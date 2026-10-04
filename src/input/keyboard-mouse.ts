@@ -151,6 +151,15 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
   const onMouseDown = (event: MouseEvent) => {
     state = reducePointer(state, { type: 'down', button: event.button, ...local(event) });
   };
+  // A clicked button would keep the browser focus: Space would then press it, and any key show
+  // its focus ring, which looks like the selection. The click still fires; focus only leaves.
+  const onButtonMouseDown = (event: MouseEvent) => {
+    if (!(event.target instanceof Element) || event.target.closest('button') === null) return;
+    event.preventDefault();
+    if (target.ownerDocument.activeElement instanceof HTMLElement) {
+      target.ownerDocument.activeElement.blur();
+    }
+  };
   const onMouseUp = (event: MouseEvent) => {
     state = reducePointer(state, { type: 'up', button: event.button });
   };
@@ -166,6 +175,7 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
   view.addEventListener('keyup', onKeyUp);
   view.addEventListener('blur', onBlur);
   view.addEventListener('mouseup', onMouseUp);
+  view.addEventListener('mousedown', onButtonMouseDown);
   target.addEventListener('mousemove', onMouseMove);
   target.addEventListener('mousedown', onMouseDown);
   target.addEventListener('wheel', onWheel, { passive: false });
@@ -182,6 +192,7 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
       view.removeEventListener('keyup', onKeyUp);
       view.removeEventListener('blur', onBlur);
       view.removeEventListener('mouseup', onMouseUp);
+      view.removeEventListener('mousedown', onButtonMouseDown);
       target.removeEventListener('mousemove', onMouseMove);
       target.removeEventListener('mousedown', onMouseDown);
       target.removeEventListener('wheel', onWheel);

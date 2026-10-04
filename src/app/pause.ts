@@ -1,5 +1,7 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
+import { fillHint } from '../ui/dom';
 import { menuEdges, navigateMenu } from '../ui/navigation';
+import { promptsFor } from '../ui/prompts';
 
 export interface PauseItem {
   readonly label: string;
@@ -13,18 +15,6 @@ export interface PauseScreen {
   hide(): void;
   // Moves the selection and activates the selected item; `back` is the caller's to handle.
   handle(menu: MenuIntents): void;
-}
-
-function hint(style: 'key' | 'button', parts: readonly (readonly [string, string])[]): string {
-  return parts
-    .map(
-      ([keys, label]) =>
-        `<span class="ui-hint__part">${keys
-          .split(' ')
-          .map((key) => `<kbd class="ui-key ui-key--${style}">${key}</kbd>`)
-          .join('')}<span>${label}</span></span>`,
-    )
-    .join('');
 }
 
 // The pause screen is the app's, but it wears the interface's styles so that it reads as one of
@@ -91,13 +81,17 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
 
   return {
     show(device) {
-      const gamepad = device === 'gamepad';
-      const navigate = items.length > 1 ? [[gamepad ? 'Croix' : '↑ ↓', 'naviguer'] as const] : [];
-      hints.innerHTML = hint(gamepad ? 'button' : 'key', [
-        ...navigate,
-        [gamepad ? 'A' : 'Entrée', 'valider'],
-        [gamepad ? 'Start' : 'Échap', 'reprendre'],
-      ]);
+      const prompts = promptsFor(device);
+      const navigate = items.length > 1 ? [{ keys: prompts.navigate, label: 'naviguer' }] : [];
+      fillHint(
+        hints,
+        [
+          ...navigate,
+          { keys: [prompts.confirm], label: 'valider' },
+          { keys: [device === 'gamepad' ? 'Start' : 'Échap'], label: 'reprendre' },
+        ],
+        prompts.style,
+      );
       select(0);
       previousMenu = null;
       screen.hidden = false;

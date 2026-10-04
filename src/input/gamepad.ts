@@ -1,5 +1,14 @@
 import type { Vec2 } from '../sim/state';
-import { GAMEPAD_BUTTON_BINDINGS, GAMEPAD_STICKS, STICK_DEADZONE, type Control } from './bindings';
+import {
+  GAMEPAD_BUTTON_BINDINGS,
+  GAMEPAD_STICKS,
+  MENU_DIRECTION_CONTROLS,
+  MENU_STICK_PRESS,
+  MENU_STICK_RELEASE,
+  STICK_DEADZONE,
+  type Control,
+  type MenuDirection,
+} from './bindings';
 import type { GamepadFrame } from './merge';
 
 export interface GamepadButtonLike {
@@ -22,6 +31,7 @@ export interface GamepadState {
   readonly buttons: readonly boolean[];
   readonly move: Vec2;
   readonly aim: Vec2;
+  readonly menuDirection: MenuDirection | null;
 }
 
 const ZERO: Vec2 = { x: 0, y: 0 };
@@ -31,6 +41,7 @@ export const INITIAL_GAMEPAD_STATE: GamepadState = {
   buttons: [],
   move: ZERO,
   aim: ZERO,
+  menuDirection: null,
 };
 
 export function applyRadialDeadzone(x: number, y: number, deadzone = STICK_DEADZONE): Vec2 {
@@ -77,6 +88,17 @@ export function reduceGamepad(
     for (const control of controls) held.add(control);
     if (previousButtons[index] !== true) presses.push(...controls);
   });
+  const previousDirection = pad.index === state.index ? state.menuDirection : null;
+  const menuDirection = stickMenuDirection(
+    pad.axes[GAMEPAD_STICKS.move.x] ?? 0,
+    pad.axes[GAMEPAD_STICKS.move.y] ?? 0,
+    previousDirection,
+  );
+  if (menuDirection !== null) {
+    const control = MENU_DIRECTION_CONTROLS[menuDirection];
+    held.add(control);
+    if (menuDirection !== previousDirection) presses.push(control);
+  }
   const anyButtonPressed = buttons.some((down, index) => down && previousButtons[index] !== true);
 
   const stick = ({ x, y }: { x: number; y: number }) =>
@@ -95,8 +117,32 @@ export function reduceGamepad(
       active: anyButtonPressed || sticksMoved,
       disconnected: state.index !== null && pad.index !== state.index,
     },
-    state: { index: pad.index, buttons, move, aim: aimStick },
+    state: { index: pad.index, buttons, move, aim: aimStick, menuDirection },
   };
+}
+
+export function stickMenuDirection(
+  x: number,
+  y: number,
+  current: MenuDirection | null,
+): MenuDirection | null {
+  if (current !== null && reach(current, x, y) >= MENU_STICK_RELEASE) return current;
+  const direction: MenuDirection =
+    Math.abs(x) >= Math.abs(y) ? (x > 0 ? 'right' : 'left') : y > 0 ? 'down' : 'up';
+  return reach(direction, x, y) >= MENU_STICK_PRESS ? direction : null;
+}
+
+function reach(direction: MenuDirection, x: number, y: number): number {
+  switch (direction) {
+    case 'up':
+      return -y;
+    case 'down':
+      return y;
+    case 'left':
+      return -x;
+    case 'right':
+      return x;
+  }
 }
 
 // The Gamepad API only exists in secure contexts.

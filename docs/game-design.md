@@ -98,7 +98,8 @@ Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-0
 | Manette (Xbox et toute manette au mapping standard de l'API Gamepad) | stick gauche                                                      | stick droit (twin-stick), assistance à la visée | gâchette droite       | LB et RB pour choisir, bouton A pour poser devant soi             |
 | Tactile (V1)                                                         | joystick virtuel gauche                                           | automatique                                     | automatique           | bouton et glisser-déposer                                         |
 
-- Les menus et l'écran de fin se parcourent entièrement à la manette.
+- Les menus et l'écran de fin se parcourent entièrement à la manette, à la croix comme au stick gauche : une poussée franche au-delà de 0,6 sur l'axe dominant vaut un appui, le stick revient sous 0,3 avant le suivant, et le maintien répète comme la croix (400 ms, puis toutes les 120 ms).
+- Au clavier, les menus se parcourent aux flèches ou ZQSD et se valident avec Entrée. Espace ne sert qu'au tir : sans effet dans les menus, hors zone de texte.
 - Les commandes se remappent (V1).
 - La vibration de la manette suit le kick et les impacts, désactivable.
 

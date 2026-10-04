@@ -122,5 +122,19 @@ export const GAMEPAD_STICKS = {
 } as const;
 
 export const STICK_DEADZONE = 0.2;
+
+export type MenuDirection = 'up' | 'down' | 'left' | 'right';
+
+export const MENU_DIRECTION_CONTROLS: Readonly<Record<MenuDirection, Control>> = {
+  up: 'menuUp',
+  down: 'menuDown',
+  left: 'menuLeft',
+  right: 'menuRight',
+};
+
+// The left stick walks the menus like the directional pad: a push past MENU_STICK_PRESS on its
+// dominant axis is one press, held until the stick comes back under MENU_STICK_RELEASE.
+export const MENU_STICK_PRESS = 0.6;
+export const MENU_STICK_RELEASE = 0.3;
 export const MENU_REPEAT_DELAY_MS = 400;
 export const MENU_REPEAT_INTERVAL_MS = 120;

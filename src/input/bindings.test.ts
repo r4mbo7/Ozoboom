@@ -181,12 +181,14 @@ describe('gamepad bindings', () => {
     expect(tested).toEqual(Object.keys(GAMEPAD_BUTTON_BINDINGS).sort());
   });
 
-  it('moves with the left stick', () => {
+  it('moves, and walks the menus, with the left stick', () => {
     const pad = fakeGamepad({ axes: [1, 0, 0, 0] });
 
     const snapshot = snapshotFromGamepad(pad);
 
-    expect(snapshot).toEqual(expectedSnapshot('gamepad', { gameplay: { move: { x: 1, y: 0 } } }));
+    expect(snapshot).toEqual(
+      expectedSnapshot('gamepad', { gameplay: { move: { x: 1, y: 0 } }, menu: { right: true } }),
+    );
   });
 
   it('aims with the right stick', () => {
