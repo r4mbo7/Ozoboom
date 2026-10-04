@@ -7,6 +7,7 @@ import type {
   SpecialEffect,
   SpeakerDefinition,
   TrapDefinition,
+  WeaponDefinition,
 } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import type { SimEvent, SimState } from '../sim/state';
@@ -15,12 +16,15 @@ import type { Layers } from './layers';
 import type { Textures } from './textures';
 import type { RenderOptions } from './types';
 
+export type WeaponLook = Pick<WeaponDefinition, 'classAffinity' | 'effect' | 'evolvedFrom'>;
+
 export interface RenderContent {
   readonly classes: readonly Pick<ClassDefinition, 'id'>[];
   readonly enemies: readonly Pick<EnemyDefinition, 'id' | 'behaviour' | 'special'>[];
   readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect'>[];
   readonly sets: readonly SetDefinition[];
   readonly bystanders?: readonly Pick<BystanderDefinition, 'id' | 'helpTicks'>[];
+  readonly weapons?: readonly (WeaponLook & Pick<WeaponDefinition, 'id'>)[];
 }
 
 export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect'>;
@@ -37,6 +41,7 @@ export interface RenderContext {
   readonly specials: ReadonlyMap<string, SpecialEffect>;
   readonly helpTicks: ReadonlyMap<string, number>;
   readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
+  readonly weaponLooks: ReadonlyMap<string, WeaponLook>;
 }
 
 export interface Family {
