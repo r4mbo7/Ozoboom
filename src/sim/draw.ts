@@ -111,3 +111,26 @@ export function drawOffer(
   }
   return offer;
 }
+
+export function relicOfferSize(state: SimState): number {
+  return OFFER_SIZE + (state.volume ?? 0);
+}
+
+export function drawRelics(
+  rng: RngState,
+  state: SimState,
+  content: ResolvedContent,
+  player: PlayerState,
+): string[] {
+  const pool = [...content.upgrades.values()].filter(
+    (upgrade) => upgrade.family === 'relic' && isEligible(upgrade, player),
+  );
+  const offer: string[] = [];
+  while (offer.length < relicOfferSize(state) && pool.length > 0) {
+    const [picked] = pool.splice(nextInt(rng, pool.length), 1);
+    if (picked !== undefined) {
+      offer.push(picked.id);
+    }
+  }
+  return offer;
+}
