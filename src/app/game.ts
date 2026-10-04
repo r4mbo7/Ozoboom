@@ -47,6 +47,10 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const audio = createAudioEngine({
     breakBars: (tier) => set.tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,
     trapEffectOf: (id) => content.traps.find((trap) => trap.id === id)?.effect.kind ?? id,
+    sfxLookups: {
+      weaponKindOf: (id) => content.weapons?.find((weapon) => weapon.id === id)?.effect.kind,
+      specialKindOf: (id) => content.enemies.find((enemy) => enemy.id === id)?.special?.kind,
+    },
   });
 
   let screen: Screen = 'title';

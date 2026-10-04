@@ -120,6 +120,18 @@ describe('enemy attacks', () => {
     expect(projectiles).toHaveLength(2);
   });
 
+  it('announce each shot with an enemyShot event', () => {
+    const { simulation } = arena();
+    const { core } = simulation.state;
+    const drizzle = placeEnemy(simulation.state, 'drizzle', core.x, 20);
+
+    const events = stepAndRecord(simulation, 16).map(({ event }) => event);
+
+    expect(events.filter((event) => event.type === 'enemyShot')).toEqual([
+      { type: 'enemyShot', id: drizzle.id, kind: 'drizzle', x: drizzle.x, y: drizzle.y },
+    ]);
+  });
+
   it('never fires a bad vibe shooter whose damage is zero, however close its target is', () => {
     const MUTE_DRIZZLE: EnemyDefinition = { ...FIXTURE_SHOOTER, id: 'mute-drizzle', damage: 0 };
     const content: GameContent = {

@@ -80,6 +80,7 @@ function shoot(
     pierceLeft: 0,
   });
   state.nextEntityId += 1;
+  state.events.push({ type: 'enemyShot', id: enemy.id, kind: enemy.kind, x: enemy.x, y: enemy.y });
   return true;
 }
 

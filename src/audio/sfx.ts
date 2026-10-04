@@ -14,7 +14,27 @@ export type SfxName =
   | 'skillUsed'
   | 'ultimateUsed'
   | 'gameWon'
-  | 'gameLost';
+  | 'gameLost'
+  | 'weaponSweep'
+  | 'weaponSpark'
+  | 'weaponHoop'
+  | 'weaponDiabolo'
+  | 'weaponFrisbee'
+  | 'weaponPlate'
+  | 'weaponTotem'
+  | 'weaponFans'
+  | 'weaponRibbon'
+  | 'weaponGained'
+  | 'weaponEvolved'
+  | 'enemyYawn'
+  | 'enemySigh'
+  | 'enemyBabble'
+  | 'enemyGrowl'
+  | 'vibesStolen'
+  | 'playerShoved'
+  | 'bystanderHelped'
+  | 'bystanderLost'
+  | 'volumeUp';
 
 export interface SfxLimit {
   perFrame: number;
@@ -29,6 +49,26 @@ export interface SfxLimiter {
 
 export type TrapEffectOf = (kind: string) => string;
 
+export interface SfxLookups {
+  readonly weaponKindOf?: (weaponId: string) => string | undefined;
+  readonly specialKindOf?: (enemyKind: string) => string | undefined;
+}
+
+// The trail (monocycle) is deliberately absent: it stays silent.
+const WEAPON_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
+  Object.entries({
+    sweep: 'weaponSweep',
+    spark: 'weaponSpark',
+    hoop: 'weaponHoop',
+    lob: 'weaponDiabolo',
+    boomerang: 'weaponFrisbee',
+    plate: 'weaponPlate',
+    totem: 'weaponTotem',
+    orbit: 'weaponFans',
+    ribbon: 'weaponRibbon',
+  }) as [string, SfxName][],
+);
+
 export const SFX_LIMITS: Readonly<Record<SfxName, SfxLimit>> = {
   playerFired: { perFrame: 1, concurrent: 3, seconds: 0.09 },
   enemyHit: { perFrame: 2, concurrent: 4, seconds: 0.04 },
@@ -42,9 +82,33 @@ export const SFX_LIMITS: Readonly<Record<SfxName, SfxLimit>> = {
   ultimateUsed: { perFrame: 1, concurrent: 1, seconds: 1 },
   gameWon: { perFrame: 1, concurrent: 1, seconds: 2 },
   gameLost: { perFrame: 1, concurrent: 1, seconds: 2 },
+  weaponSweep: { perFrame: 1, concurrent: 2, seconds: 0.2 },
+  weaponSpark: { perFrame: 1, concurrent: 3, seconds: 0.07 },
+  weaponHoop: { perFrame: 1, concurrent: 2, seconds: 0.22 },
+  weaponDiabolo: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+  weaponFrisbee: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+  weaponPlate: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+  weaponTotem: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+  weaponFans: { perFrame: 1, concurrent: 1, seconds: 0.15 },
+  weaponRibbon: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+  weaponGained: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+  weaponEvolved: { perFrame: 1, concurrent: 1, seconds: 0.8 },
+  enemyYawn: { perFrame: 1, concurrent: 2, seconds: 0.6 },
+  enemySigh: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+  enemyBabble: { perFrame: 1, concurrent: 2, seconds: 0.15 },
+  enemyGrowl: { perFrame: 1, concurrent: 2, seconds: 0.35 },
+  vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
+  playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
+  bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
+  bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+  volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
 };
 
-export function sfxOf(event: SimEvent, trapEffectOf: TrapEffectOf): SfxName | null {
+export function sfxOf(
+  event: SimEvent,
+  trapEffectOf: TrapEffectOf,
+  lookups: SfxLookups = {},
+): SfxName | null {
   switch (event.type) {
     case 'playerFired':
     case 'enemyHit':
@@ -56,7 +120,27 @@ export function sfxOf(event: SimEvent, trapEffectOf: TrapEffectOf): SfxName | nu
     case 'ultimateUsed':
     case 'gameWon':
     case 'gameLost':
+    case 'weaponGained':
+    case 'weaponEvolved':
+    case 'vibesStolen':
+    case 'playerShoved':
+    case 'bystanderHelped':
+    case 'bystanderLost':
       return event.type;
+    case 'weaponFired': {
+      const kind = lookups.weaponKindOf?.(event.weaponId);
+      return kind === undefined ? null : (WEAPON_SFX.get(kind) ?? null);
+    }
+    case 'enemyYawned':
+      return 'enemyYawn';
+    case 'enemyShot':
+      return lookups.specialKindOf?.(event.kind) === 'sigh' ? 'enemySigh' : null;
+    case 'enemyBabbled':
+      return 'enemyBabble';
+    case 'enemyRevived':
+      return 'enemyGrowl';
+    case 'volumeChanged':
+      return 'volumeUp';
     case 'trapFired': {
       const effect = trapEffectOf(event.kind);
       if (effect === 'shockwave') {
@@ -273,6 +357,327 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
+  weaponSweep: (out, at) => {
+    playNoise(out, at, {
+      gain: 0.5,
+      attack: 0.04,
+      hold: 0.03,
+      release: 0.14,
+      filter: { type: 'bandpass', hz: 500, toHz: 2400, glide: 0.2, q: 0.9 },
+    });
+  },
+  weaponSpark: (out, at) => {
+    playTone(out, at, {
+      wave: 'sine',
+      hz: degreeToHz(4, 6),
+      toHz: degreeToHz(4, 6) * 1.5,
+      glide: 0.04,
+      gain: 0.12,
+      attack: 0.001,
+      hold: 0.004,
+      release: 0.06,
+    });
+    playNoise(out, at, {
+      gain: 0.06,
+      attack: 0.001,
+      hold: 0.002,
+      release: 0.015,
+      filter: { type: 'highpass', hz: 6000 },
+    });
+  },
+  weaponHoop: (out, at) => {
+    playNoise(out, at, {
+      gain: 0.7,
+      attack: 0.03,
+      hold: 0.05,
+      release: 0.14,
+      filter: { type: 'bandpass', hz: 1700, toHz: 3300, glide: 0.2, q: 6 },
+    });
+  },
+  weaponDiabolo: (out, at) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: degreeToHz(0, 4),
+      toHz: degreeToHz(4, 4),
+      glide: 0.13,
+      gain: 0.15,
+      attack: 0.005,
+      hold: 0.11,
+      release: 0.02,
+    });
+    playTone(out, at + 0.14, {
+      wave: 'triangle',
+      hz: degreeToHz(4, 4),
+      toHz: degreeToHz(1, 4),
+      glide: 0.14,
+      gain: 0.15,
+      attack: 0.005,
+      hold: 0.12,
+      release: 0.06,
+    });
+  },
+  weaponFrisbee: (out, at) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: degreeToHz(0, 5),
+      toHz: degreeToHz(5, 5),
+      glide: 0.24,
+      gain: 0.13,
+      attack: 0.01,
+      hold: 0.2,
+      release: 0.06,
+      vibrato: { hz: 9, cents: 25, delay: 0.05 },
+    });
+  },
+  weaponPlate: (out, at) => {
+    const root = degreeToHz(3, 5);
+    [1, 2.76, 5.4].forEach((ratio, index) => {
+      playTone(out, at, {
+        wave: 'sine',
+        hz: root * ratio,
+        gain: 0.1 / (index + 1),
+        attack: 0.001,
+        hold: 0.01,
+        release: 0.3 - index * 0.08,
+      });
+    });
+  },
+  weaponTotem: (out, at) => {
+    playTone(out, at, {
+      wave: 'sine',
+      hz: degreeToHz(4, 1),
+      toHz: degreeToHz(4, 0),
+      glide: 0.22,
+      gain: 0.5,
+      attack: 0.003,
+      hold: 0.06,
+      release: 0.3,
+    });
+    playNoise(out, at, {
+      gain: 0.18,
+      attack: 0.001,
+      hold: 0.006,
+      release: 0.05,
+      filter: { type: 'lowpass', hz: 350 },
+    });
+  },
+  weaponFans: (out, at) => {
+    playTone(out, at, {
+      wave: 'sawtooth',
+      hz: degreeToHz(0, 2),
+      gain: 0.09,
+      attack: 0.08,
+      hold: 0.1,
+      release: 0.12,
+      filter: { type: 'lowpass', hz: 420, q: 1 },
+      vibrato: { hz: 14, cents: 18, delay: 0 },
+    });
+    playNoise(out, at, {
+      gain: 0.07,
+      attack: 0.08,
+      hold: 0.1,
+      release: 0.12,
+      filter: { type: 'bandpass', hz: 500, q: 0.7 },
+    });
+  },
+  weaponRibbon: (out, at) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: degreeToHz(0, 6),
+      toHz: degreeToHz(4, 7),
+      glide: 0.26,
+      gain: 0.15,
+      attack: 0.01,
+      hold: 0.2,
+      release: 0.1,
+      vibrato: { hz: 8, cents: 30, delay: 0.04 },
+    });
+  },
+  weaponGained: (out, at) => {
+    [0, 3, 5].forEach((degree) => {
+      playTone(out, at, {
+        wave: 'triangle',
+        hz: degreeToHz(degree, 4),
+        gain: 0.11,
+        attack: 0.004,
+        hold: 0.08,
+        release: 0.3,
+      });
+    });
+  },
+  weaponEvolved: (out, at) => {
+    [0, 3, 5, 7].forEach((degree, index) => {
+      playTone(out, at + index * 0.04, {
+        wave: 'triangle',
+        hz: degreeToHz(degree, 4),
+        gain: 0.1,
+        attack: 0.004,
+        hold: 0.15,
+        release: 0.5,
+      });
+    });
+    playTone(out, at, {
+      wave: 'sine',
+      hz: degreeToHz(0, 5),
+      gain: 0.1,
+      attack: 0.004,
+      hold: 0.2,
+      release: 0.5,
+    });
+  },
+  enemyYawn: (out, at) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: degreeToHz(5, 2),
+      toHz: degreeToHz(0, 2),
+      glide: 0.45,
+      gain: 0.2,
+      attack: 0.12,
+      hold: 0.12,
+      release: 0.3,
+      filter: { type: 'lowpass', hz: 600, toHz: 220, glide: 0.45 },
+    });
+    playNoise(out, at, {
+      gain: 0.07,
+      attack: 0.12,
+      hold: 0.12,
+      release: 0.3,
+      filter: { type: 'lowpass', hz: 500 },
+    });
+  },
+  enemySigh: (out, at) => {
+    playNoise(out, at, {
+      gain: 0.2,
+      attack: 0.05,
+      hold: 0.03,
+      release: 0.22,
+      filter: { type: 'lowpass', hz: 800, toHz: 250, glide: 0.25 },
+    });
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: degreeToHz(3, 2),
+      toHz: degreeToHz(0, 2),
+      glide: 0.25,
+      gain: 0.1,
+      attack: 0.04,
+      hold: 0.04,
+      release: 0.18,
+      filter: { type: 'lowpass', hz: 500 },
+    });
+  },
+  enemyBabble: (out, at, variant) => {
+    const hz = degreeToHz(variant % 2 === 0 ? 3 : 5, 2);
+    playNoise(out, at, {
+      gain: 0.2,
+      attack: 0.002,
+      hold: 0.004,
+      release: 0.02,
+      filter: { type: 'lowpass', hz: 700 },
+    });
+    playTone(out, at + 0.015, {
+      wave: 'sawtooth',
+      hz,
+      toHz: hz * 0.85,
+      glide: 0.09,
+      gain: 0.4,
+      attack: 0.008,
+      hold: 0.05,
+      release: 0.05,
+      filter: { type: 'bandpass', hz: 500, toHz: 900, glide: 0.09, q: 3 },
+    });
+  },
+  enemyGrowl: (out, at) => {
+    playTone(out, at, {
+      wave: 'sawtooth',
+      hz: degreeToHz(1, 1),
+      toHz: degreeToHz(0, 1),
+      glide: 0.3,
+      gain: 0.22,
+      attack: 0.04,
+      hold: 0.12,
+      release: 0.2,
+      filter: { type: 'lowpass', hz: 320, q: 2 },
+      vibrato: { hz: 28, cents: 90, delay: 0 },
+    });
+  },
+  vibesStolen: (out, at) => {
+    [0, 3, 7].forEach((degree, index) => {
+      playTone(out, at + index * 0.05, {
+        wave: 'square',
+        hz: degreeToHz(degree, 3),
+        gain: 0.1,
+        attack: 0.003,
+        hold: 0.03,
+        release: 0.06,
+        filter: { type: 'lowpass', hz: 1100 },
+      });
+    });
+  },
+  playerShoved: (out, at) => {
+    playTone(out, at, {
+      wave: 'sine',
+      hz: degreeToHz(0, 1),
+      toHz: degreeToHz(0, 0),
+      glide: 0.1,
+      gain: 0.3,
+      attack: 0.002,
+      hold: 0.02,
+      release: 0.1,
+    });
+    playNoise(out, at, {
+      gain: 0.22,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.07,
+      filter: { type: 'lowpass', hz: 500 },
+    });
+  },
+  bystanderHelped: (out, at) => {
+    [3, 5, 7, 10].forEach((degree, index) => {
+      const hz = degreeToHz(degree, 5);
+      playTone(out, at + index * 0.06, {
+        wave: 'sine',
+        hz,
+        gain: 0.1,
+        attack: 0.002,
+        hold: 0.02,
+        release: 0.4,
+      });
+      playTone(out, at + index * 0.06, {
+        wave: 'sine',
+        hz: hz * 2.76,
+        gain: 0.03,
+        attack: 0.002,
+        hold: 0.005,
+        release: 0.15,
+      });
+    });
+  },
+  bystanderLost: (out, at) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: degreeToHz(4, 4),
+      toHz: degreeToHz(2, 4),
+      glide: 0.3,
+      gain: 0.14,
+      attack: 0.02,
+      hold: 0.1,
+      release: 0.3,
+      filter: { type: 'lowpass', hz: 1400, toHz: 600, glide: 0.4 },
+    });
+  },
+  volumeUp: (out, at) => {
+    playTone(out, at, {
+      wave: 'sine',
+      hz: degreeToHz(0, 0),
+      toHz: degreeToHz(0, 1),
+      glide: 0.35,
+      gain: 0.4,
+      attack: 0.05,
+      hold: 0.1,
+      release: 0.2,
+    });
+  },
 };
 
 export interface Sfx {
@@ -280,12 +685,16 @@ export interface Sfx {
   beginFrame(): void;
 }
 
-export function createSfx(out: AudioNode, trapEffectOf: TrapEffectOf): Sfx {
+export function createSfx(
+  out: AudioNode,
+  trapEffectOf: TrapEffectOf,
+  lookups: SfxLookups = {},
+): Sfx {
   const limiter = createSfxLimiter(SFX_LIMITS);
   return {
     play(events, now) {
       for (const event of events) {
-        const name = sfxOf(event, trapEffectOf);
+        const name = sfxOf(event, trapEffectOf, lookups);
         if (name !== null && limiter.tryAcquire(name, now)) {
           VOICES[name](out, now, 'id' in event ? event.id : 0);
         }
