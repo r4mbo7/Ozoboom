@@ -2,7 +2,7 @@ import type { ClassDefinition, SetDefinition } from '../data/types';
 import { seedRng } from '../shared/prng';
 import { IDLE_INPUT } from './commands';
 import { lookup, type ResolvedContent } from './content';
-import type { CoreState, PlayerId, PlayerState, SimState, Vec2 } from './state';
+import type { CoreState, PlayerId, PlayerState, SimState, SpeakerState, Vec2 } from './state';
 
 export interface PlayerSlot {
   id: PlayerId;
@@ -60,11 +60,25 @@ export function createInitialState(
     pickups: [],
     laserShows: [],
     barriers: [],
+    volume: 0,
+    speakers: createSpeakers(set),
+    placed: [],
     pendingUpgrades: [],
     nextEntityId: 1,
     stats: { kills: 0, phrasesHeld: 0, damageDealt: 0, vibesCollected: 0, wattsSpent: 0 },
     events: [],
   };
+}
+
+function createSpeakers(set: SetDefinition): SpeakerState[] {
+  return (set.speakers ?? []).map((speaker) => ({
+    id: speaker.id,
+    x: speaker.x,
+    y: speaker.y,
+    radius: speaker.radius,
+    plugTicks: 0,
+    plugged: false,
+  }));
 }
 
 function createPlayer(
@@ -101,5 +115,6 @@ function createPlayer(
     modifiers: {},
     downed: false,
     invulnerableTicks: 0,
+    weapons: [],
   };
 }

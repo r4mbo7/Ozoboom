@@ -48,6 +48,13 @@ export interface CoreState {
   watts: number;
 }
 
+export interface WeaponSlot {
+  id: string;
+  level: number;
+  // Free for the module that owns this weapon's effect kind.
+  phase: number;
+}
+
 export interface PlayerState extends Positioned {
   id: PlayerId;
   classId: string;
@@ -74,6 +81,7 @@ export interface PlayerState extends Positioned {
   suppressedTicks?: number;
   // Set by dazzle, decremented by `specials`.
   dazzledTicks?: number;
+  weapons?: WeaponSlot[];
 }
 
 export interface EnemyState extends Positioned {
@@ -109,7 +117,8 @@ export interface EnemyState extends Positioned {
 export type ProjectileOwner =
   | { kind: 'player'; playerId: PlayerId }
   | { kind: 'enemy'; enemyId: EntityId }
-  | { kind: 'trap'; trapId: EntityId };
+  | { kind: 'trap'; trapId: EntityId }
+  | { kind: 'weapon'; playerId: PlayerId; weaponId: string };
 
 export interface ProjectileState extends Positioned {
   id: EntityId;
@@ -122,6 +131,10 @@ export interface ProjectileState extends Positioned {
   pierceLeft: number;
   // Enemies a piercing projectile already went through, so it hits each one once.
   hitIds?: EntityId[];
+  // The diabolo's lobbed arc: a parabola from launch to (toX, toY) over ticksTotal ticks.
+  arc?: { toX: number; toY: number; ticksTotal: number };
+  // The frisbee flies back to this player instead of expiring.
+  returnTo?: PlayerId;
 }
 
 export interface TrapState extends Positioned {
@@ -131,6 +144,24 @@ export interface TrapState extends Positioned {
   level: number;
   direction: Vec2;
   hp: number;
+  cooldown: number;
+}
+
+export interface SpeakerState {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  plugTicks: number;
+  plugged: boolean;
+}
+
+export interface PlacedState extends Positioned {
+  id: EntityId;
+  weaponId: string;
+  playerId: PlayerId;
+  radius: number;
+  ticksLeft: number;
   cooldown: number;
 }
 
@@ -175,6 +206,8 @@ export interface BarrierState {
 export interface UpgradeOffer {
   playerId: PlayerId;
   options: readonly string[];
+  // Absent means levelUp.
+  kind?: 'levelUp' | 'relic';
 }
 
 export interface SimStats {
@@ -222,6 +255,15 @@ export type SimEvent =
   | { type: 'bystanderLost'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'levelUp'; playerId: PlayerId; level: number }
   | { type: 'upgradeChosen'; playerId: PlayerId; upgradeId: string }
+  | { type: 'weaponGained'; playerId: PlayerId; weaponId: string }
+  | { type: 'weaponFired'; playerId: PlayerId; weaponId: string; x: number; y: number }
+  | { type: 'weaponEvolved'; playerId: PlayerId; weaponId: string; resultId: string }
+  | { type: 'placedSpawned'; id: EntityId; weaponId: string; x: number; y: number }
+  | { type: 'placedRemoved'; id: EntityId; weaponId: string; x: number; y: number }
+  | { type: 'speakerPlugging'; speakerId: string; progress: number }
+  | { type: 'speakerPlugged'; speakerId: string }
+  | { type: 'volumeChanged'; volume: number }
+  | { type: 'relicOffered'; playerId: PlayerId; options: readonly string[] }
   | { type: 'gameWon' }
   | { type: 'gameLost' };
 
@@ -245,6 +287,9 @@ export interface SimState {
   // Optional: created only once a Festivalier en détresse spawns, so the replay fingerprint of a
   // game without one stays unchanged.
   bystanders?: BystanderState[];
+  volume?: number;
+  speakers?: SpeakerState[];
+  placed?: PlacedState[];
   pendingUpgrades: UpgradeOffer[];
   nextEntityId: EntityId;
   stats: SimStats;

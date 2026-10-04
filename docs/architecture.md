@@ -76,6 +76,9 @@ Conventions de la simulation :
 - Une stat de joueur se lit par `statValue` (`src/sim/stats.ts`), jamais dans `player.modifiers` (un test le vérifie). Une durée en ticks tirée d'une stat a sa fonction dans ce fichier, que l'interface appelle aussi (`skillCooldownTicks`) : même arrondi des deux côtés.
 - Le hasard vient d'un générateur à graine à opérations entières (sfc32), dont l'état vit dans `state.rng`.
 - Les ennemis prennent leurs dégâts par `hurtEnemy` (`src/sim/effects.ts`), joueurs et noyau par `src/sim/damage.ts`. `hurtEnemy` reçoit le joueur à créditer (tireur, propriétaire du piège, lanceur de la compétence) et le pose dans `lastHitBy`, repris par `enemyDied.byPlayer`. `StepContext.enemyGrid` répond aux requêtes de voisinage sur les ennemis ; `enemy-steering` puis `projectiles` la reconstruisent.
+- Une offre de cartes (`UpgradeOffer.options`) mélange des identifiants d'amélioration, d'agrès et de relique ; `chooseUpgrade.upgradeId` les accepte tous, et les identifiants des agrès ne recoupent jamais ceux des améliorations.
+- Chaque sorte d'`WeaponEffect` a son module dans `src/sim/weapons/`, enregistré sur sa ligne dans `WEAPONS` (`src/sim/systems/weapons.ts`) ; `resolveContent` refuse un agrès dont la sorte n'a pas de module.
+- `SimState.volume` compte les enceintes branchées du set ; `SimState.speakers` tient leur position et leur progression de branchement, posé par `createInitialState` à partir de `SetDefinition.speakers`.
 
 ## Boucle
 

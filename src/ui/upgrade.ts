@@ -19,6 +19,7 @@ const FAMILY_LABEL: Record<UpgradeFamily, string> = {
   class: 'Classe',
   generic: 'Générique',
   defense: 'Défense',
+  relic: 'Relique',
 };
 
 export function createUpgradeOverlay(

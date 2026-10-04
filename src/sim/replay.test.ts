@@ -5,7 +5,7 @@ import type { SimulationOptions } from './index';
 import { hashState, runScript } from './replay';
 import type { Vec2 } from './state';
 
-const REFERENCE_HASH = '96c5b64b';
+const REFERENCE_HASH = '40467116';
 
 const DIRECTIONS: readonly Vec2[] = [
   { x: 1, y: 0 },

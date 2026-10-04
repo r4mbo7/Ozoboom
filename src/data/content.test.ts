@@ -10,10 +10,14 @@ import { CONTENT } from './content';
 import type { SkillDefinition, TierDefinition } from './types';
 
 const { classes, enemies, traps, upgrades, sets, bystanders = [] } = CONTENT;
+const weapons = CONTENT.weapons ?? [];
+const fusions = CONTENT.fusions ?? [];
+const speakers = sets.flatMap((set) => set.speakers ?? []);
 
 const enemyById = new Map(enemies.map((enemy) => [enemy.id, enemy]));
 const bystanderById = new Map(bystanders.map((bystander) => [bystander.id, bystander]));
 const classIds = new Set(classes.map((definition) => definition.id));
+const weaponIds = new Set(weapons.map((weapon) => weapon.id));
 
 const positive = (value: number) => Number.isFinite(value) && value > 0;
 const nonNegative = (value: number) => Number.isFinite(value) && value >= 0;
@@ -118,6 +122,59 @@ describe('CONTENT references', () => {
       expect(upgrade.classId !== undefined && classIds.has(upgrade.classId)).toBe(true);
     } else {
       expect(upgrade.classId).toBeUndefined();
+    }
+  });
+});
+
+describe('CONTENT weapons, fusions and speakers', () => {
+  it('never shares an id between an upgrade and a weapon', () => {
+    const upgradeIds = new Set(upgrades.map((upgrade) => upgrade.id));
+    const clashing = weapons.filter((weapon) => upgradeIds.has(weapon.id));
+
+    expect(clashing.map((weapon) => weapon.id)).toEqual([]);
+  });
+
+  it('has unique weapon ids', () => {
+    expect(duplicates(weapons.map((weapon) => weapon.id))).toEqual([]);
+  });
+
+  it.each(weapons)('resolves its references and rhythm for weapon $id', (weapon) => {
+    if (weapon.classAffinity !== undefined) {
+      expect(classIds.has(weapon.classAffinity)).toBe(true);
+    }
+    if (weapon.evolvedFrom !== undefined) {
+      expect(weaponIds.has(weapon.evolvedFrom)).toBe(true);
+    }
+    if (weapon.rhythm !== 'continuous') {
+      for (const step of weapon.rhythm.steps) {
+        expect(step).toBeGreaterThanOrEqual(0);
+        expect(step).toBeLessThanOrEqual(15);
+      }
+    }
+  });
+
+  it.each(fusions)('resolves its weapon, upgrade and result for fusion to $resultId', (fusion) => {
+    expect(weaponIds.has(fusion.weaponId)).toBe(true);
+    expect(upgrades.some((upgrade) => upgrade.id === fusion.upgradeId)).toBe(true);
+    expect(weaponIds.has(fusion.resultId)).toBe(true);
+  });
+
+  it.each(speakers)('sits in the arena and outside the core for speaker $id', (speaker) => {
+    const set = sets.find((candidate) => (candidate.speakers ?? []).includes(speaker));
+    if (set === undefined) {
+      throw new Error(`speaker "${speaker.id}" is not in any set`);
+    }
+
+    expect(speaker.x - speaker.radius).toBeGreaterThanOrEqual(0);
+    expect(speaker.x + speaker.radius).toBeLessThanOrEqual(set.arena.width);
+    expect(speaker.y - speaker.radius).toBeGreaterThanOrEqual(0);
+    expect(speaker.y + speaker.radius).toBeLessThanOrEqual(set.arena.height);
+
+    const dx = speaker.x - set.arena.width / 2;
+    const dy = speaker.y - set.arena.height / 2;
+    expect(Math.sqrt(dx * dx + dy * dy)).toBeGreaterThan(set.core.radius + speaker.radius);
+    if (speaker.unlocksWeaponId !== undefined) {
+      expect(weaponIds.has(speaker.unlocksWeaponId)).toBe(true);
     }
   });
 });

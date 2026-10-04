@@ -27,7 +27,7 @@ const CONTENT: GameContent = {
   enemies: [...COMBAT_CONTENT.enemies, YAWNER, ZOMBIE],
 };
 
-const REFERENCE_HASH = '88d7f6e0';
+const REFERENCE_HASH = '090e15ae';
 
 describe('replay with the Fatigué and the Zombie', () => {
   it('keeps the fingerprint of a scripted game across the yawn and revive cycles', () => {

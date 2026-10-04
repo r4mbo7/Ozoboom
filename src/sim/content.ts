@@ -6,8 +6,10 @@ import type {
   SetDefinition,
   TrapDefinition,
   UpgradeDefinition,
+  WeaponDefinition,
 } from '../data/types';
 import { SPECIALS } from './specials';
+import { WEAPONS } from './systems/weapons';
 
 export interface ResolvedContent {
   readonly classes: ReadonlyMap<string, ClassDefinition>;
@@ -16,6 +18,7 @@ export interface ResolvedContent {
   readonly upgrades: ReadonlyMap<string, UpgradeDefinition>;
   readonly sets: ReadonlyMap<string, SetDefinition>;
   readonly bystanders: ReadonlyMap<string, BystanderDefinition>;
+  readonly weapons: ReadonlyMap<string, WeaponDefinition>;
 }
 
 export function resolveContent(content: GameContent): ResolvedContent {
@@ -26,6 +29,7 @@ export function resolveContent(content: GameContent): ResolvedContent {
     upgrades: indexById(content.upgrades, 'upgrade'),
     sets: indexById(content.sets, 'set'),
     bystanders: indexById(content.bystanders ?? [], 'bystander'),
+    weapons: indexById(content.weapons ?? [], 'weapon'),
   };
 
   for (const enemy of content.enemies) {
@@ -37,6 +41,25 @@ export function resolveContent(content: GameContent): ResolvedContent {
     if (upgrade.classId !== undefined) {
       lookup(resolved.classes, upgrade.classId, `class of upgrade "${upgrade.id}"`);
     }
+  }
+  for (const weapon of resolved.weapons.values()) {
+    if (resolved.upgrades.has(weapon.id)) {
+      throw new Error(`weapon id clashes with an upgrade id: "${weapon.id}"`);
+    }
+    if (!(weapon.effect.kind in WEAPONS)) {
+      throw new Error(`weapon "${weapon.id}" has no module for effect "${weapon.effect.kind}"`);
+    }
+    if (weapon.classAffinity !== undefined) {
+      lookup(resolved.classes, weapon.classAffinity, `class affinity of weapon "${weapon.id}"`);
+    }
+    if (weapon.evolvedFrom !== undefined) {
+      lookup(resolved.weapons, weapon.evolvedFrom, `evolved weapon of "${weapon.id}"`);
+    }
+  }
+  for (const fusion of content.fusions ?? []) {
+    lookup(resolved.weapons, fusion.weaponId, `weapon of fusion to "${fusion.resultId}"`);
+    lookup(resolved.upgrades, fusion.upgradeId, `upgrade of fusion to "${fusion.resultId}"`);
+    lookup(resolved.weapons, fusion.resultId, `result of fusion to "${fusion.resultId}"`);
   }
   for (const set of content.sets) {
     if (set.tiers.length === 0) {
@@ -52,6 +75,15 @@ export function resolveContent(content: GameContent): ResolvedContent {
         lookup(resolved.bystanders, spawn.bystanderId, `spawned bystander of ${where}`);
       }
     });
+    for (const speaker of set.speakers ?? []) {
+      if (speaker.unlocksWeaponId !== undefined) {
+        lookup(
+          resolved.weapons,
+          speaker.unlocksWeaponId,
+          `unlocked weapon of speaker "${speaker.id}"`,
+        );
+      }
+    }
   }
 
   return resolved;
