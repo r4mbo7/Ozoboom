@@ -15,7 +15,16 @@ declare global {
 }
 
 // Buttons of the standard Gamepad API mapping, named after the Xbox controller.
-export const PAD = { A: 0, X: 2, Y: 3, RT: 7, Start: 9, DpadRight: 15 } as const;
+export const PAD = {
+  A: 0,
+  B: 1,
+  X: 2,
+  Y: 3,
+  RT: 7,
+  Start: 9,
+  DpadDown: 13,
+  DpadRight: 15,
+} as const;
 
 export function collectConsoleErrors(page: Page): string[] {
   const errors: string[] = [];
