@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { PALETTE_TOKENS, paletteAt } from '../shared/palette';
 import {
@@ -8,7 +9,28 @@ import {
   writePixiPalette,
 } from './palette';
 
+function cssColorTokens(css: string): Record<string, string> {
+  const tokens: Record<string, string> = {};
+  for (const [, name = '', value = ''] of css.matchAll(/--([a-z-]+):\s*(#[0-9a-f]{6})\s*;/gi)) {
+    const camel = name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+    tokens[camel] = value.toLowerCase();
+  }
+  return tokens;
+}
+
 describe('palette', () => {
+  it('declares the sun cycle tokens in style.css with their night values', () => {
+    const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+
+    const declared = cssColorTokens(css);
+    const { badVibe, ...night } = paletteAt(0.4);
+
+    expect(badVibe).toBe('#4b4762');
+    expect(
+      Object.fromEntries(Object.keys(night).map((name) => [name, declared[name] ?? 'missing'])),
+    ).toEqual(night);
+  });
+
   it('converts every token of a moment to its numeric color', () => {
     const palette = createPixiPalette();
 
