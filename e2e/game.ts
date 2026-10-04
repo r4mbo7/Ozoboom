@@ -22,6 +22,7 @@ export const PAD = {
   Y: 3,
   RT: 7,
   Start: 9,
+  DpadUp: 12,
   DpadDown: 13,
   DpadRight: 15,
 } as const;

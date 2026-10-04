@@ -110,7 +110,8 @@ export function createUpgradeOverlay(
       fillHint(
         hint,
         [
-          { keys: prompts.style === 'key' ? ['←', '→'] : prompts.navigate, label: 'choisir' },
+          { keys: prompts.navigateRow, label: 'choisir', screen: 'wide' },
+          { keys: prompts.navigate, label: 'choisir', screen: 'narrow' },
           { keys: [prompts.confirm], label: 'valider' },
         ],
         prompts.style,
