@@ -42,6 +42,8 @@ Règles de dépendance, vérifiées par ESLint (`eslint.config.js`) :
 
 Ces fichiers sont l'interface entre les couches, donc entre les tâches menées en parallèle. Un changement y est additif, petit, dans sa propre pull request, et annoncé dans l'issue concernée.
 
+Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick, les durées en ticks.
+
 | Fichier                | Contenu                                                                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/sim/state.ts`     | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas |
