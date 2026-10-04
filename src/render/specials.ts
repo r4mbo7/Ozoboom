@@ -1,6 +1,6 @@
 import type { Sprite } from 'pixi.js';
 import type { EnemyState, SimEvent, SimState } from '../sim/state';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { TICKS_PER_BEAT } from '../shared/tempo';
 import { BubbleLog, bubbleAlpha } from './bubbles';
 import { Particles } from './effects';
 import type { Family, RenderContext } from './context';
@@ -15,8 +15,6 @@ const DAY_VEIL_BOOST = 1.6;
 const ZONE_TEXTURE_RADIUS = 120;
 const CONE_LENGTH = 160;
 const LINK_LENGTH = 64;
-const ZEES = 3;
-const ZEE_PERIOD = TICKS_PER_BAR * 0.75;
 const BUBBLE_HALF_WIDTH = 32;
 const BUBBLE_POP_TICKS = TICKS_PER_BEAT / 2;
 const BUBBLE_CALM_ALPHA = 0.7;
@@ -28,7 +26,6 @@ interface SpecialView {
   readonly cone: Sprite;
   readonly link: Sprite;
   readonly purse: Sprite;
-  readonly zees: readonly Sprite[];
 }
 
 interface BubbleView {
@@ -39,9 +36,6 @@ interface BubbleView {
 
 function hideView(view: SpecialView): void {
   hide(view.zone, view.veil, view.cone, view.link, view.purse);
-  for (const zee of view.zees) {
-    zee.visible = false;
-  }
 }
 
 function targetOf(state: SimState, enemy: EnemyState): { x: number; y: number } | undefined {
@@ -58,7 +52,6 @@ export function createSpecials(ctx: RenderContext): Family {
       cone: add(layers.fx, t.cone, 0),
       link: add(layers.fx, t.link, 0),
       purse: add(layers.fx, t.purse),
-      zees: Array.from({ length: ZEES }, () => add(layers.fx, t.zee)),
     }),
     hideView,
   );
@@ -88,22 +81,6 @@ export function createSpecials(ctx: RenderContext): Family {
     sprite.scale.set(radius / ZONE_TEXTURE_RADIUS);
     setTint(sprite, color);
     sprite.alpha = alpha;
-  }
-
-  function drawSleep(view: SpecialView, enemy: EnemyState, x: number, y: number, frame: Frame) {
-    for (let index = 0; index < ZEES; index += 1) {
-      const zee = view.zees[index];
-      if (zee === undefined) {
-        continue;
-      }
-      const phase = (frame.now / ZEE_PERIOD + index / ZEES) % 1;
-      const sway = frame.calm ? 0 : Math.sin(phase * TAU) * 3;
-      zee.visible = true;
-      zee.position.set(x + enemy.radius * 0.7 + sway, y - enemy.radius - phase * 26);
-      zee.scale.set((0.45 + phase * 0.45) * (frame.calm ? 0.8 : 1));
-      setTint(zee, frame.palette.texte);
-      zee.alpha = Math.sin(phase * Math.PI) * (frame.calm ? 0.6 : 0.95);
-    }
   }
 
   function drawCling(
@@ -259,9 +236,7 @@ export function createSpecials(ctx: RenderContext): Family {
         if (effect.kind === 'suppress') {
           disc(view.zone, x, y, effect.radius, palette.badVibe, zoneAlpha('suppress', calm));
         } else if (effect.kind === 'yawn') {
-          if (enemy.stunTicks > 0) {
-            drawSleep(view, enemy, x, y, frame);
-          } else {
+          if (enemy.stunTicks <= 0) {
             disc(view.zone, x, y, effect.radius, palette.badVibe, zoneAlpha('yawn', calm));
           }
         } else if (effect.kind === 'dazzle') {

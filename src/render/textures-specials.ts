@@ -17,7 +17,6 @@ export interface SpecialTextures {
   readonly cone: Shape;
   readonly link: Shape;
   readonly purse: Shape;
-  readonly zee: Shape;
   readonly bubble: Shape;
   readonly bubbleRim: Shape;
   readonly blabla: Shape;
@@ -138,18 +137,6 @@ export function createSpecialTextures(): SpecialTextures {
       ctx.lineTo(0, 9);
       ctx.moveTo(-4, 2);
       ctx.lineTo(4, 2);
-      ctx.stroke();
-    }),
-    zee: paint(32, 32, 10, (ctx) => {
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = WHITE;
-      ctx.beginPath();
-      ctx.moveTo(-8, -8);
-      ctx.lineTo(8, -8);
-      ctx.lineTo(-8, 8);
-      ctx.lineTo(8, 8);
       ctx.stroke();
     }),
     bubble: paint(112, 76, 44, (ctx) => {
