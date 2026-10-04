@@ -65,6 +65,7 @@ export type EnemyBehaviour = 'rusher' | 'horde' | 'heavy' | 'shooter' | 'boss';
 export interface EnemyDefinition {
   id: string;
   name: string;
+  description?: string;
   behaviour: EnemyBehaviour;
   maxHp: number;
   speed: number;
@@ -74,6 +75,7 @@ export interface EnemyDefinition {
   aggroRadius: number;
   vibesDrop: number;
   wattsDrop: number;
+  // Compounded per phrase since the start of the set: value = base * factor ** phrase.
   scalingPerPhrase: { hp: number; speed: number };
   ranged?: { projectileSpeed: number; rangeTicks: number; keepDistance: number };
 }
@@ -112,6 +114,7 @@ export interface UpgradeDefinition {
   maxStacks: number;
 }
 
+// Phrases count from 0 within the tier's buildup, toPhrase included.
 export interface SpawnRule {
   enemyId: string;
   everyBars: number;
