@@ -11,8 +11,7 @@ import { ViewPool } from './views';
 import { zoneAlpha } from './zones';
 
 const TAU = Math.PI * 2;
-const WHITE = 0xffffff;
-const DAY_LIGHT_BOOST = 1.8;
+const DAY_VEIL_BOOST = 1.6;
 const ZONE_TEXTURE_RADIUS = 120;
 const CONE_LENGTH = 160;
 const LINK_LENGTH = 64;
@@ -146,11 +145,9 @@ export function createSpecials(ctx: RenderContext): Family {
     state: SimState,
     frame: Frame,
   ) {
-    // By day the text color is dark: a camera light stays white, and a little stronger on the pale ground.
-    const day = !frame.light.additive;
-    const lightColor = day ? WHITE : frame.palette.texte;
-    const boost = day ? DAY_LIGHT_BOOST : 1;
-    disc(view.veil, x, y, radius, lightColor, zoneAlpha('dazzleVeil', frame.calm) * boost);
+    // By day, texte is dark: it reads on the pale ground, and the veil is a little stronger so its rim shows.
+    const boost = frame.light.additive ? 1 : DAY_VEIL_BOOST;
+    disc(view.veil, x, y, radius, frame.palette.texte, zoneAlpha('dazzleVeil', frame.calm) * boost);
     const target = targetOf(state, enemy);
     if (target === undefined) {
       return;
@@ -161,8 +158,8 @@ export function createSpecials(ctx: RenderContext): Family {
     cone.position.set(x, y);
     cone.rotation = Math.atan2(target.y - y, target.x - x);
     cone.scale.set(length / CONE_LENGTH);
-    setTint(cone, lightColor);
-    cone.alpha = zoneAlpha('dazzleCone', frame.calm) * boost;
+    setTint(cone, frame.palette.texte);
+    cone.alpha = zoneAlpha('dazzleCone', frame.calm);
   }
 
   function drawBubbles(state: SimState, alpha: number, frame: Frame): void {
