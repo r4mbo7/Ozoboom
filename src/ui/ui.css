@@ -1269,8 +1269,13 @@
   margin: 28px 0 24px;
 }
 
+.ui-cards[data-count='4'] {
+  grid-template-columns: repeat(4, 272px);
+}
+
 .ui-card {
   --family: var(--turquoise);
+  --tint: var(--ui-line);
 
   display: flex;
   flex-direction: column;
@@ -1301,6 +1306,93 @@
 
 .ui-card[data-family='defense'] {
   --family: var(--tank);
+}
+
+.ui-card[data-kind='weapon'] {
+  --family: var(--turquoise);
+}
+
+.ui-card[data-kind='fusion'] {
+  --family: var(--mage);
+}
+
+.ui-card[data-tint='rare'] {
+  --tint: var(--turquoise);
+}
+
+.ui-card[data-tint='legendary'],
+.ui-card[data-tint='relic'] {
+  --tint: var(--or);
+}
+
+.ui-card[data-tint='fusion'] {
+  --tint: var(--mage);
+}
+
+.ui-card[data-tint='relic'] {
+  --family: var(--or);
+}
+
+.ui-card:not([data-tint='common'], [aria-current]) {
+  border-color: var(--tint);
+  box-shadow:
+    var(--ui-lift),
+    0 0 calc(18px * var(--ui-halo)) color-mix(in srgb, var(--tint) 24%, transparent);
+}
+
+.ui-card__rarity {
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1.5px solid var(--tint);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tint) 20%, transparent);
+  color: var(--texte);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
+
+.ui-card__recipe {
+  color: var(--mage);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ui-card__steps {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 3px;
+  padding: 0;
+}
+
+.ui-card__step {
+  height: 14px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--texte) 12%, transparent);
+}
+
+.ui-card__step[data-beat='true'] {
+  background: color-mix(in srgb, var(--texte) 22%, transparent);
+}
+
+.ui-card__step[data-on='true'] {
+  background: var(--turquoise);
+  box-shadow: 0 0 calc(8px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 60%, transparent);
+}
+
+.ui-card__steps[data-mode='continuous'] {
+  gap: 0;
+}
+
+.ui-card__steps[data-mode='continuous'] .ui-card__step {
+  border-radius: 0;
+}
+
+.ui-card__steps[data-mode='continuous'] .ui-card__step:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.ui-card__steps[data-mode='continuous'] .ui-card__step:last-child {
+  border-radius: 0 4px 4px 0;
 }
 
 .ui-card[aria-current] {
@@ -1579,6 +1671,12 @@
 
 /* Narrow screens */
 
+@media (max-width: 1200px) {
+  .ui-cards[data-count='4'] {
+    grid-template-columns: repeat(2, 272px);
+  }
+}
+
 @media (max-width: 720px) {
   .ui {
     --ui-gap: 10px;
@@ -1789,7 +1887,8 @@
     justify-self: start;
   }
 
-  .ui-cards {
+  .ui-cards,
+  .ui-cards[data-count] {
     grid-template-columns: minmax(0, 420px);
     gap: 14px;
     width: 100%;
