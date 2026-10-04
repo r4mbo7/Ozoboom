@@ -24,6 +24,7 @@ export interface SetProgress {
   phrase: number;
   bar: number;
   beat: number;
+  segmentStartTick: number;
 }
 
 export interface RngState {
