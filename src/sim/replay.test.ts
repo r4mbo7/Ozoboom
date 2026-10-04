@@ -5,7 +5,7 @@ import type { SimulationOptions } from './index';
 import { hashState, runScript } from './replay';
 import type { Vec2 } from './state';
 
-const REFERENCE_HASH = '5c84dfc7';
+const REFERENCE_HASH = '96c5b64b';
 
 const DIRECTIONS: readonly Vec2[] = [
   { x: 1, y: 0 },
@@ -98,7 +98,7 @@ describe('replay', () => {
     expect(state.set.segment).toBe('drop');
     expect(state.stats.kills).toBe(30);
     expect(state.stats.phrasesHeld).toBe(2);
-    expect(state.players.map((player) => player.upgrades)).toEqual([[], ['wide-nova']]);
+    expect(state.players.map((player) => player.upgrades)).toEqual([[], ['big-bass']]);
     expect(hashState(state)).toBe(REFERENCE_HASH);
   });
 });

@@ -46,6 +46,8 @@ Du brouillard gris qui absorbe la lumière. Archétypes de départ :
 
 Les ennemis montent en puissance avec les joueurs : chaque phrase augmente leur vie, leur vitesse et leur nombre selon une courbe définie dans les données.
 
+Les bad vibes visent le noyau. Elles se retournent contre un joueur seulement s'il entre dans leur rayon d'aggro, et le lâchent au-delà de deux rayons. Tirer de loin ne provoque pas de poursuite : attirer les ennemis est le rôle du tank. **Tranché le 2026-10-04.**
+
 ## Les classes
 
 Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fait une chose que les autres font mal. Habillage festival, proposé :

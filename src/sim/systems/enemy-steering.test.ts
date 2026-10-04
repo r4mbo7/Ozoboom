@@ -80,16 +80,19 @@ describe('enemy steering', () => {
     expect(fled.target).toBe('core');
   });
 
-  it('chases the player who shot it, from beyond its aggro radius', () => {
+  it('keeps walking to the core when a player shoots it from beyond its aggro radius', () => {
     const { simulation, player } = arena();
-    const grump = placeEnemy(simulation.state, 'grump', 800, 100);
-    park(player, 800, 100 + 200);
+    const { core } = simulation.state;
+    const grump = placeEnemy(simulation.state, 'grump', core.x, 100);
+    park(player, core.x, 100 + 230);
 
     simulation.step([commandFor(0, { aim: { x: 0, y: -1 }, fire: true })]);
-    steps(simulation, 15);
+    steps(simulation, 19);
 
     expect(grump.hp).toBe(10);
-    expect(grump.target).toBe(0);
+    expect(grump.lastHitBy).toBe(0);
+    expect(grump.target).toBe('core');
+    expect({ x: grump.x, y: grump.y }).toEqual({ x: core.x, y: 100 + 20 * 2.5 });
   });
 
   it('spreads a horde apart while it marches', () => {
