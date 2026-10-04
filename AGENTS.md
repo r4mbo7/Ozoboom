@@ -43,6 +43,14 @@ Couper dans cet ordre : ce que le code, l'historique git ou `gh` donnent déjà 
 - Moins de code est une victoire. Pas d'abstraction avant le deuxième usage.
 - Une dépendance s'ajoute avec un ADR si elle structure le projet, sinon avec une phrase dans la pull request qui dit pourquoi.
 
+## Retours des joueurs
+
+Un retour de joueur est une issue `feedback` (design : [docs/brainstorms/2026-10-04-feedback-requirements.md](docs/brainstorms/2026-10-04-feedback-requirements.md)).
+
+- Un retour donné de vive voix par Constantin devient une issue `feedback` `source:direct`, avec ses mots exacts en citation.
+- Trier une issue `needs-triage` : poser un `type:*`, puis la lier à une issue de travail dans un jalon, ou la fermer comme doublon avec le lien, ou la fermer « non retenue » avec une phrase qui dit pourquoi. Retirer `needs-triage`.
+- Ne jamais implémenter directement un retour : il passe par une issue de travail, comme le reste.
+
 ## Commandes
 
 ```bash

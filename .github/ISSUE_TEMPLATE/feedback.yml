@@ -1,0 +1,29 @@
+name: Donner un avis
+description: Une idée, un bug, un souci d'équilibrage. Ton avis sera public.
+title: '[Avis] '
+labels: [feedback, needs-triage]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: C'est plutôt
+      options:
+        - Une idée
+        - Un bug
+        - Trop dur, trop facile ou trop long
+        - Autre chose
+    validations:
+      required: true
+  - type: textarea
+    id: message
+    attributes:
+      label: Ton avis
+      description: Ce que tu as vécu, ce que tu attendais, ce que tu changerais.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte de la partie
+      description: Rempli par le jeu. Laisse vide si tu écris depuis GitHub.
+      render: text
