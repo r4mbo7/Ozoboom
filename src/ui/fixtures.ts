@@ -125,7 +125,7 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       id: 'baton-de-feu',
       name: 'Bâton de feu',
       description: 'Un arc de feu à chaque temps.',
-      classAffinity: 'tank',
+      classAffinity: 'mage',
       rhythm: { everyBars: 1, steps: [0, 4, 8, 12] },
       effect: { kind: 'sweep', damage: 6, radius: 90, arcDegrees: 120 },
       maxLevel: 5,
@@ -151,8 +151,61 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       maxLevel: 5,
       levelMul: 1.3,
     },
+    {
+      id: 'pluie-de-diabolos',
+      name: 'Pluie de diabolos',
+      description: 'Trois diabolos sur le un, qui retombent en éventail.',
+      classAffinity: 'mage',
+      evolvedFrom: 'diabolo',
+      rhythm: { everyBars: 1, steps: [0, 6, 12] },
+      effect: { kind: 'lob', damage: 14, radius: 70, range: 300, flightTicks: 12 },
+      maxLevel: 5,
+      levelMul: 1.3,
+    },
   ],
+  fusions: [{ weaponId: 'diabolo', upgradeId: 'nova-elargie', resultId: 'pluie-de-diabolos' }],
   upgrades: [
+    {
+      id: 'baskets-de-feu-rare',
+      name: 'Baskets de feu rare',
+      description: 'Rare : tu traverses la foule bien plus vite.',
+      family: 'generic',
+      rarity: 'rare',
+      modifiers: [{ stat: 'speedMul', mul: 1.25 }],
+      maxStacks: 1,
+    },
+    {
+      id: 'relique-casque',
+      name: 'Casque de Berlin',
+      description: 'Tu encaisses plus, et tes pièges frappent plus fort.',
+      family: 'relic',
+      modifiers: [{ stat: 'trapDamageMul', mul: 1.2 }],
+      maxStacks: 1,
+    },
+    {
+      id: 'relique-sifflet',
+      name: 'Sifflet de rave',
+      description: 'Tes tirs vont plus vite et traversent une bad vibe de plus.',
+      family: 'relic',
+      modifiers: [{ stat: 'pierceAdd', add: 1 }],
+      maxStacks: 1,
+    },
+    {
+      id: 'relique-bracelet',
+      name: 'Bracelet fluo',
+      description: 'Ta nova frappe bien plus fort, toutes les mesures.',
+      family: 'relic',
+      modifiers: [{ stat: 'skillPowerMul', mul: 1.5 }],
+      maxStacks: 1,
+    },
+    {
+      id: 'relique-bob',
+      name: 'Bob du festival',
+      description: 'Tu traverses la foule plus vite, sans jamais t’arrêter.',
+      family: 'relic',
+      modifiers: [{ stat: 'speedMul', mul: 1.2 }],
+      maxStacks: 1,
+    },
     {
       id: 'nova-elargie',
       name: 'Nova XXL',
@@ -321,7 +374,8 @@ export function fixtureState(overrides: Partial<SimState> = {}): SimState {
   };
 }
 
-export type UiFixtureScreen = 'title' | 'game' | 'upgrade' | 'won' | 'lost' | 'volume';
+export type UiFixtureScreen =
+  'title' | 'game' | 'upgrade' | 'won' | 'lost' | 'volume' | 'relics' | 'fusion';
 
 export const UI_FIXTURE_SCREENS: readonly UiFixtureScreen[] = [
   'title',
@@ -330,6 +384,8 @@ export const UI_FIXTURE_SCREENS: readonly UiFixtureScreen[] = [
   'won',
   'lost',
   'volume',
+  'relics',
+  'fusion',
 ];
 
 function fixtureSpeakerState(
@@ -387,7 +443,33 @@ export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimStat
         status: 'choosingUpgrade',
         players: [fixturePlayer({ level: 5, vibes: 0, vibesToNextLevel: 65 })],
         pendingUpgrades: [
-          { playerId: 0, options: ['nova-elargie', 'baskets-de-feu', 'caissons-gonfles'] },
+          { playerId: 0, options: ['nova-elargie', 'baskets-de-feu-rare', 'baton-de-feu'] },
+        ],
+      });
+    case 'fusion':
+      return fixtureState({
+        status: 'choosingUpgrade',
+        players: [
+          fixturePlayer({
+            level: 8,
+            vibes: 0,
+            vibesToNextLevel: 80,
+            weapons: [{ id: 'diabolo', level: 2, phase: 0 }],
+          }),
+        ],
+        pendingUpgrades: [
+          { playerId: 0, options: ['pluie-de-diabolos', 'diabolo', 'eventails-de-feu'] },
+        ],
+      });
+    case 'relics':
+      return fixtureState({
+        status: 'choosingUpgrade',
+        pendingUpgrades: [
+          {
+            playerId: 0,
+            kind: 'relic',
+            options: ['relique-casque', 'relique-sifflet', 'relique-bracelet', 'relique-bob'],
+          },
         ],
       });
     case 'won':

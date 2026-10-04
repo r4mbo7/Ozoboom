@@ -1,8 +1,9 @@
-import type { GameContent, UpgradeFamily } from '../data/types';
+import type { GameContent } from '../data/types';
 import type { InputDevice } from '../input/intents';
 import type { PlayerState, UpgradeOffer } from '../sim/state';
 import { el, fillHint, icon, setText } from './dom';
-import { familyIcon } from './icons';
+import { SIXTEENTHS_PER_BAR, type WeaponCard, cardFor, offerHeading, offerKicker } from './cards';
+import { familyIcon, weaponIcon } from './icons';
 import { type Menu, createMenu } from './menu';
 import { promptsFor } from './prompts';
 
@@ -14,13 +15,6 @@ export interface UpgradeOverlay {
   setDevice(device: InputDevice): void;
   hide(): void;
 }
-
-const FAMILY_LABEL: Record<UpgradeFamily, string> = {
-  class: 'Classe',
-  generic: 'Générique',
-  defense: 'Défense',
-  relic: 'Relique',
-};
 
 export function createUpgradeOverlay(
   onChoose: (offer: UpgradeOffer, upgradeId: string) => void,
@@ -46,42 +40,69 @@ export function createUpgradeOverlay(
     }
   });
 
-  function card(upgradeId: string, player: PlayerState | undefined, content: GameContent) {
-    const definition = content.upgrades.find((entry) => entry.id === upgradeId);
+  function strip(card: WeaponCard): HTMLElement {
+    const { steps } = card;
+    const label =
+      steps === 'continuous'
+        ? 'Joue en continu'
+        : `Tire sur les doubles croches ${steps
+            .flatMap((on, step) => (on ? [String(step + 1)] : []))
+            .join(', ')}${card.everyBars > 1 ? `, une mesure sur ${String(card.everyBars)}` : ''}`;
+    const row = el('span', 'ui-card__steps');
+    row.setAttribute('role', 'img');
+    row.setAttribute('aria-label', label);
+    row.dataset.mode = steps === 'continuous' ? 'continuous' : 'steps';
+    const cells = steps === 'continuous' ? Array<boolean>(SIXTEENTHS_PER_BAR).fill(true) : steps;
+    row.append(
+      ...cells.map((on, step) => {
+        const cell = el('span', 'ui-card__step');
+        cell.dataset.on = String(on);
+        cell.dataset.beat = String(step % 4 === 0);
+        return cell;
+      }),
+    );
+    return row;
+  }
+
+  function card(
+    id: string,
+    offer: UpgradeOffer,
+    player: PlayerState | undefined,
+    content: GameContent,
+  ) {
+    const model = cardFor(id, offer, player, content);
     const button = el('button', 'ui-card');
     button.type = 'button';
-    const family = definition?.family ?? 'generic';
-    button.dataset.family = family;
+    button.dataset.kind = model.kind;
+    button.dataset.tint = model.tint;
+    if (model.kind === 'upgrade') {
+      button.dataset.family = model.family;
+    }
+    const glyph =
+      model.kind === 'upgrade' ? familyIcon(model.family) : weaponIcon(model.weapon.effect);
     const familyRow = el('span', 'ui-card__family');
-    const className =
-      family === 'class'
-        ? content.classes.find((entry) => entry.id === definition?.classId)?.name
-        : undefined;
-    familyRow.append(
-      icon('ui-card__glyph', familyIcon(family)),
-      el(
-        'span',
-        '',
-        className === undefined ? FAMILY_LABEL[family] : `${FAMILY_LABEL[family]} · ${className}`,
-      ),
-    );
-    const stacks = player?.upgrades.filter((id) => id === upgradeId).length ?? 0;
-    const maxStacks = definition?.maxStacks ?? 1;
+    familyRow.append(icon('ui-card__glyph', glyph), el('span', 'ui-card__label', model.label));
+    if (model.rarityLabel !== null) {
+      familyRow.append(el('span', 'ui-card__rarity', model.rarityLabel));
+    }
     const foot = el('span', 'ui-card__foot');
     foot.append(
       el(
         'span',
         'ui-card__rank',
-        stacks === 0 ? 'Nouveau' : `Rang ${String(stacks + 1)} sur ${String(maxStacks)}`,
+        model.kind === 'fusion' ? `Remplace ${model.replaces}` : model.rank,
       ),
       el('span', 'ui-card__cta', 'Choisir'),
     );
-    button.append(
-      familyRow,
-      el('span', 'ui-card__name', definition?.name ?? upgradeId),
-      el('span', 'ui-card__desc', definition?.description ?? ''),
-      foot,
-    );
+    button.append(familyRow, el('span', 'ui-card__name', model.name));
+    if (model.kind === 'fusion') {
+      button.append(el('span', 'ui-card__recipe', `B2B : ${model.recipe}`));
+    }
+    button.append(el('span', 'ui-card__desc', model.description));
+    if (model.kind === 'weapon') {
+      button.append(strip(model));
+    }
+    button.append(foot);
     return button;
   }
 
@@ -97,8 +118,11 @@ export function createUpgradeOverlay(
         return;
       }
       current = offer;
-      setText(kicker, player === undefined ? 'Niveau supérieur' : `Niveau ${String(player.level)}`);
-      const buttons = offer.options.map((id) => card(id, player, content));
+      setText(kicker, offerKicker(offer, player));
+      const buttons = offer.options.map((id) => card(id, offer, player, content));
+      cards.dataset.count = String(buttons.length);
+      cards.dataset.offer = offer.kind ?? 'levelUp';
+      setText(heading, offerHeading(offer));
       cards.replaceChildren(...buttons);
       menu.setItems(buttons);
     },

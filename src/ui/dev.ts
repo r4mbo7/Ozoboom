@@ -96,6 +96,8 @@ function open(screen: UiFixtureScreen): void {
       break;
     case 'game':
     case 'upgrade':
+    case 'fusion':
+    case 'relics':
     case 'volume':
       ui.showGame();
       break;
@@ -136,6 +138,10 @@ window.addEventListener('keydown', (event) => {
     }
   } else if (event.code === 'F7') {
     open('volume');
+  } else if (event.code === 'F8') {
+    open('relics');
+  } else if (event.code === 'F9') {
+    open('fusion');
   } else if (event.code === 'KeyV') {
     state = { ...state, events: [{ type: 'volumeChanged', volume: state.volume ?? 0 }] };
   } else if (/^F[1-5]$/.test(event.code)) {
