@@ -1,16 +1,26 @@
 import type { EntityId } from '../sim/state';
 
 interface Entry<V> {
-  view: V;
+  id: EntityId;
   frame: number;
+  readonly view: V;
 }
 
 export class ViewPool<V> {
   private readonly active = new Map<EntityId, Entry<V>>();
-  private readonly free: V[] = [];
+  private readonly free: Entry<V>[] = [];
   private readonly create: () => V;
   private readonly release: (view: V) => void;
   private frame = 0;
+
+  // Bound once: iterating with a stored callback allocates neither an iterator nor [key, value] pairs.
+  private readonly releaseStale = (entry: Entry<V>): void => {
+    if (entry.frame !== this.frame) {
+      this.active.delete(entry.id);
+      this.release(entry.view);
+      this.free.push(entry);
+    }
+  };
 
   constructor(create: () => V, release: (view: V) => void) {
     this.create = create;
@@ -30,23 +40,21 @@ export class ViewPool<V> {
   }
 
   acquire(id: EntityId): V {
-    const entry = this.active.get(id);
-    if (entry !== undefined) {
-      entry.frame = this.frame;
-      return entry.view;
+    let entry = this.active.get(id);
+    if (entry === undefined) {
+      entry = this.free.pop() ?? { id, frame: 0, view: this.create() };
+      entry.id = id;
+      this.active.set(id, entry);
     }
-    const view = this.free.pop() ?? this.create();
-    this.active.set(id, { view, frame: this.frame });
-    return view;
+    entry.frame = this.frame;
+    return entry.view;
+  }
+
+  peek(id: EntityId): V | undefined {
+    return this.active.get(id)?.view;
   }
 
   end(): void {
-    for (const [id, entry] of this.active) {
-      if (entry.frame !== this.frame) {
-        this.active.delete(id);
-        this.release(entry.view);
-        this.free.push(entry.view);
-      }
-    }
+    this.active.forEach(this.releaseStale);
   }
 }

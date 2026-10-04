@@ -61,6 +61,18 @@ describe('ViewPool', () => {
     expect(pool.freeCount).toBe(0);
   });
 
+  it('peeks at the view an entity had last frame without keeping it alive', () => {
+    const { pool } = createPool();
+    const [drawn] = frame(pool, [1]);
+
+    const peeked = pool.peek(1);
+    frame(pool, []);
+
+    expect(peeked).toBe(drawn);
+    expect(pool.peek(1)).toBeUndefined();
+    expect(pool.peek(2)).toBeUndefined();
+  });
+
   it('stays bounded when every entity is replaced at each frame', () => {
     const { pool, createdCount } = createPool();
 

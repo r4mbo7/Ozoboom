@@ -1,4 +1,5 @@
 import { TICK_MS } from '../shared/tempo';
+import { applyModifiers } from '../sim/stats';
 import { FIXTURE_CONTENT, type FixtureEvent, advanceFixture, createFixtureState } from './fixture';
 import { createRenderer } from './index';
 import { PALETTE, cssColor } from './palette';
@@ -32,6 +33,9 @@ const state = createFixtureState({
   projectiles: count('projectiles', 200),
 });
 const player = state.players[0];
+if (player !== undefined && params.has('trapRadius')) {
+  applyModifiers(player, [{ stat: 'trapRadiusMul', mul: count('trapRadius', 1) }]);
+}
 let calmMode = params.get('calm') === '1' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 let queued: FixtureEvent[] = [];
 
