@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0618" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Ozoboom - entrées</title>
+    <style>
+      body.dev {
+        display: block;
+        place-items: normal;
+        padding: 20px 32px 16px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      code,
+      pre {
+        font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      }
+
+      .muted {
+        color: color-mix(in srgb, var(--bad-vibe) 45%, var(--glow));
+      }
+
+      .top,
+      .layout {
+        max-width: 1216px;
+        margin: 0 auto;
+      }
+
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .top h1 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: 0.04em;
+      }
+
+      .top h1 span {
+        color: var(--uv-magenta);
+        text-shadow: 0 0 12px color-mix(in srgb, var(--uv-magenta) 60%, transparent);
+      }
+
+      .top p {
+        margin: 2px 0 0;
+      }
+
+      .badge {
+        flex: none;
+        padding: 6px 14px;
+        border: 1px solid var(--bad-vibe);
+        border-radius: 999px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .badge[data-device='keyboardMouse'] {
+        border-color: var(--uv-cyan);
+        color: var(--uv-cyan);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--uv-cyan) 40%, transparent);
+      }
+
+      .badge[data-device='gamepad'] {
+        border-color: var(--uv-lime);
+        color: var(--uv-lime);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--uv-lime) 40%, transparent);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .column {
+        display: grid;
+        gap: 16px;
+      }
+
+      .panel {
+        padding: 14px 16px 16px;
+        border: 1px solid color-mix(in srgb, var(--bad-vibe) 60%, transparent);
+        border-radius: 10px;
+        background: var(--ink);
+      }
+
+      .panel h2 {
+        margin: 0 0 8px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--uv-cyan);
+      }
+
+      .panel * + h2 {
+        margin-top: 14px;
+      }
+
+      .surface {
+        position: relative;
+        aspect-ratio: 4 / 3;
+        border: 1px dashed var(--bad-vibe);
+        border-radius: 8px;
+        background:
+          radial-gradient(
+            circle at center,
+            color-mix(in srgb, var(--uv-magenta) 12%, transparent),
+            transparent 60%
+          ),
+          var(--night);
+        overflow: hidden;
+        cursor: crosshair;
+        user-select: none;
+      }
+
+      .surface svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .surface p {
+        position: absolute;
+        inset: auto 12px 10px;
+        margin: 0;
+        font-size: 12px;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .ray {
+        stroke: var(--uv-magenta);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+      }
+
+      .ring {
+        fill: none;
+        stroke: var(--uv-cyan);
+        stroke-width: 2;
+      }
+
+      .hub {
+        fill: var(--glow);
+      }
+
+      .well {
+        fill: var(--night);
+        stroke: var(--bad-vibe);
+      }
+
+      .deadzone {
+        fill: none;
+        stroke: var(--bad-vibe);
+        stroke-dasharray: 2 3;
+      }
+
+      .knob {
+        fill: var(--uv-lime);
+      }
+
+      .sticks {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .stick {
+        display: grid;
+        justify-items: center;
+        gap: 4px;
+      }
+
+      .stick svg {
+        width: 104px;
+        height: 104px;
+        margin-bottom: 4px;
+      }
+
+      .stick code {
+        font-size: 12px;
+      }
+
+      .rows {
+        display: grid;
+        gap: 2px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .rows.pair {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 10px 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--night);
+        border: 1px solid var(--bad-vibe);
+      }
+
+      .row[data-on] .dot {
+        background: var(--uv-lime);
+        border-color: var(--uv-lime);
+        box-shadow: 0 0 8px var(--uv-lime);
+      }
+
+      .row b {
+        font-weight: 500;
+      }
+
+      .row small {
+        display: block;
+        font-size: 11px;
+      }
+
+      .row output {
+        min-width: 2.5em;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: var(--uv-magenta);
+        font-weight: 600;
+      }
+
+      .pad-status {
+        margin: 0 0 12px;
+      }
+
+      .pad-status small {
+        display: block;
+        margin-top: 2px;
+        overflow-wrap: anywhere;
+      }
+
+      .rumble {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+
+      .rumble button {
+        display: grid;
+        gap: 2px;
+        padding: 8px 6px;
+        border: 1px solid var(--bad-vibe);
+        border-radius: 6px;
+        background: var(--night);
+        color: var(--glow);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .rumble button[aria-current='true'] {
+        border-color: var(--uv-magenta);
+        box-shadow: 0 0 10px color-mix(in srgb, var(--uv-magenta) 45%, transparent);
+      }
+
+      .rumble button span {
+        font-size: 11px;
+        font-weight: 400;
+      }
+
+      .hint {
+        margin: 10px 0 0;
+        font-size: 12px;
+      }
+
+      pre {
+        margin: 0;
+        max-height: 440px;
+        overflow: auto;
+        font-size: 11.5px;
+        line-height: 1.45;
+        scrollbar-color: var(--bad-vibe) transparent;
+      }
+
+      @media (max-width: 1000px) {
+        body.dev {
+          padding: 16px;
+        }
+
+        .layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body class="dev">
+    <header class="top">
+      <div>
+        <h1><span>Ozoboom</span> · entrées</h1>
+        <p class="muted">
+          Clavier, souris et manette vers <code>InputSnapshot</code>, lu à chaque image.
+        </p>
+      </div>
+      <output class="badge" id="device" data-device="none">Aucun périphérique</output>
+    </header>
+
+    <main class="layout">
+      <div class="column">
+        <section class="panel">
+          <h2>Zone souris</h2>
+          <div class="surface" id="surface">
+            <svg aria-hidden="true">
+              <line id="aim-ray" class="ray" />
+              <circle id="pointer" class="ring" r="9" />
+              <circle id="center" class="hub" r="5" />
+            </svg>
+            <p class="muted">Clic gauche tire, clic droit pose un piège, molette pour changer.</p>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Sticks après zone morte</h2>
+          <div class="sticks">
+            <div class="stick">
+              <svg viewBox="-52 -52 104 104" aria-hidden="true">
+                <circle class="well" r="48" />
+                <circle class="deadzone" r="9.6" />
+                <circle id="move-dot" class="knob" r="7" />
+              </svg>
+              <span>Déplacement</span>
+              <code class="muted" id="move-value">0.00, 0.00</code>
+            </div>
+            <div class="stick">
+              <svg viewBox="-52 -52 104 104" aria-hidden="true">
+                <circle class="well" r="48" />
+                <line id="aim-line" class="ray" x2="44" />
+                <circle class="hub" r="4" />
+              </svg>
+              <span>Visée · <span id="aim-source">stick</span></span>
+              <code class="muted" id="aim-value">1.00, 0.00</code>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2>Actions continues</h2>
+        <ul class="rows">
+          <li class="row" data-held="fire">
+            <i class="dot"></i><b>Tir<small class="muted">clic gauche, Espace · RT</small></b>
+          </li>
+          <li class="row" data-held="skill">
+            <i class="dot"></i><b>Compétence<small class="muted">E · X</small></b>
+          </li>
+          <li class="row" data-held="ultimate">
+            <i class="dot"></i><b>Ultime<small class="muted">R · Y</small></b>
+          </li>
+        </ul>
+        <h2>Actions d'une image</h2>
+        <ul class="rows">
+          <li class="row" data-count="placeTrap">
+            <i class="dot"></i><b>Poser un piège<small class="muted">clic droit, F · A</small></b
+            ><output>0</output>
+          </li>
+          <li class="row" data-count="nextTrap">
+            <i class="dot"></i><b>Piège suivant<small class="muted">molette bas, Tab · RB</small></b
+            ><output>0</output>
+          </li>
+          <li class="row" data-count="previousTrap">
+            <i class="dot"></i
+            ><b>Piège précédent<small class="muted">molette haut, Maj+Tab · LB</small></b
+            ><output>0</output>
+          </li>
+          <li class="row" data-count="selectTrap">
+            <i class="dot"></i><b>Choix du piège<small class="muted">1 à 5</small></b
+            ><output>-</output>
+          </li>
+          <li class="row" data-count="pause">
+            <i class="dot"></i><b>Pause<small class="muted">Échap · Start</small></b
+            ><output>0</output>
+          </li>
+        </ul>
+        <h2>Menus</h2>
+        <ul class="rows pair">
+          <li class="row" data-count="up">
+            <i class="dot"></i><b>Haut<small class="muted">Z/W, ↑ · croix</small></b
+            ><output>0</output>
+          </li>
+          <li class="row" data-count="down">
+            <i class="dot"></i><b>Bas<small class="muted">S, ↓ · croix</small></b
+            ><output>0</output>
+          </li>
+          <li class="row" data-count="left">
+            <i class="dot"></i><b>Gauche<small class="muted">Q/A, ← · croix</small></b
+            ><output>0</output>
+          </li>
+          <li class="row" data-count="right">
+            <i class="dot"></i><b>Droite<small class="muted">D, → · croix</small></b
+            ><output>0</output>
+          </li>
+          <li class="row" data-count="confirm">
+            <i class="dot"></i><b>Valider<small class="muted">Entrée · A</small></b
+            ><output>0</output>
+          </li>
+          <li class="row" data-count="back">
+            <i class="dot"></i><b>Retour<small class="muted">Échap · B</small></b
+            ><output>0</output>
+          </li>
+        </ul>
+      </section>
+
+      <div class="column">
+        <section class="panel">
+          <h2>Manette</h2>
+          <p class="pad-status" id="pad-status">Aucune manette</p>
+          <div class="rumble" id="rumble">
+            <button type="button" data-strength="0.3" data-duration="80">
+              Kick <span class="muted">0,3 · 80 ms</span>
+            </button>
+            <button type="button" data-strength="0.7" data-duration="160">
+              Impact <span class="muted">0,7 · 160 ms</span>
+            </button>
+            <button type="button" data-strength="1" data-duration="600">
+              Drop <span class="muted">1 · 600 ms</span>
+            </button>
+          </div>
+          <p class="hint muted">Croix ← → pour choisir une vibration, A pour la lancer.</p>
+        </section>
+        <section class="panel">
+          <h2>InputSnapshot</h2>
+          <pre id="snapshot"></pre>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/input/dev.ts"></script>
+  </body>
+</html>
