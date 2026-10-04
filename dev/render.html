@@ -11,8 +11,8 @@
         margin: 0;
         height: 100%;
         overflow: hidden;
-        background: var(--night);
-        color: var(--glow);
+        background: var(--sol);
+        color: var(--texte);
         font-family: system-ui, sans-serif;
       }
 
@@ -34,14 +34,14 @@
         max-width: calc(100vw - 24px);
         padding: 10px 12px;
         border-radius: 12px;
-        background: color-mix(in srgb, var(--ink) 85%, transparent);
+        background: color-mix(in srgb, var(--sol-clair) 85%, transparent);
         font-size: 14px;
         font-variant-numeric: tabular-nums;
       }
 
       .panel__stats {
         margin: 0;
-        color: var(--uv-cyan);
+        color: var(--turquoise);
       }
 
       .panel__pointer {
@@ -54,23 +54,34 @@
         gap: 6px;
       }
 
+      .panel__hour {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .panel__hour input {
+        flex: 1;
+        accent-color: var(--turquoise);
+      }
+
       .panel button {
         padding: 6px 12px;
-        border: 1px solid var(--uv-cyan);
+        border: 1px solid var(--turquoise);
         border-radius: 999px;
         background: transparent;
-        color: var(--glow);
+        color: var(--texte);
         font: inherit;
         cursor: pointer;
       }
 
       .panel button[aria-pressed='true'] {
-        background: var(--uv-cyan);
-        color: var(--night);
+        background: var(--turquoise);
+        color: var(--sol);
       }
 
       .panel button:focus-visible {
-        outline: 2px solid var(--uv-magenta);
+        outline: 2px solid var(--mage);
         outline-offset: 2px;
       }
     </style>
@@ -87,6 +98,17 @@
         <button type="button" data-event="coreHit">Scène touchée</button>
         <button type="button" id="downed" aria-pressed="false">À terre</button>
       </div>
+      <div class="panel__actions" aria-label="Heure du set">
+        <button type="button" data-hour="0">Crépuscule</button>
+        <button type="button" data-hour="0.4">Nuit</button>
+        <button type="button" data-hour="0.85">Aube</button>
+        <button type="button" data-hour="1">Plein jour</button>
+      </div>
+      <label class="panel__hour">
+        Heure
+        <input type="range" id="hour" min="0" max="1" step="0.005" value="0" />
+        <output id="hour-value">0,00</output>
+      </label>
     </section>
     <script type="module" src="/src/render/dev.ts"></script>
   </body>

@@ -1,5 +1,6 @@
 import { autoDetectRenderer } from 'pixi.js';
-import { PALETTE } from './palette';
+import { SUN_PALETTES } from '../shared/palette';
+import { parseHexColor } from './palette';
 import { type RenderContent, Scene } from './scene';
 import type { RenderOptions, Renderer } from './types';
 
@@ -20,7 +21,7 @@ export async function createRenderer(
     resolution: Math.min(window.devicePixelRatio, 2),
     autoDensity: true,
     antialias: true,
-    background: PALETTE.night,
+    background: parseHexColor(SUN_PALETTES.crepuscule.sol),
     skipExtensionImports: true,
   });
   container.appendChild(pixi.canvas);

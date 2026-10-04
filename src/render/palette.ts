@@ -1,13 +1,6 @@
-export const PALETTE = {
-  night: 0x0b0618,
-  ink: 0x1a1030,
-  uvMagenta: 0xff2bd6,
-  uvCyan: 0x2bf0ff,
-  uvLime: 0xb6ff2b,
-  sunOrange: 0xff8c2b,
-  badVibe: 0x5a506b,
-  glow: 0xf4f0ff,
-} as const;
+import { PALETTE_TOKENS, type PaletteToken, type SunPalette } from '../shared/palette';
+
+export type PixiPalette = Record<PaletteToken, number>;
 
 export function cssColor(color: number, alpha = 1): string {
   if (alpha >= 1) {
@@ -22,4 +15,22 @@ export function parseHexColor(hex: string): number {
     throw new Error(`Expected a #rrggbb color, got "${hex}"`);
   }
   return Number.parseInt(hex.slice(1), 16);
+}
+
+export function createPixiPalette(): PixiPalette {
+  const palette = {} as PixiPalette;
+  for (const token of PALETTE_TOKENS) {
+    palette[token] = 0;
+  }
+  return palette;
+}
+
+export function writePixiPalette(into: PixiPalette, palette: SunPalette): void {
+  for (const token of PALETTE_TOKENS) {
+    into[token] = parseHexColor(palette[token]);
+  }
+}
+
+export function isPaletteToken(id: string): id is PaletteToken {
+  return (PALETTE_TOKENS as readonly string[]).includes(id);
 }

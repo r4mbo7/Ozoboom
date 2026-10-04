@@ -1,8 +1,12 @@
 import { TICK_MS } from '../shared/tempo';
 import { applyModifiers } from '../sim/stats';
-import { FIXTURE_CONTENT, type FixtureEvent, advanceFixture, createFixtureState } from './fixture';
+import { FIXTURE_CONTENT, type FixtureEvent, createFixtureState } from './fixture';
+import { advanceFixture } from './fixture-step';
 import { createRenderer } from './index';
-import { PALETTE, cssColor } from './palette';
+import { PALETTE_TOKENS, paletteAt } from '../shared/palette';
+import { SETS } from '../data/sets';
+import type { SetDefinition } from '../data/types';
+import { pinFraction } from './fixture-time';
 
 function element(selector: string): HTMLElement {
   const found = document.querySelector<HTMLElement>(selector);
@@ -12,9 +16,12 @@ function element(selector: string): HTMLElement {
   return found;
 }
 
-for (const [token, color] of Object.entries(PALETTE)) {
-  const name = token.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  document.documentElement.style.setProperty(`--${name}`, cssColor(color));
+function paintPage(fraction: number) {
+  const palette = paletteAt(fraction);
+  for (const token of PALETTE_TOKENS) {
+    const name = token.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+    document.documentElement.style.setProperty(`--${name}`, palette[token]);
+  }
 }
 
 const params = new URLSearchParams(location.search);
@@ -27,6 +34,8 @@ const stats = element('#stats');
 const pointer = element('#pointer');
 const calmButton = element('#calm');
 const downedButton = element('#downed');
+const hourInput = element('#hour') as HTMLInputElement;
+const hourValue = element('#hour-value');
 
 const state = createFixtureState({
   enemies: count('enemies', 300),
@@ -35,6 +44,31 @@ const state = createFixtureState({
 const player = state.players[0];
 if (player !== undefined && params.has('trapRadius')) {
   applyModifiers(player, [{ stat: 'trapRadiusMul', mul: count('trapRadius', 1) }]);
+}
+const found = SETS.find((candidate) => candidate.id === state.setId);
+if (found === undefined) {
+  throw new Error(`Missing set ${state.setId}`);
+}
+const set: SetDefinition = found;
+let pinned: number | null = params.has('hour') ? count('hour', 0) : null;
+
+function setHour(fraction: number) {
+  pinned = fraction;
+  hourInput.value = String(fraction);
+  hourValue.textContent = fraction.toFixed(2).replace('.', ',');
+  paintPage(fraction);
+}
+
+function pinHour() {
+  if (pinned !== null) {
+    pinFraction(state, set, pinned);
+  }
+}
+
+if (pinned === null) {
+  paintPage(0);
+} else {
+  setHour(pinned);
 }
 let calmMode = params.get('calm') === '1' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 let queued: FixtureEvent[] = [];
@@ -70,6 +104,14 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-event]'
     queued.push(button.dataset.event as FixtureEvent);
   });
 }
+hourInput.addEventListener('input', () => {
+  setHour(Number(hourInput.value));
+});
+for (const button of document.querySelectorAll<HTMLButtonElement>('[data-hour]')) {
+  button.addEventListener('click', () => {
+    setHour(Number(button.dataset.hour));
+  });
+}
 window.addEventListener('resize', () => {
   renderer.resize(stage.clientWidth, stage.clientHeight);
 });
@@ -96,6 +138,7 @@ if (frozenAt !== null) {
   const injectAt = count('injectAt', frozenAt) - 1;
   while (state.tick < frozenAt) {
     advanceFixture(state, state.tick === injectAt ? inject : []);
+    pinHour();
     renderer.render(state, 0);
   }
 }
@@ -118,6 +161,7 @@ function frame(now: number) {
   }
   const alpha = frozenAt === null ? accumulator / TICK_MS : 0.5;
   const started = performance.now();
+  pinHour();
   renderer.render(state, alpha);
   renderMs += performance.now() - started;
   frames += 1;
