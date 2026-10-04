@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0618" />
+    <title>Ozoboom - rendu</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--night);
+        color: var(--glow);
+        font-family: system-ui, sans-serif;
+      }
+
+      #stage {
+        position: fixed;
+        inset: 0;
+      }
+
+      #stage canvas {
+        display: block;
+      }
+
+      .panel {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        display: grid;
+        gap: 8px;
+        max-width: calc(100vw - 24px);
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--ink) 85%, transparent);
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .panel__stats {
+        margin: 0;
+        color: var(--uv-cyan);
+      }
+
+      .panel__pointer {
+        margin: 0;
+      }
+
+      .panel__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .panel button {
+        padding: 6px 12px;
+        border: 1px solid var(--uv-cyan);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--glow);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .panel button[aria-pressed='true'] {
+        background: var(--uv-cyan);
+        color: var(--night);
+      }
+
+      .panel button:focus-visible {
+        outline: 2px solid var(--uv-magenta);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <section class="panel" aria-label="Banc de rendu">
+      <p class="panel__stats" id="stats">Chargement…</p>
+      <p class="panel__pointer" id="pointer">Pointeur : -</p>
+      <div class="panel__actions">
+        <button type="button" id="calm" aria-pressed="false">Mode calme</button>
+        <button type="button" data-event="beat">Temps</button>
+        <button type="button" data-event="enemyDied">Bad vibe éteinte</button>
+        <button type="button" data-event="coreHit">Scène touchée</button>
+        <button type="button" id="downed" aria-pressed="false">À terre</button>
+      </div>
+    </section>
+    <script type="module" src="/src/render/dev.ts"></script>
+  </body>
+</html>
