@@ -11,10 +11,12 @@ export interface Layers {
   readonly traps: Container;
   readonly core: Container;
   readonly pickups: Container;
+  readonly zones: Container;
   readonly bystanders: Container;
   readonly fx: Container;
   readonly weapons: Container;
   readonly players: Container;
+  readonly bubbles: Container;
 }
 
 function layer(parent: Container): Container {
@@ -36,10 +38,12 @@ export function createLayers(stage: Container): Layers {
     traps: layer(world),
     core: layer(world),
     pickups: layer(world),
+    zones: layer(world),
     bystanders: layer(world),
     fx: layer(world),
     weapons: layer(world),
     players: layer(world),
+    bubbles: layer(world),
   };
 }
 

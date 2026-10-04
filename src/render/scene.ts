@@ -1,5 +1,5 @@
 import { Container, type Renderer as PixiRenderer } from 'pixi.js';
-import type { SetDefinition } from '../data/types';
+import type { SetDefinition, SpecialEffect } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import type { SimEvent, SimState, Vec2 } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
@@ -17,6 +17,7 @@ import { isPaletteToken } from './palette';
 import { createPickups } from './pickups';
 import { createPlayers } from './players';
 import { createProjectiles } from './projectiles';
+import { createSpecials } from './specials';
 import { createSpeakers } from './speakers';
 import { createTextures, destroyTextures } from './textures';
 import { createTraps } from './traps';
@@ -80,6 +81,12 @@ export class Scene implements Renderer {
       classTokens: classTokens(content),
       behaviours: new Map(content.enemies.map((def) => [def.id, def.behaviour])),
       trapLooks: new Map(content.traps.map((def) => [def.id, def])),
+      specials: new Map(
+        content.enemies.flatMap((def): [string, SpecialEffect][] =>
+          def.special === undefined ? [] : [[def.id, def.special]],
+        ),
+      ),
+      helpTicks: new Map((content.bystanders ?? []).map((def) => [def.id, def.helpTicks])),
     };
     const traps = createTraps(ctx);
     this.families = [
@@ -90,6 +97,7 @@ export class Scene implements Renderer {
       createPickups(ctx),
       createBystanders(ctx),
       createEnemies(ctx),
+      createSpecials(ctx),
       createProjectiles(ctx),
       createWeapons(ctx),
       createPlayers(ctx),

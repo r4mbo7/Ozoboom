@@ -2,6 +2,7 @@ import { TICK_MS } from '../shared/tempo';
 import { applyModifiers } from '../sim/stats';
 import { FIXTURE_CONTENT, type FixtureEvent, createFixtureState } from './fixture';
 import { type SheetPose, killMasks, layMasks } from './fixture-sheet';
+import { advanceSpecials, createSpecialsState } from './fixture-specials';
 import { advanceFixture } from './fixture-step';
 import { createRenderer } from './index';
 import { PALETTE_TOKENS, paletteAt } from '../shared/palette';
@@ -38,11 +39,14 @@ const downedButton = element('#downed');
 const hourInput = element('#hour') as HTMLInputElement;
 const hourValue = element('#hour-value');
 
-const state = createFixtureState({
-  enemies: count('enemies', 300),
-  projectiles: count('projectiles', 200),
-  showcase: params.has('showcase'),
-});
+const specialsScene = params.get('scene') === 'specials';
+const state = specialsScene
+  ? createSpecialsState()
+  : createFixtureState({
+      enemies: count('enemies', 300),
+      projectiles: count('projectiles', 200),
+      showcase: params.has('showcase'),
+    });
 state.core.hp = (state.core.maxHp * count('coreHp', 100)) / 100;
 const sheet = params.has('sheet') ? count('sheet', 32) : null;
 if (sheet !== null) {
@@ -145,6 +149,10 @@ if (logFps) {
 
 // A mask sheet stands still: the tick only runs, for the animations and the farewell.
 function advance(events: readonly FixtureEvent[]) {
+  if (specialsScene) {
+    advanceSpecials(state);
+    return;
+  }
   if (sheet === null) {
     advanceFixture(state, events);
     return;

@@ -14,6 +14,7 @@ import {
   type Shape,
 } from './paint';
 import { type MaskSet, createMasks } from './textures-enemies';
+import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
 import { trap } from './textures-traps';
 
 export type { Shape } from './paint';
@@ -38,6 +39,7 @@ export interface Textures {
   readonly enemyShot: Shape;
   readonly masks: MaskSet;
   readonly traps: Readonly<Record<TrapLook, Shape>>;
+  readonly specials: SpecialTextures;
 }
 
 export const STREAK_HEAD = 40 / 48;
@@ -245,6 +247,7 @@ export function createTextures(): Textures {
       lure: trap('lure'),
       strobe: trap('strobe'),
     },
+    specials: createSpecialTextures(),
   };
 }
 
@@ -252,6 +255,7 @@ export function destroyTextures(textures: Textures): void {
   const shapes = [
     ...Object.values(textures).filter((value): value is Shape => 'texture' in value),
     ...Object.values(textures.traps),
+    ...specialShapes(textures.specials),
   ];
   for (const shape of shapes) {
     shape.texture.destroy(true);
