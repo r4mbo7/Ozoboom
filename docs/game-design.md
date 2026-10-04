@@ -102,8 +102,7 @@ Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-0
 
 ## Coop
 
-- Deuxième étape après le prototype solo. 2 à 4 joueurs, par lien d'invitation, pas de compte.
-- Pistes : coop locale (plusieurs manettes sur un écran) comme première étape, puis en ligne pair à pair avec le navigateur d'un joueur qui fait l'hôte et fait foi (voir `architecture.md`).
+- 2 à 4 joueurs. **Coop locale en V1** (plusieurs manettes sur un écran, décidé le 2026-10-04), puis **coop en ligne en V2**, par lien d'invitation, sans compte, pair à pair avec le navigateur d'un joueur qui fait l'hôte et fait foi (voir `architecture.md`).
 - Un allié à terre se relève par un coéquipier, plus vite par le healer. Tous à terre, la scène est seule : la partie finit vite.
 - Expérience et watts partagés. Le noyau est commun.
 

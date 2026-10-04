@@ -24,6 +24,7 @@ Au 2026-10-04 : les fondations sont posées, le jeu n'est pas encore jouable. Le
 - [Architecture](docs/architecture.md) : simulation déterministe séparée du rendu, contrats, organisation du code, tests.
 - [Décisions](docs/adr/) : les ADR.
 - [AGENTS.md](AGENTS.md) : conventions pour contribuer, humain ou agent.
+- [Donner un avis](https://github.com/r4mbo7/Ozoboom/issues/new?template=feedback.yml) : une idée, un bug, un souci d'équilibrage.
 
 ## Démarrer
 
