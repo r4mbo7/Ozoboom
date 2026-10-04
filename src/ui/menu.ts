@@ -1,5 +1,6 @@
 import type { MenuIntents } from '../input/intents';
 import { navigateMenu } from './navigation';
+import { onMouseMove } from './pointer';
 
 export interface Menu {
   readonly index: number;
@@ -31,8 +32,8 @@ export function createMenu(onActivate: (index: number) => void): Menu {
       items = next;
       items.forEach((item, position) => {
         item.tabIndex = -1;
-        item.addEventListener('pointerenter', (event) => {
-          if (event.pointerType === 'mouse') {
+        onMouseMove(item, () => {
+          if (index !== position) {
             select(position);
           }
         });

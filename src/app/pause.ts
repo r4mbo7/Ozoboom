@@ -1,6 +1,7 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { fillHint } from '../ui/dom';
-import { menuEdges, navigateMenu } from '../ui/navigation';
+import { createMenu } from '../ui/menu';
+import { menuEdges } from '../ui/navigation';
 import { promptsFor } from '../ui/prompts';
 
 export interface PauseItem {
@@ -41,43 +42,22 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
     throw new Error('Pause screen markup is incomplete');
   }
 
-  let selected = 0;
   let previousMenu: MenuIntents | null = null;
   const buttons = items.map((item, index) => {
     const button = item.button ?? document.createElement('button');
     button.type = 'button';
-    button.tabIndex = -1;
     if (item.button === undefined) {
       button.className = index === 0 ? 'ui-button ui-button--primary' : 'ui-button';
       button.textContent = item.label;
     }
-    button.addEventListener('pointerenter', (event) => {
-      if (event.pointerType === 'mouse') {
-        select(index);
-      }
-    });
-    button.addEventListener('click', (event) => {
-      // Enter on a focused button synthesizes a click: the key itself is already an intent.
-      if (event.detail !== 0) {
-        select(index);
-        item.activate();
-      }
-    });
     return button;
   });
   nav.append(...buttons);
   root.append(layer);
-
-  function select(index: number): void {
-    selected = index;
-    buttons.forEach((button, position) => {
-      if (position === index) {
-        button.setAttribute('aria-current', 'true');
-      } else {
-        button.removeAttribute('aria-current');
-      }
-    });
-  }
+  const menu = createMenu((index) => {
+    items[index]?.activate();
+  });
+  menu.setItems(buttons);
 
   return {
     show(device) {
@@ -92,23 +72,16 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
         ],
         prompts.style,
       );
-      select(0);
+      menu.select(0);
       previousMenu = null;
       screen.hidden = false;
     },
     hide() {
       screen.hidden = true;
     },
-    handle(menu) {
-      const edges = menuEdges(menu, previousMenu);
-      previousMenu = menu;
-      const step = navigateMenu(selected, items.length, edges);
-      if (step.index !== selected) {
-        select(step.index);
-      }
-      if (step.confirmed) {
-        items[selected]?.activate();
-      }
+    handle(intents) {
+      menu.handle(menuEdges(intents, previousMenu));
+      previousMenu = intents;
     },
   };
 }
