@@ -8,19 +8,14 @@ import type {
   SimState,
   TrapState,
 } from '../sim/state';
+import { ENEMIES } from '../data/enemies';
 import { SETS } from '../data/sets';
 import type { RenderContent } from './context';
 
 export const FIXTURE_CONTENT: RenderContent = {
   classes: [{ id: 'mage' }],
   sets: SETS,
-  enemies: [
-    { id: 'desagreable', behaviour: 'rusher' },
-    { id: 'random', behaviour: 'horde' },
-    { id: 'male-alpha', behaviour: 'heavy' },
-    { id: 'meprisant', behaviour: 'shooter' },
-    { id: 'couvre-feu', behaviour: 'boss' },
-  ],
+  enemies: ENEMIES.map(({ id, behaviour }) => ({ id, behaviour })),
   traps: [
     {
       id: 'caisson-de-basse',
@@ -54,12 +49,15 @@ interface Breed {
   share: number;
 }
 
-const BREEDS: readonly Breed[] = [
-  { kind: 'random', radius: 7, speed: 1.3, holdAt: 0, share: 0.42 },
-  { kind: 'desagreable', radius: 9, speed: 2.2, holdAt: 0, share: 0.28 },
-  { kind: 'male-alpha', radius: 14, speed: 0.6, holdAt: 0, share: 0.14 },
-  { kind: 'meprisant', radius: 10, speed: 1, holdAt: 300, share: 0.16 },
-];
+const BREEDS: readonly Breed[] = ENEMIES.filter(({ behaviour }) => behaviour !== 'boss').map(
+  (def) => ({
+    kind: def.id,
+    radius: def.radius,
+    speed: def.speed,
+    holdAt: def.behaviour === 'shooter' ? 300 : 0,
+    share: def.id === 'random' ? 0.2 : 0.08,
+  }),
+);
 const BOSS: Breed = { kind: 'couvre-feu', radius: 40, speed: 0.4, holdAt: 240, share: 0 };
 const ARENA = { width: 1600, height: 1000 };
 const CORE_RADIUS = 46;
@@ -88,7 +86,7 @@ function pickBreed(rng: RngState): Breed {
   return BREEDS[0] ?? BOSS;
 }
 
-function at<T extends object>(entity: T, x: number, y: number): T & Positioned {
+export function at<T extends object>(entity: T, x: number, y: number): T & Positioned {
   return { ...entity, x, y, prevX: x, prevY: y };
 }
 
@@ -125,7 +123,7 @@ export function spawnEnemy(state: SimState, breed: Breed, anywhere: boolean): En
       target: 'core',
       attackCooldown: 0,
       slowFactor: 1,
-      stunTicks: 0,
+      stunTicks: state.nextEntityId % 12 === 0 ? 1_000_000 : 0,
       marked: false,
       isBoss: breed === BOSS,
     },

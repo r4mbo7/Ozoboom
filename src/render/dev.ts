@@ -1,6 +1,7 @@
 import { TICK_MS } from '../shared/tempo';
 import { applyModifiers } from '../sim/stats';
 import { FIXTURE_CONTENT, type FixtureEvent, createFixtureState } from './fixture';
+import { type SheetPose, killMasks, layMasks } from './fixture-sheet';
 import { advanceFixture } from './fixture-step';
 import { createRenderer } from './index';
 import { PALETTE_TOKENS, paletteAt } from '../shared/palette';
@@ -43,6 +44,14 @@ const state = createFixtureState({
   showcase: params.has('showcase'),
 });
 state.core.hp = (state.core.maxHp * count('coreHp', 100)) / 100;
+const sheet = params.has('sheet') ? count('sheet', 32) : null;
+if (sheet !== null) {
+  layMasks(state, sheet, (params.get('pose') ?? 'awake') as SheetPose);
+}
+const dieAt = params.has('dieAt') ? count('dieAt', 0) : null;
+if (params.get('clean') === '1') {
+  element('.panel').style.display = 'none';
+}
 const player = state.players[0];
 if (player !== undefined && params.has('trapRadius')) {
   applyModifiers(player, [{ stat: 'trapRadiusMul', mul: count('trapRadius', 1) }]);
@@ -134,12 +143,25 @@ if (logFps) {
   console.info(`[render-bench] gpu=${gpu}`);
 }
 
+// A mask sheet stands still: the tick only runs, for the animations and the farewell.
+function advance(events: readonly FixtureEvent[]) {
+  if (sheet === null) {
+    advanceFixture(state, events);
+    return;
+  }
+  state.tick += 1;
+  state.events = [];
+  if (state.tick === dieAt) {
+    killMasks(state);
+  }
+}
+
 if (frozenAt !== null) {
   stats.textContent = `Figé au tick ${String(frozenAt)} · ${population}`;
   const inject = (params.get('inject') ?? '').split(',').filter(Boolean) as FixtureEvent[];
   const injectAt = count('injectAt', frozenAt) - 1;
   while (state.tick < frozenAt) {
-    advanceFixture(state, state.tick === injectAt ? inject : []);
+    advance(state.tick === injectAt ? inject : []);
     pinHour();
     renderer.render(state, 0);
   }
@@ -156,7 +178,7 @@ function frame(now: number) {
   previous = now;
   if (frozenAt === null) {
     while (accumulator >= TICK_MS) {
-      advanceFixture(state, queued);
+      advance(queued);
       queued = [];
       accumulator -= TICK_MS;
     }
