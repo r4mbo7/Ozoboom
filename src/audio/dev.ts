@@ -9,13 +9,15 @@ import {
   isBeatTick,
   isPhraseTick,
 } from '../shared/tempo';
-import type { GameStatus, SetSegment, SimEvent, SimState } from '../sim/state';
+import type { GameStatus, SetSegment, SimEvent, SimState, SpeakerState } from '../sim/state';
 import { TICK_SECONDS } from './clock';
 import { CROSSFADE_SECONDS, createFader } from './fade';
 import { createAudioEngine, heardNow } from './index';
+import { SPEAKER_LAYER_IDS, type SpeakerLayerId } from './speaker-layers';
 import type { AudioEngine, Mood } from './types';
 
 const BREAK_BARS = 4;
+const PLUG_TICKS = 2 * TICKS_PER_BAR;
 const MAX_TICKS_PER_FRAME = 8;
 const SAMPLE_RATE = 48_000;
 
@@ -90,6 +92,14 @@ function createFixture(): SimState {
     set: { tier: 0, segment: 'buildup', phrase: 0, bar: 0, beat: 0, segmentStartTick: 0 },
     core: { x: 800, y: 500, radius: 48, hp: 1000, maxHp: 1000, watts: 0 },
     players: [],
+    speakers: SPEAKER_LAYER_IDS.map((id): SpeakerState => ({
+      id,
+      x: 0,
+      y: 0,
+      radius: 60,
+      plugTicks: 0,
+      plugged: false,
+    })),
     enemies: [],
     projectiles: [],
     traps: [],
@@ -118,12 +128,32 @@ class FakeSet {
     this.entering = segment;
   }
 
+  plug(id: SpeakerLayerId): void {
+    const speaker = this.state.speakers?.find((candidate) => candidate.id === id);
+    if (speaker !== undefined && !speaker.plugged) {
+      speaker.plugTicks = 1;
+    }
+  }
+
+  unplug(id: SpeakerLayerId): void {
+    const speaker = this.state.speakers?.find((candidate) => candidate.id === id);
+    if (speaker !== undefined) {
+      speaker.plugTicks = 0;
+      speaker.plugged = false;
+    }
+  }
+
+  isPlugged(id: SpeakerLayerId): boolean {
+    return this.state.speakers?.some((speaker) => speaker.id === id && speaker.plugged) ?? false;
+  }
+
   step(): void {
     const { state } = this;
     state.events.length = 0;
     if (state.status === 'running') {
       state.tick += 1;
       this.keepTime();
+      this.keepSpeakers();
     }
     if (this.entering !== null && (isBarTick(state.tick) || state.status !== 'running')) {
       state.set.segment = this.entering;
@@ -133,6 +163,18 @@ class FakeSet {
     }
     state.events.push(...this.queued);
     this.queued.length = 0;
+  }
+
+  private keepSpeakers(): void {
+    for (const speaker of this.state.speakers ?? []) {
+      if (speaker.plugTicks > 0 && !speaker.plugged) {
+        speaker.plugTicks += 1;
+        if (speaker.plugTicks >= PLUG_TICKS) {
+          speaker.plugged = true;
+          this.state.events.push({ type: 'speakerPlugged', speakerId: speaker.id });
+        }
+      }
+    }
   }
 
   private keepTime(): void {
@@ -367,6 +409,74 @@ async function renderOffline(ending: 'won' | 'lost'): Promise<OfflineReport> {
     beforeMute: peakOf(buffer, muteAt - BAR_SECONDS, muteAt),
     afterMute: peakOf(buffer, muteAt + 0.02, muteAt + BAR_SECONDS),
     drift,
+  };
+}
+
+const LAYERS_BARS = 18;
+const LAYERS_SECONDS = 30;
+const LAYERS_BREAK_BAR = 11;
+const LAYERS_PLUG_BARS: readonly (readonly [SpeakerLayerId, number])[] = [
+  ['dome-chill', 0],
+  ['foret', 2],
+  ['sub', 4],
+  ['cercle-acid', 6],
+];
+
+function playLayers(set: FakeSet, tick: number, plugging: boolean): void {
+  const bar = barOfTick(tick);
+  if (tick === 1) {
+    set.state.set.phrase = 3;
+  }
+  if (plugging && tick % TICKS_PER_BAR === 1) {
+    for (const [id, plugBar] of LAYERS_PLUG_BARS) {
+      if (bar === plugBar) {
+        set.plug(id);
+      }
+    }
+  }
+  if (!isBarTick(tick)) {
+    return;
+  }
+  if (bar === LAYERS_BREAK_BAR) {
+    set.enter('break');
+  }
+}
+
+interface LayersReport {
+  peak: number;
+  clipped: number;
+  allOnPeak: number;
+  bareAllOnPeak: number;
+  drift: DriftStats;
+  wav: Blob;
+}
+
+async function renderLayers(): Promise<LayersReport> {
+  const lastPlugBar = Math.max(...LAYERS_PLUG_BARS.map(([, bar]) => bar));
+  const from = (lastPlugBar + 2) * BAR_SECONDS;
+  const until = LAYERS_BARS * BAR_SECONDS;
+  const { buffer, drift } = await render(
+    LAYERS_BARS,
+    LAYERS_SECONDS,
+    (set, tick) => {
+      playLayers(set, tick, true);
+    },
+    null,
+  );
+  const bare = await render(
+    LAYERS_BARS,
+    LAYERS_SECONDS,
+    (set, tick) => {
+      playLayers(set, tick, false);
+    },
+    null,
+  );
+  return {
+    ...clippingOf(buffer),
+    allOnPeak: peakOf(buffer, from, until),
+    bareAllOnPeak: peakOf(bare.buffer, from, until),
+    drift,
+    wav: wavOf(buffer),
   };
 }
 
@@ -821,6 +931,26 @@ root.innerHTML = `
       </dl>
     </section>
     <section>
+      <h2>Couches des enceintes</h2>
+      <p style="color: var(--texte); margin-bottom: 0.75rem">
+        Un interrupteur branche l'enceinte : la couche s'annonce étouffée pendant deux mesures, puis entre sur le temps d'après, filtre ouvert sur une mesure.
+      </p>
+      <div class="row">
+        <span class="label">Enceintes</span>
+        ${SPEAKER_LAYER_IDS.map((id) => `<button type="button" data-speaker="${id}" aria-pressed="false">${id}</button>`).join('')}
+      </div>
+      <div class="row">
+        <button type="button" data-layers>Rendre 30 s, une couche à la fois</button>
+        <a data-out="layersDownload" download="ozoboom-couches-30s.wav" hidden>Télécharger le WAV</a>
+      </div>
+      <dl>
+        <dt>Rendu</dt><dd data-out="layers">pas encore lancé</dd>
+        <dt>Crête</dt><dd data-out="layersPeak">-</dd>
+        <dt>Crête, tout allumé</dt><dd data-out="layersAllOn">-</dd>
+        <dt>Écart kick et tick</dt><dd data-out="layersDrift">-</dd>
+      </dl>
+    </section>
+    <section>
       <h2>Rendu de référence, 60 secondes</h2>
       <p style="color: var(--texte); margin-bottom: 0.75rem">
         Musique seule : montée en couches de 12 mesures, break de 4 mesures, drop de 20 mesures. Niveau efficace par bande, en dBFS.
@@ -1053,7 +1183,7 @@ root.addEventListener('click', (event) => {
   if (!(target instanceof HTMLButtonElement)) {
     return;
   }
-  const { action, segment, phrase, tier, status, offline } = target.dataset;
+  const { action, segment, phrase, tier, status, offline, speaker } = target.dataset;
   const { state } = fake;
   if (action === 'start') {
     void engine.start().then(() => {
@@ -1070,6 +1200,33 @@ root.addEventListener('click', (event) => {
     target.setAttribute('aria-pressed', String(paused));
   } else if (action === 'reset') {
     drift = emptyStats();
+  } else if (speaker !== undefined) {
+    const id = speaker as SpeakerLayerId;
+    if (fake.isPlugged(id) || target.getAttribute('aria-pressed') === 'true') {
+      fake.unplug(id);
+      target.setAttribute('aria-pressed', 'false');
+    } else {
+      fake.plug(id);
+      target.setAttribute('aria-pressed', 'true');
+    }
+  } else if (target.dataset.layers !== undefined) {
+    show('layers', 'rendu en cours...');
+    void renderLayers().then((report) => {
+      show('layers', `${String(LAYERS_SECONDS)} s, ${String(LAYERS_BARS)} mesures`);
+      show(
+        'layersPeak',
+        `${report.peak.toFixed(3)} (${dbOf(report.peak)}FS), ${String(report.clipped)} échantillons écrêtés`,
+      );
+      show(
+        'layersAllOn',
+        `${report.allOnPeak.toFixed(3)} (${dbOf(report.allOnPeak)}FS), ${report.bareAllOnPeak.toFixed(3)} sans les enceintes`,
+      );
+      show(
+        'layersDrift',
+        `${String(report.drift.count)} temps, moyen ${ms(report.drift.sum / report.drift.count)}, max ${ms(report.drift.worst)}`,
+      );
+      downloadLink('layersDownload', report.wav);
+    });
   } else if (segment !== undefined) {
     fake.enter(segment as SetSegment);
   } else if (phrase !== undefined) {

@@ -69,6 +69,26 @@ describe('layersFor', () => {
   });
 });
 
+describe('layersFor, speakers', () => {
+  it('has no speaker layer until a speaker is plugged', () => {
+    expect(layersFor('drop', 0, 0).speakers).toEqual([]);
+  });
+
+  it('adds one layer per plugged speaker, in a fixed order, and ignores unknown ids', () => {
+    const some = layersFor('buildup', 0, 0, ['cercle-acid', 'dome-chill', 'inconnue']);
+    const all = layersFor('drop', 0, 0, ['cercle-acid', 'sub', 'foret', 'dome-chill']);
+
+    expect(some.speakers).toEqual(['dome-chill', 'cercle-acid']);
+    expect(all.speakers).toEqual(['dome-chill', 'foret', 'sub', 'cercle-acid']);
+  });
+
+  it('keeps the plugged layers through the whole set, break included', () => {
+    for (const segment of ['buildup', 'break', 'drop'] as const) {
+      expect(layersFor(segment, 1, 5, ['foret', 'sub']).speakers).toEqual(['foret', 'sub']);
+    }
+  });
+});
+
 describe('breakCueAt', () => {
   const dropTick = 20 * TICKS_PER_BAR;
   const beforeDrop = (ticks: number) => breakCueAt(dropTick, dropTick - ticks);
