@@ -38,6 +38,7 @@ Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distingue
 - Festivalier en détresse : masque pâle et inquiet, croix de soin qui pulse au-dessus. Il n'est pas gris : c'est quelqu'un à aider.
 - Décor : rive du lac, arbres, ombres portées selon la position du soleil, reflets sur l'eau, lucioles la nuit.
 - Les pièges ressemblent au matériel de festival : caisson de basse, laser, brumisateur, déco UV, stroboscope.
+- Pièges, couleur de leur effet : caisson `turquoise`, laser `mage`, brumisateur `healer`, déco UV `or`, stroboscope `texte`. Le niveau se lit à son nombre de traits sous la silhouette. Ramassables : vibes `or`, watts `turquoise`. Noyau : la part allumée de l'anneau extérieur `or` est la vie restante.
 - Agrès de cirque : une silhouette par agrès, faite de traits et de cercles, la couleur de sa classe en renfort. Le ruban arc-en-ciel est le seul objet arc-en-ciel permanent du jeu.
 - Enceintes annexes : un stack gris et son câble, éteint ; un anneau qui se remplit sur le temps pendant le branchement ; une fois branchée, l'enceinte émet comme le noyau, dans sa couleur (Dôme chill `healer`, Forêt `turquoise`, Sub `or`, Cercle acid `mage`).
 

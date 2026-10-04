@@ -13,8 +13,13 @@ interface TrapView {
   readonly outline: Sprite;
   readonly body: Sprite;
   readonly beam: Sprite;
+  readonly pips: readonly Sprite[];
   reach: number;
 }
+
+const MAX_PIPS = 5;
+const PIP_SPACING = 0.42;
+const PIP_LENGTH = 5;
 
 export interface TrapsFamily extends Family {
   reachOf(id: EntityId): number | undefined;
@@ -36,10 +41,11 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
       outline: add(layers.traps, t.traps.shockwave),
       body: add(layers.traps, t.traps.shockwave),
       beam: add(layers.fx, t.beam, 0),
+      pips: Array.from({ length: MAX_PIPS }, () => add(layers.traps, t.pip)),
       reach: 0,
     }),
     (view) => {
-      hide(view.halo, view.outline, view.body, view.beam);
+      hide(view.halo, view.outline, view.body, view.beam, ...view.pips);
     },
   );
 
@@ -57,7 +63,7 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
         const shape = t.traps[kind];
         const color = palette[TRAP_TOKENS[kind]];
         const facing = Math.atan2(trap.direction.y, trap.direction.x);
-        const { body, halo, beam, outline } = view;
+        const { body, halo, beam, outline, pips } = view;
         body.texture = shape.texture;
         setTint(body, color);
         body.visible = true;
@@ -65,6 +71,23 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
         body.scale.set(look.radius / shape.radius);
         body.rotation = kind === 'beam' ? facing : 0;
         placeOutline(outline, body, shape.texture, shape.radius, frame);
+
+        const shown = Math.min(trap.level, MAX_PIPS);
+        const ringRadius = look.radius * 1.25;
+        for (let index = 0; index < MAX_PIPS; index += 1) {
+          const pip = pips[index];
+          if (pip === undefined) {
+            continue;
+          }
+          pip.visible = index < shown;
+          if (pip.visible) {
+            const angle = Math.PI / 2 + (index - (shown - 1) / 2) * PIP_SPACING;
+            setTint(pip, color);
+            pip.position.set(x + Math.cos(angle) * ringRadius, y + Math.sin(angle) * ringRadius);
+            pip.rotation = angle;
+            pip.scale.set(PIP_LENGTH / (t.pip.radius * 2));
+          }
+        }
 
         halo.visible = true;
         setTint(halo, color);
@@ -78,7 +101,7 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
           setTint(beam, color);
           beam.position.set(x, y);
           beam.rotation = facing;
-          beam.scale.set(view.reach / BEAM_LENGTH, (look.effect.width * 3) / (t.beam.radius * 2));
+          beam.scale.set(view.reach / BEAM_LENGTH, look.effect.width / 20);
           beam.alpha = (frame.calm ? 0.7 : 0.75 + 0.25 * pulse) * light.haloAlpha;
         }
       }

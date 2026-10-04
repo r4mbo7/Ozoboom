@@ -36,9 +36,9 @@ export function hide(...sprites: Sprite[]): void {
 }
 
 // Pixi parses the color, allocating, on every tint write, even an unchanged one.
-export function setTint(sprite: Sprite, color: number): void {
-  if (sprite.tint !== color) {
-    sprite.tint = color;
+export function setTint(target: { tint: number }, color: number): void {
+  if (target.tint !== color) {
+    target.tint = color;
   }
 }
 

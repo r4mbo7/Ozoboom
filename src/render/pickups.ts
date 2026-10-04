@@ -6,7 +6,7 @@ import { lerp } from './motion';
 import { add, hide, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
-const PICKUP_RADIUS = 6;
+const PICKUP_RADIUS = 7;
 
 interface PickupView {
   readonly outline: Sprite;
