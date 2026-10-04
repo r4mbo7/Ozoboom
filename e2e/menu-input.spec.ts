@@ -1,5 +1,12 @@
 import { type Page, expect as baseExpect, test } from '@playwright/test';
-import { collectConsoleErrors, repeatUntil } from './game';
+import {
+  PAD,
+  collectConsoleErrors,
+  plugFakeGamepad,
+  repeatUntil,
+  tapButtonUntil,
+  tiltLeftStick,
+} from './game';
 
 test.describe.configure({ timeout: 120_000 });
 const expect = baseExpect.configure({ timeout: 30_000 });
@@ -149,5 +156,42 @@ test('Space does nothing in any menu, even after a click on a button', async ({ 
   await expect(form).toBeHidden();
   await expectSpaceIgnored(page);
   await expect(end).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('the left stick alone walks through a menu, and still moves the player in game', async ({
+  page,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await plugFakeGamepad(page);
+  await page.goto('./?dev=fast');
+  const play = page.getByRole('button', { name: 'Jouer' });
+  const sound = page.getByRole('switch', { name: /^Son/ });
+  await expect(play).toHaveAttribute('aria-current', 'true');
+
+  await repeatUntil(
+    () => tiltLeftStick(page, 0.1, 0.9),
+    async () => (await sound.getAttribute('aria-current')) === 'true',
+  );
+  await expect(page.locator('.ui-title .ui-hint')).toContainText('Stick gauche');
+  await tapButtonUntil(
+    page,
+    PAD.A,
+    async () => (await sound.getAttribute('aria-checked')) === 'false',
+  );
+  await repeatUntil(
+    () => tiltLeftStick(page, -0.9, 0.2),
+    async () => (await play.getAttribute('aria-current')) === 'true',
+  );
+  await tapButtonUntil(page, PAD.A, () => page.getByRole('region', { name: 'Pièges' }).isVisible());
+
+  const playerX = () => page.evaluate(() => window.ozoboom?.state.players[0]?.x ?? 0);
+  const start = await playerX();
+  await page.evaluate(() => {
+    if (window.fakePad !== undefined) {
+      window.fakePad.axes[0] = 1;
+    }
+  });
+  await expect.poll(playerX).toBeGreaterThan(start + 50);
   expect(errors).toEqual([]);
 });

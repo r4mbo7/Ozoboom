@@ -41,7 +41,7 @@ const KEYBOARD: DevicePrompts = {
 const GAMEPAD: DevicePrompts = {
   name: 'Manette',
   style: 'button',
-  navigate: ['Croix'],
+  navigate: ['Stick gauche', 'Croix'],
   confirm: 'A',
   back: 'B',
   skill: 'X',

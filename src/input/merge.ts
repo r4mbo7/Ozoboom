@@ -1,10 +1,12 @@
 import type { Vec2 } from '../sim/state';
 import { IDLE_INPUT } from '../sim/commands';
 import {
+  MENU_DIRECTION_CONTROLS,
   MENU_REPEAT_DELAY_MS,
   MENU_REPEAT_INTERVAL_MS,
   TRAP_SLOT_CONTROLS,
   type Control,
+  type MenuDirection,
 } from './bindings';
 import type { InputDevice, InputSnapshot, MenuIntents } from './intents';
 
@@ -24,8 +26,6 @@ export interface KeyboardMouseFrame extends DeviceFrame {
 export interface GamepadFrame extends DeviceFrame {
   readonly disconnected: boolean;
 }
-
-type MenuDirection = 'up' | 'down' | 'left' | 'right';
 
 export interface MergeState {
   readonly device: InputDevice;
@@ -57,16 +57,17 @@ export function mergeFrames(
   const aimFromPointer = keyboardMouse.pointerMoved || (state.aimFromPointer && !stickAimed);
 
   const nextRepeatAt = { ...state.nextRepeatAt };
-  const repeat = (direction: MenuDirection, control: Control) => {
+  const repeat = (direction: MenuDirection) => {
+    const control = MENU_DIRECTION_CONTROLS[direction];
     const step = stepRepeat(state.nextRepeatAt[direction], pressed(control), held(control), now);
     nextRepeatAt[direction] = step.nextAt;
     return step.fire;
   };
   const menu: MenuIntents = {
-    up: repeat('up', 'menuUp'),
-    down: repeat('down', 'menuDown'),
-    left: repeat('left', 'menuLeft'),
-    right: repeat('right', 'menuRight'),
+    up: repeat('up'),
+    down: repeat('down'),
+    left: repeat('left'),
+    right: repeat('right'),
     confirm: pressed('confirm'),
     back: pressed('back'),
   };

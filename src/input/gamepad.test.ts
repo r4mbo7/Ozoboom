@@ -43,6 +43,25 @@ describe('reduceGamepad', () => {
     expect([...second.frame.held]).toEqual(['placeTrap', 'confirm']);
   });
 
+  it('presses a menu direction when the left stick is pushed, holds it while pushed', () => {
+    const pad = fakeGamepad({ axes: [0, -0.9, 0, 0] });
+
+    const first = reduceGamepad(INITIAL_GAMEPAD_STATE, [pad]);
+    const second = reduceGamepad(first.state, [pad]);
+
+    expect(first.frame.presses).toEqual(['menuUp']);
+    expect(second.frame.presses).toEqual([]);
+    expect([...second.frame.held]).toEqual(['menuUp']);
+  });
+
+  it('counts the push of another gamepad as a new press', () => {
+    const first = reduceGamepad(INITIAL_GAMEPAD_STATE, [fakeGamepad({ axes: [1, 0, 0, 0] })]);
+
+    const other = reduceGamepad(first.state, [null, fakeGamepad({ index: 1, axes: [1, 0, 0, 0] })]);
+
+    expect(other.frame.presses).toEqual(['menuRight']);
+  });
+
   it('stays inactive while the sticks rest inside the dead zone', () => {
     const pad = fakeGamepad({ axes: [0.15, 0, 0, -0.15] });
 

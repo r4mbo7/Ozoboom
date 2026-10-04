@@ -177,6 +177,81 @@ describe('menu repeat', () => {
   });
 });
 
+describe('menu left stick', () => {
+  const tilt = (x: number, y: number) => fakeGamepad({ axes: [x, y, 0, 0] });
+
+  it('moves the selection once the stick is pushed past 0.6', () => {
+    const input = createHarness();
+    input.plug(tilt(0.55, 0));
+    const soft = input.poll(0).menu.right;
+    input.plug(tilt(0.6, 0));
+    const firm = input.poll(16).menu.right;
+
+    expect([soft, firm]).toEqual([false, true]);
+  });
+
+  it('counts a new push only after the stick comes back under 0.3', () => {
+    const input = createHarness();
+    const pushes = [1, 0.4, 1, 0.25, 0.8].map((x, poll) => {
+      input.plug(tilt(x, 0));
+      return input.poll(poll * 16).menu.right;
+    });
+
+    expect(pushes).toEqual([true, false, false, false, true]);
+  });
+
+  it('repeats after 400 ms then every 120 ms while held, like the directional pad', () => {
+    const input = createHarness();
+    input.plug(tilt(0, 1));
+
+    const fired = [0, 16, 399, 400, 519, 520].map((now) => input.poll(now).menu.down);
+
+    expect(fired).toEqual([true, false, false, true, false, true]);
+  });
+
+  it('keeps repeating while the stick stays past 0.3', () => {
+    const input = createHarness();
+    input.plug(tilt(0, -1));
+    input.poll(0);
+    input.plug(tilt(0, -0.35));
+
+    expect(input.poll(400).menu.up).toBe(true);
+  });
+
+  it('follows the dominant direction only, never a diagonal', () => {
+    const input = createHarness();
+    input.plug(tilt(0.7, -0.65));
+    const mostlyRight = input.poll(0).menu;
+    input.plug(tilt(0, 0));
+    input.poll(16);
+    input.plug(tilt(-0.5, 0.8));
+    const mostlyDown = input.poll(32).menu;
+
+    expect(mostlyRight).toMatchObject({ up: false, down: false, left: false, right: true });
+    expect(mostlyDown).toMatchObject({ up: false, down: true, left: false, right: false });
+  });
+
+  it('turns to a new direction when rolled along the rim, once the first one is released', () => {
+    const input = createHarness();
+    input.plug(tilt(1, 0));
+    input.poll(0);
+    input.plug(tilt(0.5, 0.86));
+    const halfway = input.poll(16).menu;
+    input.plug(tilt(0.25, 0.97));
+    const past = input.poll(32).menu;
+
+    expect(halfway).toMatchObject({ down: false, right: false });
+    expect(past).toMatchObject({ down: true, right: false });
+  });
+
+  it('ignores the right stick', () => {
+    const input = createHarness();
+    input.plug(fakeGamepad({ axes: [0, 0, 1, 1] }));
+
+    expect(input.poll(0).menu).toMatchObject({ up: false, down: false, left: false, right: false });
+  });
+});
+
 describe('device detection', () => {
   it('starts with no device', () => {
     expect(createHarness().poll().device).toBe('none');
