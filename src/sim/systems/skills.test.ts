@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerInput } from '../commands';
-import { EFFECTS_OPTIONS, addEnemy, commandFor, enemyDefinition, stepAndRecord } from '../fixtures';
+import { EFFECTS_OPTIONS, commandFor, placeEnemy, stepAndRecord } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { EnemyState, PlayerState, SimState } from '../state';
-
-const CURFEW = enemyDefinition('curfew');
 
 function game(
   classId = 'raver',
@@ -23,7 +21,7 @@ function game(
 }
 
 function frozenBoss(state: SimState, x: number, y: number): EnemyState {
-  const enemy = addEnemy(state, CURFEW, x, y);
+  const enemy = placeEnemy(state, 'curfew', x, y);
   enemy.stunTicks = 100_000;
   return enemy;
 }

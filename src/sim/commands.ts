@@ -9,7 +9,8 @@ export interface PlayerInput {
 }
 
 export type PlayerAction =
-  | { type: 'placeTrap'; trapId: string; x: number; y: number; angle: number }
+  // The trap faces (dx, dy), normalized by the sim; a zero vector faces the aim of the player.
+  | { type: 'placeTrap'; trapId: string; x: number; y: number; dx: number; dy: number }
   | { type: 'chooseUpgrade'; upgradeId: string };
 
 export interface PlayerCommand {

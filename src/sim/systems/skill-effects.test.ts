@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { EFFECTS_OPTIONS, addEnemy, commandFor, enemyDefinition, stepAndRecord } from '../fixtures';
+import { EFFECTS_OPTIONS, commandFor, placeEnemy, stepAndRecord } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { EnemyState, PlayerState, SimState } from '../state';
-
-const GRUMP = enemyDefinition('grump');
-const CURFEW = enemyDefinition('curfew');
 
 function game(
   classId: string,
@@ -36,8 +33,8 @@ describe('laser show', () => {
 
   it('hurts every tick of its duration the enemies around the caster', () => {
     const { simulation, state, player } = castOnDrop();
-    const inside = frozen(addEnemy(state, CURFEW, player.x, player.y - 200));
-    const outside = frozen(addEnemy(state, CURFEW, player.x, player.y - 300 - 40 - 1));
+    const inside = frozen(placeEnemy(state, 'curfew', player.x, player.y - 200));
+    const outside = frozen(placeEnemy(state, 'curfew', player.x, player.y - 300 - 40 - 1));
 
     simulation.step([commandFor(0, { ultimate: true })]);
     stepAndRecord(simulation, 94);
@@ -52,7 +49,7 @@ describe('laser show', () => {
 
   it('follows its caster', () => {
     const { simulation, state, player } = castOnDrop();
-    const left = frozen(addEnemy(state, CURFEW, player.x, player.y - 200));
+    const left = frozen(placeEnemy(state, 'curfew', player.x, player.y - 200));
 
     simulation.step([commandFor(0, { ultimate: true })]);
     player.x = left.x + 1000;
@@ -72,7 +69,7 @@ describe('barrier', () => {
 
   it('pushes the enemies inside it out to its edge', () => {
     const { simulation, state, player } = game('roadie');
-    const caught = addEnemy(state, GRUMP, player.x, player.y - 50);
+    const caught = placeEnemy(state, 'grump', player.x, player.y - 50);
 
     simulation.step([commandFor(0, { skill: true })]);
 
@@ -86,7 +83,7 @@ describe('barrier', () => {
     if (barrier === undefined) {
       throw new Error('expected a barrier');
     }
-    const pressing = [addEnemy(state, GRUMP, 0, 0), addEnemy(state, GRUMP, 0, 0)];
+    const pressing = [placeEnemy(state, 'grump', 0, 0), placeEnemy(state, 'grump', 0, 0)];
     const pressAt = () => {
       for (const enemy of pressing) {
         enemy.x = barrier.x + 50;
@@ -127,7 +124,7 @@ describe('barrier', () => {
     }
     barrier.hp = 5;
     stepAndRecord(simulation, 10);
-    addEnemy(state, GRUMP, barrier.x, barrier.y + 10);
+    placeEnemy(state, 'grump', barrier.x, barrier.y + 10);
 
     simulation.step([]);
 

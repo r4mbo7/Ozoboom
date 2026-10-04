@@ -1,4 +1,4 @@
-import type { SetDefinition, TierDefinition } from '../data/types';
+import type { GameContent, SetDefinition, TierDefinition } from '../data/types';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
 import type { GameStatus, SetProgress } from '../sim/state';
 
@@ -19,6 +19,14 @@ export interface LineupInput {
   tick: number;
   status: GameStatus;
   set: Pick<SetProgress, 'tier' | 'segment' | 'segmentStartTick'>;
+}
+
+export function setOf(content: GameContent, setId: string): SetDefinition {
+  const set = content.sets.find((candidate) => candidate.id === setId);
+  if (set === undefined) {
+    throw new Error(`unknown set "${setId}"`);
+  }
+  return set;
 }
 
 export function lineupSlots(set: SetDefinition): LineupSlot[] {

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { COMBAT_OPTIONS, placeEnemy, stepAndRecord } from '../fixtures';
+import { COMBAT_OPTIONS, FIXTURE_SHOOTER, placeEnemy, stepAndRecord } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { PlayerState } from '../state';
-import { ENEMY_PROJECTILE_RADIUS } from './enemy-attacks';
 
 function arena(): { simulation: Simulation; player: PlayerState } {
   const simulation = createSimulation(COMBAT_OPTIONS);
@@ -105,7 +104,7 @@ describe('enemy attacks', () => {
       x: core.x,
       vx: 0,
       vy: 7,
-      radius: ENEMY_PROJECTILE_RADIUS,
+      radius: FIXTURE_SHOOTER.ranged?.projectileRadius,
       damage: 5,
       ticksLeft: 50,
     });

@@ -4,7 +4,7 @@ import type { SetDefinition } from '../data/types';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
 import type { GameStatus, SetSegment } from '../sim/state';
 import { UI_FIXTURE_CONTENT } from './fixtures';
-import { type LineupInput, lineupCursor, lineupSlots, ticksToDrop } from './lineup';
+import { type LineupInput, lineupCursor, lineupSlots, setOf, ticksToDrop } from './lineup';
 
 const set: SetDefinition = {
   ...firstSet(),
@@ -34,6 +34,21 @@ function at(
 ): LineupInput {
   return { tick, status, set: { tier, segment, segmentStartTick } };
 }
+
+describe('setOf', () => {
+  it('finds the set the game plays, wherever it sits in the content', () => {
+    const encore: SetDefinition = { ...set, id: 'encore' };
+    const content = { ...UI_FIXTURE_CONTENT, sets: [...UI_FIXTURE_CONTENT.sets, encore] };
+
+    const played = setOf(content, 'encore');
+
+    expect(played).toBe(encore);
+  });
+
+  it('rejects a set the content does not have', () => {
+    expect(() => setOf(UI_FIXTURE_CONTENT, 'nope')).toThrow('unknown set "nope"');
+  });
+});
 
 describe('lineupSlots', () => {
   it('lists each phrase, then a break and a drop per tier, then the sunrise', () => {

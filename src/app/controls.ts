@@ -1,7 +1,6 @@
 import type { TrapDefinition } from '../data/types';
 import type { GameplayIntents, InputSnapshot } from '../input/intents';
 import { selectTrap } from '../ui';
-import { angleOf } from '../shared/angle';
 import { length, normalize } from '../shared/vec';
 import { IDLE_INPUT, type PlayerAction, type PlayerCommand } from '../sim/commands';
 import type { PlayerState, Vec2 } from '../sim/state';
@@ -57,7 +56,14 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
   const actions: PlayerAction[] = [];
   if (request.placeTrap && trap !== undefined) {
     const spot = trapSpot(snapshot, player, toWorld, aim, trap);
-    actions.push({ type: 'placeTrap', trapId: trap.id, x: spot.x, y: spot.y, angle: angleOf(aim) });
+    actions.push({
+      type: 'placeTrap',
+      trapId: trap.id,
+      x: spot.x,
+      y: spot.y,
+      dx: aim.x,
+      dy: aim.y,
+    });
   }
   if (request.upgradeId !== null) {
     actions.push({ type: 'chooseUpgrade', upgradeId: request.upgradeId });

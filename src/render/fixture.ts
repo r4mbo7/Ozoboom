@@ -185,7 +185,7 @@ function createTraps(state: SimState): TrapState[] {
         kind,
         ownerId: 0,
         level: 1,
-        angle,
+        direction: { x: Math.cos(angle), y: Math.sin(angle) },
         hp: 100,
         cooldown: 0,
       },
@@ -198,6 +198,7 @@ function createTraps(state: SimState): TrapState[] {
 export function createFixtureState(options: FixtureOptions): SimState {
   const state: SimState = {
     seed: 5,
+    setId: 'soiree-v0',
     tick: 0,
     status: 'running',
     rng: { a: 5, b: 0, c: 0, d: 0 },
@@ -384,7 +385,8 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
 
   for (const trap of state.traps) {
     if (trap.kind === 'laser') {
-      trap.angle += 0.012;
+      const turned = Math.atan2(trap.direction.y, trap.direction.x) + 0.012;
+      trap.direction = { x: Math.cos(turned), y: Math.sin(turned) };
     }
   }
 

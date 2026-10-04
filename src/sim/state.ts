@@ -82,7 +82,7 @@ export interface EnemyState extends Positioned {
   stunTicks: number;
   marked: boolean;
   isBoss: boolean;
-  // Last player whose attack hit this enemy: credited with the kill.
+  // Last player whose projectile, trap or skill hit this enemy: credited with the kill.
   lastHitBy?: PlayerId;
 }
 
@@ -109,8 +109,7 @@ export interface TrapState extends Positioned {
   kind: string;
   ownerId: PlayerId;
   level: number;
-  angle: number;
-  direction?: Vec2;
+  direction: Vec2;
   hp: number;
   cooldown: number;
 }
@@ -190,6 +189,7 @@ export type SimEvent =
 
 export interface SimState {
   seed: number;
+  setId: string;
   tick: number;
   status: GameStatus;
   rng: RngState;

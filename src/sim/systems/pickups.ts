@@ -2,15 +2,12 @@ import { lookup, type ResolvedContent } from '../content';
 import type { PickupState, PlayerState, SimState } from '../state';
 import type { StepContext } from './types';
 
-// Faster than any player, so a pickup always catches the one it flies to.
-export const PICKUP_SPEED = 12;
-
-export function pickups({ state, content }: StepContext): void {
+export function pickups({ state, content, set }: StepContext): void {
   let kept = 0;
   for (const pickup of state.pickups) {
     pickup.ticksLeft -= 1;
     const collector = nearestCollector(state, content, pickup);
-    if (collector !== undefined && attract(pickup, collector)) {
+    if (collector !== undefined && attract(pickup, collector, set.pickups.speed)) {
       collect(state, pickup, collector);
       continue;
     }
@@ -48,15 +45,15 @@ function nearestCollector(
 }
 
 // Moves the pickup toward the player and returns whether it reaches them this tick.
-function attract(pickup: PickupState, player: PlayerState): boolean {
+function attract(pickup: PickupState, player: PlayerState, speed: number): boolean {
   const dx = player.x - pickup.x;
   const dy = player.y - pickup.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  if (distance <= player.radius + PICKUP_SPEED) {
+  if (distance <= player.radius + speed) {
     return true;
   }
-  pickup.x += (dx / distance) * PICKUP_SPEED;
-  pickup.y += (dy / distance) * PICKUP_SPEED;
+  pickup.x += (dx / distance) * speed;
+  pickup.y += (dy / distance) * speed;
   return false;
 }
 

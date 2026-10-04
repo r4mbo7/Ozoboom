@@ -55,19 +55,19 @@ Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick
 
 Conventions de la simulation :
 
-- `createSimulation(options)` construit l'état initial à partir d'une graine, des joueurs et du contenu. Son `step(commands)` avance d'un tick **en modifiant l'état en place** : pas de copie à chaque tick avec des centaines d'entités.
+- `createSimulation(options)` construit l'état initial à partir d'une graine, des joueurs et du contenu, et garde le set joué dans `state.setId`. Son `step(commands)` avance d'un tick **en modifiant l'état en place** : pas de copie à chaque tick avec des centaines d'entités.
 - Chaque entité mobile garde `prevX`, `prevY` : la sim les met à jour au début du pas, le rendu interpole entre `prev` et courant avec `alpha`.
 - `state.events` contient les événements du dernier pas seulement (temps, mesure, drop, mort, tir, dégâts, niveau...). La sim le vide au début de chaque pas. Rendu, audio et interface s'en servent pour les effets sans que la sim les connaisse.
 - Le tick 0 n'est simulé par aucun pas : `createSimulation` pose dans `state.events` les événements `beat`, `bar`, `phrase` et `segment` du tick 0, que le premier pas vide.
 - En `choosingUpgrade`, `won` et `lost`, le pas vide les événements et recopie `prev` mais `tick` ne bouge plus : la grille musicale et le set s'arrêtent.
 - `SetProgress.segmentStartTick` est le tick où le segment courant a commencé : les segments se comptent en mesures depuis là, car le drop a une durée variable.
 - Une fois le set fini, `set.tier` vaut `tiers.length`, au-delà du dernier palier : c'est ce qui donne `won`.
-- Statuts posés par un système et seulement lus par les autres : `slowFactor` et `stunTicks` d'un ennemi, remis à 1 et décomptés par `traps` ; `invulnerableTicks` d'un joueur, décompté par `skills`, aucun dégât tant qu'il est positif. Un piège s'oriente par `TrapState.direction`, vecteur unitaire, jamais par `angle`.
+- Statuts posés par un système et seulement lus par les autres : `slowFactor` et `stunTicks` d'un ennemi, remis à 1 et décomptés par `traps` ; `invulnerableTicks` d'un joueur, décompté par `skills`, aucun dégât tant qu'il est positif. Un piège s'oriente par `TrapState.direction`, vecteur unitaire tiré du `(dx, dy)` de l'action `placeTrap`.
 - `input.move` est borné à une longueur de 1, pas normalisé : un stick à mi-course donne la mi-vitesse, une diagonale clavier la vitesse nominale.
 - Les identifiants de contenu (`classId`, `kind`, `trapId`, `upgradeId`) sont des chaînes qui pointent dans `GameContent`. La sim résout ces références une fois à la création, puis travaille avec des tables.
 - Maths autorisées dans la sim : `+ - * /`, `Math.floor`, `Math.ceil`, `Math.abs`, `Math.min`, `Math.max`, `Math.sqrt` (arrondi correct garanti par IEEE 754). Interdites car non reproductibles d'un moteur à l'autre : `Math.sin`, `Math.cos`, `Math.atan2`, `Math.pow`, `Math.exp`, `Math.hypot`. Les angles passent par des vecteurs normalisés, pas par des radians ; `src/shared/angle.ts` convertit ceux des données et des événements sans trigonométrie de `Math`.
 - Le hasard vient d'un générateur à graine à opérations entières (sfc32), dont l'état vit dans `state.rng`.
-- Les ennemis prennent leurs dégâts par `hurtEnemy` (`src/sim/effects.ts`), joueurs et noyau par `src/sim/damage.ts`. Un projectile de joueur pose aussi `lastHitBy`, le joueur crédité du kill. `StepContext.enemyGrid` répond aux requêtes de voisinage sur les ennemis ; `enemy-steering` puis `projectiles` la reconstruisent.
+- Les ennemis prennent leurs dégâts par `hurtEnemy` (`src/sim/effects.ts`), joueurs et noyau par `src/sim/damage.ts`. `hurtEnemy` reçoit le joueur à créditer (tireur, propriétaire du piège, lanceur de la compétence) et le pose dans `lastHitBy`, repris par `enemyDied.byPlayer`. `StepContext.enemyGrid` répond aux requêtes de voisinage sur les ennemis ; `enemy-steering` puis `projectiles` la reconstruisent.
 
 ## Boucle
 

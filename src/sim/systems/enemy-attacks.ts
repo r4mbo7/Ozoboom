@@ -6,7 +6,6 @@ import type { StepContext } from './types';
 
 // Steering stops an enemy at contact up to rounding: this slack still counts it as touching.
 const CONTACT_SLACK = 1;
-export const ENEMY_PROJECTILE_RADIUS = 5;
 
 export function enemyAttacks({ state, content }: StepContext): void {
   for (const enemy of state.enemies) {
@@ -67,7 +66,7 @@ function shoot(
     prevY: enemy.y,
     vx: (dx / distance) * ranged.projectileSpeed,
     vy: (dy / distance) * ranged.projectileSpeed,
-    radius: ENEMY_PROJECTILE_RADIUS,
+    radius: ranged.projectileRadius,
     damage: enemy.damage,
     ticksLeft: ranged.rangeTicks,
     pierceLeft: 0,

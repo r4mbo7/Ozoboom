@@ -5,7 +5,7 @@ import type { SimulationOptions } from './index';
 import { hashState, runScript } from './replay';
 import type { Vec2 } from './state';
 
-const REFERENCE_HASH = 'f5de4f1a';
+const REFERENCE_HASH = '3463a2cd';
 
 const DIRECTIONS: readonly Vec2[] = [
   { x: 1, y: 0 },
@@ -24,7 +24,8 @@ const PLACE_SUBWOOFER: PlayerAction = {
   trapId: 'subwoofer',
   x: 400,
   y: 300,
-  angle: 0,
+  dx: 1,
+  dy: 0,
 };
 
 // The script cannot see the offers, so it names one upgrade per tick: the first one offered wins.

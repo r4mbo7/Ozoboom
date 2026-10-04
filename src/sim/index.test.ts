@@ -53,12 +53,13 @@ describe('createSimulation', () => {
     expect(state.players.map((player) => player.id)).toEqual([0, 1, 2, 3]);
   });
 
-  it('starts at tick 0 on the first beat of the first buildup, seeded from the seed', () => {
+  it('starts the set at tick 0 on the first beat of the first buildup, seeded from the seed', () => {
     const options = { ...FIXTURE_OPTIONS, seed: 2026 };
 
     const { state } = createSimulation(options);
 
     expect(state.seed).toBe(2026);
+    expect(state.setId).toBe('fixture-set');
     expect(state.tick).toBe(0);
     expect(state.status).toBe('running');
     expect(state.rng).toEqual(seedRng(2026));

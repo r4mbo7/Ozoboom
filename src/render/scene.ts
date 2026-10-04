@@ -470,7 +470,8 @@ export class Scene implements Renderer {
       view.body.visible = true;
       view.body.position.set(x, y);
       view.body.scale.set(look.radius / shape.radius);
-      view.body.rotation = kind === 'beam' ? trap.angle : 0;
+      const facing = Math.atan2(trap.direction.y, trap.direction.x);
+      view.body.rotation = kind === 'beam' ? facing : 0;
 
       view.halo.visible = true;
       view.halo.tint = TRAP_COLORS[kind];
@@ -481,7 +482,7 @@ export class Scene implements Renderer {
       view.beam.visible = look.effect.kind === 'beam';
       if (look.effect.kind === 'beam') {
         view.beam.position.set(x, y);
-        view.beam.rotation = trap.angle;
+        view.beam.rotation = facing;
         view.beam.scale.set(
           look.effect.length / BEAM_LENGTH,
           (look.effect.width * 3) / (t.beam.radius * 2),

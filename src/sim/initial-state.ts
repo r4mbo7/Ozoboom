@@ -44,6 +44,7 @@ export function createInitialState(
 
   return {
     seed,
+    setId: set.id,
     tick: 0,
     status: 'running',
     rng: seedRng(seed),

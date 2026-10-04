@@ -1,11 +1,8 @@
-import { TICKS_PER_BAR } from '../../shared/tempo';
 import { lookup } from '../content';
 import type { PickupKind, SimState } from '../state';
 import type { StepContext } from './types';
 
-export const PICKUP_LIFETIME_TICKS = 8 * TICKS_PER_BAR;
-
-export function deaths({ state, content }: StepContext): void {
+export function deaths({ state, content, set }: StepContext): void {
   let kept = 0;
   for (const enemy of state.enemies) {
     if (enemy.hp > 0) {
@@ -24,17 +21,25 @@ export function deaths({ state, content }: StepContext): void {
     });
     state.stats.kills += 1;
     const spread = vibesDrop > 0 && wattsDrop > 0 ? enemy.radius / 2 : 0;
+    const { lifetimeTicks } = set.pickups;
     if (vibesDrop > 0) {
-      drop(state, 'vibes', vibesDrop, enemy.x - spread, enemy.y);
+      drop(state, 'vibes', vibesDrop, enemy.x - spread, enemy.y, lifetimeTicks);
     }
     if (wattsDrop > 0) {
-      drop(state, 'watts', wattsDrop, enemy.x + spread, enemy.y);
+      drop(state, 'watts', wattsDrop, enemy.x + spread, enemy.y, lifetimeTicks);
     }
   }
   state.enemies.length = kept;
 }
 
-function drop(state: SimState, kind: PickupKind, amount: number, x: number, y: number): void {
+function drop(
+  state: SimState,
+  kind: PickupKind,
+  amount: number,
+  x: number,
+  y: number,
+  ticksLeft: number,
+): void {
   state.pickups.push({
     id: state.nextEntityId,
     kind,
@@ -43,7 +48,7 @@ function drop(state: SimState, kind: PickupKind, amount: number, x: number, y: n
     y,
     prevX: x,
     prevY: y,
-    ticksLeft: PICKUP_LIFETIME_TICKS,
+    ticksLeft,
   });
   state.nextEntityId += 1;
 }

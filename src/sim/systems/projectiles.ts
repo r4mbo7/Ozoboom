@@ -1,6 +1,6 @@
 import { damageCore, damagePlayer, playerById } from '../damage';
 import { hurtEnemy, markedDamageMul } from '../effects';
-import type { ProjectileState, SimState } from '../state';
+import type { PlayerId, ProjectileState, SimState } from '../state';
 import type { StepContext } from './types';
 
 export function projectiles({ state, content, enemyGrid }: StepContext): void {
@@ -33,19 +33,17 @@ function hitEnemies(
   projectile: ProjectileState,
   markedMul: number,
 ): boolean {
-  const byPlayer = projectile.owner.kind === 'player' ? projectile.owner.playerId : null;
+  const byPlayer = creditedPlayer(state, projectile);
   const found = grid.query(projectile.x, projectile.y, projectile.radius);
   for (let i = 0; i < found; i++) {
     const enemy = state.enemies[grid.result(i)];
     if (enemy === undefined || enemy.hp <= 0 || projectile.hitIds?.includes(enemy.id) === true) {
       continue;
     }
-    hurtEnemy(state, enemy, projectile.damage, markedMul);
-    if (byPlayer !== null) {
-      enemy.lastHitBy = byPlayer;
-      if (playerById(state, byPlayer)?.downed === false) {
-        enemy.target = byPlayer;
-      }
+    hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer);
+    const { owner } = projectile;
+    if (owner.kind === 'player' && playerById(state, owner.playerId)?.downed === false) {
+      enemy.target = owner.playerId;
     }
     if (projectile.pierceLeft <= 0) {
       return true;
@@ -54,6 +52,18 @@ function hitEnemies(
     (projectile.hitIds ??= []).push(enemy.id);
   }
   return false;
+}
+
+function creditedPlayer(state: SimState, projectile: ProjectileState): PlayerId | null {
+  const { owner } = projectile;
+  switch (owner.kind) {
+    case 'player':
+      return owner.playerId;
+    case 'trap':
+      return state.traps.find((trap) => trap.id === owner.trapId)?.ownerId ?? null;
+    case 'enemy':
+      return null;
+  }
 }
 
 function hitPlayerOrCore(state: SimState, projectile: ProjectileState): boolean {
