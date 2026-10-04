@@ -96,7 +96,7 @@ export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): S
 
 type Voice = (out: AudioNode, at: number, variant: number) => void;
 
-const DIED_DEGREES = [4, 2, 0, 5];
+const DIED_DEGREES = [4, 3, 0, 5];
 
 const VOICES: Readonly<Record<SfxName, Voice>> = {
   playerFired: (out, at) => {
@@ -181,7 +181,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
     });
   },
   levelUp: (out, at) => {
-    [0, 2, 4, 7].forEach((degree, index) => {
+    [0, 3, 4, 7].forEach((degree, index) => {
       playTone(out, at + index * 0.07, {
         wave: 'triangle',
         hz: degreeToHz(degree, 4),

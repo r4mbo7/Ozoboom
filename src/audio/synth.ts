@@ -3,6 +3,13 @@ export interface Envelope {
   attack: number;
   hold: number;
   release: number;
+  pan?: number;
+}
+
+export interface Vibrato {
+  hz: number;
+  cents: number;
+  delay: number;
 }
 
 export interface FilterSpec {
@@ -19,6 +26,7 @@ export interface ToneSpec extends Envelope {
   toHz?: number;
   glide?: number;
   detune?: number;
+  vibrato?: Vibrato;
   filter?: FilterSpec;
 }
 
@@ -69,6 +77,32 @@ function shape(context: BaseAudioContext, at: number, envelope: Envelope): [Gain
   return [amp, end];
 }
 
+function panned(amp: GainNode, out: AudioNode, pan: number | undefined): void {
+  if (pan === undefined) {
+    amp.connect(out);
+    return;
+  }
+  const panner = amp.context.createStereoPanner();
+  panner.pan.value = pan;
+  amp.connect(panner);
+  panner.connect(out);
+}
+
+function wobble(oscillator: OscillatorNode, at: number, end: number, vibrato: Vibrato): void {
+  const context = oscillator.context;
+  const lfo = context.createOscillator();
+  lfo.frequency.value = vibrato.hz;
+  const depth = context.createGain();
+  const from = Math.min(at + vibrato.delay, end);
+  depth.gain.setValueAtTime(0, at);
+  depth.gain.setValueAtTime(0, from);
+  depth.gain.linearRampToValueAtTime(vibrato.cents, Math.min(from + 0.12, end));
+  lfo.connect(depth);
+  depth.connect(oscillator.detune);
+  lfo.start(at);
+  lfo.stop(end);
+}
+
 function filtered(
   context: BaseAudioContext,
   source: AudioNode,
@@ -94,7 +128,10 @@ export function playTone(out: AudioNode, at: number, spec: ToneSpec): number {
   glide(oscillator.frequency, spec.hz, spec.toHz, at, spec.glide);
   const [amp, end] = shape(context, at, spec);
   filtered(context, oscillator, at, spec.filter).connect(amp);
-  amp.connect(out);
+  panned(amp, out, spec.pan);
+  if (spec.vibrato !== undefined) {
+    wobble(oscillator, at, end, spec.vibrato);
+  }
   oscillator.start(at);
   oscillator.stop(end);
   return end;
@@ -107,7 +144,7 @@ export function playNoise(out: AudioNode, at: number, spec: NoiseSpec): number {
   source.loop = true;
   const [amp, end] = shape(context, at, spec);
   filtered(context, source, at, spec.filter).connect(amp);
-  amp.connect(out);
+  panned(amp, out, spec.pan);
   source.start(at, (at * 0.618) % NOISE_SECONDS);
   source.stop(end);
   return end;
