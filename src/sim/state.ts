@@ -96,6 +96,8 @@ export interface EnemyState extends Positioned {
   revivesLeft?: number;
   // Zombie: ticks left lying down before it revives.
   downTicks?: number;
+  // Fatigué: ticks left awake before it falls asleep; the nap itself is tracked by stunTicks.
+  awakeTicks?: number;
   // Arnaqueur: vibes amount stolen from a pickup, dropped where it dies.
   carrying?: number;
   // Arnaqueur: running from players instead of chasing them, while carrying stolen vibes.
