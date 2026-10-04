@@ -1,12 +1,15 @@
 import type { InputDevice } from '../input/intents';
 import { el, fillHint, keycap, setText } from './dom';
+import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
 import { promptsFor } from './prompts';
+import { createToggle } from './toggle';
 
 export interface TitleActions {
   start(): void;
   toggleCalmMode(): void;
   toggleMute(): void;
+  feedback?(): void;
 }
 
 export interface TitleScreen {
@@ -23,32 +26,6 @@ const MANDALA =
     return `<ellipse rx="22" ry="78" transform="rotate(${String(turn)})"/>`;
   }).join('') +
   '<circle r="96"/><circle r="60"/><circle r="30"/></svg>';
-
-interface Toggle {
-  button: HTMLButtonElement;
-  set(on: boolean): void;
-}
-
-function createToggle(label: string, hint: string, onText: string, offText: string): Toggle {
-  const button = el('button', 'ui-button ui-toggle');
-  button.type = 'button';
-  button.setAttribute('role', 'switch');
-  const text = el('span', 'ui-toggle__text');
-  text.append(el('span', 'ui-toggle__label', label), el('span', 'ui-toggle__hint', hint));
-  const control = el('span', 'ui-toggle__control');
-  const state = el('span', 'ui-toggle__state');
-  const track = el('span', 'ui-switch');
-  track.append(el('span', 'ui-switch__knob'));
-  control.append(state, track);
-  button.append(text, control);
-  return {
-    button,
-    set(on) {
-      button.setAttribute('aria-checked', String(on));
-      setText(state, on ? onText : offText);
-    },
-  };
-}
 
 export function createTitle(actions: TitleActions): TitleScreen {
   const element = el('section', 'ui-screen ui-title');
@@ -69,9 +46,14 @@ export function createTitle(actions: TitleActions): TitleScreen {
   const calm = createToggle('Mode calme', 'Sans strobos, secousses ni halos forts', 'Oui', 'Non');
   const sound = createToggle('Son', 'Musique et effets', 'Activé', 'Coupé');
 
+  const items = [play, calm.button, sound.button];
+  if (actions.feedback !== undefined) {
+    items.push(createFeedbackButton());
+  }
+
   const nav = el('nav', 'ui-menu');
   nav.setAttribute('aria-label', 'Menu principal');
-  nav.append(play, calm.button, sound.button);
+  nav.append(...items);
 
   const controls = el('section', 'ui-panel ui-controls');
   const controlsHead = el('div', 'ui-panel__head');
@@ -91,11 +73,13 @@ export function createTitle(actions: TitleActions): TitleScreen {
       actions.start();
     } else if (index === 1) {
       actions.toggleCalmMode();
-    } else {
+    } else if (index === 2) {
       actions.toggleMute();
+    } else {
+      actions.feedback?.();
     }
   });
-  menu.setItems([play, calm.button, sound.button]);
+  menu.setItems(items);
 
   let device: InputDevice | null = null;
 

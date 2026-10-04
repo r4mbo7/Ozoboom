@@ -4,12 +4,13 @@ import type { UpgradeOffer } from '../sim/state';
 import { el } from './dom';
 import { createEnd } from './end';
 import { createHud } from './hud';
-import { menuEdges } from './navigation';
+import { HELD_MENU_INTENTS, menuEdges } from './navigation';
 import { createTitle } from './title';
 import type { CreateUi } from './types';
 import { createUpgradeOverlay } from './upgrade';
 
 export type { Ui, UiCallbacks } from './types';
+export { createFeedbackButton } from './feedback-button';
 export { selectTrap } from './navigation';
 
 type Screen = 'title' | 'game' | 'end';
@@ -40,7 +41,16 @@ export const createUi: CreateUi = (root, callbacks) => {
     }
   }
 
+  const feedback =
+    callbacks.onFeedback === undefined
+      ? undefined
+      : () => {
+          previousMenu = HELD_MENU_INTENTS;
+          callbacks.onFeedback?.();
+        };
+
   const title = createTitle({
+    ...(feedback === undefined ? {} : { feedback }),
     start() {
       once(() => {
         callbacks.onStart();
@@ -68,7 +78,7 @@ export const createUi: CreateUi = (root, callbacks) => {
     once(() => {
       callbacks.onRestart();
     });
-  });
+  }, feedback);
   container.append(hud.element, upgrade.element, end.element, title.element);
 
   function applyOptions(): void {

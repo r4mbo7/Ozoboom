@@ -9,6 +9,16 @@ export const NO_MENU_INTENTS: Readonly<MenuIntents> = {
   back: false,
 };
 
+// Previous intents that make every intent wait for its release before it counts again.
+export const HELD_MENU_INTENTS: Readonly<MenuIntents> = {
+  up: true,
+  down: true,
+  left: true,
+  right: true,
+  confirm: true,
+  back: true,
+};
+
 export function menuEdges(current: MenuIntents, previous: MenuIntents | null): MenuIntents {
   const before = previous ?? NO_MENU_INTENTS;
   return {

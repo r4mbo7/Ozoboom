@@ -70,6 +70,27 @@ export default defineConfig(
     },
   },
   {
+    files: ['src/ui/**', 'src/feedback/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'pixi.js',
+                'pixi.js/*',
+                ...forbiddenOutsideLayers(['render', 'audio', 'net', 'app']),
+              ],
+              message:
+                "ui et feedback lisent l'état de la sim : ni rendu, ni audio, ni réseau, ni assemblage (docs/architecture.md).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/**/*.test.ts'],
     rules: {
       'no-restricted-globals': 'off',

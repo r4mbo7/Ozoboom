@@ -1,6 +1,7 @@
 import type { InputDevice } from '../input/intents';
 import type { SimState } from '../sim/state';
 import { el, fillHint, icon, setText } from './dom';
+import { createFeedbackButton } from './feedback-button';
 import { endStats } from './format';
 import { FOG, SUN } from './icons';
 import { type Menu, createMenu } from './menu';
@@ -23,7 +24,7 @@ const LOST = {
   text: 'Les bad vibes ont eu raison du sound system. On rebranche et on y retourne\u202f?',
 };
 
-export function createEnd(onRestart: () => void): EndScreen {
+export function createEnd(onRestart: () => void, onFeedback?: () => void): EndScreen {
   const element = el('section', 'ui-screen ui-overlay ui-end');
   element.setAttribute('aria-label', 'Fin de partie');
   const emblem = el('div', 'ui-end__emblem');
@@ -32,13 +33,25 @@ export function createEnd(onRestart: () => void): EndScreen {
   const stats = el('dl', 'ui-stats');
   const restart = el('button', 'ui-button ui-button--primary', 'Rejouer');
   restart.type = 'button';
+  const items = [restart];
+  if (onFeedback !== undefined) {
+    items.push(createFeedbackButton());
+  }
+  const actions = el('div', 'ui-end__actions');
+  actions.append(...items);
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-end__body');
-  body.append(emblem, title, text, stats, restart, hint);
+  body.append(emblem, title, text, stats, actions, hint);
   element.append(body);
 
-  const menu = createMenu(onRestart);
-  menu.setItems([restart]);
+  const menu = createMenu((index) => {
+    if (index === 0) {
+      onRestart();
+    } else {
+      onFeedback?.();
+    }
+  });
+  menu.setItems(items);
 
   let device: InputDevice | null = null;
 
@@ -69,7 +82,16 @@ export function createEnd(onRestart: () => void): EndScreen {
       }
       device = next;
       const prompts = promptsFor(next);
-      fillHint(hint, [{ keys: [prompts.confirm], label: 'rejouer' }], prompts.style);
+      fillHint(
+        hint,
+        items.length > 1
+          ? [
+              { keys: prompts.navigate, label: 'naviguer' },
+              { keys: [prompts.confirm], label: 'valider' },
+            ]
+          : [{ keys: [prompts.confirm], label: 'rejouer' }],
+        prompts.style,
+      );
     },
   };
 }

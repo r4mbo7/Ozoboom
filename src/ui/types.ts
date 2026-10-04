@@ -8,6 +8,8 @@ export interface UiCallbacks {
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
   onToggleCalmMode(enabled: boolean): void;
   onToggleMute(muted: boolean): void;
+  // Only shows the « Ton avis » button when set. Route menu intents to the form until it closes.
+  onFeedback?(): void;
 }
 
 export interface Ui {
