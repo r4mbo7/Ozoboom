@@ -12,6 +12,7 @@ export interface DevicePrompts {
   style: KeyStyle;
   navigate: readonly string[];
   confirm: string;
+  back: string;
   skill: string;
   ultimate: string;
   controls: readonly Control[];
@@ -22,6 +23,7 @@ const KEYBOARD: DevicePrompts = {
   style: 'key',
   navigate: ['↑', '↓'],
   confirm: 'Entrée',
+  back: 'Échap',
   skill: 'E',
   ultimate: 'R',
   controls: [
@@ -41,6 +43,7 @@ const GAMEPAD: DevicePrompts = {
   style: 'button',
   navigate: ['Croix'],
   confirm: 'A',
+  back: 'B',
   skill: 'X',
   ultimate: 'Y',
   controls: [

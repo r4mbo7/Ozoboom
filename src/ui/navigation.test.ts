@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { MenuIntents } from '../input/intents';
-import { NO_MENU_INTENTS, menuEdges, navigateMenu, selectTrap } from './navigation';
+import {
+  HELD_MENU_INTENTS,
+  NO_MENU_INTENTS,
+  menuEdges,
+  navigateMenu,
+  selectTrap,
+} from './navigation';
 
 function menu(overrides: Partial<MenuIntents>): MenuIntents {
   return { ...NO_MENU_INTENTS, ...overrides };
@@ -23,6 +29,16 @@ describe('menuEdges', () => {
 
   it('treats a missing previous update as idle', () => {
     expect(menuEdges(menu({ back: true }), null).back).toBe(true);
+  });
+
+  it('waits for a release after held intents, so the press that opened a form does not act in it', () => {
+    const held = menuEdges(menu({ confirm: true }), HELD_MENU_INTENTS);
+    const released = menuEdges(menu({}), menu({ confirm: true }));
+    const pressedAgain = menuEdges(menu({ confirm: true }), menu({}));
+
+    expect(held).toEqual(NO_MENU_INTENTS);
+    expect(released).toEqual(NO_MENU_INTENTS);
+    expect(pressedAgain.confirm).toBe(true);
   });
 });
 
