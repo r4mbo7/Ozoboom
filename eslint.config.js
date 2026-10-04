@@ -15,7 +15,14 @@ const forbiddenOutsideLayers = (layers) =>
   layers.flatMap((layer) => [`**/${layer}`, `**/${layer}/**`]);
 
 export default defineConfig(
-  globalIgnores(['dist', 'coverage', '.claude']),
+  globalIgnores([
+    'dist',
+    'coverage',
+    '.claude',
+    'test-results',
+    'playwright-report',
+    'blob-report',
+  ]),
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   tseslint.configs.stylisticTypeChecked,

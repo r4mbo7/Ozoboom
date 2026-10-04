@@ -44,4 +44,15 @@ describe('tempo', () => {
     expect(simulation.state.tick).toBe(tick);
     expect(simulation.state.set).toMatchObject({ phrase: 1, bar: 16 + 3, beat: 64 + 3 * 4 + 2 });
   });
+
+  it('counts every phrase held to its end', () => {
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
+
+    stepAndRecord(simulation, TICKS_PER_PHRASE - 1);
+    const beforeFirstEnd = simulation.state.stats.phrasesHeld;
+    stepAndRecord(simulation, TICKS_PER_PHRASE + 1);
+
+    expect(beforeFirstEnd).toBe(0);
+    expect(simulation.state.stats.phrasesHeld).toBe(2);
+  });
 });

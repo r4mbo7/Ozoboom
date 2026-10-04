@@ -79,7 +79,7 @@ périphériques -> InputSnapshot -> PlayerCommand(tick)
                        render(state, alpha)   audio.update(state)   ui.update(state)
 ```
 
-L'accumulateur plafonne le nombre de ticks par image pour ne pas s'enfoncer après une pause d'onglet. Quand la sim est en `choosingUpgrade`, elle n'avance plus : l'interface affiche le choix, l'action `chooseUpgrade` la relance.
+L'accumulateur plafonne le nombre de ticks par image pour ne pas s'enfoncer après une pause d'onglet. Les entrées sont lues une fois par image, avant ses pas ; l'audio reçoit l'état après chaque pas, le rendu et l'interface une fois par image avec les événements de tous les pas de l'image (`src/app/session.ts`), sans toucher à `state.events` de la sim. Quand la sim est en `choosingUpgrade`, elle n'avance plus : l'interface affiche le choix, l'action `chooseUpgrade` la relance.
 
 ## Chemin vers la coop en ligne
 
