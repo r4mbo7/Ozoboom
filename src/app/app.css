@@ -1,0 +1,35 @@
+html,
+body {
+  overflow: hidden;
+}
+
+.game-stage {
+  position: fixed;
+  inset: 0;
+}
+
+.game-stage canvas {
+  display: block;
+}
+
+.pause {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: min(100%, 420px);
+  text-align: center;
+}
+
+.pause__text {
+  color: var(--ui-muted);
+  font-size: 18px;
+}
+
+.pause__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 320px);
+  margin-top: 12px;
+}
