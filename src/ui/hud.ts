@@ -1,13 +1,26 @@
 import type { ClassDefinition, GameContent, SetDefinition, SkillDefinition } from '../data/types';
+import { setFraction } from '../sim/lineup';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { PlayerState, SimState } from '../sim/state';
 import { skillCooldownTicks, statValue } from '../sim/stats';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
-import { BOLT, FOG, SUN, skillIcon, trapIcon } from './icons';
+import {
+  GEAR_SLOTS,
+  type GearSlotView,
+  enteredSpeaker,
+  gearSlots,
+  isNight,
+  plugHelp,
+  sunPosition,
+  trapCapacity,
+  volumeCrans,
+} from './hud-model';
+import { BOLT, FOG, MOON, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
 import { type LineupSlot, lineupCursor, lineupSlots, setOf, ticksToDrop } from '../sim/lineup';
 import { selectTrap } from './navigation';
 import { promptsFor } from './prompts';
+import { cssName } from './sun';
 
 export interface Hud {
   readonly element: HTMLElement;
@@ -93,6 +106,10 @@ export function createHud(): Hud {
   const lineupNext = el('span', 'ui-lineup__next');
   lineup.head.append(lineupNow, lineupNext);
   const lineupTrack = el('div', 'ui-lineup');
+  const sky = el('div', 'ui-lineup__sky');
+  sky.setAttribute('aria-hidden', 'true');
+  const sun = el('span', 'ui-lineup__sun');
+  sky.append(sun);
   lineup.root.append(lineupTrack);
 
   const threat = panel('threat', 'Bad vibes');
@@ -136,7 +153,27 @@ export function createHud(): Hud {
   const ultimate = createSkillView('ultimate');
   skills.root.append(skill.root, ultimate.root);
 
-  element.append(core.root, lineup.root, threat.root, level.root, traps.root, skills.root);
+  const volume = panel('volume', 'Volume');
+  const volumeValue = el('span', 'ui-panel__value ui-panel__value--small');
+  volume.head.append(el('span', 'ui-panel__label', 'Volume'), volumeValue);
+  const cranRow = el('div', 'ui-crans');
+  cranRow.setAttribute('role', 'meter');
+  cranRow.setAttribute('aria-label', 'Volume');
+  cranRow.setAttribute('aria-valuemin', '0');
+  const volumeHelp = el('p', 'ui-volume__help');
+  volumeHelp.setAttribute('role', 'status');
+  volumeHelp.hidden = true;
+  volume.root.append(cranRow, volumeHelp);
+
+  const gear = panel('gear', 'Agrès');
+  gear.head.remove();
+  const gearRow = el('div', 'ui-gear');
+  gear.root.append(gearRow);
+
+  const aux = el('div', 'ui-hud__aux');
+  aux.append(volume.root, gear.root);
+
+  element.append(core.root, lineup.root, threat.root, aux, level.root, traps.root, skills.root);
 
   let builtFor: GameContent | null = null;
   let set: SetDefinition | null = null;
@@ -148,6 +185,15 @@ export function createHud(): Hud {
   let selectedTrap = 0;
   let previousGameplay: InputSnapshot['gameplay'] | null = null;
   let litSegments = -1;
+  let crans: HTMLElement[] = [];
+  let gearViews: HTMLElement[] = [];
+  let gearKey = '';
+  let slotEdges: { left: number; width: number }[] = [];
+  let sunNight: boolean | null = null;
+  let sunAt = -1;
+  let beat = false;
+  let helpSeen = false;
+  let helpWasShown = false;
 
   function build(content: GameContent, setId: string): void {
     builtFor = content;
@@ -173,7 +219,17 @@ export function createHud(): Hud {
       }
       slots.push(node);
     }
-    lineupTrack.replaceChildren(...groups);
+    lineupTrack.replaceChildren(sky, ...groups);
+    measureSlots();
+
+    crans = (set.speakers ?? []).map((speaker) => {
+      const cran = el('span', 'ui-cran');
+      cran.title = speaker.name;
+      return cran;
+    });
+    cranRow.replaceChildren(...crans);
+    cranRow.setAttribute('aria-valuemax', String(crans.length));
+    volume.root.hidden = crans.length === 0;
 
     selectedTrap = Math.min(selectedTrap, Math.max(content.traps.length - 1, 0));
     tiles = content.traps.map((trap, index) => {
@@ -190,6 +246,113 @@ export function createHud(): Hud {
     });
     trapTiles.replaceChildren(...tiles);
     classDef = null;
+  }
+
+  function measureSlots(): void {
+    const width = lineupTrack.clientWidth;
+    slotEdges =
+      width === 0
+        ? []
+        : slots.map((slot) => ({ left: slot.offsetLeft / width, width: slot.offsetWidth / width }));
+  }
+
+  function updateSun(fraction: number): void {
+    const edges =
+      slotEdges.length === slots.length
+        ? slotEdges
+        : slots.map((_, index) => ({ left: index / slots.length, width: 1 / slots.length }));
+    const at = sunPosition(fraction, edges);
+    if (Math.abs(at - sunAt) > 0.0005) {
+      sunAt = at;
+      setVar(sky, '--sun', String(at));
+    }
+    const night = isNight(fraction);
+    if (night !== sunNight) {
+      sunNight = night;
+      sun.replaceChildren(icon('ui-lineup__glyph', night ? MOON : SUN));
+    }
+  }
+
+  function updateVolume(state: SimState): void {
+    if (set === null) {
+      return;
+    }
+    const levels = volumeCrans(set, state);
+    levels.forEach((level, index) => {
+      const cran = crans[index];
+      if (cran === undefined) {
+        return;
+      }
+      setVar(cran, '--cran', `var(${cssName(level.token)})`);
+      setVar(cran, '--fill', String(level.fill));
+      cran.dataset.state = level.state;
+    });
+    const volumeNow = state.volume ?? 0;
+    setText(volumeValue, `${String(volumeNow)} / ${String(levels.length)}`);
+    cranRow.setAttribute('aria-valuenow', String(volumeNow));
+    cranRow.setAttribute(
+      'aria-valuetext',
+      `Volume ${String(volumeNow)} sur ${String(levels.length)}`,
+    );
+    if (state.events.some((event) => event.type === 'volumeChanged')) {
+      beat = !beat;
+      volume.root.dataset.bump = beat ? 'a' : 'b';
+    }
+
+    const entered = helpSeen ? null : enteredSpeaker(set, state);
+    if (entered !== null) {
+      setText(volumeHelp, plugHelp(entered.plugBars));
+      helpWasShown = true;
+    } else if (helpWasShown) {
+      helpSeen = true;
+    }
+    volumeHelp.hidden = entered === null;
+  }
+
+  function buildGear(views: readonly GearSlotView[]): void {
+    gearViews = views.map((view) => {
+      const slot = el('div', 'ui-gear__slot');
+      if (view.weapon === null) {
+        slot.dataset.empty = '';
+        slot.setAttribute('aria-label', 'Emplacement libre');
+        return slot;
+      }
+      slot.setAttribute('role', 'img');
+      slot.setAttribute('aria-label', `${view.weapon.name}, niveau ${String(view.level)}`);
+      slot.title = `${view.weapon.name} : ${view.weapon.description}`;
+      slot.dataset.weapon = view.weapon.id;
+      if (view.weapon.rhythm === 'continuous') {
+        slot.dataset.continuous = '';
+      }
+      const dots = el('span', 'ui-gear__dots');
+      for (let level = 1; level <= view.weapon.maxLevel; level += 1) {
+        const dot = el('span', 'ui-gear__dot');
+        setFlag(dot, 'on', level <= view.level);
+        dots.append(dot);
+      }
+      slot.append(icon('ui-gear__icon', weaponIcon(view.weapon.effect)), dots);
+      return slot;
+    });
+    gearRow.replaceChildren(...gearViews);
+  }
+
+  function updateGear(player: PlayerState, state: SimState, content: GameContent): void {
+    const views = gearSlots(player, content);
+    const key = views.map((view) => `${view.weapon?.id ?? '-'}:${String(view.level)}`).join(',');
+    if (key !== gearKey || gearViews.length !== GEAR_SLOTS) {
+      gearKey = key;
+      buildGear(views);
+    }
+    for (const event of state.events) {
+      if (event.type !== 'weaponFired' || event.playerId !== player.id) {
+        continue;
+      }
+      const slot = gearViews.find((view) => view.dataset.weapon === event.weaponId);
+      if (slot !== undefined && slot.dataset.continuous === undefined) {
+        beat = !beat;
+        slot.dataset.pulse = beat ? 'a' : 'b';
+      }
+    }
   }
 
   function buildSkills(definition: ClassDefinition, device: InputDevice): void {
@@ -256,6 +419,7 @@ export function createHud(): Hud {
       setText(lineupNext, `${boss} est là`);
     }
     setFlag(lineup.root, 'drop', state.set.segment === 'drop' && state.status !== 'won');
+    updateSun(setFraction(set, state));
   }
 
   function update(state: SimState, snapshot: InputSnapshot, content: GameContent): void {
@@ -265,6 +429,7 @@ export function createHud(): Hud {
     updateCore(state);
     updateLineup(state, content);
     setText(threatCount, formatNumber(state.enemies.length));
+    updateVolume(state);
 
     const player = state.players[0];
     setFlag(element, 'no-player', player === undefined);
@@ -282,7 +447,8 @@ export function createHud(): Hud {
 
     selectedTrap = selectTrap(selectedTrap, tiles.length, snapshot.gameplay, previousGameplay);
     previousGameplay = snapshot.gameplay;
-    const maxTraps = set?.maxTraps ?? 0;
+    const maxTraps = set === null ? 0 : trapCapacity(set, state);
+    updateGear(player, state, content);
     setText(wattsValue, formatNumber(state.core.watts));
     setText(trapsCount, `${String(state.traps.length)} / ${String(maxTraps)} posés`);
     content.traps.forEach((trap, index) => {
@@ -309,6 +475,10 @@ export function createHud(): Hud {
       setFlag(ultimate.root, 'ready', player.ultimateReady);
       setText(ultimate.status, player.ultimateReady ? 'Prêt' : 'Au drop');
     }
+  }
+
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(measureSlots).observe(lineupTrack);
   }
 
   return {

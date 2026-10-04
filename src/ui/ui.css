@@ -9,6 +9,7 @@
   --ui-halo: 1;
   --ui-radius: 26px;
   --ui-gap: 16px;
+  --ui-side-width: 300px;
   --ui-chevron: 22px;
 
   position: fixed;
@@ -546,7 +547,8 @@
   display: grid;
   grid-template:
     'core lineup threat' auto
-    '. . .' 1fr
+    'volume . .' 1fr
+    '. . gear' auto
     'level traps skills' auto
     / minmax(0, 1fr) auto minmax(0, 1fr);
   gap: var(--ui-gap);
@@ -555,7 +557,7 @@
     max(var(--ui-gap), env(safe-area-inset-left));
 }
 
-.ui-hud[data-no-player] :is(.ui-hud__level, .ui-hud__traps, .ui-hud__skills) {
+.ui-hud[data-no-player] :is(.ui-hud__level, .ui-hud__traps, .ui-hud__skills, .ui-hud__gear) {
   display: none;
 }
 
@@ -608,6 +610,7 @@
 .ui-hud__core {
   grid-area: core;
   justify-self: start;
+  width: var(--ui-side-width);
 }
 
 .ui-hud__lineup {
@@ -690,10 +693,46 @@
 }
 
 .ui-lineup {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
   height: 22px;
+  margin-top: 26px;
+}
+
+.ui-lineup__sky {
+  position: absolute;
+  inset: -26px 0 auto;
+  height: 22px;
+}
+
+.ui-lineup__sky::before {
+  content: '';
+  position: absolute;
+  inset: 10px 0 auto;
+  border-top: 1.5px dashed color-mix(in srgb, var(--or) 45%, transparent);
+}
+
+.ui-lineup__sun {
+  position: absolute;
+  top: 0;
+  left: calc(var(--sun) * 100%);
+  width: 22px;
+  height: 22px;
+  color: var(--or);
+  filter: drop-shadow(0 0 calc(7px * var(--ui-halo)) var(--or));
+  translate: -50% 0;
+}
+
+.ui-lineup__sky {
+  --sun: 0;
+}
+
+.ui-lineup__glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .ui-lineup__tier {
@@ -1071,6 +1110,138 @@
   font-weight: 700;
 }
 
+/* Volume and gear */
+
+.ui-hud__aux {
+  display: contents;
+}
+
+.ui-hud__volume {
+  grid-area: volume;
+  align-self: start;
+  justify-self: start;
+  width: var(--ui-side-width);
+}
+
+.ui-hud__volume[data-bump='a'] {
+  animation: ui-bump-a 700ms ease-out;
+}
+
+.ui-hud__volume[data-bump='b'] {
+  animation: ui-bump-b 700ms ease-out;
+}
+
+.ui-crans {
+  display: flex;
+  gap: 8px;
+}
+
+.ui-cran {
+  --cran: var(--or);
+  --fill: 0;
+
+  flex: 1;
+  height: 16px;
+  border: 1.5px solid color-mix(in srgb, var(--texte) 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--texte) 8%, transparent);
+}
+
+.ui-cran[data-state='plugging'] {
+  border-color: color-mix(in srgb, var(--cran) 70%, transparent);
+  background: linear-gradient(
+    90deg,
+    var(--cran) calc(var(--fill) * 100%),
+    color-mix(in srgb, var(--cran) 14%, transparent) calc(var(--fill) * 100%)
+  );
+}
+
+.ui-cran[data-state='on'] {
+  border-color: var(--cran);
+  background: var(--cran);
+  box-shadow: 0 0 calc(10px * var(--ui-halo)) color-mix(in srgb, var(--cran) 65%, transparent);
+}
+
+.ui-volume__help {
+  margin-top: 12px;
+  color: var(--texte);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.ui-hud__gear {
+  display: flex;
+  grid-area: gear;
+  align-items: center;
+  justify-self: end;
+  padding: 10px 20px;
+}
+
+.ui-gear {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ui-gear__slot {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 68px;
+  height: 68px;
+  border: 1.5px solid color-mix(in srgb, var(--or) 55%, transparent);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--sol) 60%, transparent);
+  color: var(--or);
+}
+
+.ui-gear__slot[data-empty] {
+  border-style: dashed;
+  border-color: var(--ui-line);
+  background: color-mix(in srgb, var(--sol) 30%, transparent);
+  box-shadow: inset 0 2px 8px color-mix(in srgb, var(--sol) 70%, transparent);
+}
+
+.ui-gear__slot[data-continuous] {
+  border-color: var(--or);
+}
+
+.ui-gear__icon {
+  width: 32px;
+  height: 32px;
+}
+
+.ui-gear__dots {
+  display: flex;
+  gap: 4px;
+}
+
+.ui-gear__dot {
+  width: 7px;
+  height: 7px;
+  border: 1px solid color-mix(in srgb, var(--or) 70%, transparent);
+  border-radius: 50%;
+}
+
+.ui-gear__dot[data-on] {
+  background: var(--or);
+  box-shadow: 0 0 calc(5px * var(--ui-halo)) var(--or);
+}
+
+.ui-gear__slot[data-pulse='a'] {
+  animation: ui-gear-a 260ms ease-out;
+}
+
+.ui-gear__slot[data-pulse='b'] {
+  animation: ui-gear-b 260ms ease-out;
+}
+
 /* Overlays */
 
 .ui-overlay {
@@ -1352,6 +1523,38 @@
   }
 }
 
+@keyframes ui-bump-a {
+  from {
+    border-color: var(--or);
+    box-shadow:
+      var(--ui-lift),
+      0 0 calc(24px * var(--ui-halo)) color-mix(in srgb, var(--or) 55%, transparent);
+  }
+}
+
+@keyframes ui-bump-b {
+  from {
+    border-color: var(--or);
+    box-shadow:
+      var(--ui-lift),
+      0 0 calc(24px * var(--ui-halo)) color-mix(in srgb, var(--or) 55%, transparent);
+  }
+}
+
+@keyframes ui-gear-a {
+  from {
+    border-color: var(--or);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes ui-gear-b {
+  from {
+    border-color: var(--or);
+    transform: scale(1.06);
+  }
+}
+
 @keyframes ui-spin {
   to {
     rotate: 360deg;
@@ -1407,6 +1610,7 @@
     grid-template:
       'core threat' auto
       'lineup lineup' auto
+      'aux aux' auto
       '. .' 1fr
       'level skills' auto
       'traps skills' auto
@@ -1419,6 +1623,51 @@
 
   .ui-hud__core {
     justify-self: stretch;
+    width: auto;
+  }
+
+  .ui-hud__aux {
+    display: flex;
+    grid-area: aux;
+    gap: var(--ui-gap);
+  }
+
+  .ui-hud__volume {
+    flex: 1;
+    width: auto;
+  }
+
+  .ui-crans {
+    gap: 5px;
+  }
+
+  .ui-hud__gear {
+    padding: 8px;
+  }
+
+  .ui-gear {
+    gap: 6px;
+  }
+
+  .ui-gear__slot {
+    width: 44px;
+    height: 54px;
+    gap: 4px;
+    border-radius: 16px;
+  }
+
+  .ui-gear__icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ui-gear__dots {
+    gap: 2px;
+  }
+
+  .ui-gear__dot {
+    width: 5px;
+    height: 5px;
   }
 
   .ui-vu {

@@ -1,7 +1,17 @@
-import type { GameContent } from '../data/types';
+import type { GameContent, SpeakerDefinition } from '../data/types';
 import type { InputSnapshot } from '../input/intents';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
-import type { EnemyState, PlayerState, SimState, TrapState } from '../sim/state';
+import type { EnemyState, PlayerState, SimState, SpeakerState, TrapState } from '../sim/state';
+
+function fixtureSpeaker(
+  id: string,
+  name: string,
+  x: number,
+  y: number,
+  aura: SpeakerDefinition['aura'],
+): SpeakerDefinition {
+  return { id, name, description: name, x, y, radius: 90, plugBars: 2, aura };
+}
 
 export const UI_FIXTURE_CONTENT: GameContent = {
   classes: [
@@ -110,6 +120,38 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       levelMul: 1.5,
     },
   ],
+  weapons: [
+    {
+      id: 'baton-de-feu',
+      name: 'Bâton de feu',
+      description: 'Un arc de feu à chaque temps.',
+      classAffinity: 'tank',
+      rhythm: { everyBars: 1, steps: [0, 4, 8, 12] },
+      effect: { kind: 'sweep', damage: 6, radius: 90, arcDegrees: 120 },
+      maxLevel: 5,
+      levelMul: 1.3,
+    },
+    {
+      id: 'diabolo',
+      name: 'Diabolo',
+      description: 'Lancé sur le un, il retombe une demi-mesure plus loin.',
+      classAffinity: 'mage',
+      rhythm: { everyBars: 1, steps: [0] },
+      effect: { kind: 'lob', damage: 14, radius: 70, range: 300, flightTicks: 12 },
+      maxLevel: 5,
+      levelMul: 1.3,
+    },
+    {
+      id: 'eventails-de-feu',
+      name: 'Éventails de feu',
+      description: 'Tournent autour de toi en continu.',
+      classAffinity: 'tank',
+      rhythm: 'continuous',
+      effect: { kind: 'orbit', damage: 1, count: 2, radius: 14, orbitRadius: 60, turnsPerBar: 1 },
+      maxLevel: 5,
+      levelMul: 1.3,
+    },
+  ],
   upgrades: [
     {
       id: 'nova-elargie',
@@ -146,6 +188,31 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       core: { radius: 60, maxHp: 1000, wattsPerBar: 5 },
       startingWatts: 60,
       maxTraps: 6,
+      speakers: [
+        fixtureSpeaker('dome-chill', 'Le Dôme chill', 800, 80, {
+          kind: 'mist',
+          slowFactor: 1,
+          healPerBar: 4,
+          radius: 120,
+        }),
+        fixtureSpeaker('foret', 'La Forêt', 1520, 500, {
+          kind: 'mist',
+          slowFactor: 0.6,
+          healPerBar: 0,
+          radius: 120,
+        }),
+        fixtureSpeaker('sub', 'Le Sub', 800, 920, {
+          kind: 'shockwave',
+          damage: 6,
+          radius: 120,
+          knockback: 10,
+        }),
+        fixtureSpeaker('cercle-acid', 'Le Cercle acid', 80, 500, {
+          kind: 'lure',
+          radius: 120,
+          markedDamageMul: 1.5,
+        }),
+      ],
       levelCurve: { baseVibes: 10, vibesPerLevel: 5 },
       pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
       tiers: [
@@ -254,7 +321,7 @@ export function fixtureState(overrides: Partial<SimState> = {}): SimState {
   };
 }
 
-export type UiFixtureScreen = 'title' | 'game' | 'upgrade' | 'won' | 'lost';
+export type UiFixtureScreen = 'title' | 'game' | 'upgrade' | 'won' | 'lost' | 'volume';
 
 export const UI_FIXTURE_SCREENS: readonly UiFixtureScreen[] = [
   'title',
@@ -262,13 +329,59 @@ export const UI_FIXTURE_SCREENS: readonly UiFixtureScreen[] = [
   'upgrade',
   'won',
   'lost',
+  'volume',
 ];
 
-export function fixtureForScreen(screen: UiFixtureScreen): SimState {
+function fixtureSpeakerState(
+  definition: SpeakerDefinition,
+  plugged: boolean,
+  plugTicks: number,
+): SpeakerState {
+  const { id, x, y, radius } = definition;
+  return { id, x, y, radius, plugTicks, plugged };
+}
+
+// Volume 2 in the night of the second tier (or at the end of the drop, in daylight): two speakers plugged, a third filling with the player
+// standing in it, and two circus weapons held.
+function volumeState(late: boolean): SimState {
+  const definitions = UI_FIXTURE_CONTENT.sets[0]?.speakers ?? [];
+  const sub = definitions[2];
+  const segmentStartTick = 20_000;
+  return fixtureState({
+    tick: segmentStartTick + (late ? 4 * TICKS_PER_BAR : 1.5 * TICKS_PER_PHRASE),
+    set: {
+      tier: 1,
+      segment: late ? 'drop' : 'buildup',
+      phrase: 1,
+      bar: 70,
+      beat: 280,
+      segmentStartTick,
+    },
+    volume: 2,
+    speakers: definitions.map((definition, index) =>
+      fixtureSpeakerState(definition, index < 2, index === 2 ? 2 * TICKS_PER_BAR * 0.6 : 0),
+    ),
+    players: [
+      fixturePlayer({
+        x: sub?.x ?? 0,
+        y: sub?.y ?? 0,
+        level: 7,
+        weapons: [
+          { id: 'baton-de-feu', level: 3, phase: 0 },
+          { id: 'diabolo', level: 1, phase: 0 },
+        ],
+      }),
+    ],
+  });
+}
+
+export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimState {
   switch (screen) {
     case 'title':
     case 'game':
       return fixtureState();
+    case 'volume':
+      return volumeState(late);
     case 'upgrade':
       return fixtureState({
         status: 'choosingUpgrade',
