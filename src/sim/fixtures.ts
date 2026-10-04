@@ -346,6 +346,38 @@ export const FIXTURE_SHOOTER: EnemyDefinition = {
   ranged: { projectileSpeed: 7, projectileRadius: 6, rangeTicks: 50, keepDistance: 200 },
 };
 
+export const FIXTURE_THIEF: EnemyDefinition = {
+  id: 'grifter',
+  name: 'Arnaqueur',
+  behaviour: 'rusher',
+  maxHp: 20,
+  speed: 2.5,
+  radius: 12,
+  damage: 5,
+  attackCooldownTicks: 24,
+  aggroRadius: 120,
+  vibesDrop: 1,
+  wattsDrop: 0,
+  scalingPerPhrase: { hp: 1, speed: 1 },
+  special: { kind: 'steal', fleeSpeedMul: 1.5 },
+};
+
+export const FIXTURE_CLINGER: EnemyDefinition = {
+  id: 'clinger',
+  name: 'Collant',
+  behaviour: 'rusher',
+  maxHp: 20,
+  speed: 2.5,
+  radius: 12,
+  damage: 5,
+  attackCooldownTicks: 24,
+  aggroRadius: 120,
+  vibesDrop: 1,
+  wattsDrop: 0,
+  scalingPerPhrase: { hp: 1, speed: 1 },
+  special: { kind: 'cling', slowFactor: 0.5, detachDamage: 8 },
+};
+
 export const FIXTURE_LURE: TrapDefinition = {
   id: 'uv-deco',
   name: 'Déco UV',
@@ -376,7 +408,14 @@ export const FIXTURE_PROP: TrapDefinition = {
 // behaviour, a lure and an inert prop: combat tests place exactly the enemies they need.
 export const COMBAT_CONTENT: GameContent = {
   ...FIXTURE_CONTENT,
-  enemies: [...FIXTURE_CONTENT.enemies, FIXTURE_HORDE, FIXTURE_HEAVY, FIXTURE_SHOOTER],
+  enemies: [
+    ...FIXTURE_CONTENT.enemies,
+    FIXTURE_HORDE,
+    FIXTURE_HEAVY,
+    FIXTURE_SHOOTER,
+    FIXTURE_THIEF,
+    FIXTURE_CLINGER,
+  ],
   traps: [...FIXTURE_CONTENT.traps, FIXTURE_LURE, FIXTURE_PROP],
   sets: [{ ...FIXTURE_SET, tiers: FIXTURE_SET.tiers.map((tier) => ({ ...tier, spawns: [] })) }],
 };

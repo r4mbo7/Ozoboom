@@ -12,7 +12,12 @@ export function enemyAttacks({ state, content }: StepContext): void {
     if (enemy.attackCooldown > 0) {
       enemy.attackCooldown -= 1;
     }
-    if (enemy.hp <= 0 || enemy.stunTicks > 0 || enemy.attackCooldown > 0) {
+    if (
+      enemy.hp <= 0 ||
+      enemy.stunTicks > 0 ||
+      enemy.attackCooldown > 0 ||
+      enemy.clingingTo !== undefined
+    ) {
       continue;
     }
     const definition = lookup(content.enemies, enemy.kind, 'enemy');
