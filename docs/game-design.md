@@ -90,11 +90,11 @@ Nombre d'emplacements limité, améliorables. Les lourds peuvent pousser ou cass
 
 Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-04** :
 
-| Support                                                              | Déplacement                                  | Visée                                           | Tir                   | Pièges                                                            |
-| -------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- | --------------------- | ----------------------------------------------------------------- |
-| Clavier et souris                                                    | ZQSD et WASD (les deux dispositions actives) | souris                                          | clic gauche ou touche | molette ou touches numériques pour choisir, clic droit pour poser |
-| Manette (Xbox et toute manette au mapping standard de l'API Gamepad) | stick gauche                                 | stick droit (twin-stick), assistance à la visée | gâchette droite       | gâchette gauche pour choisir, bouton A pour poser devant soi      |
-| Tactile (V1)                                                         | joystick virtuel gauche                      | automatique                                     | automatique           | bouton et glisser-déposer                                         |
+| Support                                                              | Déplacement                                                       | Visée                                           | Tir                   | Pièges                                                            |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------- | --------------------- | ----------------------------------------------------------------- |
+| Clavier et souris                                                    | ZQSD en AZERTY, WASD en QWERTY (mêmes touches physiques), flèches | souris                                          | clic gauche ou touche | molette ou touches numériques pour choisir, clic droit pour poser |
+| Manette (Xbox et toute manette au mapping standard de l'API Gamepad) | stick gauche                                                      | stick droit (twin-stick), assistance à la visée | gâchette droite       | LB et RB pour choisir, bouton A pour poser devant soi             |
+| Tactile (V1)                                                         | joystick virtuel gauche                                           | automatique                                     | automatique           | bouton et glisser-déposer                                         |
 
 - Les menus et l'écran de fin se parcourent entièrement à la manette.
 - Les commandes se remappent (V1).
