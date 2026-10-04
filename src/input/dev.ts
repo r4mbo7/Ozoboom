@@ -36,7 +36,7 @@ const countRows = new Map(
     { row, output: row.querySelector('output'), count: 0 },
   ]),
 );
-const flashColor = getComputedStyle(document.documentElement).getPropertyValue('--uv-magenta');
+const flashColor = getComputedStyle(document.documentElement).getPropertyValue('--mage');
 
 const input = createInputSource(surface);
 let selectedRumble = 0;
