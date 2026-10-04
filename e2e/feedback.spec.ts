@@ -1,9 +1,10 @@
-import { type Locator, type Page, expect, test } from '@playwright/test';
+import { type Locator, type Page, expect as baseExpect, test } from '@playwright/test';
 import { collectConsoleErrors } from './game';
 
-// Every key press waits for two frames, and SwiftShader frames are slow when tests run in
-// parallel: the budget of the full games, not the default 30 seconds.
+// Every key press waits for two frames, and SwiftShader frames are slow on CI and when tests run
+// in parallel: the budget of the full games, and 30 seconds per assertion instead of 5.
 test.describe.configure({ timeout: 120_000 });
+const expect = baseExpect.configure({ timeout: 30_000 });
 
 declare global {
   interface Window {
@@ -176,14 +177,25 @@ test('sends feedback from the end screen, with the stats of the game', async ({ 
   await page.goto('./?dev=fast');
   await page.getByRole('button', { name: 'Jouer' }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
-  // The test is about the form, not about losing: the scene goes silent at once.
-  await page.evaluate(() => {
-    const state = window.ozoboom?.state;
-    if (state === undefined) {
-      throw new Error('The game state is not exposed');
-    }
-    state.core.hp = 0;
-  });
+  // The test is about the form, not about losing: the scene goes silent until the game is lost.
+  // Once is not enough, as the scene may repair itself before the sim checks the status.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const silence = () => {
+          const state = window.ozoboom?.state;
+          if (state === undefined) {
+            reject(new Error('The game state is not exposed'));
+          } else if (state.status === 'lost') {
+            resolve();
+          } else {
+            state.core.hp = 0;
+            requestAnimationFrame(silence);
+          }
+        };
+        silence();
+      }),
+  );
   const end = page.getByRole('region', { name: 'Fin de partie' });
   await expect(end).toContainText('La musique s’arrête');
 
