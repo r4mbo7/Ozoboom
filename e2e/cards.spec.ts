@@ -13,8 +13,11 @@ test('a relic offer of four cards is titled, gold and navigable by keyboard', as
   await expect(cards).toHaveCount(4);
   await expect(cards.first()).toHaveAttribute('aria-current', 'true');
   await expect(cards.nth(3)).toHaveAttribute('data-tint', 'relic');
+  // The menu may ignore the first press while it opens: press again only while nothing moved.
   await expect(async () => {
-    await page.keyboard.press('ArrowRight');
+    if ((await cards.first().getAttribute('aria-current')) === 'true') {
+      await page.keyboard.press('ArrowRight');
+    }
     await expect(cards.nth(1)).toHaveAttribute('aria-current', 'true', { timeout: 500 });
   }).toPass();
   await page.keyboard.press('ArrowRight');
