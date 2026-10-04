@@ -93,6 +93,7 @@ function createPlayer(
     level: 1,
     vibes: 0,
     vibesToNextLevel: set.levelCurve.baseVibes,
+    pendingLevelUps: 0,
     attackCooldown: 0,
     skillCooldown: 0,
     ultimateReady: false,

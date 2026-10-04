@@ -66,6 +66,8 @@ export interface PlayerState extends Positioned {
   modifiers: Partial<Record<StatKey, number>>;
   downed: boolean;
   invulnerableTicks?: number;
+  // Levels gained whose offer is not drawn yet. Optional so that states built by hand stay valid.
+  pendingLevelUps?: number;
 }
 
 export interface EnemyState extends Positioned {

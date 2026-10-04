@@ -1,5 +1,6 @@
 import { lookup } from '../content';
 import { applyModifiers, refreshDerivedStats } from '../stats';
+import { isEligible, presentNextOffer } from './progression';
 import type { StepContext } from './types';
 
 export function upgradeChoice({ state, content, commands }: StepContext): void {
@@ -13,11 +14,15 @@ export function upgradeChoice({ state, content, commands }: StepContext): void {
         continue;
       }
       const upgrade = lookup(content.upgrades, action.upgradeId, 'upgrade');
+      if (!isEligible(upgrade, player)) {
+        continue;
+      }
       applyModifiers(player, upgrade.modifiers);
       refreshDerivedStats(player, lookup(content.classes, player.classId, 'class'));
       player.upgrades.push(upgrade.id);
       state.pendingUpgrades.splice(index, 1);
       state.events.push({ type: 'upgradeChosen', playerId: player.id, upgradeId: upgrade.id });
+      presentNextOffer(state, content, player);
     }
   }
 }

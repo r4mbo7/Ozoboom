@@ -88,18 +88,17 @@ describe('upgrade choice', () => {
     expect(simulation.state.status).toBe('choosingUpgrade');
   });
 
-  it('answers the oldest offer first when a player has several', () => {
-    const { simulation, player } = pausedOnOffer(['quick-feet']);
-    simulation.state.pendingUpgrades.push({ playerId: 0, options: ['big-bass'] });
+  it('refuses an offered upgrade that already reached its maximum stacks', () => {
+    const { simulation, player } = pausedOnOffer(['wide-nova', 'quick-feet']);
+    player.upgrades.push('wide-nova', 'wide-nova');
 
-    simulation.step([choose('big-bass')]);
-    simulation.step([choose('quick-feet')]);
-    const afterFirst = simulation.state.status;
-    simulation.step([choose('big-bass')]);
+    simulation.step([choose('wide-nova')]);
 
-    expect(afterFirst).toBe('choosingUpgrade');
-    expect(player.upgrades).toEqual(['quick-feet', 'big-bass']);
-    expect(simulation.state.status).toBe('running');
+    expect(player.upgrades).toEqual(['wide-nova', 'wide-nova']);
+    expect(simulation.state.events).toEqual([]);
+    expect(simulation.state.pendingUpgrades).toEqual([
+      { playerId: 0, options: ['wide-nova', 'quick-feet'] },
+    ]);
   });
 
   it('lets a player answer only their own offer and waits for every offer', () => {
