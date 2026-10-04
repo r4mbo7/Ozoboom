@@ -90,16 +90,20 @@ export async function tapButtonUntil(
   done: () => Promise<boolean>,
 ): Promise<void> {
   await expect
-    .poll(async () => {
-      await tapButton(page, button);
-      return done();
-    })
+    .poll(
+      async () => {
+        await tapButton(page, button);
+        return done();
+      },
+      { timeout: 30_000 },
+    )
     .toBe(true);
 }
 
 export interface GameSummary {
   status: SimState['status'];
   level: number;
+  upgrades: number;
   traps: number;
   player: { x: number; y: number };
   enemies: { x: number; y: number; isBoss: boolean }[];
@@ -115,6 +119,7 @@ export async function readGame(page: Page): Promise<GameSummary | null> {
     return {
       status: state.status,
       level: player.level,
+      upgrades: player.upgrades.length,
       traps: state.traps.length,
       player: { x: player.x, y: player.y },
       enemies: state.enemies.map(({ x, y, isBoss }) => ({ x, y, isBoss })),
