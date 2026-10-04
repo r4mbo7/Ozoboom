@@ -305,6 +305,26 @@
   border-radius: 999px;
 }
 
+.ui-key--arrow {
+  position: relative;
+}
+
+.ui-key__arrow,
+.ui-key__arrow svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.ui-key__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .ui-hint {
   display: flex;
   flex-wrap: wrap;
@@ -314,13 +334,18 @@
   font-size: 15px;
 }
 
-.ui-hint__part {
+.ui-hint__part,
+.ui-hint__keys {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.ui-hint__part > span {
+.ui-hint__part--narrow {
+  display: none;
+}
+
+.ui-hint__label {
   margin-left: 2px;
 }
 
@@ -1451,6 +1476,32 @@
 
   .ui-skill__name {
     display: none;
+  }
+
+  /* One row per action, the keys right-aligned against a column of labels. */
+  .ui-hint {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ui-hint__part,
+  .ui-hint__part--narrow {
+    display: contents;
+  }
+
+  .ui-hint__part--wide {
+    display: none;
+  }
+
+  .ui-hint__keys {
+    justify-self: end;
+  }
+
+  .ui-hint__label {
+    justify-self: start;
   }
 
   .ui-cards {

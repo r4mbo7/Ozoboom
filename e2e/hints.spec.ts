@@ -85,7 +85,7 @@ interface HintRow {
   keys: { left: number; right: number };
 }
 
-// One entry per action shown: where its label sits, and where its keys start and end.
+// One entry per action shown: where the text of its label sits, and where its keys start and end.
 function hintRows(hint: Locator): Promise<HintRow[]> {
   return hint.evaluate((node) =>
     [...node.children].flatMap((part) => {
@@ -94,7 +94,9 @@ function hintRows(hint: Locator): Promise<HintRow[]> {
       if (label === null || !label.checkVisibility() || keys.length === 0) {
         return [];
       }
-      const text = label.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const text = range.getBoundingClientRect();
       return [
         {
           label: { left: text.left, top: text.top, right: text.right },

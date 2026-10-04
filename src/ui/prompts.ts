@@ -10,7 +10,9 @@ export interface Control {
 export interface DevicePrompts {
   name: string;
   style: KeyStyle;
+  // Through a list from top to bottom, and through items side by side.
   navigate: readonly string[];
+  navigateRow: readonly string[];
   confirm: string;
   back: string;
   skill: string;
@@ -22,6 +24,7 @@ const KEYBOARD: DevicePrompts = {
   name: 'Clavier et souris',
   style: 'key',
   navigate: ['↑', '↓'],
+  navigateRow: ['←', '→'],
   confirm: 'Entrée',
   back: 'Échap',
   skill: 'E',
@@ -42,6 +45,7 @@ const GAMEPAD: DevicePrompts = {
   name: 'Manette',
   style: 'button',
   navigate: ['Stick gauche', 'Croix'],
+  navigateRow: ['Stick gauche', 'Croix'],
   confirm: 'A',
   back: 'B',
   skill: 'X',
