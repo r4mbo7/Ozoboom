@@ -114,6 +114,12 @@ describe('draw', () => {
     expect(withFour).toEqual(['ribbon']);
   });
 
+  it('never draws a relic in a level offer', () => {
+    const { draw } = setup([upgrade('common'), upgrade('relic', { family: 'relic' })], []);
+
+    expect(seen(draw, 50)).toEqual(new Set(['common']));
+  });
+
   it('never draws an evolved form', () => {
     const { draw } = setup([], [weapon('base'), weapon('evolved', { evolvedFrom: 'base' })]);
 

@@ -67,7 +67,11 @@ function candidates(
   const volume = state.volume ?? 0;
   const pool: Candidate[] = [];
   for (const upgrade of content.upgrades.values()) {
-    if (isEligible(upgrade, player) && isRarityOpen(upgrade, volume)) {
+    if (
+      upgrade.family !== 'relic' &&
+      isEligible(upgrade, player) &&
+      isRarityOpen(upgrade, volume)
+    ) {
       pool.push({ id: upgrade.id, weight: 1 });
     }
   }
