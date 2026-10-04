@@ -152,10 +152,15 @@ describe('progression', () => {
       simulation.step([choose(greediest)]);
     }
 
+    const weaponLevels = (player.weapons ?? []).reduce((sum, slot) => sum + slot.level, 0);
     expect(player.level).toBe(21);
-    expect(player.upgrades).toHaveLength(20);
+    expect(player.upgrades.length + weaponLevels).toBe(20);
     for (const upgrade of CONTENT.upgrades) {
       expect(stacks(upgrade.id)).toBeLessThanOrEqual(upgrade.maxStacks);
+    }
+    for (const slot of player.weapons ?? []) {
+      const weapon = CONTENT.weapons?.find((definition) => definition.id === slot.id);
+      expect(slot.level).toBeLessThanOrEqual(weapon?.maxLevel ?? 0);
     }
     expect(simulation.state.status).toBe('running');
   });
