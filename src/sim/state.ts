@@ -146,6 +146,9 @@ export interface ProjectileState extends Positioned {
   arc?: { toX: number; toY: number; ticksTotal: number };
   // The frisbee flies back to this player instead of expiring.
   returnTo?: PlayerId;
+  // Set once the frisbee has turned back: it no longer hurts, it flies to `returnTo` and heals.
+  returning?: boolean;
+  heal?: number;
 }
 
 export interface TrapState extends Positioned {
