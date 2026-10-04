@@ -73,10 +73,12 @@ export function createTitle(actions: TitleActions): TitleScreen {
   nav.setAttribute('aria-label', 'Menu principal');
   nav.append(play, calm.button, sound.button);
 
-  const controls = el('section', 'ui-controls');
-  const controlsTitle = el('h2', 'ui-controls__title');
+  const controls = el('section', 'ui-panel ui-controls');
+  const controlsHead = el('div', 'ui-panel__head');
+  const controlsTitle = el('h2', 'ui-panel__label');
+  controlsHead.append(controlsTitle);
   const controlsList = el('dl', 'ui-controls__list');
-  controls.append(controlsTitle, controlsList);
+  controls.append(controlsHead, controlsList);
 
   const hint = el('p', 'ui-hint');
 
