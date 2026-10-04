@@ -137,7 +137,8 @@ export async function tapButtonUntil(
 export interface GameSummary {
   status: SimState['status'];
   level: number;
-  upgrades: number;
+  // Level choices taken: upgrades, and circus gear gained or levelled up.
+  choices: number;
   traps: number;
   player: { x: number; y: number };
   enemies: { x: number; y: number; isBoss: boolean }[];
@@ -153,7 +154,9 @@ export async function readGame(page: Page): Promise<GameSummary | null> {
     return {
       status: state.status,
       level: player.level,
-      upgrades: player.upgrades.length,
+      choices:
+        player.upgrades.length +
+        (player.weapons ?? []).reduce((levels, slot) => levels + slot.level, 0),
       traps: state.traps.length,
       player: { x: player.x, y: player.y },
       enemies: state.enemies.map(({ x, y, isBoss }) => ({ x, y, isBoss })),

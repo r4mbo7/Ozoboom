@@ -50,6 +50,7 @@ async function look(page: Page) {
       ringed: visible(':focus-visible').map(name),
       status: state?.status,
       upgrades: state?.players[0]?.upgrades.length,
+      weapons: state?.players[0]?.weapons?.map((slot) => `${slot.id}:${String(slot.level)}`),
       tick: state?.status === 'running' ? state.tick : null,
     };
   });
