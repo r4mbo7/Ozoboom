@@ -179,6 +179,109 @@ describe('CONTENT weapons, fusions and speakers', () => {
   });
 });
 
+describe('CONTENT circus weapons, rarities and relics', () => {
+  const upgradeIds = new Set(upgrades.map((upgrade) => upgrade.id));
+  const withRarity = (rarity: string) => upgrades.filter((upgrade) => upgrade.rarity === rarity);
+
+  it('has the ten circus weapons and seven evolved forms', () => {
+    expect(weapons.filter((weapon) => weapon.evolvedFrom === undefined).map((w) => w.id)).toEqual([
+      'baton-de-feu',
+      'baton-du-diable',
+      'cerceaux',
+      'diabolo',
+      'frisbee',
+      'assiettes-chinoises',
+      'totem',
+      'eventails-de-feu',
+      'monocycle',
+      'ruban-arc-en-ciel',
+    ]);
+    expect(weapons.filter((weapon) => weapon.evolvedFrom !== undefined)).toHaveLength(7);
+  });
+
+  it.each(fusions)('points fusion to $resultId at a weapon evolved from its own', (fusion) => {
+    const result = weapons.find((weapon) => weapon.id === fusion.resultId);
+
+    expect(weaponIds.has(fusion.weaponId)).toBe(true);
+    expect(upgradeIds.has(fusion.upgradeId)).toBe(true);
+    expect(result?.evolvedFrom).toBe(fusion.weaponId);
+  });
+
+  it('fuses each weapon at most once and gives each evolved form one fusion', () => {
+    const evolved = weapons.filter((weapon) => weapon.evolvedFrom !== undefined);
+
+    expect(duplicates(fusions.map((fusion) => fusion.weaponId))).toEqual([]);
+    expect(fusions.map((fusion) => fusion.resultId).sort()).toEqual(
+      evolved.map((weapon) => weapon.id).sort(),
+    );
+  });
+
+  it.each([...withRarity('rare'), ...withRarity('legendary')])(
+    'has a common variant for $id, one stack only',
+    (upgrade) => {
+      const suffix = upgrade.rarity === 'rare' ? '-rare' : '-legendaire';
+      const common = upgrades.find((candidate) => `${candidate.id}${suffix}` === upgrade.id);
+
+      expect(common?.rarity).toBe('common');
+      expect(common?.family).toBe(upgrade.family);
+      expect(common?.classId).toBe(upgrade.classId);
+      expect(upgrade.maxStacks).toBe(1);
+    },
+  );
+
+  it('gives every common upgrade a rare and a legendary variant', () => {
+    const commons = upgrades.filter((upgrade) => upgrade.rarity === 'common');
+
+    expect(commons).toHaveLength(12);
+    for (const common of commons) {
+      expect(upgradeIds.has(`${common.id}-rare`), common.id).toBe(true);
+      expect(upgradeIds.has(`${common.id}-legendaire`), common.id).toBe(true);
+    }
+  });
+
+  it('names the rarity in rare and legendary upgrades', () => {
+    for (const upgrade of withRarity('rare')) {
+      expect(upgrade.name).toMatch(/rare$/);
+      expect(upgrade.description).toMatch(/^Rare : /);
+    }
+    for (const upgrade of withRarity('legendary')) {
+      expect(upgrade.name).toMatch(/légendaire$/);
+      expect(upgrade.description).toMatch(/^Légendaire : /);
+    }
+  });
+
+  it('has six relics, one stack each, of two or three modifiers', () => {
+    const relics = upgrades.filter((upgrade) => upgrade.family === 'relic');
+
+    expect(relics).toHaveLength(6);
+    for (const relic of relics) {
+      expect(relic.maxStacks).toBe(1);
+      expect(relic.modifiers.length).toBeGreaterThanOrEqual(2);
+      expect(relic.modifiers.length).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('has four speakers, each opening an existing weapon, and the ribbon alone behind all four', () => {
+    expect(speakers.map((speaker) => [speaker.id, speaker.unlocksWeaponId])).toEqual([
+      ['dome-chill', 'assiettes-chinoises'],
+      ['foret', 'monocycle'],
+      ['sub', 'totem'],
+      ['cercle-acid', 'baton-du-diable'],
+    ]);
+    expect(speakers.map((speaker) => speaker.aura.kind)).toEqual([
+      'mist',
+      'mist',
+      'shockwave',
+      'lure',
+    ]);
+    expect(speakers.every((speaker) => speaker.plugBars === 2)).toBe(true);
+    expect(weapons.filter((weapon) => weapon.unlockedBySpeakers !== undefined)).toEqual([
+      expect.objectContaining({ id: 'ruban-arc-en-ciel', unlockedBySpeakers: 4 }),
+    ]);
+    expect(sets.every((set) => set.weaponSlots === 3 || set.speakers === undefined)).toBe(true);
+  });
+});
+
 describe('CONTENT numbers', () => {
   it('are finite and never negative', () => {
     const wrong = allNumbers.filter(({ value }) => !Number.isFinite(value) || value < 0);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE, TICK_RATE_HZ } from '../shared/tempo';
 import { CONTENT } from './content';
+import type { WeaponDefinition } from './types';
 
 function find<T extends { id: string }>(items: readonly T[], id: string): T {
   const item = items.find((candidate) => candidate.id === id);
@@ -69,4 +70,47 @@ describe('starting values of soiree-v0 with the mage', () => {
 
     expect(ticks).toBeLessThan(10 * 60 * TICK_RATE_HZ);
   });
+});
+
+describe('circus weapons at level 1', () => {
+  const weapons = CONTENT.weapons ?? [];
+  const mageDamagePerBar = (TICKS_PER_BAR / mage.attack.cooldownTicks) * mage.attack.damage;
+  const baseWeapons = weapons.filter((weapon) => weapon.evolvedFrom === undefined);
+
+  function damagePerBar(weapon: WeaponDefinition): number | undefined {
+    const { effect, rhythm } = weapon;
+    if (rhythm === 'continuous') {
+      return effect.kind === 'orbit'
+        ? effect.damage * effect.count * effect.turnsPerBar
+        : undefined;
+    }
+    const triggersPerBar = rhythm.steps.length / rhythm.everyBars;
+    return 'damage' in effect ? effect.damage * triggersPerBar : undefined;
+  }
+
+  it.each(baseWeapons.filter((weapon) => damagePerBar(weapon) !== undefined))(
+    'deals a quarter to half of the mage attack per bar for $id',
+    (weapon) => {
+      const perBar = damagePerBar(weapon) ?? 0;
+
+      expect(perBar).toBeGreaterThanOrEqual(mageDamagePerBar / 4);
+      expect(perBar).toBeLessThanOrEqual(mageDamagePerBar / 2);
+    },
+  );
+
+  it('plants a totem for at least four bars', () => {
+    const effect = find(weapons, 'totem').effect;
+
+    expect(effect.kind === 'totem' ? effect.durationBars : 0).toBeGreaterThanOrEqual(4);
+  });
+
+  it.each(CONTENT.sets.flatMap((candidate) => candidate.speakers ?? []))(
+    'puts speaker $id more than 300 units from the core',
+    (speaker) => {
+      const dx = speaker.x - set.arena.width / 2;
+      const dy = speaker.y - set.arena.height / 2;
+
+      expect(Math.hypot(dx, dy)).toBeGreaterThan(300);
+    },
+  );
 });
