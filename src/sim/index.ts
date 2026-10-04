@@ -5,6 +5,7 @@ import { createInitialState, type PlayerSlot } from './initial-state';
 import { SpatialHash } from './spatial-hash';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
+import { bystanders } from './systems/bystanders';
 import { coreWatts } from './systems/core-watts';
 import { deaths } from './systems/deaths';
 import { enemyAttacks } from './systems/enemy-attacks';
@@ -51,6 +52,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     spawning,
     enemySteering,
     specials,
+    bystanders,
     projectiles,
     traps,
     skillEffects,
