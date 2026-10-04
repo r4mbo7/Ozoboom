@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { COMBAT_OPTIONS, FIXTURE_SHOOTER, placeEnemy, stepAndRecord } from '../fixtures';
+import type { EnemyDefinition, GameContent } from '../../data/types';
+import {
+  COMBAT_CONTENT,
+  COMBAT_OPTIONS,
+  FIXTURE_SHOOTER,
+  placeEnemy,
+  stepAndRecord,
+} from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { PlayerState } from '../state';
+import { spawnEnemy } from './spawning';
 
 function arena(): { simulation: Simulation; player: PlayerState } {
   const simulation = createSimulation(COMBAT_OPTIONS);
@@ -110,6 +118,24 @@ describe('enemy attacks', () => {
     });
     expect(beforeCooldown).toBe(1);
     expect(projectiles).toHaveLength(2);
+  });
+
+  it('never fires a bad vibe shooter whose damage is zero, however close its target is', () => {
+    const MUTE_DRIZZLE: EnemyDefinition = { ...FIXTURE_SHOOTER, id: 'mute-drizzle', damage: 0 };
+    const content: GameContent = {
+      ...COMBAT_CONTENT,
+      enemies: [...COMBAT_CONTENT.enemies, MUTE_DRIZZLE],
+    };
+    const simulation = createSimulation({ ...COMBAT_OPTIONS, content });
+    const player = simulation.state.players[0];
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    spawnEnemy(simulation.state, MUTE_DRIZZLE, player.x, player.y, false);
+
+    stepAndRecord(simulation, 60);
+
+    expect(simulation.state.projectiles).toHaveLength(0);
   });
 });
 

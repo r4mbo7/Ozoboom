@@ -47,6 +47,9 @@ function shoot(
   enemy: EnemyState,
   ranged: NonNullable<EnemyDefinition['ranged']>,
 ): boolean {
+  if (enemy.damage === 0) {
+    return false;
+  }
   const target = enemy.target === 'core' ? state.core : playerById(state, enemy.target);
   if (target === undefined) {
     return false;

@@ -1,5 +1,6 @@
 import { lookup } from '../content';
 import { SPECIALS } from '../specials';
+import { applyDerivedStats } from '../stats';
 import type { StepContext } from './types';
 
 export function specials(ctx: StepContext): void {
@@ -8,8 +9,11 @@ export function specials(ctx: StepContext): void {
     if (player.slowFactor !== undefined) {
       player.slowFactor = 1;
     }
-    if (player.suppressedTicks !== undefined) {
-      player.suppressedTicks = Math.max(0, player.suppressedTicks - 1);
+    if (player.suppressedTicks !== undefined && player.suppressedTicks > 0) {
+      player.suppressedTicks -= 1;
+      if (player.suppressedTicks === 0) {
+        applyDerivedStats(player, lookup(content.classes, player.classId, 'class'));
+      }
     }
     if (player.dazzledTicks !== undefined) {
       player.dazzledTicks = Math.max(0, player.dazzledTicks - 1);
