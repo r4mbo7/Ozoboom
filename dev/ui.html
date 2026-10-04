@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0618" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Ozoboom - interface</title>
+    <style>
+      .dev-stage {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% 52%, rgb(43 240 255 / 0.35) 0 46px, transparent 47px),
+          radial-gradient(circle at 50% 52%, rgb(43 240 255 / 0.12), transparent 240px),
+          repeating-radial-gradient(
+            circle at 50% 52%,
+            rgb(255 43 214 / 0.07) 0 1px,
+            transparent 1px 64px
+          ),
+          #0b0618;
+      }
+
+      .dev-stage span {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #5a506b;
+        box-shadow: 0 0 12px 4px rgb(90 80 107 / 0.6);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dev-stage" aria-hidden="true">
+      <span style="left: 18%; top: 38%"></span>
+      <span style="left: 24%; top: 61%"></span>
+      <span style="left: 71%; top: 33%"></span>
+      <span style="left: 78%; top: 58%"></span>
+      <span style="left: 64%; top: 70%"></span>
+      <span style="left: 33%; top: 28%"></span>
+      <span style="left: 85%; top: 45%"></span>
+      <span style="left: 12%; top: 50%"></span>
+    </div>
+    <main id="app"></main>
+    <script type="module" src="/src/ui/dev.ts"></script>
+  </body>
+</html>
