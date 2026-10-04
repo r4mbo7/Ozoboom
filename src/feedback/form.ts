@@ -5,6 +5,7 @@ import { el, fillHint, icon, setText } from '../ui/dom';
 import { formatNumber } from '../ui/format';
 import { EYE, SENT } from '../ui/icons';
 import { HELD_MENU_INTENTS, menuEdges } from '../ui/navigation';
+import { onMouseMove } from '../ui/pointer';
 import { promptsFor } from '../ui/prompts';
 import { createToggle } from '../ui/toggle';
 import { FEEDBACK_TYPES, clipboardText } from './github';
@@ -355,16 +356,11 @@ export function openFeedback(
   for (const target of [form, sent]) {
     target.items.forEach((item, position) => {
       const node = target.nodes.get(item);
-      // A real move only: the form opens under a resting cursor, whose synthetic hover must not
-      // take the selection from the keyboard or the gamepad.
-      node?.addEventListener('pointermove', (event) => {
-        const moved = event.movementX !== 0 || event.movementY !== 0;
-        if (
-          moved &&
-          event.pointerType === 'mouse' &&
-          index !== position &&
-          document.activeElement !== textarea
-        ) {
+      if (node === undefined) {
+        return;
+      }
+      onMouseMove(node, () => {
+        if (index !== position && document.activeElement !== textarea) {
           select(target, position);
         }
       });
