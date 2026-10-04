@@ -28,6 +28,13 @@ export const FIXTURE_CONTENT: RenderContent = {
       effect: { kind: 'shockwave', damage: 6, radius: 110, knockback: 24 },
     },
     { id: 'laser', radius: 14, effect: { kind: 'beam', damagePerTick: 1, length: 360, width: 12 } },
+    {
+      id: 'brumisateur',
+      radius: 16,
+      effect: { kind: 'mist', slowFactor: 0.6, healPerBar: 1, radius: 90 },
+    },
+    { id: 'deco-uv', radius: 15, effect: { kind: 'lure', radius: 140, markedDamageMul: 1.5 } },
+    { id: 'stroboscope', radius: 15, effect: { kind: 'strobe', stunTicks: 30, radius: 100 } },
   ],
 };
 
@@ -36,6 +43,7 @@ export type FixtureEvent = 'beat' | 'enemyDied' | 'coreHit';
 export interface FixtureOptions {
   enemies: number;
   projectiles: number;
+  showcase?: boolean;
 }
 
 interface Breed {
@@ -169,22 +177,29 @@ export function spawnPickup(state: SimState): PickupState {
   );
 }
 
-function createTraps(state: SimState): TrapState[] {
+function createTraps(state: SimState, showcase: boolean): TrapState[] {
   const layout = [
-    { kind: 'caisson-de-basse', angle: -Math.PI / 2, distance: 150 },
-    { kind: 'caisson-de-basse', angle: Math.PI / 6, distance: 150 },
-    { kind: 'caisson-de-basse', angle: (5 * Math.PI) / 6, distance: 150 },
-    { kind: 'laser', angle: Math.PI / 2, distance: 120 },
-    { kind: 'laser', angle: -Math.PI / 6, distance: 330 },
+    { kind: 'caisson-de-basse', angle: -Math.PI / 2, distance: 150, level: 1 },
+    { kind: 'caisson-de-basse', angle: Math.PI / 6, distance: 150, level: 2 },
+    { kind: 'caisson-de-basse', angle: (5 * Math.PI) / 6, distance: 150, level: 3 },
+    { kind: 'laser', angle: Math.PI / 2, distance: 120, level: 2 },
+    { kind: 'laser', angle: -Math.PI / 6, distance: 330, level: 1 },
   ];
-  return layout.map(({ kind, angle, distance }) => {
+  if (showcase) {
+    layout.push(
+      { kind: 'brumisateur', angle: -Math.PI / 4, distance: 200, level: 1 },
+      { kind: 'deco-uv', angle: (3 * Math.PI) / 4, distance: 230, level: 2 },
+      { kind: 'stroboscope', angle: (-3 * Math.PI) / 4, distance: 210, level: 3 },
+    );
+  }
+  return layout.map(({ kind, angle, distance, level }) => {
     state.nextEntityId += 1;
     return at(
       {
         id: state.nextEntityId,
         kind,
         ownerId: 0,
-        level: 1,
+        level,
         direction: { x: Math.cos(angle), y: Math.sin(angle) },
         hp: 100,
         cooldown: 0,
@@ -246,7 +261,7 @@ export function createFixtureState(options: FixtureOptions): SimState {
       state.core.y,
     ),
   );
-  state.traps = createTraps(state);
+  state.traps = createTraps(state, options.showcase === true);
   state.enemies.push(spawnEnemy(state, BOSS, true));
   while (state.enemies.length < options.enemies) {
     state.enemies.push(spawnEnemy(state, pickBreed(state.rng), true));

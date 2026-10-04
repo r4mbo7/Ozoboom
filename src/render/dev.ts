@@ -40,7 +40,9 @@ const hourValue = element('#hour-value');
 const state = createFixtureState({
   enemies: count('enemies', 300),
   projectiles: count('projectiles', 200),
+  showcase: params.has('showcase'),
 });
+state.core.hp = (state.core.maxHp * count('coreHp', 100)) / 100;
 const player = state.players[0];
 if (player !== undefined && params.has('trapRadius')) {
   applyModifiers(player, [{ stat: 'trapRadiusMul', mul: count('trapRadius', 1) }]);

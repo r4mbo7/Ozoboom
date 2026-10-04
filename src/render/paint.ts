@@ -59,3 +59,15 @@ export function glow(ctx: CanvasRenderingContext2D, color: string, blur: number)
   ctx.shadowColor = color;
   ctx.shadowBlur = blur;
 }
+
+// Two thin parallel lines along the current path: a wide stroke, then its middle knocked out.
+export function doubleStroke(ctx: Ctx, outer: number, gap: number) {
+  ctx.lineWidth = outer;
+  ctx.stroke();
+  ctx.save();
+  ctx.shadowBlur = 0;
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.lineWidth = gap;
+  ctx.stroke();
+  ctx.restore();
+}

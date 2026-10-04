@@ -6,6 +6,7 @@ import {
   TAU,
   WHITE,
   circle,
+  doubleStroke,
   glow,
   paint,
   polygon,
@@ -33,6 +34,7 @@ export interface Textures {
   readonly core: Shape;
   readonly coreRay: Shape;
   readonly beam: Shape;
+  readonly pip: Shape;
   readonly enemyShot: Shape;
   readonly enemies: Readonly<Record<EnemyBehaviour, Shape>>;
   readonly traps: Readonly<Record<TrapLook, Shape>>;
@@ -77,37 +79,45 @@ export function createTextures(): Textures {
       ]);
       ctx.fill();
     }),
-    streak: paint(48, 16, 3.5, (ctx) => {
-      const gradient = ctx.createLinearGradient(-20, 0, 16, 0);
+    streak: paint(48, 16, 3, (ctx) => {
+      const gradient = ctx.createLinearGradient(-8, 0, 16, 0);
       gradient.addColorStop(0, 'rgb(255 255 255 / 0)');
       gradient.addColorStop(1, WHITE);
       ctx.lineCap = 'round';
-      ctx.lineWidth = 7;
+      ctx.lineWidth = 4;
       ctx.strokeStyle = gradient;
       ctx.beginPath();
-      ctx.moveTo(-20, 0);
-      ctx.lineTo(16, 0);
+      ctx.moveTo(-8, 0);
+      ctx.lineTo(15, 0);
       ctx.stroke();
+      glow(ctx, WHITE, 5);
+      ctx.fillStyle = WHITE;
+      circle(ctx, 3.2, 15, 0);
+      ctx.fill();
     }),
     vibes: paint(32, 32, 12, (ctx) => {
       glow(ctx, WHITE, 6);
       ctx.fillStyle = WHITE;
-      star(ctx, 4, 12, 3.5);
+      star(ctx, 4, 12, 2.6);
+      ctx.fill();
+      circle(ctx, 3);
       ctx.fill();
     }),
     watts: paint(32, 32, 10, (ctx) => {
       glow(ctx, WHITE, 6);
-      ctx.beginPath();
-      for (let index = 0; index < 6; index += 1) {
-        const angle = (index / 6) * TAU;
-        ctx.lineTo(Math.cos(angle) * 9, Math.sin(angle) * 9);
-      }
-      ctx.closePath();
-      ctx.fillStyle = 'rgb(255 255 255 / 0.45)';
-      ctx.fill();
-      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 2.6;
       ctx.strokeStyle = WHITE;
+      ctx.beginPath();
+      for (let index = 0; index < 3; index += 1) {
+        const angle = (index / 3) * Math.PI + Math.PI / 2;
+        ctx.moveTo(Math.cos(angle) * 11, Math.sin(angle) * 11);
+        ctx.lineTo(-Math.cos(angle) * 11, -Math.sin(angle) * 11);
+      }
       ctx.stroke();
+      ctx.fillStyle = WHITE;
+      circle(ctx, 3.4);
+      ctx.fill();
     }),
     player: paint(96, 96, 32, (ctx) => {
       glow(ctx, WHITE, 10);
@@ -156,34 +166,24 @@ export function createTextures(): Textures {
       ctx.fill();
     }),
     core: paint(256, 256, 96, (ctx) => {
-      const cyan = WHITE;
       ctx.fillStyle = SHADE_DEEP;
-      circle(ctx, 96);
+      circle(ctx, 92);
       ctx.fill();
-      glow(ctx, cyan, 18);
-      ctx.lineWidth = 8;
-      ctx.strokeStyle = cyan;
-      ctx.stroke();
-      ctx.lineWidth = 3;
-      ctx.lineJoin = 'round';
+      glow(ctx, WHITE, 16);
+      ctx.lineJoin = 'miter';
+      ctx.strokeStyle = WHITE;
       for (const turn of [0, Math.PI]) {
         polygon(
           ctx,
           [0, 1, 2].map((index) => {
             const angle = turn + (index / 3) * TAU - Math.PI / 2;
-            return [Math.cos(angle) * 78, Math.sin(angle) * 78] as const;
+            return [Math.cos(angle) * 82, Math.sin(angle) * 82] as const;
           }),
         );
-        ctx.stroke();
+        doubleStroke(ctx, 11, 4.5);
       }
       ctx.fillStyle = WHITE;
-      for (let index = 0; index < 12; index += 1) {
-        const angle = (index / 12) * TAU;
-        circle(ctx, 3.5, Math.cos(angle) * 86, Math.sin(angle) * 86);
-        ctx.fill();
-      }
-      glow(ctx, cyan, 24);
-      circle(ctx, 26);
+      circle(ctx, 22);
       ctx.fill();
     }),
     coreRay: paint(256, 32, 16, (ctx) => {
@@ -200,34 +200,41 @@ export function createTextures(): Textures {
       ctx.fill();
     }),
     beam: paint(BEAM_LENGTH, 32, 16, (ctx) => {
-      const gradient = ctx.createLinearGradient(0, -16, 0, 16);
-      gradient.addColorStop(0, 'rgb(255 255 255 / 0)');
-      gradient.addColorStop(0.3, 'rgb(255 255 255 / 0.25)');
-      gradient.addColorStop(0.43, WHITE);
-      gradient.addColorStop(0.5, WHITE);
-      gradient.addColorStop(0.57, WHITE);
-      gradient.addColorStop(0.7, 'rgb(255 255 255 / 0.25)');
-      gradient.addColorStop(1, 'rgb(255 255 255 / 0)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(-BEAM_LENGTH / 2, -16, BEAM_LENGTH, 32);
-      const fade = ctx.createLinearGradient(-BEAM_LENGTH / 2, 0, BEAM_LENGTH / 2, 0);
+      const half = BEAM_LENGTH / 2;
+      ctx.fillStyle = 'rgb(255 255 255 / 0.14)';
+      ctx.fillRect(-half, -10, BEAM_LENGTH, 20);
+      ctx.fillStyle = WHITE;
+      for (const y of [-10, 10]) {
+        ctx.fillRect(-half, y - 1.5, BEAM_LENGTH, 3);
+      }
+      ctx.fillRect(-half, -2, BEAM_LENGTH, 4);
+      const fade = ctx.createLinearGradient(-half, 0, half, 0);
       fade.addColorStop(0, WHITE);
       fade.addColorStop(0.8, WHITE);
       fade.addColorStop(1, 'rgb(255 255 255 / 0)');
       ctx.globalCompositeOperation = 'destination-in';
       ctx.fillStyle = fade;
-      ctx.fillRect(-BEAM_LENGTH / 2, -16, BEAM_LENGTH, 32);
+      ctx.fillRect(-half, -16, BEAM_LENGTH, 32);
+    }),
+    pip: paint(16, 8, 4, (ctx) => {
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = WHITE;
+      ctx.beginPath();
+      ctx.moveTo(-4, 0);
+      ctx.lineTo(4, 0);
+      ctx.stroke();
     }),
     enemyShot: paint(32, 32, 8, (ctx) => {
-      ctx.beginPath();
-      ctx.moveTo(-10, 0);
-      ctx.quadraticCurveTo(-2, -8, 6, -6);
-      ctx.arc(6, 0, 6, -Math.PI / 2, Math.PI / 2);
-      ctx.quadraticCurveTo(-2, 8, -10, 0);
-      ctx.fillStyle = WHITE;
-      ctx.fill();
-      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
       ctx.strokeStyle = SHADE;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(-13, 0);
+      ctx.lineTo(8, 0);
+      ctx.stroke();
+      ctx.strokeStyle = WHITE;
+      ctx.lineWidth = 3;
       ctx.stroke();
     }),
     enemies: {
