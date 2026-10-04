@@ -8,13 +8,13 @@ Jouer : [r4mbo7.github.io/Ozoboom](https://r4mbo7.github.io/Ozoboom/)
 
 Au 2026-10-04 : les fondations sont posées, le jeu n'est pas encore jouable. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
 
-| Jalon      | Contenu                                                                                                                                                                             | État     |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Fondations | Vision, direction artistique, game design, architecture, contrats, outillage, CI et déploiement                                                                                     | fait     |
-| V0         | Prototype solo jouable : mage, vagues, deux pièges, clavier et manette, musique synthétisée ([exigences](docs/brainstorms/2026-10-04-v0-requirements.md), [plan](docs/plans/v0.md)) | planifié |
-| V1         | Trois classes, tous les pièges, équilibrage, coop locale, tactile, mode radio, avis des joueurs depuis le jeu ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))              | à venir  |
-| V2         | Coop en ligne par lien, pair à pair                                                                                                                                                 | à venir  |
-| V3         | Classement public : soirée du jour, scores vérifiés par rejeu                                                                                                                       | à venir  |
+| Jalon      | Contenu                                                                                                                                                                                                  | État     |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Fondations | Vision, direction artistique, game design, architecture, contrats, outillage, CI et déploiement                                                                                                          | fait     |
+| V0         | Prototype solo jouable : mage, vagues, deux pièges, clavier et manette, musique synthétisée, bouton « Ton avis » ([exigences](docs/brainstorms/2026-10-04-v0-requirements.md), [plan](docs/plans/v0.md)) | planifié |
+| V1         | Trois classes, tous les pièges, équilibrage, coop locale, tactile, mode radio ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))                                                                   | à venir  |
+| V2         | Coop en ligne par lien, pair à pair                                                                                                                                                                      | à venir  |
+| V3         | Classement public : soirée du jour, scores vérifiés par rejeu                                                                                                                                            | à venir  |
 
 ## Documentation
 
