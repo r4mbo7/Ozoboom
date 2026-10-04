@@ -1,4 +1,4 @@
-import type { TrapCadence, TrapDefinition } from '../../data/types';
+import type { TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
 import { isBarTick } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
 import type { PlayerAction } from '../commands';
@@ -12,16 +12,23 @@ import {
   touches,
   wholeTicks,
 } from '../effects';
-import type { EnemyState, PlayerState, SimState, TrapState, Vec2 } from '../state';
+import type { EnemyState, PlayerId, PlayerState, SimState, TrapState, Vec2 } from '../state';
 import { statValue } from '../stats';
 import type { StepContext } from './types';
 
 type PlaceTrap = Extract<PlayerAction, { type: 'placeTrap' }>;
 
-interface Firing {
+export interface Emitter extends Vec2 {
+  direction: Vec2;
+}
+
+export interface Firing {
   state: SimState;
-  trap: TrapState;
-  definition: TrapDefinition;
+  at: Emitter;
+  effect: TrapEffect;
+  // Half-width of the emitter body: the lure stops its prey there.
+  contact: number;
+  by: PlayerId | null;
   power: number;
   damageMul: number;
   radiusMul: number;
@@ -46,10 +53,19 @@ export function traps(ctx: StepContext): void {
       if (firing[definition.cadence] && (definition.effect.kind === 'lure') === lures) {
         const owner = ownerOf(state, trap);
         const power = compound(definition.levelMul, trap.level - 1);
+        state.events.push({
+          type: 'trapFired',
+          id: trap.id,
+          kind: trap.kind,
+          x: trap.x,
+          y: trap.y,
+        });
         fire({
           state,
-          trap,
-          definition,
+          at: trap,
+          effect: definition.effect,
+          contact: definition.radius,
+          by: trap.ownerId,
           power,
           damageMul: power * statValue(owner, 'trapDamageMul', 1),
           radiusMul: statValue(owner, 'trapRadiusMul', 1),
@@ -106,7 +122,7 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     y <= arena.height - radius &&
     !overlaps(footprint, core, core.radius) &&
     !state.traps.some((trap) => overlaps(footprint, trap, trapDefinition(content, trap).radius)) &&
-    state.traps.length < set.maxTraps;
+    state.traps.length < set.maxTraps + (state.volume ?? 0);
   if (!fits) {
     return;
   }
@@ -163,36 +179,34 @@ function cadencesFiring(state: SimState): Readonly<Record<TrapCadence, boolean>>
   return { beat, bar, drop, continuous: true };
 }
 
-function fire(firing: Firing): void {
-  const { state, trap, definition, power, damageMul, radiusMul, markedMul } = firing;
-  const { effect } = definition;
-  state.events.push({ type: 'trapFired', id: trap.id, kind: trap.kind, x: trap.x, y: trap.y });
+export function fire(firing: Firing): void {
+  const { state, at, effect, contact, by, power, damageMul, radiusMul, markedMul } = firing;
   switch (effect.kind) {
     case 'shockwave':
       for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, trap, effect.radius * radiusMul)) {
-          hurtEnemy(state, enemy, effect.damage * damageMul, markedMul, trap.ownerId);
-          pushAway(enemy, trap, effect.knockback);
+        if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
+          hurtEnemy(state, enemy, effect.damage * damageMul, markedMul, by);
+          pushAway(enemy, at, effect.knockback);
         }
       }
       return;
     case 'beam':
       for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && inBeam(enemy, trap, effect.length * radiusMul, effect.width / 2)) {
-          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, trap.ownerId);
+        if (enemy.hp > 0 && inBeam(enemy, at, effect.length * radiusMul, effect.width / 2)) {
+          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, by);
         }
       }
       return;
     case 'mist': {
       const radius = effect.radius * radiusMul;
       for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, trap, radius)) {
+        if (enemy.hp > 0 && touches(enemy, at, radius)) {
           enemy.slowFactor = Math.min(enemy.slowFactor, effect.slowFactor);
         }
       }
       if (isBarTick(state.tick)) {
         for (const player of state.players) {
-          if (!player.downed && touches(player, trap, radius)) {
+          if (!player.downed && touches(player, at, radius)) {
             player.hp = Math.min(player.maxHp, player.hp + effect.healPerBar * power);
           }
         }
@@ -201,16 +215,16 @@ function fire(firing: Firing): void {
     }
     case 'lure':
       for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, trap, effect.radius * radiusMul)) {
+        if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
           enemy.marked = true;
-          drawTo(enemy, trap, definition.radius + enemy.radius);
+          drawTo(enemy, at, contact + enemy.radius);
         }
       }
       return;
     case 'strobe': {
       const stun = wholeTicks(effect.stunTicks * power);
       for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, trap, effect.radius * radiusMul)) {
+        if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
           enemy.stunTicks = Math.max(enemy.stunTicks, stun);
         }
       }
@@ -219,7 +233,7 @@ function fire(firing: Firing): void {
   }
 }
 
-function inBeam(enemy: EnemyState, trap: TrapState, length: number, halfWidth: number): boolean {
+function inBeam(enemy: EnemyState, trap: Emitter, length: number, halfWidth: number): boolean {
   const { direction } = trap;
   const dx = enemy.x - trap.x;
   const dy = enemy.y - trap.y;
@@ -231,7 +245,7 @@ function inBeam(enemy: EnemyState, trap: TrapState, length: number, halfWidth: n
 }
 
 // The lure replaces the step the steering just gave the enemy: same speed, slow and stun, new goal.
-function drawTo(enemy: EnemyState, trap: TrapState, contact: number): void {
+function drawTo(enemy: EnemyState, trap: Vec2, contact: number): void {
   const step = enemy.stunTicks > 0 ? 0 : enemy.speed * enemy.slowFactor;
   const dx = trap.x - enemy.prevX;
   const dy = trap.y - enemy.prevY;

@@ -3,6 +3,7 @@ import { nextFloat } from '../../shared/prng';
 import { BARS_PER_PHRASE, TICKS_PER_BAR, isBarTick } from '../../shared/tempo';
 import { lookup } from '../content';
 import { compound } from '../effects';
+import { volumeMul } from '../volume';
 import type { Arena, EnemyState, SimState, Vec2 } from '../state';
 import type { StepContext } from './types';
 
@@ -29,7 +30,8 @@ export function spawning({ state, content, set }: StepContext): void {
       continue;
     }
     const definition = lookup(content.enemies, rule.enemyId, 'enemy');
-    for (let i = 0; i < rule.count; i++) {
+    const count = Math.ceil(rule.count * volumeMul(state));
+    for (let i = 0; i < count; i++) {
       spawnAtEdge(state, definition, false);
     }
   }
@@ -43,7 +45,8 @@ export function spawnEnemy(
   isBoss: boolean,
 ): EnemyState {
   const phrase = state.set.phrase;
-  const maxHp = definition.maxHp * compound(definition.scalingPerPhrase.hp, phrase);
+  const maxHp =
+    definition.maxHp * compound(definition.scalingPerPhrase.hp, phrase) * volumeMul(state);
   const enemy: EnemyState = {
     id: state.nextEntityId,
     kind: definition.id,
