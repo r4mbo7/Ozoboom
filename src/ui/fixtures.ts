@@ -42,8 +42,8 @@ export const UI_FIXTURE_CONTENT: GameContent = {
   ],
   enemies: [
     {
-      id: 'relou',
-      name: 'Le Relou',
+      id: 'desagreable',
+      name: 'Le Désagréable',
       behaviour: 'rusher',
       maxHp: 20,
       speed: 3,
@@ -153,13 +153,13 @@ export const UI_FIXTURE_CONTENT: GameContent = {
           buildupPhrases: 4,
           breakBars: 4,
           bossId: 'couvre-feu',
-          spawns: [{ enemyId: 'relou', everyBars: 1, count: 3, fromPhrase: 0 }],
+          spawns: [{ enemyId: 'desagreable', everyBars: 1, count: 3, fromPhrase: 0 }],
         },
         {
           buildupPhrases: 4,
           breakBars: 4,
           bossId: 'batterie-a-plat',
-          spawns: [{ enemyId: 'relou', everyBars: 1, count: 6, fromPhrase: 0 }],
+          spawns: [{ enemyId: 'desagreable', everyBars: 1, count: 6, fromPhrase: 0 }],
         },
       ],
     },
@@ -195,7 +195,7 @@ export function fixturePlayer(overrides: Partial<PlayerState> = {}): PlayerState
 function fixtureEnemies(count: number): EnemyState[] {
   return Array.from({ length: count }, (_, index) => ({
     id: 100 + index,
-    kind: 'relou',
+    kind: 'desagreable',
     x: (index * 97) % 1600,
     y: (index * 61) % 1000,
     prevX: (index * 97) % 1600,

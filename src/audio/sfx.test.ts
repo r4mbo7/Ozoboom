@@ -12,7 +12,7 @@ const trapEffectOf = (kind: string) => trapEffects[kind] ?? kind;
 const soundingEvents: readonly [SimEvent, SfxName][] = [
   [{ type: 'playerFired', playerId: 0, x: 0, y: 0, angle: 0 }, 'playerFired'],
   [{ type: 'enemyHit', id: 1, damage: 3, x: 0, y: 0 }, 'enemyHit'],
-  [{ type: 'enemyDied', id: 1, kind: 'relou', x: 0, y: 0, byPlayer: 0 }, 'enemyDied'],
+  [{ type: 'enemyDied', id: 1, kind: 'desagreable', x: 0, y: 0, byPlayer: 0 }, 'enemyDied'],
   [{ type: 'coreHit', damage: 2 }, 'coreHit'],
   [{ type: 'trapFired', id: 4, kind: 'caisson-de-basse', x: 0, y: 0 }, 'trapSub'],
   [{ type: 'trapFired', id: 5, kind: 'laser', x: 0, y: 0 }, 'trapBreath'],
@@ -33,7 +33,7 @@ describe('sfxOf', () => {
     const silent: SimEvent[] = [
       { type: 'beat', beat: 1 },
       { type: 'segment', segment: 'drop', tier: 0 },
-      { type: 'enemySpawned', id: 1, kind: 'relou', x: 0, y: 0 },
+      { type: 'enemySpawned', id: 1, kind: 'desagreable', x: 0, y: 0 },
       { type: 'trapFired', id: 6, kind: 'brumisateur', x: 0, y: 0 },
     ];
 
