@@ -54,6 +54,7 @@ function creditedPlayer(state: SimState, projectile: ProjectileState): PlayerId 
   const { owner } = projectile;
   switch (owner.kind) {
     case 'player':
+    case 'weapon':
       return owner.playerId;
     case 'trap':
       return state.traps.find((trap) => trap.id === owner.trapId)?.ownerId ?? null;

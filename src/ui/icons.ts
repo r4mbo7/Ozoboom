@@ -81,5 +81,7 @@ export function familyIcon(family: UpgradeFamily): string {
       return '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="3"/>';
     case 'defense':
       return '<path d="M12 2.5 20 6v6c0 4.6-3.4 8.2-8 9.5-4.6-1.3-8-4.9-8-9.5V6z" fill="currentColor"/>';
+    case 'relic':
+      return '<path d="M12 2 4 9l8 13 8-13z" fill="currentColor"/>';
   }
 }

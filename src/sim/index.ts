@@ -24,6 +24,7 @@ import { status } from './systems/status';
 import { tempo } from './systems/tempo';
 import { traps } from './systems/traps';
 import { upgradeChoice } from './systems/upgrade-choice';
+import { weapons } from './systems/weapons';
 import type { StepContext, System } from './systems/types';
 
 export interface SimulationOptions {
@@ -48,6 +49,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     upgradeChoice,
     playerMovement,
     playerAttack,
+    weapons,
     skills,
     spawning,
     enemySteering,

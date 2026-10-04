@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GameContent, SpecialEffect, TierDefinition } from '../data/types';
+import type { GameContent, SpecialEffect, TierDefinition, WeaponEffect } from '../data/types';
 import { resolveContent } from './content';
 import { FIXTURE_CONTENT, FIXTURE_SET } from './fixtures';
 
@@ -20,6 +20,103 @@ describe('resolveContent', () => {
     expect([...resolved.upgrades.keys()]).toEqual(['quick-feet', 'big-bass', 'wide-nova']);
     expect(resolved.sets.get('fixture-set')).toBe(FIXTURE_SET);
     expect([...resolved.bystanders.keys()]).toEqual([]);
+  });
+
+  it('loads a content without weapons nor speakers as before', () => {
+    const content = FIXTURE_CONTENT;
+
+    const resolved = resolveContent(content);
+
+    expect([...resolved.weapons.keys()]).toEqual([]);
+  });
+
+  it('rejects a weapon whose effect has no module', () => {
+    const content: GameContent = {
+      ...FIXTURE_CONTENT,
+      weapons: [
+        {
+          id: 'mystery-prop',
+          name: 'Mystery prop',
+          description: 'mystery',
+          rhythm: 'continuous',
+          effect: { kind: 'mystery' } as unknown as WeaponEffect,
+          maxLevel: 1,
+          levelMul: 1,
+        },
+      ],
+    };
+
+    expect(() => resolveContent(content)).toThrow(
+      'weapon "mystery-prop" has no module for effect "mystery"',
+    );
+  });
+
+  it('rejects a weapon id clashing with an upgrade id', () => {
+    const content: GameContent = {
+      ...FIXTURE_CONTENT,
+      weapons: [
+        {
+          id: 'quick-feet',
+          name: 'Quick feet',
+          description: 'clash',
+          rhythm: 'continuous',
+          effect: { kind: 'sweep', damage: 1, radius: 1, arcDegrees: 1 },
+          maxLevel: 1,
+          levelMul: 1,
+        },
+      ],
+    };
+
+    expect(() => resolveContent(content)).toThrow(
+      'weapon id clashes with an upgrade id: "quick-feet"',
+    );
+  });
+
+  it('rejects a fusion whose weapon, upgrade or result is unknown', () => {
+    const fireStick = {
+      id: 'fire-stick',
+      name: 'Fire stick',
+      description: 'swing',
+      rhythm: 'continuous' as const,
+      effect: { kind: 'sweep', damage: 1, radius: 1, arcDegrees: 1 } as const,
+      maxLevel: 1,
+      levelMul: 1,
+    };
+    const content: GameContent = {
+      ...FIXTURE_CONTENT,
+      weapons: [fireStick],
+      fusions: [{ weaponId: 'fire-stick', upgradeId: 'quick-feet', resultId: 'ghost' }],
+    };
+
+    expect(() => resolveContent(content)).toThrow('unknown result of fusion to "ghost": "ghost"');
+  });
+
+  it("rejects a speaker whose unlocked weapon doesn't exist", () => {
+    const content: GameContent = {
+      ...FIXTURE_CONTENT,
+      sets: [
+        {
+          ...FIXTURE_SET,
+          speakers: [
+            {
+              id: 'chill-dome',
+              name: 'Dôme chill',
+              description: 'un dôme calme',
+              x: 10,
+              y: 10,
+              radius: 40,
+              plugBars: 8,
+              aura: { kind: 'mist', slowFactor: 0.5, healPerBar: 1, radius: 100 },
+              unlocksWeaponId: 'ghost',
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(() => resolveContent(content)).toThrow(
+      'unknown unlocked weapon of speaker "chill-dome": "ghost"',
+    );
   });
 
   it('rejects a tier whose boss is unknown', () => {

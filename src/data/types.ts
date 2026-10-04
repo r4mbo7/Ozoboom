@@ -119,7 +119,9 @@ export interface TrapDefinition {
   levelMul: number;
 }
 
-export type UpgradeFamily = 'class' | 'generic' | 'defense';
+export type UpgradeFamily = 'class' | 'generic' | 'defense' | 'relic';
+
+export type Rarity = 'common' | 'rare' | 'legendary';
 
 export interface UpgradeDefinition {
   id: string;
@@ -127,8 +129,70 @@ export interface UpgradeDefinition {
   description: string;
   family: UpgradeFamily;
   classId?: string;
+  // Absent means common.
+  rarity?: Rarity;
   modifiers: readonly StatModifier[];
   maxStacks: number;
+}
+
+// `steps`: sixteenth notes, 0 to 15, within the bar.
+export type WeaponRhythm = { everyBars: number; steps: readonly number[] } | 'continuous';
+
+export type WeaponEffect =
+  | { kind: 'sweep'; damage: number; radius: number; arcDegrees: number }
+  | { kind: 'spark'; damage: number; speed: number; pierce: number; rangeTicks: number }
+  | { kind: 'hoop'; damage: number; radius: number; wideRadius: number; knockback: number }
+  | { kind: 'lob'; damage: number; radius: number; range: number; flightTicks: number }
+  | { kind: 'boomerang'; damage: number; heal: number; range: number; speed: number }
+  | {
+      kind: 'plate';
+      slowFactor: number;
+      healPerBar: number;
+      radius: number;
+      durationBars: number;
+      maxPlaced: number;
+    }
+  | { kind: 'totem'; damage: number; knockback: number; radius: number; durationBars: number }
+  | {
+      kind: 'orbit';
+      damage: number;
+      count: number;
+      radius: number;
+      orbitRadius: number;
+      turnsPerBar: number;
+    }
+  | { kind: 'trail'; speedMul: number; slowFactor: number; healPerBar: number; lengthTicks: number }
+  | { kind: 'ribbon'; length: number; markedTicks: number };
+
+export interface WeaponDefinition {
+  id: string;
+  name: string;
+  description: string;
+  classAffinity?: string;
+  unlockedBySpeakers?: number;
+  evolvedFrom?: string;
+  rhythm: WeaponRhythm;
+  effect: WeaponEffect;
+  maxLevel: number;
+  levelMul: number;
+}
+
+export interface FusionDefinition {
+  weaponId: string;
+  upgradeId: string;
+  resultId: string;
+}
+
+export interface SpeakerDefinition {
+  id: string;
+  name: string;
+  description: string;
+  x: number;
+  y: number;
+  radius: number;
+  plugBars: number;
+  aura: TrapEffect;
+  unlocksWeaponId?: string;
 }
 
 // Phrases count from 0 within the tier's buildup, toPhrase included.
@@ -180,6 +244,9 @@ export interface SetDefinition {
   levelCurve: { baseVibes: number; vibesPerLevel: number };
   pickups: { lifetimeTicks: number; speed: number };
   tiers: readonly TierDefinition[];
+  speakers?: readonly SpeakerDefinition[];
+  // Absent means 3.
+  weaponSlots?: number;
 }
 
 export interface GameContent {
@@ -189,4 +256,6 @@ export interface GameContent {
   upgrades: readonly UpgradeDefinition[];
   sets: readonly SetDefinition[];
   bystanders?: readonly BystanderDefinition[];
+  weapons?: readonly WeaponDefinition[];
+  fusions?: readonly FusionDefinition[];
 }
