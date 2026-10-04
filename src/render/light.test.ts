@@ -26,11 +26,23 @@ function frameAt(fraction: number): Frame {
 
 function context(): RenderContext {
   const shape: Shape = { texture: Texture.EMPTY, radius: 32 };
+  const look = { object: shape, downed: shape, extent: 40, height: 1, shadow: shape };
+  const playerTextures = {
+    shoulders: shape,
+    head: shape,
+    aim: shape,
+    contour: shape,
+    looks: { poi: look, case: look, parasol: look },
+  };
   return {
-    textures: { halo: shape, playerRing: shape, player: shape, playerDowned: shape, aim: shape },
+    textures: { halo: shape, players: playerTextures },
     layers: createLayers(new Container()),
     options: { calmMode: false },
-    classTokens: new Map([['mage', 'mage']]),
+    classTokens: new Map([
+      ['mage', 'mage'],
+      ['tank', 'tank'],
+      ['healer', 'healer'],
+    ]),
     behaviours: new Map(),
     trapLooks: new Map(),
   } as unknown as RenderContext;
@@ -67,11 +79,10 @@ describe('players', () => {
 
       players.update(state, 0, frame);
 
-      const sprites = ctx.layers.glow.children.concat(ctx.layers.players.children);
       const [halo] = ctx.layers.glow.children;
-      const [outline, body] = ctx.layers.players.children;
-      expect(sprites.length).toBeGreaterThan(0);
-      expect(body?.tint).toBe(frame.palette.mage);
+      const [outline, , shoulders, , object] = ctx.layers.players.children[1]?.children ?? [];
+      expect(shoulders?.tint).toBe(frame.palette.mage);
+      expect(object?.tint).toBe(frame.palette.mage);
       expect(halo?.tint).toBe(frame.palette.mage);
       expect(halo?.alpha).toBe(frame.light.haloAlpha);
       expect(outline?.visible).toBe(!night);
@@ -84,6 +95,6 @@ describe('players', () => {
 
     createPlayers(ctx).update(createFixtureState({ enemies: 0, projectiles: 0 }), 0, frame);
 
-    expect(ctx.layers.players.children[0]?.tint).toBe(frame.palette.texte);
+    expect(ctx.layers.players.children[1]?.children[0]?.tint).toBe(frame.palette.texte);
   });
 });

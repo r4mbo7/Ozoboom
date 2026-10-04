@@ -1,6 +1,7 @@
 import type {
   EnemyState,
   PickupState,
+  PlayerId,
   PlayerState,
   Positioned,
   ProjectileState,
@@ -14,7 +15,7 @@ import { SETS } from '../data/sets';
 import type { RenderContent } from './context';
 
 export const FIXTURE_CONTENT: RenderContent = {
-  classes: [{ id: 'mage' }],
+  classes: [{ id: 'mage' }, { id: 'tank' }, { id: 'healer' }],
   sets: SETS,
   enemies: ENEMIES,
   bystanders: BYSTANDERS,
@@ -64,6 +65,8 @@ const BOSS: Breed = { kind: 'couvre-feu', radius: 40, speed: 0.4, holdAt: 240, s
 const ARENA = { width: 1600, height: 1000 };
 const CORE_RADIUS = 46;
 export const PLAYER_ORBIT = 230;
+export const PARTY_OFFSET = 64;
+const PARTY = ['mage', 'tank', 'healer'];
 export const TAU = Math.PI * 2;
 
 export function nextRandom(rng: RngState): number {
@@ -238,27 +241,29 @@ export function createFixtureState(options: FixtureOptions): SimState {
     events: [],
   };
   state.players.push(
-    at<Omit<PlayerState, keyof Positioned>>(
-      {
-        id: 0,
-        classId: 'mage',
-        radius: 14,
-        hp: 100,
-        maxHp: 100,
-        speed: 3,
-        aim: { x: 1, y: 0 },
-        level: 1,
-        vibes: 0,
-        vibesToNextLevel: 10,
-        attackCooldown: 0,
-        skillCooldown: 0,
-        ultimateReady: false,
-        upgrades: [],
-        modifiers: {},
-        downed: false,
-      },
-      state.core.x + PLAYER_ORBIT,
-      state.core.y,
+    ...PARTY.map((classId, id) =>
+      at<Omit<PlayerState, keyof Positioned>>(
+        {
+          id: id as PlayerId,
+          classId,
+          radius: 14,
+          hp: 100,
+          maxHp: 100,
+          speed: 3,
+          aim: { x: 1, y: 0 },
+          level: 1,
+          vibes: 0,
+          vibesToNextLevel: 10,
+          attackCooldown: 0,
+          skillCooldown: 0,
+          ultimateReady: false,
+          upgrades: [],
+          modifiers: {},
+          downed: false,
+        },
+        state.core.x + PLAYER_ORBIT,
+        state.core.y + PARTY_OFFSET * (id === 0 ? 0 : id === 1 ? -1 : 1),
+      ),
     ),
   );
   state.traps = createTraps(state, options.showcase === true);

@@ -71,3 +71,9 @@ export function doubleStroke(ctx: Ctx, outer: number, gap: number) {
   ctx.stroke();
   ctx.restore();
 }
+
+export function rim(ctx: Ctx, width = 2): void {
+  ctx.lineWidth = width;
+  ctx.strokeStyle = SHADE_DEEP;
+  ctx.stroke();
+}

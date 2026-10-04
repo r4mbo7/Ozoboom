@@ -23,7 +23,7 @@ export function createWater(ctx: RenderContext, parent: Container) {
   const coreReflection = add(parent, t.core);
   const playerReflections: Sprite[] = [];
   for (let index = 0; index < REFLECTED_PLAYERS; index += 1) {
-    playerReflections.push(add(parent, t.player));
+    playerReflections.push(add(parent, t.players.shoulders));
   }
   for (const sprite of [coreReflection, ...playerReflections]) {
     sprite.visible = false;
@@ -90,7 +90,7 @@ export function createWater(ctx: RenderContext, parent: Container) {
           continue;
         }
         used += 1;
-        const size = player.radius / t.player.radius;
+        const size = player.radius / t.players.shoulders.radius;
         sprite.visible = true;
         setTint(sprite, frame.palette[lookup(ctx.classTokens, player.classId, 'class')]);
         sprite.position.set(
