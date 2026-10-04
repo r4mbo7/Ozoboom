@@ -1,6 +1,7 @@
 import { lookup, type ResolvedContent } from '../content';
 import type { PickupState, PlayerState, SimState } from '../state';
 import { statValue } from '../stats';
+import { volumeMul } from '../volume';
 import type { StepContext } from './types';
 
 export function pickups({ state, content, set }: StepContext): void {
@@ -62,8 +63,9 @@ function attract(pickup: PickupState, player: PlayerState, speed: number): boole
 
 function collect(state: SimState, pickup: PickupState, player: PlayerState): void {
   if (pickup.kind === 'vibes') {
-    player.vibes += pickup.amount;
-    state.stats.vibesCollected += pickup.amount;
+    const amount = pickup.amount * volumeMul(state);
+    player.vibes += amount;
+    state.stats.vibesCollected += amount;
   } else {
     state.core.watts += pickup.amount;
   }

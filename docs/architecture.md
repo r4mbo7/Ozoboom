@@ -79,6 +79,7 @@ Conventions de la simulation :
 - Une offre de cartes (`UpgradeOffer.options`) mélange des identifiants d'amélioration, d'agrès et de relique ; `chooseUpgrade.upgradeId` les accepte tous, et les identifiants des agrès ne recoupent jamais ceux des améliorations.
 - Chaque sorte d'`WeaponEffect` a son module dans `src/sim/weapons/`, enregistré sur sa ligne dans `WEAPONS` (`src/sim/systems/weapons.ts`) ; `resolveContent` refuse un agrès dont la sorte n'a pas de module.
 - `SimState.volume` compte les enceintes branchées du set ; `SimState.speakers` tient leur position et leur progression de branchement, posé par `createInitialState` à partir de `SetDefinition.speakers`.
+- Le système `speakers` suit `traps` : l'aura d'une enceinte branchée passe par `fire` de `traps.ts`, comme un piège (onde de choc sur le temps, le reste en continu). Les effets du Volume se lisent par `volumeMul` (`src/sim/volume.ts`) ; le score d'une partie est `scoreOf` (`src/sim/score.ts`).
 
 ## Boucle
 

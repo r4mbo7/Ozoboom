@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerAction, PlayerCommand } from './commands';
-import { FIXTURE_OPTIONS, commandFor } from './fixtures';
+import { EFFECTS_CONTENT, FIXTURE_OPTIONS, FIXTURE_SET, commandFor } from './fixtures';
 import type { SimulationOptions } from './index';
 import { hashState, runScript } from './replay';
 import type { Vec2 } from './state';
@@ -70,6 +70,33 @@ function referenceScript(ticks: number): PlayerCommand[][] {
   });
 }
 
+const SPEAKER_HASH = '4b896531';
+
+const speakerGame: SimulationOptions = {
+  ...FIXTURE_OPTIONS,
+  seed: 77,
+  content: {
+    ...EFFECTS_CONTENT,
+    sets: [
+      {
+        ...FIXTURE_SET,
+        speakers: [
+          {
+            id: 'dome',
+            name: 'Dôme',
+            description: 'Une brume.',
+            x: 800,
+            y: 450,
+            radius: 150,
+            plugBars: 2,
+            aura: { kind: 'mist', slowFactor: 0.5, healPerBar: 10, radius: 100 },
+          },
+        ],
+      },
+    ],
+  },
+};
+
 describe('replay', () => {
   it('reaches the same state twice from the same seed and script', () => {
     const script = referenceScript(1000);
@@ -100,6 +127,18 @@ describe('replay', () => {
     expect(state.stats.phrasesHeld).toBe(2);
     expect(state.players.map((player) => player.upgrades)).toEqual([[], ['big-bass']]);
     expect(hashState(state)).toBe(REFERENCE_HASH);
+  });
+});
+
+describe('replay of a game that plugs a speaker', () => {
+  it('keeps the fingerprint of the speaker script', () => {
+    const script = Array.from({ length: 1000 }, () => [commandFor(0, { fire: true })]);
+
+    const state = runScript(speakerGame, script);
+
+    expect(state.speakers?.map((speaker) => speaker.plugged)).toEqual([true]);
+    expect(state.volume).toBe(1);
+    expect(hashState(state)).toBe(SPEAKER_HASH);
   });
 });
 
