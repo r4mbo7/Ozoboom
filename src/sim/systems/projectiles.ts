@@ -1,7 +1,10 @@
-import { damageCore, damagePlayer } from '../damage';
-import { hurtEnemy, markedDamageMul } from '../effects';
-import type { PlayerId, ProjectileState, SimState } from '../state';
+import { damageCore, damagePlayer, playerById } from '../damage';
+import { hurtEnemy, markedDamageMul, pushAway } from '../effects';
+import type { PlayerId, PlayerState, ProjectileState, SimState } from '../state';
 import type { StepContext } from './types';
+
+const LANDING_KNOCKBACK_PER_RADIUS = 0.25;
+const RETURN_TICKS = 600;
 
 export function projectiles({ state, content, enemyGrid }: StepContext): void {
   const markedMul = markedDamageMul(content);
@@ -9,21 +12,108 @@ export function projectiles({ state, content, enemyGrid }: StepContext): void {
   const { width, height } = state.arena;
   let kept = 0;
   for (const projectile of state.projectiles) {
+    if (projectile.returning === true && flyHome(state, projectile)) {
+      continue;
+    }
     projectile.x += projectile.vx;
     projectile.y += projectile.vy;
     projectile.ticksLeft -= 1;
-    const spent =
-      projectile.owner.kind === 'enemy'
-        ? hitPlayerOrCore(state, projectile)
-        : hitEnemies(state, enemyGrid, projectile, markedMul);
+    let spent = false;
+    if (projectile.owner.kind === 'enemy') {
+      spent = hitPlayerOrCore(state, projectile);
+    } else if (projectile.returning !== true && projectile.arc === undefined) {
+      spent = hitEnemies(state, enemyGrid, projectile, markedMul);
+    }
     const inArena =
       projectile.x >= 0 && projectile.x <= width && projectile.y >= 0 && projectile.y <= height;
-    if (!spent && projectile.ticksLeft > 0 && inArena) {
+    if (!spent && (projectile.ticksLeft <= 0 || !inArena)) {
+      spent = !endOfFlight(state, enemyGrid, projectile, markedMul);
+    }
+    if (!spent) {
       state.projectiles[kept] = projectile;
       kept += 1;
     }
   }
   state.projectiles.length = kept;
+}
+
+// A lobbed projectile lands, a frisbee turns back; anything else is done. Returns whether the
+// projectile flies on.
+function endOfFlight(
+  state: SimState,
+  grid: StepContext['enemyGrid'],
+  projectile: ProjectileState,
+  markedMul: number,
+): boolean {
+  if (projectile.arc !== undefined) {
+    land(state, grid, projectile, markedMul);
+    return false;
+  }
+  if (projectile.returnTo === undefined || projectile.returning === true) {
+    return false;
+  }
+  const ally = mostInjured(state);
+  if (ally === undefined) {
+    return false;
+  }
+  projectile.returnTo = ally.id;
+  projectile.returning = true;
+  projectile.ticksLeft = RETURN_TICKS;
+  projectile.x = Math.min(state.arena.width, Math.max(0, projectile.x));
+  projectile.y = Math.min(state.arena.height, Math.max(0, projectile.y));
+  return true;
+}
+
+function land(
+  state: SimState,
+  grid: StepContext['enemyGrid'],
+  projectile: ProjectileState,
+  markedMul: number,
+): void {
+  const byPlayer = creditedPlayer(state, projectile);
+  const found = grid.query(projectile.x, projectile.y, projectile.radius);
+  for (let i = 0; i < found; i++) {
+    const enemy = state.enemies[grid.result(i)];
+    if (enemy === undefined || enemy.hp <= 0) {
+      continue;
+    }
+    hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer);
+    pushAway(enemy, projectile, projectile.radius * LANDING_KNOCKBACK_PER_RADIUS);
+  }
+}
+
+function mostInjured(state: SimState): PlayerState | undefined {
+  let worst: PlayerState | undefined;
+  for (const player of state.players) {
+    if (
+      !player.downed &&
+      (worst === undefined || player.hp / player.maxHp < worst.hp / worst.maxHp)
+    ) {
+      worst = player;
+    }
+  }
+  return worst;
+}
+
+// Aims the frisbee at its ally at constant speed. Returns whether it is spent: it reached the
+// ally and healed them, or there is no one left to reach.
+function flyHome(state: SimState, projectile: ProjectileState): boolean {
+  const ally =
+    projectile.returnTo === undefined ? undefined : playerById(state, projectile.returnTo);
+  if (ally === undefined || ally.downed) {
+    return true;
+  }
+  const dx = ally.x - projectile.x;
+  const dy = ally.y - projectile.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const speed = Math.sqrt(projectile.vx * projectile.vx + projectile.vy * projectile.vy);
+  if (distance <= speed + ally.radius) {
+    ally.hp = Math.min(ally.maxHp, ally.hp + (projectile.heal ?? 0));
+    return true;
+  }
+  projectile.vx = (dx / distance) * speed;
+  projectile.vy = (dy / distance) * speed;
+  return false;
 }
 
 // Returns whether the projectile is spent.
