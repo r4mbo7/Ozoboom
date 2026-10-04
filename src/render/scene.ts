@@ -87,6 +87,12 @@ export class Scene implements Renderer {
         ),
       ),
       helpTicks: new Map((content.bystanders ?? []).map((def) => [def.id, def.helpTicks])),
+      speakerLooks: new Map(
+        content.sets.map((set) => [
+          set.id,
+          new Map((set.speakers ?? []).map((def) => [def.id, def])),
+        ]),
+      ),
     };
     const traps = createTraps(ctx);
     this.families = [

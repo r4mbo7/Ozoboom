@@ -63,6 +63,13 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
   if (queued.includes('coreHit')) {
     events.push({ type: 'coreHit', damage: 5 });
   }
+  if (queued.includes('speakerPlugged')) {
+    for (const speaker of state.speakers ?? []) {
+      if (speaker.plugged) {
+        events.push({ type: 'speakerPlugged', speakerId: speaker.id });
+      }
+    }
+  }
   if (queued.includes('enemyDied') || tick % 7 === 0) {
     killRandomEnemy(state, events);
   }

@@ -16,6 +16,7 @@ import {
 import { type MaskSet, createMasks } from './textures-enemies';
 import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
 import { type PlayerTextures, playerShapes, playerTextures } from './textures-players';
+import { createSpeakerShapes } from './textures-speakers';
 import { trap } from './textures-traps';
 
 export type { Shape } from './paint';
@@ -35,6 +36,8 @@ export interface Textures {
   readonly beam: Shape;
   readonly pip: Shape;
   readonly enemyShot: Shape;
+  readonly stack: Shape;
+  readonly zone: Shape;
   readonly masks: MaskSet;
   readonly traps: Readonly<Record<TrapLook, Shape>>;
   readonly specials: SpecialTextures;
@@ -192,6 +195,7 @@ export function createTextures(): Textures {
       ctx.lineWidth = 3;
       ctx.stroke();
     }),
+    ...createSpeakerShapes(),
     masks: createMasks(),
     traps: {
       shockwave: trap('shockwave'),
