@@ -11,6 +11,7 @@ import { deaths } from './systems/deaths';
 import { enemyAttacks } from './systems/enemy-attacks';
 import { enemySteering } from './systems/enemy-steering';
 import { pickups } from './systems/pickups';
+import { placedTotems, placedZones } from './systems/placed';
 import { playerAttack } from './systems/player-attack';
 import { playerMovement } from './systems/player-movement';
 import { progression } from './systems/progression';
@@ -51,9 +52,11 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     playerMovement,
     playerAttack,
     weapons,
+    placedZones,
     skills,
     spawning,
     enemySteering,
+    placedTotems,
     specials,
     bystanders,
     projectiles,
