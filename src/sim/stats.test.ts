@@ -30,6 +30,23 @@ describe('statValue', () => {
     expect(statValue(player, 'maxHpAdd', 100)).toBe(120);
     expect(statValue(player, 'damageMul', 10)).toBe(15);
   });
+
+  it('ignores every modifier and returns the base value while suppressedTicks is positive', () => {
+    const player = freshPlayer();
+    player.modifiers = { maxHpAdd: 20, damageMul: 1.5 };
+    player.suppressedTicks = 5;
+
+    expect(statValue(player, 'maxHpAdd', 100)).toBe(100);
+    expect(statValue(player, 'damageMul', 10)).toBe(10);
+  });
+
+  it('applies modifiers again once suppressedTicks reaches zero', () => {
+    const player = freshPlayer();
+    player.modifiers = { damageMul: 1.5 };
+    player.suppressedTicks = 0;
+
+    expect(statValue(player, 'damageMul', 10)).toBe(15);
+  });
 });
 
 describe('applyModifiers', () => {

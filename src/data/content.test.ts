@@ -9,9 +9,10 @@ import {
 import { CONTENT } from './content';
 import type { SkillDefinition, TierDefinition } from './types';
 
-const { classes, enemies, traps, upgrades, sets } = CONTENT;
+const { classes, enemies, traps, upgrades, sets, bystanders = [] } = CONTENT;
 
 const enemyById = new Map(enemies.map((enemy) => [enemy.id, enemy]));
+const bystanderById = new Map(bystanders.map((bystander) => [bystander.id, bystander]));
 const classIds = new Set(classes.map((definition) => definition.id));
 
 const positive = (value: number) => Number.isFinite(value) && value > 0;
@@ -81,6 +82,10 @@ describe('CONTENT identifiers', () => {
     expect(ids.length).toBeGreaterThan(0);
     expect(duplicates(ids)).toEqual([]);
   });
+
+  it('has no duplicate bystander id', () => {
+    expect(duplicates(bystanders.map((item) => item.id))).toEqual([]);
+  });
 });
 
 describe('CONTENT references', () => {
@@ -92,6 +97,9 @@ describe('CONTENT references', () => {
         const enemy = enemyById.get(rule.enemyId);
         expect(enemy, rule.enemyId).toBeDefined();
         expect(enemy?.behaviour, rule.enemyId).not.toBe('boss');
+      }
+      for (const rule of tier.bystanderSpawns ?? []) {
+        expect(bystanderById.get(rule.bystanderId), rule.bystanderId).toBeDefined();
       }
     },
   );
@@ -157,6 +165,7 @@ describe('CONTENT numbers', () => {
         hpScaling: [enemy.scalingPerPhrase.hp, atLeastOne],
         speedScaling: [enemy.scalingPerPhrase.speed, atLeastOne],
         ...(enemy.ranged === undefined ? {} : effectFields(enemy.ranged)),
+        ...(enemy.special === undefined ? {} : effectFields(enemy.special)),
       }),
     ).toEqual([]);
     expect(enemy.ranged !== undefined).toBe(enemy.behaviour === 'shooter');
@@ -233,6 +242,16 @@ describe.each(sets)('set $id', (set) => {
         expect(Number.isInteger(rule.fromPhrase), rule.enemyId).toBe(true);
         expect(rule.fromPhrase, rule.enemyId).toBeLessThanOrEqual(lastPhrase);
         expect(lastPhrase, rule.enemyId).toBeLessThan(tier.buildupPhrases);
+      }
+      for (const rule of tier.bystanderSpawns ?? []) {
+        const lastPhrase = rule.toPhrase ?? tier.buildupPhrases - 1;
+
+        expect(BARS_PER_PHRASE % rule.everyBars, rule.bystanderId).toBe(0);
+        expect(rule.everyBars, rule.bystanderId).toSatisfy(wholePositive);
+        expect(rule.count, rule.bystanderId).toSatisfy(wholePositive);
+        expect(Number.isInteger(rule.fromPhrase), rule.bystanderId).toBe(true);
+        expect(rule.fromPhrase, rule.bystanderId).toBeLessThanOrEqual(lastPhrase);
+        expect(lastPhrase, rule.bystanderId).toBeLessThan(tier.buildupPhrases);
       }
     },
   );

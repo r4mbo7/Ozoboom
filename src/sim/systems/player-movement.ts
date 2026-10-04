@@ -10,16 +10,9 @@ export function playerMovement({ state, commands }: StepContext): void {
     }
     const input = commands.get(player.id)?.input ?? IDLE_INPUT;
     const direction = length(input.move) > 1 ? normalize(input.move) : input.move;
-    player.x = clamp(
-      player.x + direction.x * player.speed,
-      player.radius,
-      arena.width - player.radius,
-    );
-    player.y = clamp(
-      player.y + direction.y * player.speed,
-      player.radius,
-      arena.height - player.radius,
-    );
+    const speed = player.speed * (player.slowFactor ?? 1);
+    player.x = clamp(player.x + direction.x * speed, player.radius, arena.width - player.radius);
+    player.y = clamp(player.y + direction.y * speed, player.radius, arena.height - player.radius);
     const aim = normalize(input.aim);
     if (aim.x !== 0 || aim.y !== 0) {
       player.aim = aim;

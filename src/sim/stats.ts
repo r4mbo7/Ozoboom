@@ -20,10 +20,13 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
 };
 
 export function statValue(
-  player: Pick<PlayerState, 'modifiers'>,
+  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks'>,
   key: StatKey,
   base: number,
 ): number {
+  if ((player.suppressedTicks ?? 0) > 0) {
+    return base;
+  }
   const modifier = player.modifiers[key];
   if (modifier === undefined) {
     return base;

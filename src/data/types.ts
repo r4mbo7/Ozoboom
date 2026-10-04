@@ -62,6 +62,17 @@ export interface ClassDefinition {
 
 export type EnemyBehaviour = 'rusher' | 'horde' | 'heavy' | 'shooter' | 'boss';
 
+export type SpecialEffect =
+  | { kind: 'shove'; knockback: number }
+  | { kind: 'sigh'; slowFactor: number; durationTicks: number }
+  | { kind: 'cling'; slowFactor: number; detachDamage: number }
+  | { kind: 'suppress'; radius: number }
+  | { kind: 'steal'; fleeSpeedMul: number }
+  | { kind: 'yawn'; radius: number; slowFactor: number; awakeBars: number; sleepBars: number }
+  | { kind: 'revive'; times: number; hpRatio: number; downBars: number }
+  | { kind: 'dazzle'; radius: number }
+  | { kind: 'babble'; everyBars: number };
+
 export interface EnemyDefinition {
   id: string;
   name: string;
@@ -83,6 +94,7 @@ export interface EnemyDefinition {
     rangeTicks: number;
     keepDistance: number;
   };
+  special?: SpecialEffect;
 }
 
 export type TrapCadence = 'beat' | 'bar' | 'drop' | 'continuous';
@@ -128,11 +140,33 @@ export interface SpawnRule {
   toPhrase?: number;
 }
 
+export interface BystanderDefinition {
+  id: string;
+  name: string;
+  description: string;
+  radius: number;
+  speed: number;
+  helpTicks: number;
+  vibesReward: number;
+  vibesPenalty: number;
+  lifetimeBars: number;
+}
+
+// Phrases count from 0 within the tier's buildup, toPhrase included.
+export interface BystanderSpawnRule {
+  bystanderId: string;
+  everyBars: number;
+  count: number;
+  fromPhrase: number;
+  toPhrase?: number;
+}
+
 export interface TierDefinition {
   buildupPhrases: number;
   breakBars: number;
   bossId: string;
   spawns: readonly SpawnRule[];
+  bystanderSpawns?: readonly BystanderSpawnRule[];
 }
 
 export interface SetDefinition {
@@ -154,4 +188,5 @@ export interface GameContent {
   traps: readonly TrapDefinition[];
   upgrades: readonly UpgradeDefinition[];
   sets: readonly SetDefinition[];
+  bystanders?: readonly BystanderDefinition[];
 }
