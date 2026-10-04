@@ -12,6 +12,7 @@ import {
   beatPeriodMs,
   isBarTick,
   isBeatTick,
+  isPhraseTick,
   phraseOfTick,
 } from './tempo';
 
@@ -50,5 +51,12 @@ describe('tick grid', () => {
     expect(isBarTick(TICKS_PER_BEAT)).toBe(false);
     expect(isBeatTick(TICKS_PER_BEAT + 1)).toBe(false);
     expect(isBarTick(TICKS_PER_BAR)).toBe(true);
+  });
+
+  it('flags the first tick of a phrase', () => {
+    expect(isPhraseTick(0)).toBe(true);
+    expect(isPhraseTick(TICKS_PER_BAR)).toBe(false);
+    expect(isPhraseTick(TICKS_PER_PHRASE - 1)).toBe(false);
+    expect(isPhraseTick(TICKS_PER_PHRASE)).toBe(true);
   });
 });
