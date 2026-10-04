@@ -171,11 +171,11 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
         async () => (await firstCard.getAttribute('aria-current')) === null,
       );
       // Two levels at once present two offers in a row: a choice shows as one more upgrade, not as a status.
-      const chosen = (await readGame(page))?.upgrades ?? 0;
+      const chosen = (await readGame(page))?.choices ?? 0;
       await tapButtonUntil(
         page,
         PAD.A,
-        async () => ((await readGame(page))?.upgrades ?? 0) > chosen,
+        async () => ((await readGame(page))?.choices ?? 0) > chosen,
       );
       upgrades += 1;
     }
