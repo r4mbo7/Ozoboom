@@ -1,0 +1,63 @@
+# AGENTS.md
+
+Instructions pour toute personne ou agent qui travaille sur Ozoboom. `CLAUDE.md` ne fait qu'inclure ce fichier : il n'y a qu'une source.
+
+## Lire avant d'agir
+
+- [docs/vision.md](docs/vision.md) : piliers et non-objectifs. À lire à chaque session.
+- [docs/architecture.md](docs/architecture.md) : avant de toucher au code. Les contrats partagés y sont listés.
+- [docs/game-design.md](docs/game-design.md) : avant de toucher au gameplay, au contenu ou à l'équilibrage.
+- [docs/direction-artistique.md](docs/direction-artistique.md) : avant de toucher au visuel, au son ou aux textes.
+- [docs/adr/](docs/adr/) : les décisions prises. Ne pas les rediscuter sans nouvel ADR.
+- [docs/brainstorms/](docs/brainstorms/) : les exigences du jalon en cours. [docs/plans/](docs/plans/) : son découpage en tâches.
+
+## Langues
+
+Documentation, interface du jeu et textes en français. Code, identifiants, messages de commit et messages d'erreur techniques en anglais. Pas de tiret long, le tiret simple « - » suffit.
+
+## Prendre une tâche
+
+- Les tâches sont les issues GitHub du jalon en cours. Une issue porte le label `ready` quand rien ne la bloque. Ne pas commencer une issue `blocked`.
+- Une branche par issue, une pull request par issue, qui la ferme (`Closes #N`). Une pull request reste petite et ne fait que ce que dit l'issue.
+- Les contrats partagés (voir `docs/architecture.md`) sont communs à toutes les tâches en cours. Un changement y est additif, minimal, dans sa propre pull request, et annoncé dans l'issue concernée avant de fusionner.
+- Ce qui dépasse l'issue devient une nouvelle issue, jamais un `TODO` ni du périmètre ajouté au diff.
+
+## Écrire des documents
+
+Court. Un agent doit pouvoir charger un document entier et garder de la place pour travailler. Quand un document grossit, on coupe, on ne crée pas un second fichier pour garder la prose.
+
+Couper dans cet ordre : ce que le code, l'historique git ou `gh` donnent déjà ; les paragraphes qui redisent un tableau ; les préambules et récapitulatifs ; les justifications qui n'empêchent personne de défaire la décision. Une exigence ou une décision tient en une ligne, sinon c'est deux.
+
+- Une décision coûteuse à défaire : un ADR depuis `docs/adr/TEMPLATE.md`.
+- Un jalon : un document d'exigences daté dans `docs/brainstorms/`, et son plan dans `docs/plans/`.
+- Le reste : le document existant, mis à jour. Pas de fichier « divers ».
+
+## Écrire du code
+
+- Pas de commentaire par défaut. Une ligne seulement quand le pourquoi est vraiment non évident. Jamais pour redire ce que le code dit.
+- Tests d'abord quand le besoin est clair. Un bug se corrige en écrivant d'abord le test qui échoue. Structure Given / When / Then, sans commentaires pour le dire.
+- Commencer une fonctionnalité par ses interfaces publiques, puis les tests, puis l'implémentation.
+- Dans `src/sim/`, `src/data/` et `src/shared/` : rien du navigateur, pas de `Math.random`, pas de `Date`, pas de PixiJS, maths limitées à celles de `docs/architecture.md`. ESLint le vérifie, ne pas contourner.
+- Le contenu de jeu (classes, ennemis, pièges, améliorations, sets) est de la donnée dans `src/data/`, jamais des `if` dans la logique.
+- Une erreur attendue n'est pas un bug. Une exception inattendue en est un et doit remonter, pas être avalée.
+- Moins de code est une victoire. Pas d'abstraction avant le deuxième usage.
+- Une dépendance s'ajoute avec un ADR si elle structure le projet, sinon avec une phrase dans la pull request qui dit pourquoi.
+
+## Commandes
+
+```bash
+pnpm install          # dépendances (Node 24, pnpm épinglé dans package.json)
+pnpm dev              # serveur de développement
+pnpm check            # types, lint, format, tests, build : doit passer avant tout commit
+pnpm test:watch       # tests en continu
+pnpm format           # formate tout
+```
+
+Un lint, un test ou une instabilité qui casse se répare, même sans lien avec le travail en cours.
+
+## Git
+
+- Tronc unique : `main` déploie sur GitHub Pages et doit rester jouable. Branche courte et pull request pour tout ce qui dépasse une correction triviale, fusion quand la CI est verte.
+- Messages de commit en anglais, format conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `refactor:`, `test:`), le sujet dit ce que le joueur ou le contributeur peut faire de nouveau.
+- Pas de ligne d'attribution ni de co-auteur agent dans les commits.
+- Jamais de secret dans le dépôt. Le jeu n'en a pas besoin ; le futur service de classement les tiendra hors du code.
