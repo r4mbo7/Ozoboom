@@ -1,5 +1,5 @@
 import { Sprite, type Container } from 'pixi.js';
-import type { EnemyBehaviour, TrapEffect } from '../data/types';
+import type { TrapEffect } from '../data/types';
 import type { EntityId, SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
@@ -7,8 +7,6 @@ import type { Frame } from './frame';
 import { trapReach } from './reach';
 import { TRAP_TOKENS, type Shape } from './textures';
 import { byId, lookup } from './util';
-
-const TAU = Math.PI * 2;
 
 interface Particle {
   readonly sprite: Sprite;
@@ -118,8 +116,6 @@ export function createEffects(
 ): Family {
   const { textures: t, layers } = ctx;
   const rings = new Particles(layers.fx, t.ring, 48);
-  const puffs = new Particles(layers.fx, t.halo, 96);
-  const shards = new Particles(layers.fx, t.shard, 900);
 
   function firedReach(state: SimState, trapId: EntityId, effect: TrapEffect): number {
     const trap = byId(state.traps, trapId);
@@ -131,70 +127,14 @@ export function createEffects(
     return reachOf(trapId) ?? trapReach(effect, { modifiers: {} });
   }
 
-  function burst(
-    x: number,
-    y: number,
-    id: number,
-    behaviour: EnemyBehaviour,
-    tick: number,
-    frame: Frame,
-  ): void {
-    const { mage, turquoise, healer, tank, texte } = frame.palette;
-    const colors = [mage, turquoise, healer, tank];
-    const boss = behaviour === 'boss';
-    const count = boss ? 28 : 10;
-    const reach = boss ? 140 : 42;
-    const offset = (id * 0.618) % 1;
-    for (let index = 0; index < count; index += 1) {
-      const angle = ((index + offset) / count) * TAU;
-      const distance = reach * (0.6 + 0.4 * ((index * 7) % 5) * 0.25);
-      shards.spawn({
-        now: tick,
-        duration: TICKS_PER_BEAT,
-        x,
-        y,
-        dx: Math.cos(angle) * distance,
-        dy: Math.sin(angle) * distance,
-        fromRadius: boss ? 9 : 5,
-        toRadius: boss ? 6 : 3,
-        tint: colors[(index + id) % colors.length] ?? texte,
-        peak: 1,
-        spin: angle + Math.PI,
-      });
-    }
-    if (!ctx.options.calmMode) {
-      puffs.spawn({
-        now: tick,
-        duration: TICKS_PER_BEAT / 2,
-        x,
-        y,
-        fromRadius: boss ? 60 : 16,
-        toRadius: boss ? 160 : 40,
-        tint: colors[id % colors.length] ?? texte,
-        peak: 0.8,
-      });
-    }
-  }
-
   function reset(): void {
-    for (const particles of [shards, puffs, rings]) {
-      particles.clear();
-    }
+    rings.clear();
   }
 
   return {
     onEvent(event: SimEvent, state: SimState, frame: Frame): void {
       const tick = state.tick;
-      if (event.type === 'enemyDied') {
-        burst(
-          event.x,
-          event.y,
-          event.id,
-          lookup(ctx.behaviours, event.kind, 'enemy kind'),
-          tick,
-          frame,
-        );
-      } else if (event.type === 'trapFired') {
+      if (event.type === 'trapFired') {
         const { effect } = lookup(ctx.trapLooks, event.kind, 'trap kind');
         if (effect.kind === 'shockwave') {
           const reach = firedReach(state, event.id, effect);
@@ -212,8 +152,6 @@ export function createEffects(
       }
     },
     update(_state: SimState, _alpha: number, frame: Frame): void {
-      shards.update(frame.now);
-      puffs.update(frame.now);
       rings.update(frame.now);
     },
     reset,

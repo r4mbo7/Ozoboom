@@ -1,4 +1,4 @@
-import type { EnemyBehaviour, TrapEffect } from '../data/types';
+import type { TrapEffect } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import {
   SHADE,
@@ -13,7 +13,7 @@ import {
   star,
   type Shape,
 } from './paint';
-import { enemy } from './textures-enemies';
+import { type MaskSet, createMasks } from './textures-enemies';
 import { trap } from './textures-traps';
 
 export type { Shape } from './paint';
@@ -36,7 +36,7 @@ export interface Textures {
   readonly beam: Shape;
   readonly pip: Shape;
   readonly enemyShot: Shape;
-  readonly enemies: Readonly<Record<EnemyBehaviour, Shape>>;
+  readonly masks: MaskSet;
   readonly traps: Readonly<Record<TrapLook, Shape>>;
 }
 
@@ -237,13 +237,7 @@ export function createTextures(): Textures {
       ctx.lineWidth = 3;
       ctx.stroke();
     }),
-    enemies: {
-      horde: enemy('horde'),
-      rusher: enemy('rusher'),
-      heavy: enemy('heavy'),
-      shooter: enemy('shooter'),
-      boss: enemy('boss'),
-    },
+    masks: createMasks(),
     traps: {
       shockwave: trap('shockwave'),
       beam: trap('beam'),
@@ -257,10 +251,10 @@ export function createTextures(): Textures {
 export function destroyTextures(textures: Textures): void {
   const shapes = [
     ...Object.values(textures).filter((value): value is Shape => 'texture' in value),
-    ...Object.values(textures.enemies),
     ...Object.values(textures.traps),
   ];
   for (const shape of shapes) {
     shape.texture.destroy(true);
   }
+  textures.masks.destroy();
 }
