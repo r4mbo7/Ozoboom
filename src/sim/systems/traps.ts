@@ -77,7 +77,7 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
   if (definition === undefined || player.downed) {
     return;
   }
-  const cost = definition.cost * statValue(player, 'trapCostMul', 1);
+  const cost = statValue(player, 'trapCostMul', definition.cost);
   if (state.core.watts < cost) {
     return;
   }

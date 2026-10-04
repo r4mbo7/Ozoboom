@@ -2,9 +2,9 @@ import type { SkillEffect } from '../../data/types';
 import { normalize } from '../../shared/vec';
 import { IDLE_INPUT, type PlayerInput } from '../commands';
 import { lookup } from '../content';
-import { hurtEnemy, markedDamageMul, pushAway, touches, wholeTicks } from '../effects';
+import { hurtEnemy, markedDamageMul, pushAway, touches } from '../effects';
 import type { PlayerState, SimState } from '../state';
-import { statValue } from '../stats';
+import { skillCooldownTicks, statValue } from '../stats';
 import type { StepContext } from './types';
 
 export function skills({ state, content, commands }: StepContext): void {
@@ -25,8 +25,7 @@ export function skills({ state, content, commands }: StepContext): void {
     if (input.skill && player.skillCooldown === 0) {
       const power = statValue(player, 'skillPowerMul', 1);
       cast(state, player, input, skill.effect, power, markedMul);
-      const cooldownMul = statValue(player, 'skillCooldownMul', 1);
-      player.skillCooldown = wholeTicks(skill.cooldownTicks * cooldownMul);
+      player.skillCooldown = skillCooldownTicks(player, skill);
       state.events.push({ type: 'skillUsed', playerId: player.id });
     }
     if (input.ultimate && player.ultimateReady) {

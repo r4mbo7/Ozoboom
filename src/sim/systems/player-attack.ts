@@ -2,6 +2,7 @@ import { angleOf, rotate } from '../../shared/angle';
 import { IDLE_INPUT } from '../commands';
 import { lookup } from '../content';
 import type { PlayerState, SimState, Vec2 } from '../state';
+import { statValue } from '../stats';
 import type { StepContext } from './types';
 
 export function playerAttack({ state, content, commands }: StepContext): void {
@@ -18,14 +19,13 @@ export function playerAttack({ state, content, commands }: StepContext): void {
       continue;
     }
     const attack = lookup(content.classes, player.classId, 'class').attack;
-    const { modifiers } = player;
-    const count = Math.max(1, Math.floor(attack.count + (modifiers.projectileCountAdd ?? 0)));
+    const count = Math.max(1, Math.floor(statValue(player, 'projectileCountAdd', attack.count)));
     const shot: Shot = {
-      speed: attack.projectileSpeed * (modifiers.projectileSpeedMul ?? 1),
+      speed: statValue(player, 'projectileSpeedMul', attack.projectileSpeed),
       radius: attack.projectileRadius,
-      damage: attack.damage * (modifiers.damageMul ?? 1),
+      damage: statValue(player, 'damageMul', attack.damage),
       ticks: attack.rangeTicks,
-      pierce: attack.pierce + (modifiers.pierceAdd ?? 0),
+      pierce: statValue(player, 'pierceAdd', attack.pierce),
     };
     for (let i = 0; i < count; i++) {
       const offset =
@@ -33,7 +33,7 @@ export function playerAttack({ state, content, commands }: StepContext): void {
       fire(state, player, offset === 0 ? player.aim : rotate(player.aim, offset), shot);
     }
     // The fractional part of a shortened cooldown carries over, so the fire rate stays exact.
-    player.attackCooldown += attack.cooldownTicks * (modifiers.attackCooldownMul ?? 1);
+    player.attackCooldown += statValue(player, 'attackCooldownMul', attack.cooldownTicks);
     state.events.push({
       type: 'playerFired',
       playerId: player.id,
