@@ -30,17 +30,31 @@ describe('player movement', () => {
     expect({ x: player.x, y: player.y }).toEqual({ x: start.x, y: start.y - 40 });
   });
 
-  it('moves at the same speed diagonally and whatever the strength of the input', () => {
+  it('moves a keyboard diagonal at the nominal speed, not faster', () => {
     const { simulation, player } = soloGame();
     const start = { x: player.x, y: player.y };
 
     hold(simulation, { move: { x: 1, y: 1 } }, 1);
-    const diagonalStep = length(sub(player, start));
-    const beforeStrongPush = player.x;
+
+    expect(length(sub(player, start))).toBeCloseTo(player.speed, 12);
+  });
+
+  it('moves at half speed with a stick pushed halfway', () => {
+    const { simulation, player } = soloGame();
+    const startX = player.x;
+
+    hold(simulation, { move: { x: 0.5, y: 0 } }, 1);
+
+    expect(player.x - startX).toBe(player.speed / 2);
+  });
+
+  it('caps the speed when the input is longer than 1', () => {
+    const { simulation, player } = soloGame();
+    const startX = player.x;
+
     hold(simulation, { move: { x: 25, y: 0 } }, 1);
 
-    expect(diagonalStep).toBeCloseTo(player.speed, 12);
-    expect(player.x - beforeStrongPush).toBe(player.speed);
+    expect(player.x - startX).toBe(player.speed);
   });
 
   it('keeps the player inside the arena on every side', () => {

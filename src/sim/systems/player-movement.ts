@@ -1,4 +1,4 @@
-import { normalize } from '../../shared/vec';
+import { length, normalize } from '../../shared/vec';
 import { IDLE_INPUT } from '../commands';
 import type { StepContext } from './types';
 
@@ -9,7 +9,7 @@ export function playerMovement({ state, commands }: StepContext): void {
       continue;
     }
     const input = commands.get(player.id)?.input ?? IDLE_INPUT;
-    const direction = normalize(input.move);
+    const direction = length(input.move) > 1 ? normalize(input.move) : input.move;
     player.x = clamp(
       player.x + direction.x * player.speed,
       player.radius,

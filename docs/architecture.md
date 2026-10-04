@@ -55,9 +55,14 @@ Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick
 
 Conventions de la simulation :
 
-- `createGame(options): SimState` construit l'état initial à partir d'une graine, des joueurs et du contenu. `step(state, commands): void` avance d'un tick **en modifiant l'état en place** : pas de copie à chaque tick avec des centaines d'entités.
+- `createSimulation(options)` construit l'état initial à partir d'une graine, des joueurs et du contenu. Son `step(commands)` avance d'un tick **en modifiant l'état en place** : pas de copie à chaque tick avec des centaines d'entités.
 - Chaque entité mobile garde `prevX`, `prevY` : la sim les met à jour au début du pas, le rendu interpole entre `prev` et courant avec `alpha`.
 - `state.events` contient les événements du dernier pas seulement (temps, mesure, drop, mort, tir, dégâts, niveau...). La sim le vide au début de chaque pas. Rendu, audio et interface s'en servent pour les effets sans que la sim les connaisse.
+- Le tick 0 n'est simulé par aucun pas : `createSimulation` pose dans `state.events` les événements `beat`, `bar`, `phrase` et `segment` du tick 0, que le premier pas vide.
+- En `choosingUpgrade`, `won` et `lost`, le pas vide les événements et recopie `prev` mais `tick` ne bouge plus : la grille musicale et le set s'arrêtent.
+- `SetProgress.segmentStartTick` est le tick où le segment courant a commencé : les segments se comptent en mesures depuis là, car le drop a une durée variable.
+- Une fois le set fini, `set.tier` vaut `tiers.length`, au-delà du dernier palier : c'est ce qui donne `won`.
+- `input.move` est borné à une longueur de 1, pas normalisé : un stick à mi-course donne la mi-vitesse, une diagonale clavier la vitesse nominale.
 - Les identifiants de contenu (`classId`, `kind`, `trapId`, `upgradeId`) sont des chaînes qui pointent dans `GameContent`. La sim résout ces références une fois à la création, puis travaille avec des tables.
 - Maths autorisées dans la sim : `+ - * /`, `Math.floor`, `Math.ceil`, `Math.abs`, `Math.min`, `Math.max`, `Math.sqrt` (arrondi correct garanti par IEEE 754). Interdites car non reproductibles d'un moteur à l'autre : `Math.sin`, `Math.cos`, `Math.atan2`, `Math.pow`, `Math.exp`, `Math.hypot`. Les angles passent par des vecteurs normalisés, pas par des radians.
 - Le hasard vient d'un générateur à graine à opérations entières (sfc32), dont l'état vit dans `state.rng`.
