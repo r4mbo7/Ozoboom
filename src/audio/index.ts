@@ -2,12 +2,13 @@ import type { SimState } from '../sim/state';
 import { createAmbience, type Ambience } from './ambience';
 import { createMasterChain, type MasterChain } from './master';
 import { createMusic, type Music } from './music';
-import { createSfx, type Sfx, type TrapEffectOf } from './sfx';
+import { createSfx, type Sfx, type SfxLookups, type TrapEffectOf } from './sfx';
 import type { AudioEngine, Mood } from './types';
 
 export interface AudioEngineOptions {
   readonly breakBars?: (tier: number) => number;
   readonly trapEffectOf?: TrapEffectOf;
+  readonly sfxLookups?: SfxLookups;
   readonly createContext?: () => BaseAudioContext;
   readonly onKickScheduled?: (tick: number, time: number) => void;
   // Calls back regularly while the menu ambience plays, and returns how to stop. The offline bench
@@ -128,7 +129,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         breakBars,
         onKickScheduled: options.onKickScheduled,
       }),
-      sfx: createSfx(master.sfx, trapEffectOf),
+      sfx: createSfx(master.sfx, trapEffectOf, options.sfxLookups),
       ambience: createAmbience(master.music),
     };
     applyMood();

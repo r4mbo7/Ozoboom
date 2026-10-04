@@ -104,6 +104,24 @@ describe('yawn', () => {
     expect(awokeAgain).toEqual({ slowFactor: SLOW_FACTOR, stunTicks: 0 });
   });
 
+  it('announces the yawn once, as the enemy falls asleep', () => {
+    const { simulation } = duo();
+    const enemy = yawner(simulation);
+    const yawns = () => simulation.state.events.filter((event) => event.type === 'enemyYawned');
+
+    steps(simulation, AWAKE_BARS * TICKS_PER_BAR);
+    const beforeNap = yawns();
+    simulation.step([]);
+    const atNap = yawns();
+    simulation.step([]);
+
+    expect(beforeNap).toEqual([]);
+    expect(atNap).toEqual([
+      { type: 'enemyYawned', id: enemy.id, kind: 'yawner', x: enemy.x, y: enemy.y },
+    ]);
+    expect(yawns()).toEqual([]);
+  });
+
   it('acts as an obstacle while asleep: a passing horde enemy separates away from it', () => {
     const simulation = createSimulation({ ...COMBAT_OPTIONS, content: CONTENT });
     const player = simulation.state.players[0];

@@ -12,6 +12,13 @@ export const yawn: SpecialModule = (ctx, enemy, effect) => {
   if (awakeTicks <= 0) {
     delete enemy.awakeTicks;
     enemy.stunTicks = effect.sleepBars * TICKS_PER_BAR;
+    ctx.state.events.push({
+      type: 'enemyYawned',
+      id: enemy.id,
+      kind: enemy.kind,
+      x: enemy.x,
+      y: enemy.y,
+    });
     return;
   }
   enemy.awakeTicks = awakeTicks - 1;

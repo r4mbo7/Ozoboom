@@ -264,6 +264,8 @@ export type SimEvent =
   | { type: 'enemyRevived'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'vibesStolen'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'enemyFled'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'enemyShot'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'enemyYawned'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'enemyBabbled'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderSpawned'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderHelped'; id: EntityId; kind: string; x: number; y: number }
