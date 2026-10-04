@@ -34,17 +34,27 @@ La scène principale et son sound system. Sa vie est son volume. Les ennemis le 
 
 ## Les ennemis : bad vibes
 
-Du brouillard gris qui absorbe la lumière. Archétypes de départ :
+Des masques gris de mauvaises humeurs : les relous que l'on croise en festival. Bestiaire **tranché le 2026-10-04** ; chaque sorte a un déplacement (nuée, rapide, lourd, à distance, boss) et au plus un effet spécial, qui est une donnée pointant sur un module de la sim.
 
-| Archétype | Rôle                                  | Nom de travail                    |
-| --------- | ------------------------------------- | --------------------------------- |
-| Rusher    | rapide, fragile, nombreux             | le Relou                          |
-| Horde     | lent, en masse, submerge              | la Foule au bar                   |
-| Lourd     | lent, encaisse, pousse les pièges     | le Vigile de mauvais poil         |
-| Tireur    | reste à distance, crache sur la scène | la Pluie                          |
-| Boss      | arrive sur le drop, mécanique unique  | le Couvre-feu, la Batterie à plat |
+| Bad vibe           | Déplacement | Effet spécial                                                                  | Arrive          |
+| ------------------ | ----------- | ------------------------------------------------------------------------------ | --------------- |
+| le Random          | nuée        | aucun : faible, mais partout                                                   | palier 1        |
+| le Désagréable     | rapide      | bouscule : repousse le joueur qu'il touche                                     | palier 1        |
+| le Méprisant       | à distance  | ses soupirs ralentissent le joueur touché                                      | palier 1        |
+| le Mâle alpha      | lourd       | pousse les pièges (le lourd de base)                                           | palier 1        |
+| le Collant         | rapide      | s'accroche à un joueur et le ralentit jusqu'à ce qu'on le décroche             | palier 1        |
+| l'Intolérant       | nuée lente  | éteint les bonus des joueurs dans sa zone ; à viser en priorité                | palier 2        |
+| l'Arnaqueur        | rapide      | file vers les vibes au sol, les vole et s'enfuit ; les rend quand on le chasse | palier 2        |
+| le Fatigué         | nuée lente  | bâillement contagieux : ralentit les joueurs proches, puis s'endort sur place  | palier 2        |
+| le Filmeur         | à distance  | son écran éblouit doucement une zone, sans flash                               | palier 2        |
+| le Bavard          | à distance  | ses bulles masquent un bout de l'écran                                         | palier 2        |
+| le Zombie          | lourd       | le zombie du petit matin : se relève une fois                                  | dernière phrase |
+| le Couvre-feu      | boss        | arrive sur le premier drop                                                     | drop 1          |
+| la Batterie à plat | boss        | arrive sur le dernier drop                                                     | drop 2          |
 
-Les ennemis montent en puissance avec les joueurs : chaque phrase augmente leur vie, leur vitesse et leur nombre selon une courbe définie dans les données.
+La variété monte avec le set : chaque phrase amène une sorte nouvelle au moins, et un set plus long ajoute des paliers et des sortes. Les ennemis montent en puissance avec les joueurs : chaque phrase augmente leur vie, leur vitesse et leur nombre selon une courbe définie dans les données.
+
+**Le Festivalier en détresse** n'est pas une bad vibe. Il apparaît dans la foule à partir du palier 2 : un joueur qui reste une mesure à son contact, ou un soin de zone, l'aide, et toute l'équipe gagne des vibes. Si une bad vibe l'atteint avant, il s'en va et l'équipe en perd. Le care l'aide plus vite (V1).
 
 Les bad vibes visent le noyau. Elles se retournent contre un joueur seulement s'il entre dans leur rayon d'aggro, et le lâchent au-delà de deux rayons. Tirer de loin ne provoque pas de poursuite : attirer les ennemis est le rôle du tank. **Tranché le 2026-10-04.**
 
@@ -74,13 +84,63 @@ Du matériel de festival, posé avec des watts, qui agit sur le temps musical :
 | Déco UV          | attire les ennemis, les marque (dégâts bonus)       |
 | Stroboscope      | étourdit sur le drop                                |
 
-Nombre d'emplacements limité, améliorables. Les lourds peuvent pousser ou casser un piège.
+Nombre d'emplacements limité, un de plus par niveau de Volume. Un piège posé se renforce avec des watts. Les lourds peuvent pousser ou casser un piège.
 
 ## Progression dans la partie
 
 - Expérience partagée entre les joueurs : tout le monde monte de niveau en même temps, chacun choisit son amélioration. Proposé, à valider en jouant.
-- Améliorations de trois familles : classe (compétences), générique (vitesse, portée, vie), défense (pièges). Des synergies entre familles font les grosses parties.
+- Améliorations de quatre familles : classe (compétences), générique (vitesse, portée, vie), défense (pièges), relique (uniques, lâchées par les boss). Des synergies entre familles font les grosses parties.
+- Raretés : commun, rare, légendaire, la même amélioration avec de plus gros chiffres. Le Volume 2 ouvre les rares, le Volume 3 les légendaires.
 - Pas de méta-progression entre parties dans les premières versions. Un déblocage cosmétique est envisageable plus tard.
+
+## Enceintes annexes et Volume
+
+**Tranché le 2026-10-04.** La nuit monte toute seule ; le joueur peut pousser le son lui-même, plus dur tout de suite, plus puissant ensuite, fatal s'il le fait trop tôt.
+
+- Quatre stacks éteints au bord de l'arène : le Dôme chill, la Forêt, le Sub, le Cercle acid. Un joueur qui reste deux mesures dedans la branche, sans menu. Indestructibles.
+- Chaque enceinte branchée ajoute un niveau de **Volume**, commun à l'équipe et définitif jusqu'au sunrise.
+
+| Par niveau de Volume | Coût, immédiat                    | Gain, cumulatif                           |
+| -------------------- | --------------------------------- | ----------------------------------------- |
+| Bad vibes            | +25 % de vie, +25 % d'apparitions | +25 % de vibes                            |
+| Tirage               | -                                 | Volume 2 : rares ; Volume 3 : légendaires |
+| Pièges               | -                                 | +1 emplacement                            |
+| Boss                 | +25 % de vie                      | une relique de plus au choix              |
+| Score                | -                                 | x (1 + 0,25 par niveau)                   |
+
+Chaque enceinte a sa couche musicale, son aura et l'agrès qu'elle ouvre au tirage :
+
+| Enceinte       | Aura autour d'elle                 | Couche                   | Ouvre               |
+| -------------- | ---------------------------------- | ------------------------ | ------------------- |
+| le Dôme chill  | brume qui soigne les joueurs       | nappe, voix lointaine    | assiettes chinoises |
+| la Forêt       | les bad vibes ralentissent         | frappes boisées, oiseaux | monocycle           |
+| le Sub         | onde de choc sur chaque kick       | sub-basse                | totem               |
+| le Cercle acid | marque les bad vibes qui y dansent | ligne acide              | bâton du diable     |
+
+Les quatre branchées ouvrent le ruban arc-en-ciel et les fusions B2B. Le Volume ne change pas la liste des bad vibes : les paliers du set décident qui arrive.
+
+## Agrès de cirque
+
+**Tranché le 2026-10-04.** La classe garde son attaque, à la main. En plus, jusqu'à trois agrès automatiques, proposés dans les cartes de niveau avec les améliorations. Aucun au départ : le début reste fragile. Chacun tire sur sa place dans la mesure, en doubles croches, ou en continu ; visée automatique vers la bad vibe la plus proche. Un agrès de ta classe sort deux fois plus souvent au tirage. En coop, chacun ses agrès.
+
+| Agrès               | Classe | Rythme                                | Effet                                                                                        |
+| ------------------- | ------ | ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| bâton de feu        | tank   | chaque temps                          | tournoie devant toi et frappe en arc                                                         |
+| bâton du diable     | mage   | sur la basse, 3 doubles après le kick | chaque frappe projette une étincelle qui traverse les bad vibes                              |
+| cerceaux            | mage   | chaque demi-mesure                    | un cerceau tourne autour de toi et repousse ce qui le touche ; sur le 1 et le 3 il s'élargit |
+| diabolo             | mage   | lancé sur le 1, retombe sur le 3      | retombe au milieu des bad vibes, onde à l'impact                                             |
+| frisbee             | healer | sur le 2 et le 4                      | frappe à l'aller, revient vers un allié et le soigne (vers toi en solo)                      |
+| assiettes chinoises | healer | sur le 3                              | zones posées au sol qui ralentissent les bad vibes et soignent les alliés, trois au plus     |
+| totem               | tank   | toutes les 2 mesures                  | planté au sol, attire les bad vibes puis les repousse d'une onde                             |
+| éventails de feu    | tank   | continu                               | deux éventails tournent autour de toi sans arrêt                                             |
+| monocycle           | healer | continu                               | tu roules plus vite, ta traînée ralentit les bad vibes et soigne les alliés qui la suivent   |
+| ruban arc-en-ciel   | aucune | contretemps                           | marque toute bad vibe qu'il traverse : elle prend plus de dégâts de toute l'équipe           |
+
+**Fusions B2B** : un agrès au niveau maximal plus une amélioration au maximum, l'agrès évolue. Diabolo + Double faisceau : pluie de diabolos sur le drop. Cerceaux + Nova XXL : anneaux solaires, trois cerceaux dont chaque élargissement est une nova. Totem + Sub renforcé : totem sono, une onde sur chaque kick. Bâton de feu + Jambes de danseur : double bâton. Frisbee + Bonnes ondes : trois frisbees qui se font des passes. Ruban + Double tempo : arc-en-ciel sur le drop, il traverse l'écran et marque tout. Monocycle + Deuxième souffle : la traînée répare la scène.
+
+**Reliques de boss** : le boss du drop lâche un choix parmi trois objets de scène uniques, une relique de plus au choix par niveau de Volume. En V0.1 une relique est une grosse combinaison d'améliorations ; des effets uniques viendront ensuite.
+
+Les nombres sont des points de départ, à régler dans `src/data/` en jouant.
 
 ## Rythme et musique
 
