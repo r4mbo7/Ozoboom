@@ -4,13 +4,23 @@ import type {
   EnemyBehaviour,
   EnemyDefinition,
   TrapDefinition,
+  TrapEffect,
 } from '../data/types';
-import type { Arena, PlayerState, Positioned, SimEvent, SimState, Vec2 } from '../sim/state';
+import type {
+  Arena,
+  EntityId,
+  PlayerState,
+  SimEvent,
+  SimState,
+  TrapState,
+  Vec2,
+} from '../sim/state';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import { type Camera, frameCamera, screenToWorld } from './camera';
 import { Particles } from './effects';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { PALETTE, parseHexColor } from './palette';
+import { trapReach } from './reach';
 import {
   BEAM_LENGTH,
   STREAK_HEAD,
@@ -46,6 +56,7 @@ interface TrapView {
   readonly halo: Sprite;
   readonly body: Sprite;
   readonly beam: Sprite;
+  reach: number;
 }
 
 const TAU = Math.PI * 2;
@@ -66,8 +77,21 @@ function lookup<V>(map: ReadonlyMap<string, V>, key: string, what: string): V {
   return value;
 }
 
-function interpolate(entity: Positioned, alpha: number): Vec2 {
-  return { x: lerp(entity.prevX, entity.x, alpha), y: lerp(entity.prevY, entity.y, alpha) };
+function byId<T extends { readonly id: number }>(items: readonly T[], id: number): T | undefined {
+  for (const item of items) {
+    if (item.id === id) {
+      return item;
+    }
+  }
+  return undefined;
+}
+
+function ownerOf(players: readonly PlayerState[], trap: TrapState): PlayerState {
+  const owner = byId(players, trap.ownerId);
+  if (owner === undefined) {
+    throw new Error(`Trap ${String(trap.id)} has no owner ${String(trap.ownerId)}`);
+  }
+  return owner;
 }
 
 function add(parent: Container, shape: Shape, anchorX = 0.5): Sprite {
@@ -77,9 +101,10 @@ function add(parent: Container, shape: Shape, anchorX = 0.5): Sprite {
   return sprite;
 }
 
-function hide(...sprites: Sprite[]): void {
-  for (const sprite of sprites) {
-    sprite.visible = false;
+// Pixi parses the color, allocating, on every tint write, even an unchanged one.
+function setTint(sprite: Sprite, color: number): void {
+  if (sprite.tint !== color) {
+    sprite.tint = color;
   }
 }
 
@@ -133,6 +158,8 @@ export class Scene implements Renderer {
   private flashTick = Number.NEGATIVE_INFINITY;
   private shakeTick = Number.NEGATIVE_INFINITY;
   private floorArena: Arena = { width: 0, height: 0 };
+  private readonly focus = { x: 0, y: 0 };
+  private readonly playerTints: number[] = [];
 
   constructor(
     pixi: PixiRenderer,
@@ -166,6 +193,7 @@ export class Scene implements Renderer {
     this.coreBody = add(this.coreLayer, t.core);
     this.coreFlash = add(this.fxLayer, t.ring);
     this.coreFlash.visible = false;
+    this.coreFlash.tint = PALETTE.sunOrange;
     for (const sprite of [...this.coreRays, this.coreHalo]) {
       sprite.tint = PALETTE.uvCyan;
     }
@@ -175,27 +203,28 @@ export class Scene implements Renderer {
         halo: add(this.glowLayer, t.halo),
         body: add(this.trapLayer, t.traps.shockwave),
         beam: add(this.fxLayer, t.beam, 0),
+        reach: 0,
       }),
       (view) => {
-        hide(view.halo, view.body, view.beam);
+        view.halo.visible = view.body.visible = view.beam.visible = false;
       },
     );
     this.enemies = new ViewPool(
       () => ({ sprite: add(this.enemyLayer, t.enemies.horde), heading: 0 }),
       (view) => {
-        hide(view.sprite);
+        view.sprite.visible = false;
       },
     );
     this.enemyShots = new ViewPool(
       () => add(this.enemyShotLayer, t.enemyShot),
       (sprite) => {
-        hide(sprite);
+        sprite.visible = false;
       },
     );
     this.pickups = new ViewPool(
       () => add(this.pickupLayer, t.vibes),
       (sprite) => {
-        hide(sprite);
+        sprite.visible = false;
       },
     );
     this.players = new ViewPool(
@@ -205,13 +234,13 @@ export class Scene implements Renderer {
         aim: add(this.playerLayer, t.aim),
       }),
       (view) => {
-        hide(view.halo, view.body, view.aim);
+        view.halo.visible = view.body.visible = view.aim.visible = false;
       },
     );
     this.lightShots = new ViewPool(
       () => add(this.fxLayer, t.streak, STREAK_HEAD),
       (sprite) => {
-        hide(sprite);
+        sprite.visible = false;
       },
     );
     this.rings = new Particles(this.fxLayer, t.ring, 48);
@@ -244,8 +273,12 @@ export class Scene implements Renderer {
     }
 
     const now = state.tick + alpha;
-    const focusPlayer = state.players.find((player) => player.id === 0);
-    const focus = focusPlayer === undefined ? state.core : interpolate(focusPlayer, alpha);
+    const focusPlayer = byId(state.players, 0);
+    const { focus } = this;
+    focus.x =
+      focusPlayer === undefined ? state.core.x : lerp(focusPlayer.prevX, focusPlayer.x, alpha);
+    focus.y =
+      focusPlayer === undefined ? state.core.y : lerp(focusPlayer.prevY, focusPlayer.y, alpha);
     this.camera = frameCamera(
       focus,
       state.arena,
@@ -316,13 +349,14 @@ export class Scene implements Renderer {
       case 'trapFired': {
         const { effect } = lookup(this.trapLooks, event.kind, 'trap kind');
         if (effect.kind === 'shockwave') {
+          const reach = this.firedReach(state, event.id, effect);
           this.rings.spawn({
             now: tick,
             duration: TICKS_PER_BEAT / 2,
             x: event.x,
             y: event.y,
-            fromRadius: effect.radius * 0.2,
-            toRadius: effect.radius,
+            fromRadius: reach * 0.2,
+            toRadius: reach,
             tint: TRAP_COLORS.shockwave,
             peak: this.options.calmMode ? 0.5 : 0.9,
           });
@@ -332,6 +366,15 @@ export class Scene implements Renderer {
       default:
         break;
     }
+  }
+
+  private firedReach(state: SimState, trapId: EntityId, effect: TrapEffect): number {
+    const trap = byId(state.traps, trapId);
+    if (trap !== undefined) {
+      return trapReach(effect, ownerOf(state.players, trap));
+    }
+    // A trap broken in the tick it fired has already left the state: keep the reach it was drawn with.
+    return this.traps.peek(trapId)?.reach ?? trapReach(effect, { modifiers: {} });
   }
 
   private burst(x: number, y: number, id: number, behaviour: EnemyBehaviour, tick: number): void {
@@ -433,13 +476,14 @@ export class Scene implements Renderer {
     this.coreHalo.scale.set(((core.radius * 3.4) / t.halo.radius) * (1 + 0.3 * pulse));
     this.coreHalo.alpha = 0.55 + 0.45 * pulse;
 
-    const turn = this.options.calmMode ? Math.PI / 4 : (now / RAY_TURN_TICKS) * TAU;
-    this.coreRays.forEach((ray, index) => {
+    let turn = this.options.calmMode ? Math.PI / 4 : (now / RAY_TURN_TICKS) * TAU;
+    for (const ray of this.coreRays) {
       ray.position.set(core.x, core.y);
-      ray.rotation = turn + index * Math.PI;
+      ray.rotation = turn;
       ray.scale.set((core.radius * 9) / 256, (core.radius * 1.6) / 32);
       ray.alpha = 0.25 + 0.35 * pulse;
-    });
+      turn += Math.PI;
+    }
 
     const since = now - this.flashTick;
     const calm = this.options.calmMode;
@@ -448,7 +492,6 @@ export class Scene implements Renderer {
     this.coreFlash.visible = progress >= 0 && progress < 1;
     if (this.coreFlash.visible) {
       this.coreFlash.position.set(core.x, core.y);
-      this.coreFlash.tint = PALETTE.sunOrange;
       const reach = calm ? 1.15 : 1.05 + 0.75 * (1 - (1 - progress) * (1 - progress));
       this.coreFlash.scale.set((core.radius * reach) / t.ring.radius);
       this.coreFlash.alpha = calm
@@ -463,7 +506,8 @@ export class Scene implements Renderer {
     for (const trap of state.traps) {
       const look = lookup(this.trapLooks, trap.kind, 'trap kind');
       const view = this.traps.acquire(trap.id);
-      const { x, y } = interpolate(trap, alpha);
+      const x = lerp(trap.prevX, trap.x, alpha);
+      const y = lerp(trap.prevY, trap.y, alpha);
       const kind = look.effect.kind;
       const shape = t.traps[kind];
       view.body.texture = shape.texture;
@@ -474,17 +518,18 @@ export class Scene implements Renderer {
       view.body.rotation = kind === 'beam' ? facing : 0;
 
       view.halo.visible = true;
-      view.halo.tint = TRAP_COLORS[kind];
+      setTint(view.halo, TRAP_COLORS[kind]);
       view.halo.position.set(x, y);
       view.halo.scale.set((look.radius * 3) / t.halo.radius);
       view.halo.alpha = 0.6 + 0.4 * pulse;
 
+      view.reach = trapReach(look.effect, ownerOf(state.players, trap));
       view.beam.visible = look.effect.kind === 'beam';
       if (look.effect.kind === 'beam') {
         view.beam.position.set(x, y);
         view.beam.rotation = facing;
         view.beam.scale.set(
-          look.effect.length / BEAM_LENGTH,
+          view.reach / BEAM_LENGTH,
           (look.effect.width * 3) / (t.beam.radius * 2),
         );
         view.beam.alpha = this.options.calmMode ? 0.7 : 0.75 + 0.25 * pulse;
@@ -499,11 +544,12 @@ export class Scene implements Renderer {
     this.pickups.begin();
     for (const pickup of state.pickups) {
       const sprite = this.pickups.acquire(pickup.id);
-      const { x, y } = interpolate(pickup, alpha);
+      const x = lerp(pickup.prevX, pickup.x, alpha);
+      const y = lerp(pickup.prevY, pickup.y, alpha);
       const shape = pickup.kind === 'vibes' ? t.vibes : t.watts;
       const twinkle = calm ? 1 : 1 + 0.2 * Math.sin(now * 0.45 + pickup.id);
       sprite.texture = shape.texture;
-      sprite.tint = pickup.kind === 'vibes' ? PALETTE.uvLime : PALETTE.uvCyan;
+      setTint(sprite, pickup.kind === 'vibes' ? PALETTE.uvLime : PALETTE.uvCyan);
       sprite.visible = true;
       sprite.position.set(x, y);
       sprite.scale.set((PICKUP_RADIUS / shape.radius) * twinkle);
@@ -526,7 +572,8 @@ export class Scene implements Renderer {
         view.heading = Math.atan2(dy, dx);
       }
       const { sprite } = view;
-      const { x, y } = interpolate(enemy, alpha);
+      const x = lerp(enemy.prevX, enemy.x, alpha);
+      const y = lerp(enemy.prevY, enemy.y, alpha);
       sprite.texture = shape.texture;
       sprite.visible = true;
       sprite.position.set(x, y);
@@ -538,7 +585,11 @@ export class Scene implements Renderer {
 
   private drawProjectiles(state: SimState, alpha: number): void {
     const t = this.textures;
-    const colors = this.playerColors(state.players);
+    const tints = this.playerTints;
+    tints.fill(PALETTE.glow);
+    for (const player of state.players) {
+      tints[player.id] = lookup(this.classColors, player.classId, 'class');
+    }
     this.enemyShots.begin();
     this.lightShots.begin();
     for (const projectile of state.projectiles) {
@@ -548,15 +599,18 @@ export class Scene implements Renderer {
         ? this.enemyShots.acquire(projectile.id)
         : this.lightShots.acquire(projectile.id);
       const shape = dark ? t.enemyShot : t.streak;
-      const { x, y } = interpolate(projectile, alpha);
+      const x = lerp(projectile.prevX, projectile.x, alpha);
+      const y = lerp(projectile.prevY, projectile.y, alpha);
       sprite.visible = true;
       sprite.position.set(x, y);
       sprite.rotation = Math.atan2(projectile.vy, projectile.vx);
       const size = projectile.radius / shape.radius;
       sprite.scale.set(size, dark ? size : size * 0.6);
       if (!dark) {
-        sprite.tint =
-          owner.kind === 'player' ? (colors[owner.playerId] ?? PALETTE.glow) : PALETTE.glow;
+        setTint(
+          sprite,
+          owner.kind === 'player' ? (tints[owner.playerId] ?? PALETTE.glow) : PALETTE.glow,
+        );
       }
     }
     this.enemyShots.end();
@@ -569,35 +623,28 @@ export class Scene implements Renderer {
     for (const player of state.players) {
       const view = this.players.acquire(player.id);
       const color = lookup(this.classColors, player.classId, 'class');
-      const { x, y } = interpolate(player, alpha);
+      const x = lerp(player.prevX, player.x, alpha);
+      const y = lerp(player.prevY, player.y, alpha);
       const { body, halo, aim } = view;
       body.visible = true;
       body.texture = player.downed ? t.playerDowned.texture : t.player.texture;
-      body.tint = color;
+      setTint(body, color);
       body.position.set(x, y);
       body.scale.set(player.radius / t.player.radius);
       body.alpha = player.downed ? 0.6 + 0.4 * pulse : 1;
 
       halo.visible = !player.downed;
-      halo.tint = color;
+      setTint(halo, color);
       halo.position.set(x, y);
       halo.scale.set(((player.radius * 3.2) / t.halo.radius) * (1 + 0.1 * pulse));
 
       aim.visible = !player.downed;
-      aim.tint = color;
+      setTint(aim, color);
       const reach = player.radius + 10;
       aim.position.set(x + player.aim.x * reach, y + player.aim.y * reach);
       aim.rotation = Math.atan2(player.aim.y, player.aim.x);
       aim.scale.set(player.radius / 24);
     }
     this.players.end();
-  }
-
-  private playerColors(players: readonly PlayerState[]): number[] {
-    const colors: number[] = [];
-    for (const player of players) {
-      colors[player.id] = lookup(this.classColors, player.classId, 'class');
-    }
-    return colors;
   }
 }
