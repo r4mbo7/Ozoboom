@@ -1,7 +1,21 @@
-import { expect, test } from '@playwright/test';
-import { collectConsoleErrors } from './game';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { collectConsoleErrors, repeatUntil } from './game';
 
 const PHONE = { width: 390, height: 844 };
+
+// A menu ignores presses for a moment: press again only while the selection has not moved yet.
+async function stepRight(page: Page, cards: Locator, from: number): Promise<void> {
+  const isCurrent = async (index: number) =>
+    (await cards.nth(index).getAttribute('aria-current')) === 'true';
+  await repeatUntil(
+    async () => {
+      if (await isCurrent(from)) {
+        await page.keyboard.press('ArrowRight');
+      }
+    },
+    () => isCurrent(from + 1),
+  );
+}
 
 test('a relic offer of four cards is titled, gold and navigable by keyboard', async ({ page }) => {
   const errors = collectConsoleErrors(page);
@@ -13,14 +27,8 @@ test('a relic offer of four cards is titled, gold and navigable by keyboard', as
   await expect(cards).toHaveCount(4);
   await expect(cards.first()).toHaveAttribute('aria-current', 'true');
   await expect(cards.nth(3)).toHaveAttribute('data-tint', 'relic');
-  // The menu may ignore the first press while it opens: press again only while nothing moved.
-  await expect(async () => {
-    if ((await cards.first().getAttribute('aria-current')) === 'true') {
-      await page.keyboard.press('ArrowRight');
-    }
-    await expect(cards.nth(1)).toHaveAttribute('aria-current', 'true', { timeout: 500 });
-  }).toPass();
-  await page.keyboard.press('ArrowRight');
+  await stepRight(page, cards, 0);
+  await stepRight(page, cards, 1);
 
   await expect(cards.nth(2)).toHaveAttribute('aria-current', 'true');
   expect(errors).toEqual([]);
