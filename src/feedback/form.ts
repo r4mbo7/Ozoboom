@@ -355,8 +355,16 @@ export function openFeedback(
   for (const target of [form, sent]) {
     target.items.forEach((item, position) => {
       const node = target.nodes.get(item);
-      node?.addEventListener('pointerenter', (event) => {
-        if (event.pointerType === 'mouse' && document.activeElement !== textarea) {
+      // A real move only: the form opens under a resting cursor, whose synthetic hover must not
+      // take the selection from the keyboard or the gamepad.
+      node?.addEventListener('pointermove', (event) => {
+        const moved = event.movementX !== 0 || event.movementY !== 0;
+        if (
+          moved &&
+          event.pointerType === 'mouse' &&
+          index !== position &&
+          document.activeElement !== textarea
+        ) {
           select(target, position);
         }
       });
