@@ -15,6 +15,7 @@ import {
 } from './paint';
 import { type MaskSet, createMasks } from './textures-enemies';
 import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
+import { type PlayerTextures, playerShapes, playerTextures } from './textures-players';
 import { trap } from './textures-traps';
 
 export type { Shape } from './paint';
@@ -28,10 +29,7 @@ export interface Textures {
   readonly streak: Shape;
   readonly vibes: Shape;
   readonly watts: Shape;
-  readonly player: Shape;
-  readonly playerDowned: Shape;
-  readonly playerRing: Shape;
-  readonly aim: Shape;
+  readonly players: PlayerTextures;
   readonly core: Shape;
   readonly coreRay: Shape;
   readonly beam: Shape;
@@ -121,52 +119,7 @@ export function createTextures(): Textures {
       circle(ctx, 3.4);
       ctx.fill();
     }),
-    player: paint(96, 96, 32, (ctx) => {
-      glow(ctx, WHITE, 10);
-      ctx.fillStyle = 'rgb(255 255 255 / 0.28)';
-      circle(ctx, 29);
-      ctx.fill();
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = WHITE;
-      ctx.stroke();
-      ctx.fillStyle = WHITE;
-      circle(ctx, 9);
-      ctx.fill();
-    }),
-    playerRing: paint(96, 96, 32, (ctx) => {
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = WHITE;
-      circle(ctx, 29);
-      ctx.stroke();
-    }),
-    playerDowned: paint(96, 96, 32, (ctx) => {
-      ctx.fillStyle = 'rgb(255 255 255 / 0.12)';
-      circle(ctx, 29);
-      ctx.fill();
-      ctx.setLineDash([9, 7]);
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = 'rgb(255 255 255 / 0.8)';
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(-9, -9);
-      ctx.lineTo(9, 9);
-      ctx.moveTo(9, -9);
-      ctx.lineTo(-9, 9);
-      ctx.stroke();
-    }),
-    aim: paint(32, 32, 8, (ctx) => {
-      glow(ctx, WHITE, 4);
-      ctx.fillStyle = WHITE;
-      polygon(ctx, [
-        [10, 0],
-        [-6, -9],
-        [-2, 0],
-        [-6, 9],
-      ]);
-      ctx.fill();
-    }),
+    players: playerTextures(),
     core: paint(256, 256, 96, (ctx) => {
       ctx.fillStyle = SHADE_DEEP;
       circle(ctx, 92);
@@ -256,6 +209,7 @@ export function destroyTextures(textures: Textures): void {
     ...Object.values(textures).filter((value): value is Shape => 'texture' in value),
     ...Object.values(textures.traps),
     ...specialShapes(textures.specials),
+    ...playerShapes(textures.players),
   ];
   for (const shape of shapes) {
     shape.texture.destroy(true);

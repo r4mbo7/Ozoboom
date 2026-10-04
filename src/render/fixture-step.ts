@@ -2,6 +2,7 @@ import type { SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import {
   type FixtureEvent,
+  PARTY_OFFSET,
   PLAYER_ORBIT,
   TAU,
   breedOf,
@@ -74,6 +75,14 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
     player.y = core.y + Math.sin(orbit) * wobble * 0.8;
     const aimAngle = orbit + Math.sin(tick / 17) * 0.9;
     player.aim = { x: Math.cos(aimAngle), y: Math.sin(aimAngle) };
+  }
+  for (const mate of state.players.slice(1)) {
+    if (player !== undefined && !mate.downed) {
+      const side = mate.id === 1 ? -1 : 1;
+      mate.x = player.x;
+      mate.y = player.y + PARTY_OFFSET * side;
+      mate.aim = player.aim;
+    }
   }
 
   for (let index = 0; index < state.enemies.length; index += 1) {

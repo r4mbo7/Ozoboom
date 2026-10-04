@@ -36,6 +36,7 @@ const stats = element('#stats');
 const pointer = element('#pointer');
 const calmButton = element('#calm');
 const downedButton = element('#downed');
+const invulnerableButton = element('#invulnerable');
 const hourInput = element('#hour') as HTMLInputElement;
 const hourValue = element('#hour-value');
 
@@ -55,6 +56,10 @@ if (sheet !== null) {
 const dieAt = params.has('dieAt') ? count('dieAt', 0) : null;
 if (params.get('clean') === '1') {
   element('.panel').style.display = 'none';
+}
+if (params.get('bare') === '1') {
+  state.traps = [];
+  state.pickups = [];
 }
 const player = state.players[0];
 if (player !== undefined && params.has('trapRadius')) {
@@ -97,14 +102,22 @@ function setPressed(button: HTMLElement, pressed: boolean) {
 }
 
 function setDowned(downed: boolean) {
-  if (player !== undefined) {
-    player.downed = downed;
+  for (const member of state.players) {
+    member.downed = downed;
   }
   setPressed(downedButton, downed);
 }
 
+function setInvulnerable(invulnerable: boolean) {
+  for (const member of state.players) {
+    member.invulnerableTicks = invulnerable ? Number.MAX_SAFE_INTEGER : 0;
+  }
+  setPressed(invulnerableButton, invulnerable);
+}
+
 setPressed(calmButton, calmMode);
 setDowned(params.get('downed') === '1');
+setInvulnerable(params.get('invulnerable') === '1');
 
 calmButton.addEventListener('click', () => {
   calmMode = !calmMode;
@@ -113,6 +126,9 @@ calmButton.addEventListener('click', () => {
 });
 downedButton.addEventListener('click', () => {
   setDowned(player?.downed !== true);
+});
+invulnerableButton.addEventListener('click', () => {
+  setInvulnerable(invulnerableButton.getAttribute('aria-pressed') !== 'true');
 });
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-event]')) {
   button.addEventListener('click', () => {
