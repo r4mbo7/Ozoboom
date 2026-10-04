@@ -2,6 +2,7 @@ import type { EnemyDefinition, GameContent, SetDefinition, TrapDefinition } from
 import { IDLE_INPUT, type PlayerAction, type PlayerCommand, type PlayerInput } from './commands';
 import type { Simulation, SimulationOptions } from './index';
 import type { EnemyState, PlayerId, SimEvent, SimState } from './state';
+import { spawnEnemy } from './systems/spawning';
 
 export function commandFor(playerId: PlayerId, input: Partial<PlayerInput> = {}): PlayerCommand {
   return { playerId, input: { ...IDLE_INPUT, ...input }, actions: [] };
@@ -100,7 +101,7 @@ export const FIXTURE_CONTENT: GameContent = {
       aggroRadius: 120,
       vibesDrop: 1,
       wattsDrop: 0,
-      scalingPerPhrase: { hp: 0.1, speed: 0.02 },
+      scalingPerPhrase: { hp: 1.1, speed: 1.02 },
     },
     {
       id: 'curfew',
@@ -114,7 +115,7 @@ export const FIXTURE_CONTENT: GameContent = {
       aggroRadius: 200,
       vibesDrop: 20,
       wattsDrop: 25,
-      scalingPerPhrase: { hp: 0.2, speed: 0 },
+      scalingPerPhrase: { hp: 1.2, speed: 1 },
     },
   ],
   traps: [
@@ -202,7 +203,7 @@ export const FIXTURE_BOUNCER: EnemyDefinition = {
   aggroRadius: 100,
   vibesDrop: 5,
   wattsDrop: 3,
-  scalingPerPhrase: { hp: 0.1, speed: 0 },
+  scalingPerPhrase: { hp: 1.1, speed: 1 },
 };
 
 export const FAST_DROP_SET: SetDefinition = {
@@ -306,4 +307,106 @@ export function enemyDefinition(id: string): EnemyDefinition {
     throw new Error(`no fixture enemy "${id}"`);
   }
   return definition;
+}
+
+// Removes every enemy after each step: the set then runs on its grid, untouched by combat.
+export function peaceful(simulation: Simulation): Simulation {
+  return {
+    state: simulation.state,
+    step(commands) {
+      simulation.step(commands);
+      simulation.state.enemies.length = 0;
+    },
+  };
+}
+
+export const FIXTURE_HORDE: EnemyDefinition = {
+  id: 'queue',
+  name: 'File',
+  behaviour: 'horde',
+  maxHp: 30,
+  speed: 2,
+  radius: 12,
+  damage: 3,
+  attackCooldownTicks: 24,
+  aggroRadius: 80,
+  vibesDrop: 1,
+  wattsDrop: 0,
+  scalingPerPhrase: { hp: 1, speed: 1 },
+};
+
+export const FIXTURE_HEAVY: EnemyDefinition = {
+  id: 'doorman',
+  name: 'Videur',
+  behaviour: 'heavy',
+  maxHp: 140,
+  speed: 1,
+  radius: 20,
+  damage: 12,
+  attackCooldownTicks: 36,
+  aggroRadius: 100,
+  vibesDrop: 5,
+  wattsDrop: 3,
+  scalingPerPhrase: { hp: 1, speed: 1 },
+};
+
+export const FIXTURE_SHOOTER: EnemyDefinition = {
+  id: 'drizzle',
+  name: 'Bruine',
+  behaviour: 'shooter',
+  maxHp: 24,
+  speed: 2,
+  radius: 11,
+  damage: 5,
+  attackCooldownTicks: 48,
+  aggroRadius: 220,
+  vibesDrop: 2,
+  wattsDrop: 1,
+  scalingPerPhrase: { hp: 1, speed: 1 },
+  ranged: { projectileSpeed: 7, rangeTicks: 50, keepDistance: 200 },
+};
+
+export const FIXTURE_LURE: TrapDefinition = {
+  id: 'uv-deco',
+  name: 'Déco UV',
+  description: 'Attire et marque.',
+  cost: 20,
+  radius: 16,
+  hp: 50,
+  cadence: 'continuous',
+  effect: { kind: 'lure', radius: 150, markedDamageMul: 2 },
+  maxLevel: 3,
+  levelMul: 1.5,
+};
+
+export const FIXTURE_PROP: TrapDefinition = {
+  id: 'speaker-stack',
+  name: "Pile d'enceintes",
+  description: 'Un obstacle sans effet.',
+  cost: 20,
+  radius: 24,
+  hp: 1000,
+  cadence: 'bar',
+  effect: { kind: 'mist', slowFactor: 1, healPerBar: 0, radius: 1 },
+  maxLevel: 1,
+  levelMul: 1,
+};
+
+// The fixture without scheduled waves (the boss still lands on each drop), plus one enemy of each
+// behaviour, a lure and an inert prop: combat tests place exactly the enemies they need.
+export const COMBAT_CONTENT: GameContent = {
+  ...FIXTURE_CONTENT,
+  enemies: [...FIXTURE_CONTENT.enemies, FIXTURE_HORDE, FIXTURE_HEAVY, FIXTURE_SHOOTER],
+  traps: [...FIXTURE_CONTENT.traps, FIXTURE_LURE, FIXTURE_PROP],
+  sets: [{ ...FIXTURE_SET, tiers: FIXTURE_SET.tiers.map((tier) => ({ ...tier, spawns: [] })) }],
+};
+
+export const COMBAT_OPTIONS: SimulationOptions = { ...FIXTURE_OPTIONS, content: COMBAT_CONTENT };
+
+export function placeEnemy(state: SimState, kind: string, x: number, y: number): EnemyState {
+  const definition = COMBAT_CONTENT.enemies.find((enemy) => enemy.id === kind);
+  if (definition === undefined) {
+    throw new Error(`no fixture enemy "${kind}"`);
+  }
+  return spawnEnemy(state, definition, x, y, definition.behaviour === 'boss');
 }

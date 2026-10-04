@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../../shared/tempo';
-import { FIXTURE_OPTIONS, commandFor, stepAndRecord } from '../fixtures';
+import { FIXTURE_OPTIONS, commandFor, peaceful, stepAndRecord } from '../fixtures';
 import { createSimulation } from '../index';
 
 const SET_LENGTH = 2 * (TICKS_PER_PHRASE + 3 * TICKS_PER_BAR);
@@ -15,7 +15,7 @@ const twoPlayers = {
 
 describe('status', () => {
   it('wins when the last drop of the fixture set ends without enemies', () => {
-    const simulation = createSimulation(FIXTURE_OPTIONS);
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
 
     const recorded = stepAndRecord(simulation, SET_LENGTH);
 
@@ -28,7 +28,7 @@ describe('status', () => {
   });
 
   it('stays running until the last tick of the set', () => {
-    const simulation = createSimulation(FIXTURE_OPTIONS);
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
 
     stepAndRecord(simulation, SET_LENGTH - 1);
 
@@ -63,7 +63,7 @@ describe('status', () => {
   });
 
   it('prefers losing to winning when both happen on the same tick', () => {
-    const simulation = createSimulation(FIXTURE_OPTIONS);
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
     stepAndRecord(simulation, SET_LENGTH - 1);
     simulation.state.core.hp = 0;
 

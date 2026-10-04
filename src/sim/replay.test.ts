@@ -5,7 +5,7 @@ import type { SimulationOptions } from './index';
 import { hashState, runScript } from './replay';
 import type { Vec2 } from './state';
 
-const REFERENCE_HASH = '1e26455b';
+const REFERENCE_HASH = '146fccfc';
 
 const DIRECTIONS: readonly Vec2[] = [
   { x: 1, y: 0 },
@@ -27,6 +27,13 @@ const PLACE_SUBWOOFER: PlayerAction = {
   angle: 0,
 };
 
+// The script cannot see the offers, so it names one upgrade per tick: the first one offered wins.
+const UPGRADES: readonly string[] = ['quick-feet', 'big-bass', 'wide-nova'];
+const choose = (tick: number): PlayerAction => ({
+  type: 'chooseUpgrade',
+  upgradeId: UPGRADES[tick % UPGRADES.length] ?? 'quick-feet',
+});
+
 const duo: SimulationOptions = {
   ...FIXTURE_OPTIONS,
   seed: 1234,
@@ -47,12 +54,16 @@ function referenceScript(ticks: number): PlayerCommand[][] {
           aim: { x: aim.x * 3, y: aim.y * 3 },
           skill: tick % 7 === 0,
           ultimate: tick % 5 === 0,
+          fire: true,
         }),
-        actions: TRAP_TICKS.includes(tick) ? [PLACE_SUBWOOFER] : [],
+        actions: TRAP_TICKS.includes(tick) ? [PLACE_SUBWOOFER, choose(tick)] : [choose(tick)],
       },
     ];
     if (tick % 3 !== 0) {
-      commands.push(commandFor(1, { move: { x: -move.y, y: move.x * 0.5 } }));
+      commands.push({
+        ...commandFor(1, { move: { x: -move.y, y: move.x * 0.5 }, fire: tick % 2 === 0 }),
+        actions: [choose(tick)],
+      });
     }
     return commands;
   });
@@ -82,7 +93,10 @@ describe('replay', () => {
 
     const state = runScript(duo, script);
 
-    expect(state.status).toBe('won');
+    expect(state.status).toBe('running');
+    expect(state.set.segment).toBe('drop');
+    expect(state.stats.kills).toBe(30);
+    expect(state.players.map((player) => player.upgrades)).toEqual([[], ['wide-nova']]);
     expect(hashState(state)).toBe(REFERENCE_HASH);
   });
 });

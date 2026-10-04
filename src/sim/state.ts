@@ -82,6 +82,8 @@ export interface EnemyState extends Positioned {
   stunTicks: number;
   marked: boolean;
   isBoss: boolean;
+  // Last player whose attack hit this enemy: credited with the kill.
+  lastHitBy?: PlayerId;
 }
 
 export type ProjectileOwner =
@@ -98,6 +100,8 @@ export interface ProjectileState extends Positioned {
   damage: number;
   ticksLeft: number;
   pierceLeft: number;
+  // Enemies a piercing projectile already went through, so it hits each one once.
+  hitIds?: EntityId[];
 }
 
 export interface TrapState extends Positioned {

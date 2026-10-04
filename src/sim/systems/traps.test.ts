@@ -394,6 +394,8 @@ describe('trap effects', () => {
     stepAndRecord(simulation, 93);
     const inside = addEnemy(state, GRUMP, 450, 450);
     const outside = addEnemy(state, GRUMP, 400, 450 + 120 + 12 + 1);
+    inside.speed = 0;
+    outside.speed = 0;
 
     simulation.step([]);
     simulation.step([]);

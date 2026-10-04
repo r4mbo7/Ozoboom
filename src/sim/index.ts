@@ -2,14 +2,22 @@ import type { GameContent } from '../data/types';
 import type { PlayerCommand } from './commands';
 import { lookup, resolveContent } from './content';
 import { createInitialState, type PlayerSlot } from './initial-state';
+import { SpatialHash } from './spatial-hash';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
 import { coreWatts } from './systems/core-watts';
+import { deaths } from './systems/deaths';
+import { enemyAttacks } from './systems/enemy-attacks';
+import { enemySteering } from './systems/enemy-steering';
+import { pickups } from './systems/pickups';
+import { playerAttack } from './systems/player-attack';
 import { playerMovement } from './systems/player-movement';
 import { progression } from './systems/progression';
+import { projectiles } from './systems/projectiles';
 import { setProgress } from './systems/set-progress';
 import { skillEffects } from './systems/skill-effects';
 import { skills } from './systems/skills';
+import { spawning } from './systems/spawning';
 import { status } from './systems/status';
 import { tempo } from './systems/tempo';
 import { traps } from './systems/traps';
@@ -28,6 +36,8 @@ export interface Simulation {
   step(commands: readonly PlayerCommand[]): void;
 }
 
+const ENEMY_GRID_CELL_SIZE = 64;
+
 const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
   running: [
     beginStep,
@@ -35,16 +45,16 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     setProgress,
     upgradeChoice,
     playerMovement,
-    // player-attack (#2)
+    playerAttack,
     skills,
-    // spawning (#2)
-    // enemy-steering (#2)
-    // projectiles (#2)
+    spawning,
+    enemySteering,
+    projectiles,
     traps,
     skillEffects,
-    // enemy-attacks (#2)
-    // deaths (#2)
-    // pickups (#2)
+    enemyAttacks,
+    deaths,
+    pickups,
     progression,
     coreWatts,
     status,
@@ -59,7 +69,8 @@ export function createSimulation(options: SimulationOptions): Simulation {
   const set = lookup(content.sets, options.setId, 'set');
   const state = createInitialState(options.seed, options.players, content, set);
   const commands = new Map<PlayerId, PlayerCommand>();
-  const ctx: StepContext = { state, content, set, commands };
+  const enemyGrid = new SpatialHash(set.arena.width, set.arena.height, ENEMY_GRID_CELL_SIZE);
+  const ctx: StepContext = { state, content, set, commands, enemyGrid };
 
   tempo(ctx);
   state.events.push({ type: 'segment', segment: state.set.segment, tier: state.set.tier });

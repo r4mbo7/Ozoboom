@@ -65,8 +65,9 @@ Conventions de la simulation :
 - Statuts posés par un système et seulement lus par les autres : `slowFactor` et `stunTicks` d'un ennemi, remis à 1 et décomptés par `traps` ; `invulnerableTicks` d'un joueur, décompté par `skills`, aucun dégât tant qu'il est positif. Un piège s'oriente par `TrapState.direction`, vecteur unitaire, jamais par `angle`.
 - `input.move` est borné à une longueur de 1, pas normalisé : un stick à mi-course donne la mi-vitesse, une diagonale clavier la vitesse nominale.
 - Les identifiants de contenu (`classId`, `kind`, `trapId`, `upgradeId`) sont des chaînes qui pointent dans `GameContent`. La sim résout ces références une fois à la création, puis travaille avec des tables.
-- Maths autorisées dans la sim : `+ - * /`, `Math.floor`, `Math.ceil`, `Math.abs`, `Math.min`, `Math.max`, `Math.sqrt` (arrondi correct garanti par IEEE 754). Interdites car non reproductibles d'un moteur à l'autre : `Math.sin`, `Math.cos`, `Math.atan2`, `Math.pow`, `Math.exp`, `Math.hypot`. Les angles passent par des vecteurs normalisés, pas par des radians.
+- Maths autorisées dans la sim : `+ - * /`, `Math.floor`, `Math.ceil`, `Math.abs`, `Math.min`, `Math.max`, `Math.sqrt` (arrondi correct garanti par IEEE 754). Interdites car non reproductibles d'un moteur à l'autre : `Math.sin`, `Math.cos`, `Math.atan2`, `Math.pow`, `Math.exp`, `Math.hypot`. Les angles passent par des vecteurs normalisés, pas par des radians ; `src/shared/angle.ts` convertit ceux des données et des événements sans trigonométrie de `Math`.
 - Le hasard vient d'un générateur à graine à opérations entières (sfc32), dont l'état vit dans `state.rng`.
+- Les ennemis prennent leurs dégâts par `hurtEnemy` (`src/sim/effects.ts`), joueurs et noyau par `src/sim/damage.ts`. Un projectile de joueur pose aussi `lastHitBy`, le joueur crédité du kill. `StepContext.enemyGrid` répond aux requêtes de voisinage sur les ennemis ; `enemy-steering` puis `projectiles` la reconstruisent.
 
 ## Boucle
 
