@@ -3,7 +3,7 @@ import { el, fillHint, keycap, setText } from './dom';
 import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
 import { promptsFor } from './prompts';
-import { createToggle } from './toggle';
+import { createSoundToggle, createToggle } from './toggle';
 
 export interface TitleActions {
   start(): void;
@@ -44,7 +44,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
   const play = el('button', 'ui-button ui-button--primary', 'Jouer');
   play.type = 'button';
   const calm = createToggle('Mode calme', 'Sans strobos, secousses ni halos forts', 'Oui', 'Non');
-  const sound = createToggle('Son', 'Musique et effets', 'Activé', 'Coupé');
+  const sound = createSoundToggle();
 
   const items = [play, calm.button, sound.button];
   if (actions.feedback !== undefined) {

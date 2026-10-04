@@ -79,7 +79,9 @@ test('plays a whole game with the keyboard only, from the title to a restart', a
 
   const end = page.getByRole('region', { name: 'Fin de partie' });
   await expect(end).toBeVisible({ timeout: 120_000 });
-  await expect(end).toContainText('La musique s’arrête');
+  // The scene or the player falls first depending on the seed: the end tells which one did.
+  const silent = await page.evaluate(() => (window.ozoboom?.state.core.hp ?? 0) <= 0);
+  await expect(end).toContainText(silent ? 'La musique s’arrête' : 'Plus personne debout');
   await expect
     .poll(async () => {
       await page.keyboard.press('Enter');

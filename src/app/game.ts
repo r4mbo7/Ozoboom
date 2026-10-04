@@ -12,7 +12,7 @@ import { createRenderer } from '../render';
 import { TICK_MS } from '../shared/tempo';
 import { length, normalize } from '../shared/vec';
 import { IDLE_INPUT } from '../sim/commands';
-import { createFeedbackButton, createUi, prefersCalmMode } from '../ui';
+import { createFeedbackButton, createSoundToggle, createUi, prefersCalmMode } from '../ui';
 import { Controls } from './controls';
 import { BENCH_ENEMIES, type DevOptions, crowd, createDevProbe } from './dev';
 import { createFpsMeter } from './fps';
@@ -71,18 +71,23 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       renderer.setOptions({ calmMode: enabled });
       savePref(storage, 'calmMode', enabled);
     },
-    onToggleMute(muted) {
-      prefs.muted = muted;
-      applySound();
-      savePref(storage, 'muted', muted);
-    },
+    onToggleMute: setMuted,
     onFeedback: openForm,
   });
+  const soundToggle = createSoundToggle();
+  soundToggle.set(!prefs.muted);
   const pause = createPauseScreen(root, [
     {
       label: 'Reprendre',
       activate() {
         setPaused(false);
+      },
+    },
+    {
+      label: 'Son',
+      button: soundToggle.button,
+      activate() {
+        setMuted(!prefs.muted);
       },
     },
     { label: 'Ton avis', button: createFeedbackButton(), activate: openForm },
@@ -134,6 +139,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         feedback = null;
       },
     });
+  }
+
+  function setMuted(muted: boolean): void {
+    prefs.muted = muted;
+    applySound();
+    savePref(storage, 'muted', muted);
+    soundToggle.set(!muted);
   }
 
   function play(): void {
