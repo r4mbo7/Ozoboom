@@ -10,6 +10,7 @@ import type { CreateUi } from './types';
 import { createUpgradeOverlay } from './upgrade';
 
 export type { Ui, UiCallbacks } from './types';
+export { createFeedbackButton } from './feedback-button';
 export { selectTrap } from './navigation';
 
 type Screen = 'title' | 'game' | 'end';

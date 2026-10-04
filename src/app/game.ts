@@ -1,13 +1,21 @@
 import { createAudioEngine } from '../audio';
+import {
+  type FeedbackDialog,
+  buildFeedbackReport,
+  feedbackMeta,
+  githubFormLink,
+  openFeedback,
+} from '../feedback';
 import type { InputSnapshot } from '../input/intents';
 import { createInputSource } from '../input';
 import { createRenderer } from '../render';
 import { TICK_MS } from '../shared/tempo';
 import { length, normalize } from '../shared/vec';
 import { IDLE_INPUT } from '../sim/commands';
-import { createUi, prefersCalmMode } from '../ui';
+import { createFeedbackButton, createUi, prefersCalmMode } from '../ui';
 import { Controls } from './controls';
 import { BENCH_ENEMIES, type DevOptions, crowd, createDevProbe } from './dev';
+import { createFpsMeter } from './fps';
 import { createFixedStepLoop } from './loop';
 import { createPauseScreen } from './pause';
 import { loadPrefs, savePref } from './prefs';
@@ -49,6 +57,9 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   let session = newSession();
   let controls = controlsFor(session);
   let uiSnapshot: InputSnapshot | null = null;
+  let played = false;
+  let feedback: FeedbackDialog | null = null;
+  const fps = createFpsMeter();
   const probe = dev.mode === null ? null : createDevProbe(() => session.state);
 
   const ui = createUi(root, {
@@ -67,6 +78,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       audio.setMuted(muted || paused);
       savePref(storage, 'muted', muted);
     },
+    onFeedback: openForm,
   });
   const pause = createPauseScreen(root, [
     {
@@ -75,6 +87,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         setPaused(false);
       },
     },
+    { label: 'Ton avis', button: createFeedbackButton(), activate: openForm },
   ]);
   ui.showTitle({ calmMode: prefs.calmMode, muted: prefs.muted, device: 'none' });
 
@@ -99,8 +112,28 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     );
   }
 
+  // Opened from the title, the pause or the end, where the sim does not step: the form takes every
+  // input until it closes, then the screen below takes them back.
+  function openForm(): void {
+    if (feedback !== null) {
+      return;
+    }
+    const device = uiSnapshot?.device ?? 'none';
+    const report = buildFeedbackReport(
+      played ? session.state : null,
+      feedbackMeta({ device, calmMode: prefs.calmMode, averageFps: fps.average() }),
+    );
+    feedback = openFeedback(root, report, githubFormLink(), {
+      device,
+      onClose() {
+        feedback = null;
+      },
+    });
+  }
+
   function play(): void {
     void audio.start();
+    played = true;
     session = newSession();
     if (dev.mode === 'bench') {
       crowd(session.state, content, BENCH_ENEMIES);
@@ -125,6 +158,10 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
 
   function beginFrame(): void {
     let snapshot = input.poll();
+    if (feedback !== null) {
+      feedback.update(snapshot);
+      return;
+    }
     if (screen === 'game') {
       const { gameplay, menu } = snapshot;
       const wasPaused = paused;
@@ -181,7 +218,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     const start = performance.now();
     renderer.render(session.frame, alpha);
     const rendered = performance.now();
-    if (uiSnapshot !== null) {
+    if (uiSnapshot !== null && feedback === null) {
       ui.update(session.frame, uiSnapshot, content);
     }
     session.endFrame();
@@ -201,6 +238,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       // Input is polled once per frame, before the steps of that frame.
       requestFrame: (callback) =>
         requestAnimationFrame((time) => {
+          fps.frame(time);
           beginFrame();
           callback(time);
         }),

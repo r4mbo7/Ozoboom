@@ -3,6 +3,8 @@ import { menuEdges, navigateMenu } from '../ui/navigation';
 
 export interface PauseItem {
   readonly label: string;
+  // A button built elsewhere, for an entry that must look the same on every screen.
+  readonly button?: HTMLButtonElement;
   activate(): void;
 }
 
@@ -52,11 +54,13 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
   let selected = 0;
   let previousMenu: MenuIntents | null = null;
   const buttons = items.map((item, index) => {
-    const button = document.createElement('button');
+    const button = item.button ?? document.createElement('button');
     button.type = 'button';
     button.tabIndex = -1;
-    button.className = index === 0 ? 'ui-button ui-button--primary' : 'ui-button';
-    button.textContent = item.label;
+    if (item.button === undefined) {
+      button.className = index === 0 ? 'ui-button ui-button--primary' : 'ui-button';
+      button.textContent = item.label;
+    }
     button.addEventListener('pointerenter', (event) => {
       if (event.pointerType === 'mouse') {
         select(index);
