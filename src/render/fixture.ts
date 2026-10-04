@@ -15,10 +15,10 @@ import type { RenderContent } from './scene';
 export const FIXTURE_CONTENT: RenderContent = {
   classes: [{ id: 'mage', color: '#ff2bd6' }],
   enemies: [
-    { id: 'relou', behaviour: 'rusher' },
-    { id: 'foule-au-bar', behaviour: 'horde' },
-    { id: 'vigile', behaviour: 'heavy' },
-    { id: 'pluie', behaviour: 'shooter' },
+    { id: 'desagreable', behaviour: 'rusher' },
+    { id: 'random', behaviour: 'horde' },
+    { id: 'male-alpha', behaviour: 'heavy' },
+    { id: 'meprisant', behaviour: 'shooter' },
     { id: 'couvre-feu', behaviour: 'boss' },
   ],
   traps: [
@@ -47,10 +47,10 @@ interface Breed {
 }
 
 const BREEDS: readonly Breed[] = [
-  { kind: 'foule-au-bar', radius: 7, speed: 1.3, holdAt: 0, share: 0.42 },
-  { kind: 'relou', radius: 9, speed: 2.2, holdAt: 0, share: 0.28 },
-  { kind: 'vigile', radius: 14, speed: 0.6, holdAt: 0, share: 0.14 },
-  { kind: 'pluie', radius: 10, speed: 1, holdAt: 300, share: 0.16 },
+  { kind: 'random', radius: 7, speed: 1.3, holdAt: 0, share: 0.42 },
+  { kind: 'desagreable', radius: 9, speed: 2.2, holdAt: 0, share: 0.28 },
+  { kind: 'male-alpha', radius: 14, speed: 0.6, holdAt: 0, share: 0.14 },
+  { kind: 'meprisant', radius: 10, speed: 1, holdAt: 300, share: 0.16 },
 ];
 const BOSS: Breed = { kind: 'couvre-feu', radius: 40, speed: 0.4, holdAt: 240, share: 0 };
 const ARENA = { width: 1600, height: 1000 };
@@ -129,7 +129,7 @@ function spawnEnemy(state: SimState, breed: Breed, anywhere: boolean): EnemyStat
 function fire(state: SimState, projectile: ProjectileState): void {
   const { rng } = state;
   const player = state.players[0];
-  const shooters = state.enemies.filter((enemy) => enemy.kind === 'pluie');
+  const shooters = state.enemies.filter((enemy) => enemy.kind === 'meprisant');
   const shooter = shooters[Math.floor(nextRandom(rng) * shooters.length)];
   state.nextEntityId += 1;
   projectile.id = state.nextEntityId;

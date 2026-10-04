@@ -16,6 +16,7 @@ const bystanderById = new Map(bystanders.map((bystander) => [bystander.id, bysta
 const classIds = new Set(classes.map((definition) => definition.id));
 
 const positive = (value: number) => Number.isFinite(value) && value > 0;
+const nonNegative = (value: number) => Number.isFinite(value) && value >= 0;
 const atLeastOne = (value: number) => Number.isFinite(value) && value >= 1;
 const wholePositive = (value: number) => Number.isInteger(value) && value > 0;
 
@@ -63,6 +64,14 @@ function spawnsInPhrase(tier: TierDefinition, phrase: number): number {
   return tier.spawns
     .filter((rule) => rule.fromPhrase <= phrase && phrase <= (rule.toPhrase ?? Infinity))
     .reduce((total, rule) => total + rule.count * (BARS_PER_PHRASE / rule.everyBars), 0);
+}
+
+function kindsInPhrase(tier: TierDefinition, phrase: number): Set<string> {
+  return new Set(
+    tier.spawns
+      .filter((rule) => rule.fromPhrase <= phrase && phrase <= (rule.toPhrase ?? Infinity))
+      .map((rule) => rule.enemyId),
+  );
 }
 
 describe('CONTENT identifiers', () => {
@@ -158,7 +167,8 @@ describe('CONTENT numbers', () => {
         maxHp: [enemy.maxHp, positive],
         speed: [enemy.speed, positive],
         radius: [enemy.radius, positive],
-        damage: [enemy.damage, positive],
+        // A "shooter sans dégâts" (filmeur, bavard) threatens only through its special effect.
+        damage: [enemy.damage, nonNegative],
         attackCooldownTicks: [enemy.attackCooldownTicks, wholePositive],
         aggroRadius: [enemy.aggroRadius, positive],
         vibesDrop: [enemy.vibesDrop, positive],
@@ -180,6 +190,19 @@ describe('CONTENT numbers', () => {
         maxLevel: [trap.maxLevel, wholePositive],
         levelMul: [trap.levelMul, atLeastOne],
         ...effectFields(trap.effect),
+      }),
+    ).toEqual([]);
+  });
+
+  it.each(bystanders)('are positive where needed for bystander $id', (bystander) => {
+    expect(
+      invalid({
+        radius: [bystander.radius, positive],
+        speed: [bystander.speed, positive],
+        helpTicks: [bystander.helpTicks, wholePositive],
+        vibesReward: [bystander.vibesReward, positive],
+        vibesPenalty: [bystander.vibesPenalty, positive],
+        lifetimeBars: [bystander.lifetimeBars, wholePositive],
       }),
     ).toEqual([]);
   });
@@ -270,6 +293,38 @@ describe.each(sets)('set $id', (set) => {
     },
   );
 
+  it.each(set.tiers.map((tier, index) => [index, tier] as const))(
+    'tier %i introduces a bad vibe absent from its previous phrases, every phrase',
+    (_, tier) => {
+      const seen = new Set<string>();
+
+      for (let phrase = 0; phrase < tier.buildupPhrases; phrase += 1) {
+        const kinds = kindsInPhrase(tier, phrase);
+        const introduced = [...kinds].filter((kind) => !seen.has(kind));
+
+        expect(introduced.length, `phrase ${String(phrase)}`).toBeGreaterThan(0);
+        for (const kind of kinds) {
+          seen.add(kind);
+        }
+      }
+    },
+  );
+
+  it('spawns every bad vibe of the bestiary and the distressed bystander', () => {
+    const spawnedEnemyIds = new Set(
+      set.tiers.flatMap((tier) => tier.spawns.map((rule) => rule.enemyId)),
+    );
+    const bestiary = enemies.filter((enemy) => enemy.behaviour !== 'boss').map((enemy) => enemy.id);
+    const spawnedBystanderIds = new Set(
+      set.tiers.flatMap((tier) => (tier.bystanderSpawns ?? []).map((rule) => rule.bystanderId)),
+    );
+
+    expect(bestiary.filter((id) => !spawnedEnemyIds.has(id))).toEqual([]);
+    expect(bystanders.map((item) => item.id).filter((id) => !spawnedBystanderIds.has(id))).toEqual(
+      [],
+    );
+  });
+
   it('lasts under ten minutes without its drops', () => {
     const ticks = set.tiers.reduce(
       (total, tier) =>
@@ -335,7 +390,7 @@ describe('CONTENT texts', () => {
   });
 });
 
-describe('V0 scope', () => {
+describe('V0.1 scope', () => {
   it('has the mage as the VJ with nova and laser show', () => {
     const mage = classes.find((definition) => definition.id === 'mage');
 
@@ -345,12 +400,19 @@ describe('V0 scope', () => {
     expect(mage?.ultimate.effect.kind).toBe('laserShow');
   });
 
-  it('has four bad vibes and one boss per tier', () => {
+  it('has the eleven bad vibes and two bosses of the V0.1 bestiary', () => {
     expect(enemies.map((enemy) => [enemy.id, enemy.behaviour])).toEqual([
-      ['relou', 'rusher'],
-      ['foule-au-bar', 'horde'],
-      ['vigile', 'heavy'],
-      ['pluie', 'shooter'],
+      ['random', 'horde'],
+      ['desagreable', 'rusher'],
+      ['meprisant', 'shooter'],
+      ['male-alpha', 'heavy'],
+      ['collant', 'rusher'],
+      ['intolerant', 'horde'],
+      ['arnaqueur', 'rusher'],
+      ['fatigue', 'horde'],
+      ['filmeur', 'shooter'],
+      ['bavard', 'shooter'],
+      ['zombie', 'heavy'],
       ['couvre-feu', 'boss'],
       ['batterie-a-plat', 'boss'],
     ]);
@@ -358,6 +420,33 @@ describe('V0 scope', () => {
       'couvre-feu',
       'batterie-a-plat',
     ]);
+  });
+
+  it('has the special module each enemy points to, and no other', () => {
+    expect(enemies.map((enemy) => [enemy.id, enemy.special?.kind])).toEqual([
+      ['random', undefined],
+      ['desagreable', 'shove'],
+      ['meprisant', 'sigh'],
+      ['male-alpha', undefined],
+      ['collant', 'cling'],
+      ['intolerant', 'suppress'],
+      ['arnaqueur', 'steal'],
+      ['fatigue', 'yawn'],
+      ['filmeur', 'dazzle'],
+      ['bavard', 'babble'],
+      ['zombie', 'revive'],
+      ['couvre-feu', undefined],
+      ['batterie-a-plat', undefined],
+    ]);
+  });
+
+  it('has the Festivalier en détresse helped in a bar, rewarding more than it penalizes', () => {
+    const bystander = bystanderById.get('festivalier-en-detresse');
+
+    expect(bystander?.helpTicks).toBe(TICKS_PER_BAR);
+    expect(bystander?.vibesReward).toBe(8);
+    expect(bystander?.vibesPenalty).toBe(4);
+    expect(bystander?.lifetimeBars).toBe(4);
   });
 
   it('has the bass bin on the beat and the laser continuously', () => {

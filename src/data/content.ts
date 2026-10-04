@@ -1,3 +1,4 @@
+import { BYSTANDERS } from './bystanders';
 import { CLASSES } from './classes';
 import { ENEMIES } from './enemies';
 import { SETS } from './sets';
@@ -11,4 +12,5 @@ export const CONTENT: GameContent = {
   traps: TRAPS,
   upgrades: UPGRADES,
   sets: SETS,
+  bystanders: BYSTANDERS,
 };

@@ -57,7 +57,7 @@ function eventOf(name: EventName, id: number): SimEvent {
     case 'enemyHit':
       return { type: 'enemyHit', id, damage: 1, x: 0, y: 0 };
     case 'enemyDied':
-      return { type: 'enemyDied', id, kind: 'relou', x: 0, y: 0, byPlayer: 0 };
+      return { type: 'enemyDied', id, kind: 'desagreable', x: 0, y: 0, byPlayer: 0 };
     case 'coreHit':
       return { type: 'coreHit', damage: 5 };
     case 'trapShockwave':
