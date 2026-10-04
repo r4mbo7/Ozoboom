@@ -77,6 +77,11 @@ export interface PlayerState extends Positioned {
   pendingLevelUps?: number;
   // Set by a special effect (sigh, cling) and reset to 1 each tick by `specials`.
   slowFactor?: number;
+  // Tick at which the current slowFactor effect ends, and the value it keeps posing until then.
+  // Needed because `specials` resets slowFactor to 1 every tick: the module that owns the longer
+  // of two overlapping effects re-poses it from here, so they never stack.
+  slowFactorExpiresTick?: number;
+  slowFactorValue?: number;
   // Set by suppress; statValue returns the base value of every stat while this is positive.
   suppressedTicks?: number;
   // Set by dazzle, decremented by `specials`.
