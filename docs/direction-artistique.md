@@ -43,6 +43,13 @@ Tout ce qui bouge est calé dessus : le noyau pulse sur le kick, les pièges tir
 ## Son
 
 - Musique : psytrance (full-on ou progressive, 140 à 150 BPM), en couches qui s'épaississent avec les vagues et se vident au break avant le drop. En V0, la musique est synthétisée dans le navigateur (Web Audio), ce qui règle la question des droits et du poids.
+- Référence : la playlist [Main Stage](https://soundcloud.com/cos-685050861/sets/main-stage) de Constantin (Astrix, Celli Earthling à Ozora, Loom au Boom, IKØN, Liquid Soul et Ace Ventura). On en retient :
+  - Kick et basse, du full-on : kick court et sec, accordé sur fa dièse, fini avant la première basse ; basse roulante en doubles croches (kick, basse, basse, basse) dont le filtre claque à chaque note et s'ouvre vers le temps suivant.
+  - Lead, d'Astrix : mélodie orientale en mode hijaz (seconde mineure, tierce majeure), scies désaccordées, portamento, vibrato sur les notes longues, écho en croche pointée. Elle joue au palier le plus intense, s'annonce étouffée au break et éclate au drop.
+  - Textures, du forest de Loom : frappes boisées, oiseaux, grillons, zaps et une ligne acide, tout synthétisé.
+  - Construction, du progressive d'IKØN et d'Ace Ventura : une couche de plus par phrase.
+  - Break et drop : le break retire le grave et ne garde que la nappe, le lead étouffé et les textures. La caisse claire accélère sous le riser, tout se coupe un temps, puis un impact ouvre le drop, où tout revient.
+- Aucun extrait de la playlist n'est utilisé, ni échantillon ni enregistrement. On s'inspire d'informations publiques (tempo, style, structure) et tout le son est synthétisé par le code.
 - Effets : courts, tonals, dans la gamme du morceau. Les ennemis sont sourds (bruits mats, étouffés), les joueurs brillants (sons synthétiques, aigus).
 - Droits : uniquement des pistes libres (CC0, CC-BY) ou composées pour le jeu. Aucun morceau commercial.
 
