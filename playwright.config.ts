@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// Parallel checkouts each pick their own port: E2E_PORT=4201 pnpm exec playwright test
+const PORT = Number(process.env.E2E_PORT ?? 4173);
 const URL = `http://localhost:${String(PORT)}/`;
 
 export default defineConfig({
