@@ -50,6 +50,7 @@ Tout ce qui bouge est calé dessus : le noyau pulse sur le kick, les pièges tir
   - Construction, du progressive d'IKØN et d'Ace Ventura : une couche de plus par phrase.
   - Break et drop : le break retire le grave et ne garde que la nappe, le lead étouffé et les textures. La caisse claire accélère sous le riser, tout se coupe un temps, puis un impact ouvre le drop, où tout revient.
 - Aucun extrait de la playlist n'est utilisé, ni échantillon ni enregistrement. On s'inspire d'informations publiques (tempo, style, structure) et tout le son est synthétisé par le code.
+- Menus : la pause et l'écran de fin (après le sunrise ou l'extinction) jouent une ambiance chill, nappe, bourdon et arpège doux à mi-tempo, sans kick, en fa dièse sans tierce. Elle remplace le set par un fondu enchaîné d'une mesure. L'accueil reste silencieux.
 - Effets : courts, tonals, dans la gamme du morceau. Les ennemis sont sourds (bruits mats, étouffés), les joueurs brillants (sons synthétiques, aigus).
 - Droits : uniquement des pistes libres (CC0, CC-BY) ou composées pour le jeu. Aucun morceau commercial.
 

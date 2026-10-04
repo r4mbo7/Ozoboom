@@ -12,6 +12,7 @@ import {
   timeToTick,
   type Anchor,
 } from './clock';
+import { CROSSFADE_SECONDS, createFader } from './fade';
 import {
   HIJAZ_SEMITONES,
   ROOT_MIDI,
@@ -53,6 +54,12 @@ export interface MusicOptions {
 
 export interface Music {
   update(state: SimState, now: number, currentTime: number): void;
+  // When the set can give way to the menus: now during a game, after the ending once it is over.
+  menuAt(currentTime: number): number;
+  // Fades the set out over one bar, still in rhythm, and returns the next beat of its grid.
+  fadeOut(currentTime: number): number;
+  // Fades the set back in over one bar, on the grid of the next update.
+  fadeIn(): void;
 }
 
 interface Bus {
@@ -73,6 +80,8 @@ export const ROLL_BARS = 3;
 const SIXTEENTH = STEP_TICKS * TICK_SECONDS;
 const CUT_SECONDS = 0.02;
 const WON_FADE_SECONDS = 1.5;
+const SUNRISE_ATTACK = 4;
+const SUNRISE_HOLD = 12;
 const EXTINCTION_SECONDS = 1.6;
 const BUS_TAIL_SECONDS = 2;
 const RISER_LOW_HZ = 300;
@@ -624,8 +633,8 @@ function sunrise(out: AudioNode, at: number) {
         hz: midiToHz(ROOT_MIDI + 24 + semitones),
         detune,
         gain: 0.035,
-        attack: 4,
-        hold: 12,
+        attack: SUNRISE_ATTACK,
+        hold: SUNRISE_HOLD,
         release: 10,
         filter: { type: 'lowpass', hz: 600, toHz: 2500, glide: 8 },
       });
@@ -652,7 +661,12 @@ function powerDown(out: AudioNode, at: number) {
 
 export function createMusic(out: AudioNode, options: MusicOptions): Music {
   const context = out.context;
+  const level = context.createGain();
+  const fader = createFader(level.gain, context, 1);
+  level.connect(out);
   let bus: Bus | null = null;
+  let last: SimState | null = null;
+  let endsAt = 0;
   let anchor: Anchor | null = null;
   let cursor = 0;
   let mode: MusicMode | null = null;
@@ -668,7 +682,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     input.Q.value = 0.7;
     const output = context.createGain();
     input.connect(output);
-    output.connect(out);
+    output.connect(level);
     const lead = context.createGain();
     const echo = context.createDelay(1);
     echo.delayTime.value = ECHO_SECONDS;
@@ -830,6 +844,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
 
   return {
     update(state, now, currentTime) {
+      last = state;
       const nextMode = modeOf(state.status);
       if (nextMode !== mode) {
         mode = nextMode;
@@ -838,8 +853,10 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         if (nextMode === 'won') {
           retire(bus, WON_FADE_SECONDS);
           sunrise(openBus().input, currentTime);
+          endsAt = currentTime + SUNRISE_ATTACK + SUNRISE_HOLD;
         } else if (nextMode === 'lost') {
           extinguish(currentTime);
+          endsAt = currentTime + EXTINCTION_SECONDS;
         }
       }
       if (mode !== 'playing') {
@@ -887,6 +904,34 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         playStep(target, step, state, clock, currentTime);
       }
       cursor = range.until;
+    },
+    menuAt(currentTime) {
+      return mode === 'won' || mode === 'lost' ? Math.max(currentTime, endsAt) : currentTime;
+    },
+    fadeOut(currentTime) {
+      fader.to(0);
+      if (mode !== 'playing' || bus === null || anchor === null || last === null) {
+        return currentTime;
+      }
+      const clock = anchor;
+      const range = stepsToSchedule(
+        clock,
+        cursor,
+        currentTime - LATE_TOLERANCE_SECONDS,
+        currentTime + CROSSFADE_SECONDS,
+      );
+      const until = Math.min(range.until, dropTick ?? Infinity);
+      for (let step = range.from; step < until; step += STEP_TICKS) {
+        playStep(bus, step, last, clock, currentTime);
+      }
+      cursor = Math.max(cursor, until);
+      anchor = null;
+      const beat = Math.ceil(timeToTick(clock, currentTime) / TICKS_PER_BEAT) * TICKS_PER_BEAT;
+      return Math.max(currentTime, tickToTime(clock, beat));
+    },
+    fadeIn() {
+      fader.to(1);
+      anchor = null;
     },
   };
 }

@@ -11,7 +11,9 @@ import {
 } from '../shared/tempo';
 import type { GameStatus, SetSegment, SimEvent, SimState } from '../sim/state';
 import { TICK_SECONDS } from './clock';
+import { CROSSFADE_SECONDS, createFader } from './fade';
 import { createAudioEngine, heardNow } from './index';
+import type { AudioEngine, Mood } from './types';
 
 const BREAK_BARS = 4;
 const MAX_TICKS_PER_FRAME = 8;
@@ -272,34 +274,40 @@ interface Rendered {
   drift: DriftStats;
 }
 
-async function render(
-  bars: number,
+// Steps the offline audio clock one tick at a time. `onTick` returns the sim tick it stepped, or
+// null when the sim stood still, so the drift is only measured on ticks the music followed.
+async function drive(
   seconds: number,
-  script: (set: FakeSet, tick: number) => void,
-  muteBar: number | null,
+  ticks: number,
+  onTick: (tick: number, engine: AudioEngine) => number | null,
+  mood: Mood = 'set',
 ): Promise<Rendered> {
-  const totalTicks = bars * TICKS_PER_BAR;
   const context = new OfflineAudioContext(2, Math.ceil(seconds * SAMPLE_RATE), SAMPLE_RATE);
   const kicks = new Map<number, number>();
+  const pumps = new Set<() => void>();
   const engine = createAudioEngine({
     createContext: () => context,
     breakBars: () => BREAK_BARS,
     onKickScheduled: (tick, time) => kicks.set(tick, time),
+    repeat: (callback) => {
+      pumps.add(callback);
+      return () => {
+        pumps.delete(callback);
+      };
+    },
   });
+  engine.setMood(mood);
   await engine.start();
-  const set = new FakeSet();
   const drift = emptyStats();
-  for (let tick = 1; tick <= totalTicks; tick += 1) {
+  for (let tick = 1; tick <= ticks; tick += 1) {
     void context.suspend(tick * TICK_SECONDS).then(() => {
-      script(set, tick);
-      set.step();
-      engine.update(set.state);
-      if (muteBar !== null && isBarTick(tick) && barOfTick(tick) >= muteBar) {
-        engine.setMuted(barOfTick(tick) === muteBar);
+      const stepped = onTick(tick, engine);
+      for (const pump of [...pumps]) {
+        pump();
       }
       queueMicrotask(() => {
-        const kick = kicks.get(tick);
-        if (isBeatTick(tick) && kick !== undefined) {
+        const kick = stepped === null ? undefined : kicks.get(stepped);
+        if (stepped !== null && isBeatTick(stepped) && kick !== undefined) {
           record(drift, kick - context.currentTime);
         }
         void context.resume();
@@ -309,6 +317,24 @@ async function render(
   const buffer = await context.startRendering();
   engine.destroy();
   return { buffer, drift };
+}
+
+function render(
+  bars: number,
+  seconds: number,
+  script: (set: FakeSet, tick: number) => void,
+  muteBar: number | null,
+): Promise<Rendered> {
+  const set = new FakeSet();
+  return drive(seconds, bars * TICKS_PER_BAR, (tick, engine) => {
+    script(set, tick);
+    set.step();
+    engine.update(set.state);
+    if (muteBar !== null && isBarTick(tick) && barOfTick(tick) >= muteBar) {
+      engine.setMuted(barOfTick(tick) === muteBar);
+    }
+    return tick;
+  });
 }
 
 function clippingOf(buffer: AudioBuffer): { peak: number; clipped: number } {
@@ -435,6 +461,243 @@ async function renderReference(): Promise<ReferenceReport> {
   };
 }
 
+function dbOf(value: number): string {
+  return `${(20 * Math.log10(value)).toFixed(1)} dB`;
+}
+
+function rmsOf(samples: Float32Array, from: number, until: number, rate: number): number {
+  const first = Math.max(0, Math.floor(from * rate));
+  const last = Math.min(samples.length, Math.floor(until * rate));
+  let sum = 0;
+  for (let index = first; index < last; index += 1) {
+    sum += (samples[index] ?? 0) ** 2;
+  }
+  return Math.sqrt(sum / Math.max(1, last - first));
+}
+
+function stereoRms(buffer: AudioBuffer, from: number, until: number): number {
+  const left = rmsOf(buffer.getChannelData(0), from, until, buffer.sampleRate);
+  const right = rmsOf(buffer.getChannelData(1), from, until, buffer.sampleRate);
+  return Math.sqrt((left ** 2 + right ** 2) / 2);
+}
+
+async function lowBand(buffer: AudioBuffer, hz: number): Promise<Float32Array> {
+  const context = new OfflineAudioContext(1, buffer.length, buffer.sampleRate);
+  const source = context.createBufferSource();
+  source.buffer = buffer;
+  let node: AudioNode = source;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const filter = context.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = hz;
+    node.connect(filter);
+    node = filter;
+  }
+  node.connect(context.destination);
+  source.start();
+  return (await context.startRendering()).getChannelData(0);
+}
+
+const AMBIENCE_SECONDS = 30;
+
+function ticksIn(seconds: number): number {
+  return Math.ceil(seconds / TICK_SECONDS) - 1;
+}
+
+interface AmbienceReport {
+  peak: number;
+  clipped: number;
+  rms: number;
+  wav: Blob;
+}
+
+async function renderAmbience(): Promise<AmbienceReport> {
+  const { buffer } = await drive(AMBIENCE_SECONDS, ticksIn(AMBIENCE_SECONDS), () => null, 'menu');
+  return {
+    ...clippingOf(buffer),
+    rms: stereoRms(buffer, 0, AMBIENCE_SECONDS),
+    wav: wavOf(buffer),
+  };
+}
+
+const PAUSE_BAR = 8;
+const MENU_MUTE_BAR = 12;
+const RESUME_BAR = 16;
+const END_BAR = 24;
+const SUNRISE_SECONDS = 16;
+const MOODS_SECONDS = END_BAR * BAR_SECONDS + SUNRISE_SECONDS + 3 * BAR_SECONDS;
+const SUB_HZ = 50;
+
+interface MoodsReport {
+  peak: number;
+  clipped: number;
+  drift: DriftStats;
+  setRms: number;
+  menuRms: number;
+  beforeMute: number;
+  afterMute: number;
+  pauseCurve: number[];
+  resumeCurve: number[];
+  endCurve: number[];
+  wav: Blob;
+}
+
+// Level per beat of the band under 50 Hz, where the kick and the bass of the set live, in dB
+// against the last bar of the set before the pause.
+function beatCurve(
+  sub: Float32Array,
+  rate: number,
+  reference: number,
+  at: number,
+  beats: number,
+): number[] {
+  const beat = BAR_SECONDS / 4;
+  return Array.from({ length: beats }, (_, index) => {
+    const from = at + index * beat;
+    return 20 * Math.log10(rmsOf(sub, from, from + beat, rate) / reference);
+  });
+}
+
+async function renderMoods(): Promise<MoodsReport> {
+  const set = new FakeSet();
+  let paused = false;
+  const { buffer, drift } = await drive(MOODS_SECONDS, ticksIn(MOODS_SECONDS), (tick, engine) => {
+    const bar = barOfTick(tick);
+    if (isBarTick(tick)) {
+      if (bar === 2 || bar === 4) {
+        set.state.set.phrase += 1;
+      } else if (bar === PAUSE_BAR) {
+        paused = true;
+        engine.setMood('menu');
+      } else if (bar === MENU_MUTE_BAR || bar === MENU_MUTE_BAR + 1) {
+        engine.setMuted(bar === MENU_MUTE_BAR);
+      } else if (bar === RESUME_BAR) {
+        paused = false;
+        engine.setMood('set');
+      } else if (bar === END_BAR) {
+        set.state.status = 'won';
+        set.queue('gameWon');
+      }
+    }
+    if (paused) {
+      return null;
+    }
+    set.step();
+    engine.update(set.state);
+    if (set.state.status !== 'running') {
+      engine.setMood('menu');
+      return null;
+    }
+    return set.state.tick;
+  });
+  const sub = await lowBand(buffer, SUB_HZ);
+  const rate = buffer.sampleRate;
+  const setSub = rmsOf(sub, (PAUSE_BAR - 1) * BAR_SECONDS, PAUSE_BAR * BAR_SECONDS, rate);
+  const muteAt = MENU_MUTE_BAR * BAR_SECONDS;
+  const allBand = buffer.getChannelData(0);
+  const endAt = END_BAR * BAR_SECONDS + SUNRISE_SECONDS;
+  return {
+    ...clippingOf(buffer),
+    drift,
+    setRms: stereoRms(buffer, PAUSE_BAR * BAR_SECONDS - 4 * BAR_SECONDS, PAUSE_BAR * BAR_SECONDS),
+    menuRms: stereoRms(buffer, (PAUSE_BAR + 2) * BAR_SECONDS, muteAt),
+    beforeMute: peakOf(buffer, muteAt - BAR_SECONDS, muteAt),
+    afterMute: peakOf(buffer, muteAt + 0.02, muteAt + BAR_SECONDS),
+    pauseCurve: beatCurve(sub, rate, setSub, PAUSE_BAR * BAR_SECONDS, 8),
+    resumeCurve: beatCurve(sub, rate, setSub, RESUME_BAR * BAR_SECONDS - BAR_SECONDS, 12),
+    endCurve: Array.from({ length: 12 }, (_, index) => {
+      const from = endAt - 1 + index * 0.5;
+      return 20 * Math.log10(rmsOf(allBand, from, from + 0.5, rate));
+    }),
+    wav: wavOf(buffer),
+  };
+}
+
+interface FadeReport {
+  seconds: number;
+  shapeError: number;
+  powerError: number;
+  turnJump: number;
+  turnSeconds: number;
+}
+
+// Renders the gains of two real faders, one leaving and one entering, then one turning back.
+async function measureFades(): Promise<FadeReport> {
+  const seconds = 7;
+  const context = new OfflineAudioContext(2, seconds * SAMPLE_RATE, SAMPLE_RATE);
+  const merger = context.createChannelMerger(2);
+  merger.connect(context.destination);
+  const [leaving, entering] = [1, 0].map((presence, channel) => {
+    const source = context.createConstantSource();
+    const gain = context.createGain();
+    source.connect(gain);
+    gain.connect(merger, 0, channel);
+    source.start();
+    return createFader(gain.gain, context, presence);
+  });
+  if (leaving === undefined || entering === undefined) {
+    throw new Error('Missing fader');
+  }
+  const later = (time: number, action: () => void) => {
+    void context.suspend(time).then(() => {
+      action();
+      void context.resume();
+    });
+  };
+  later(0.5, () => {
+    leaving.to(0);
+    entering.to(1);
+  });
+  later(4, () => entering.to(0));
+  later(4 + CROSSFADE_SECONDS / 4, () => entering.to(1));
+  const buffer = await context.startRendering();
+  const out = buffer.getChannelData(0);
+  const into = buffer.getChannelData(1);
+  const rate = buffer.sampleRate;
+  const start = out.findIndex((gain) => gain < 1 - 1e-6);
+  const end = out.findIndex((gain) => gain <= 1e-6);
+  let shapeError = 0;
+  let powerError = 0;
+  for (let index = start; index < end; index += 1) {
+    const progress = (index - start) / (end - start);
+    shapeError = Math.max(
+      shapeError,
+      Math.abs((out[index] ?? 0) - Math.cos((progress * Math.PI) / 2)),
+    );
+    powerError = Math.max(
+      powerError,
+      Math.abs((out[index] ?? 0) ** 2 + (into[index] ?? 0) ** 2 - 1),
+    );
+  }
+  let turnJump = 0;
+  const turnFrom = Math.floor(3.9 * rate);
+  for (let index = turnFrom; index < Math.floor(6.5 * rate); index += 1) {
+    turnJump = Math.max(turnJump, Math.abs((into[index] ?? 0) - (into[index - 1] ?? 0)));
+  }
+  const leaves = into.findIndex((gain, index) => index > turnFrom && gain < 1 - 1e-6);
+  const back = into.findIndex((gain, index) => index > leaves && gain >= 1 - 1e-6);
+  return {
+    seconds: (end - start) / rate,
+    shapeError,
+    powerError,
+    turnJump,
+    turnSeconds: (back - leaves) / rate,
+  };
+}
+
+function downloadLink(name: string, wav: Blob): void {
+  const link = output(name);
+  if (link instanceof HTMLAnchorElement) {
+    URL.revokeObjectURL(link.href);
+    link.href = URL.createObjectURL(wav);
+    link.hidden = false;
+  }
+}
+
+function curveText(curve: readonly number[]): string {
+  return curve.map((value) => value.toFixed(1)).join(' ');
+}
+
 const SEGMENTS: readonly SetSegment[] = ['buildup', 'break', 'drop'];
 const STATUSES: readonly GameStatus[] = ['running', 'choosingUpgrade', 'won', 'lost'];
 const PHRASES = [0, 1, 2, 3, 4];
@@ -527,6 +790,11 @@ root.innerHTML = `
       <div class="row"><span class="label">Phrase</span>${buttons('phrase', PHRASES)}</div>
       <div class="row"><span class="label">Palier</span>${buttons('tier', TIERS)}</div>
       <div class="row"><span class="label">Statut</span>${buttons('status', STATUSES)}</div>
+      <div class="row">
+        <span class="label">Menus</span>
+        <button type="button" data-action="pause" aria-pressed="false">Pause</button>
+        <span data-out="mood"></span>
+      </div>
     </section>
     <section>
       <h2>Événements</h2>
@@ -568,6 +836,50 @@ root.innerHTML = `
       </dl>
       <div class="bands"><table data-out="bands"></table></div>
     </section>
+    <section>
+      <h2>Ambiance menu, 30 secondes</h2>
+      <p style="color: var(--glow); margin-bottom: 0.75rem">
+        L'ambiance seule, telle qu'elle entre en pause ou sur l'écran de fin.
+      </p>
+      <div class="row">
+        <button type="button" data-ambience>Rendre 30 s</button>
+        <a data-out="ambienceDownload" download="ozoboom-ambiance-menu-30s.wav" hidden>Télécharger le WAV</a>
+      </div>
+      <dl>
+        <dt>Rendu</dt><dd data-out="ambience">pas encore lancé</dd>
+        <dt>Crête</dt><dd data-out="ambiencePeak">-</dd>
+        <dt>Niveau efficace</dt><dd data-out="ambienceRms">-</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>Fondus enchaînés</h2>
+      <p style="color: var(--glow); margin-bottom: 0.75rem">
+        Set 8 mesures, pause (ambiance) 8 mesures avec le son coupé à la mesure 12 et rendu à la 13, reprise, victoire à la mesure 24, puis sunrise et ambiance. Les courbes donnent, temps par temps, le niveau sous 50 Hz (kick et basse du set) par rapport à la dernière mesure du set avant la pause, et la fin le niveau de tout le spectre par demi-seconde autour de la fin du sunrise.
+      </p>
+      <div class="row">
+        <button type="button" data-moods>Rendre les fondus</button>
+        <a data-out="moodsDownload" download="ozoboom-fondus.wav" hidden>Télécharger le WAV</a>
+      </div>
+      <dl>
+        <dt>Rendu</dt><dd data-out="moods">pas encore lancé</dd>
+        <dt>Crête</dt><dd data-out="moodsPeak">-</dd>
+        <dt>Set puis ambiance</dt><dd data-out="moodsLevels">-</dd>
+        <dt>Coupure en pause</dt><dd data-out="moodsMute">-</dd>
+        <dt>Pause, set</dt><dd data-out="pauseCurve">-</dd>
+        <dt>Reprise, set</dt><dd data-out="resumeCurve">-</dd>
+        <dt>Fin, par 0,5 s</dt><dd data-out="endCurve">-</dd>
+        <dt>Écart kick et tick</dt><dd data-out="moodsDrift">-</dd>
+      </dl>
+      <div class="row" style="margin-top: 0.75rem">
+        <button type="button" data-fades>Mesurer les fondus</button>
+      </div>
+      <dl>
+        <dt>Durée d'un fondu</dt><dd data-out="fadeSeconds">-</dd>
+        <dt>Forme</dt><dd data-out="fadeShape">-</dd>
+        <dt>Puissance</dt><dd data-out="fadePower">-</dd>
+        <dt>Demi-tour</dt><dd data-out="fadeTurn">-</dd>
+      </dl>
+    </section>
   </div>
 `;
 
@@ -586,6 +898,7 @@ function show(name: string, text: string): void {
 const fake = new FakeSet();
 let context: AudioContext | null = null;
 let muted = false;
+let paused = false;
 let drift = emptyStats();
 const kicks = new Map<number, number>();
 const arrivals = new Map<number, number>();
@@ -638,6 +951,10 @@ function stepOnce(): void {
   }
 }
 
+function moodOf(): Mood {
+  return paused || fake.state.status === 'won' || fake.state.status === 'lost' ? 'menu' : 'set';
+}
+
 function refresh(): void {
   const { state } = fake;
   const { set } = state;
@@ -658,6 +975,7 @@ function refresh(): void {
         : '';
   show('segment', `${set.segment}${detail}`);
   show('status', state.status);
+  show('mood', `ambiance ${moodOf()}`);
   show('count', String(drift.count));
   show('mean', drift.count > 0 ? ms(drift.sum / drift.count) : '-');
   show('worst', drift.count > 0 ? ms(drift.worst) : '-');
@@ -717,11 +1035,14 @@ function frame(time: number): void {
   while (accumulator >= TICK_MS && ticks < MAX_TICKS_PER_FRAME) {
     accumulator -= TICK_MS;
     ticks += 1;
-    stepOnce();
+    if (!paused) {
+      stepOnce();
+    }
   }
   if (ticks === MAX_TICKS_PER_FRAME) {
     accumulator = 0;
   }
+  engine.setMood(moodOf());
   refresh();
   requestAnimationFrame(frame);
 }
@@ -744,6 +1065,9 @@ root.addEventListener('click', (event) => {
     engine.setMuted(muted);
     target.setAttribute('aria-pressed', String(muted));
     target.textContent = muted ? 'Remettre le son' : 'Couper le son';
+  } else if (action === 'pause') {
+    paused = !paused;
+    target.setAttribute('aria-pressed', String(paused));
   } else if (action === 'reset') {
     drift = emptyStats();
   } else if (segment !== undefined) {
@@ -756,6 +1080,52 @@ root.addEventListener('click', (event) => {
     state.status = status as GameStatus;
   } else if (target.dataset.event !== undefined) {
     fake.queue(target.dataset.event as EventName, Number(target.dataset.count ?? 1));
+  } else if (target.dataset.ambience !== undefined) {
+    show('ambience', 'rendu en cours...');
+    void renderAmbience().then((report) => {
+      show('ambience', `${String(AMBIENCE_SECONDS)} s`);
+      show(
+        'ambiencePeak',
+        `${report.peak.toFixed(3)} (${dbOf(report.peak)}FS), ${String(report.clipped)} échantillons écrêtés`,
+      );
+      show('ambienceRms', `${dbOf(report.rms)}FS`);
+      downloadLink('ambienceDownload', report.wav);
+    });
+  } else if (target.dataset.moods !== undefined) {
+    show('moods', 'rendu en cours...');
+    void renderMoods().then((report) => {
+      show('moods', `${MOODS_SECONDS.toFixed(1)} s`);
+      show(
+        'moodsPeak',
+        `${report.peak.toFixed(3)} (${dbOf(report.peak)}FS), ${String(report.clipped)} échantillons écrêtés`,
+      );
+      show('moodsLevels', `${dbOf(report.setRms)}FS puis ${dbOf(report.menuRms)}FS`);
+      show(
+        'moodsMute',
+        `crête ${report.beforeMute.toFixed(4)} la mesure d'avant, ${report.afterMute.toFixed(5)} de 20 ms à 1 mesure après`,
+      );
+      show('pauseCurve', curveText(report.pauseCurve));
+      show('resumeCurve', curveText(report.resumeCurve));
+      show('endCurve', curveText(report.endCurve));
+      show(
+        'moodsDrift',
+        `${String(report.drift.count)} temps, moyen ${ms(report.drift.sum / report.drift.count)}, max ${ms(report.drift.worst)}`,
+      );
+      downloadLink('moodsDownload', report.wav);
+    });
+  } else if (target.dataset.fades !== undefined) {
+    void measureFades().then((report) => {
+      show('fadeSeconds', `${report.seconds.toFixed(3)} s`);
+      show('fadeShape', `écart max au quart de sinus ${report.shapeError.toExponential(1)}`);
+      show(
+        'fadePower',
+        `écart max de la somme des puissances à 1 : ${report.powerError.toExponential(1)}`,
+      );
+      show(
+        'fadeTurn',
+        `saut max ${report.turnJump.toExponential(1)} par échantillon, aller-retour en ${report.turnSeconds.toFixed(3)} s`,
+      );
+    });
   } else if (target.dataset.reference !== undefined) {
     show('reference', 'rendu en cours...');
     void renderReference().then(showReference);
