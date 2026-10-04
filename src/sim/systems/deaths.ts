@@ -1,8 +1,10 @@
 import { lookup } from '../content';
+import { SPECIALS } from '../specials';
 import type { PickupKind, SimState } from '../state';
 import type { StepContext } from './types';
 
-export function deaths({ state, content, set }: StepContext): void {
+export function deaths(ctx: StepContext): void {
+  const { state, content, set } = ctx;
   let kept = 0;
   for (const enemy of state.enemies) {
     if (enemy.hp > 0) {
@@ -10,7 +12,16 @@ export function deaths({ state, content, set }: StepContext): void {
       kept += 1;
       continue;
     }
-    const { vibesDrop, wattsDrop } = lookup(content.enemies, enemy.kind, 'enemy');
+    const definition = lookup(content.enemies, enemy.kind, 'enemy');
+    if (definition.special?.kind === 'revive') {
+      SPECIALS.revive(ctx, enemy, definition.special);
+      if (enemy.hp > 0 || enemy.downTicks !== undefined) {
+        state.enemies[kept] = enemy;
+        kept += 1;
+        continue;
+      }
+    }
+    const { vibesDrop, wattsDrop } = definition;
     state.events.push({
       type: 'enemyDied',
       id: enemy.id,

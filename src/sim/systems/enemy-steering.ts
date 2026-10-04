@@ -15,6 +15,9 @@ const separation = { x: 0, y: 0 };
 export function enemySteering({ state, content, enemyGrid }: StepContext): void {
   enemyGrid.rebuild(state.enemies);
   for (const enemy of state.enemies) {
+    if (enemy.hp <= 0) {
+      continue;
+    }
     const definition = lookup(content.enemies, enemy.kind, 'enemy');
     chooseTarget(state, enemy, definition);
     if (enemy.stunTicks > 0) {
