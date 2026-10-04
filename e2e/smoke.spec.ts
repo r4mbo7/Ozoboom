@@ -13,6 +13,7 @@ async function secondsToDrop(page: Page): Promise<number> {
 }
 
 test('plays ten seconds from the title without a console error', async ({ page }) => {
+  test.setTimeout(150_000);
   const errors = collectConsoleErrors(page);
   await page.goto('./');
   await page.getByRole('button', { name: 'Jouer' }).click();
@@ -22,9 +23,10 @@ test('plays ten seconds from the title without a console error', async ({ page }
     await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
   }
   const atStart = await secondsToDrop(page);
-  // The countdown follows the sim ticks: ten seconds off it are ten seconds of play.
+  // The countdown follows the sim ticks: ten seconds off it are ten seconds of play. Without a GPU
+  // the CI renders a few frames per second and the loop slows the sim down, hence the wide budget.
   await expect
-    .poll(() => secondsToDrop(page), { timeout: 30_000 })
+    .poll(() => secondsToDrop(page), { timeout: 120_000 })
     .toBeLessThanOrEqual(atStart - 10);
 
   await page.keyboard.press('Escape');
