@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { CONTENT } from '../../data/content';
 import type { GameContent, UpgradeDefinition } from '../../data/types';
-import { EFFECTS_CONTENT, FIXTURE_CONTENT, FIXTURE_OPTIONS } from '../fixtures';
+import { EFFECTS_CONTENT, FIXTURE_CONTENT, FIXTURE_OPTIONS, actionsFor } from '../fixtures';
 import { createSimulation, type Simulation, type SimulationOptions } from '../index';
 import type { PlayerState } from '../state';
 
@@ -28,6 +29,13 @@ const WIDE_POOL: GameContent = {
   ],
 };
 const RAVER_ELIGIBLE = ['quick-feet', 'big-bass', 'wide-nova', 'cheap'];
+
+const SOIREE = CONTENT.sets.find((set) => set.id === 'soiree-v0');
+if (SOIREE === undefined) {
+  throw new Error('expected the soiree-v0 set');
+}
+
+const choose = (upgradeId: string) => actionsFor(0, { type: 'chooseUpgrade', upgradeId });
 
 function soloGame(options: SimulationOptions = FIXTURE_OPTIONS): {
   simulation: Simulation;
@@ -78,7 +86,7 @@ describe('progression', () => {
     expect(simulation.state.status).toBe('choosingUpgrade');
   });
 
-  it('gains several levels at once and queues one offer per level', () => {
+  it('gains several levels at once, presents one offer and keeps the others pending', () => {
     const { simulation, player } = soloGame();
     player.vibes = 10 + 15 + 1;
 
@@ -89,7 +97,67 @@ describe('progression', () => {
       { type: 'levelUp', playerId: 0, level: 2 },
       { type: 'levelUp', playerId: 0, level: 3 },
     ]);
-    expect(simulation.state.pendingUpgrades).toHaveLength(2);
+    expect(simulation.state.pendingUpgrades).toHaveLength(1);
+    expect(player.pendingLevelUps).toBe(1);
+  });
+
+  it('draws each offer of a multi-level gain after the previous choice', () => {
+    const { simulation, player } = soloGame();
+    player.upgrades.push('wide-nova');
+    player.vibes = 10 + 15 + 20;
+    simulation.step([]);
+    const presented: (readonly string[])[] = [];
+    const queued: number[] = [];
+
+    for (let i = 0; i < 3; i++) {
+      const offer = simulation.state.pendingUpgrades;
+      presented.push(offer[0]?.options ?? []);
+      queued.push(offer.length);
+      const options = offer[0]?.options ?? [];
+      simulation.step([choose(options.includes('wide-nova') ? 'wide-nova' : (options[0] ?? ''))]);
+    }
+
+    expect(queued).toEqual([1, 1, 1]);
+    expect(presented[0]).toContain('wide-nova');
+    expect(presented[1]).not.toContain('wide-nova');
+    expect(presented[2]).not.toContain('wide-nova');
+    expect(player.upgrades).toHaveLength(4);
+    expect(player.upgrades.filter((id) => id === 'wide-nova')).toHaveLength(2);
+    expect(player.pendingLevelUps).toBe(0);
+    expect(simulation.state.pendingUpgrades).toEqual([]);
+    expect(simulation.state.status).toBe('running');
+  });
+
+  it('never stacks an upgrade past its maximum over twenty levels gained in one go', () => {
+    const simulation = createSimulation({
+      seed: 2026,
+      players: [{ id: 0, classId: 'mage' }],
+      setId: 'soiree-v0',
+      content: CONTENT,
+    });
+    const player = simulation.state.players[0];
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    const stacks = (id: string) => player.upgrades.filter((owned) => owned === id).length;
+    const { baseVibes, vibesPerLevel } = SOIREE.levelCurve;
+    player.vibes = Array.from({ length: 20 }, (_, i) => baseVibes + vibesPerLevel * i).reduce(
+      (sum, vibes) => sum + vibes,
+    );
+
+    simulation.step([]);
+    for (let i = 0; i < 20; i++) {
+      const options = simulation.state.pendingUpgrades[0]?.options ?? [];
+      const greediest = [...options].sort((a, b) => stacks(b) - stacks(a))[0] ?? '';
+      simulation.step([choose(greediest)]);
+    }
+
+    expect(player.level).toBe(21);
+    expect(player.upgrades).toHaveLength(20);
+    for (const upgrade of CONTENT.upgrades) {
+      expect(stacks(upgrade.id)).toBeLessThanOrEqual(upgrade.maxStacks);
+    }
+    expect(simulation.state.status).toBe('running');
   });
 
   it('offers three distinct eligible upgrades, the same for the same seed', () => {
