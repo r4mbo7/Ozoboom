@@ -2,6 +2,7 @@ import type {
   BystanderDefinition,
   ClassDefinition,
   EnemyDefinition,
+  FusionDefinition,
   GameContent,
   SetDefinition,
   TrapDefinition,
@@ -19,6 +20,7 @@ export interface ResolvedContent {
   readonly sets: ReadonlyMap<string, SetDefinition>;
   readonly bystanders: ReadonlyMap<string, BystanderDefinition>;
   readonly weapons: ReadonlyMap<string, WeaponDefinition>;
+  readonly fusions: readonly FusionDefinition[];
 }
 
 export function resolveContent(content: GameContent): ResolvedContent {
@@ -30,6 +32,7 @@ export function resolveContent(content: GameContent): ResolvedContent {
     sets: indexById(content.sets, 'set'),
     bystanders: indexById(content.bystanders ?? [], 'bystander'),
     weapons: indexById(content.weapons ?? [], 'weapon'),
+    fusions: content.fusions ?? [],
   };
 
   for (const enemy of content.enemies) {

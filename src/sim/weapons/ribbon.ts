@@ -1,8 +1,34 @@
+import { markEnemy } from '../effects';
 import type { WeaponModule } from './types';
 
-// Behaviour comes with the weapon's own issue (docs/plans/v0.1.md).
+const RIBBON_HALF_WIDTH = 14;
+
+// A wave from the player along their aim marks every bad vibe it crosses.
 export const ribbon: WeaponModule = {
-  fire() {
-    // no-op
+  fire({ state, set }, player, _slot, { effect }) {
+    if (effect.kind !== 'ribbon') {
+      return;
+    }
+    const length =
+      effect.dropCrossesArena === true && state.set.segment === 'drop'
+        ? Math.hypot(set.arena.width, set.arena.height)
+        : effect.length;
+    const { x: dirX, y: dirY } = player.aim;
+    for (const enemy of state.enemies) {
+      if (enemy.hp <= 0) {
+        continue;
+      }
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const along = dx * dirX + dy * dirY;
+      const across = Math.abs(dx * dirY - dy * dirX);
+      if (
+        along >= -enemy.radius &&
+        along <= length + enemy.radius &&
+        across <= RIBBON_HALF_WIDTH + enemy.radius
+      ) {
+        markEnemy(state, enemy, effect.markedTicks);
+      }
+    }
   },
 };

@@ -1,3 +1,4 @@
+import { TICKS_PER_BAR } from '../../shared/tempo';
 import type { StepContext } from '../systems/types';
 import { shoot } from './shoot';
 import type { WeaponModule } from './types';
@@ -8,7 +9,12 @@ export const lob: WeaponModule = {
     if (effect.kind !== 'lob' || target === null) {
       return;
     }
-    const aim = densestSpot(ctx, player, effect.range, effect.radius);
+    const raining = effect.dropRain === true && ctx.state.set.segment === 'drop';
+    if (effect.dropRain === true && !raining && ctx.state.tick % TICKS_PER_BAR !== 0) {
+      return;
+    }
+    const range = raining ? Math.hypot(ctx.set.arena.width, ctx.set.arena.height) : effect.range;
+    const aim = densestSpot(ctx, player, range, effect.radius);
     if (aim === null) {
       return;
     }

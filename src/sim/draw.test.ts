@@ -26,9 +26,14 @@ const upgrade = (id: string, extra: Partial<UpgradeDefinition> = {}): UpgradeDef
   ...extra,
 });
 
-function setup(upgrades: UpgradeDefinition[], weapons: WeaponDefinition[], slots = 3) {
+function setup(
+  upgrades: UpgradeDefinition[],
+  weapons: WeaponDefinition[],
+  slots = 3,
+  fusions: GameContent['fusions'] = [],
+) {
   const set = { ...FIXTURE_SET, weaponSlots: slots };
-  const content: GameContent = { ...FIXTURE_CONTENT, upgrades, weapons, sets: [set] };
+  const content: GameContent = { ...FIXTURE_CONTENT, upgrades, weapons, fusions, sets: [set] };
   const { state } = createSimulation({ ...FIXTURE_OPTIONS, content });
   const player = state.players[0];
   if (player === undefined) {
@@ -124,5 +129,27 @@ describe('draw', () => {
     const { draw } = setup([], [weapon('base'), weapon('evolved', { evolvedFrom: 'base' })]);
 
     expect(seen(draw, 50)).toEqual(new Set(['base']));
+  });
+
+  it('draws an open fusion three times as often as a plain card', () => {
+    const { player, draw } = setup(
+      [upgrade('plain'), upgrade('twin')],
+      [weapon('base', { maxLevel: 1 }), weapon('fused', { evolvedFrom: 'base' })],
+      3,
+      [{ weaponId: 'base', upgradeId: 'twin', resultId: 'fused' }],
+    );
+    player.weapons = [{ id: 'base', level: 1, phase: 0 }];
+    player.upgrades = ['twin'];
+    const first = { plain: 0, fused: 0 };
+
+    for (let i = 0; i < 10_000; i++) {
+      const [pick] = draw();
+      if (pick === 'plain' || pick === 'fused') {
+        first[pick] += 1;
+      }
+    }
+
+    expect(first.fused / first.plain).toBeGreaterThan(2.7);
+    expect(first.fused / first.plain).toBeLessThan(3.3);
   });
 });

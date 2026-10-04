@@ -134,10 +134,14 @@ export async function tapButtonUntil(
   await repeatUntil(() => tapButton(page, button), done);
 }
 
+// A fusion swaps a gear at its maximum level (5, for every base gear) for its fused form at level
+// 1: counting those levels keeps the number of choices from ever going down.
+const FUSED_LEVELS = 5;
+
 export interface GameSummary {
   status: SimState['status'];
   level: number;
-  // Level choices taken: upgrades, and circus gear gained or levelled up.
+  // Level choices taken: upgrades, and circus gear gained, levelled up or fused.
   choices: number;
   traps: number;
   player: { x: number; y: number };
@@ -145,7 +149,7 @@ export interface GameSummary {
 }
 
 export async function readGame(page: Page): Promise<GameSummary | null> {
-  return page.evaluate(() => {
+  return page.evaluate((fusedLevels) => {
     const state = window.ozoboom?.state;
     const player = state?.players[0];
     if (state === undefined || player === undefined) {
@@ -156,10 +160,11 @@ export async function readGame(page: Page): Promise<GameSummary | null> {
       level: player.level,
       choices:
         player.upgrades.length +
-        (player.weapons ?? []).reduce((levels, slot) => levels + slot.level, 0),
+        (player.weapons ?? []).reduce((levels, slot) => levels + slot.level, 0) +
+        (player.fused?.length ?? 0) * fusedLevels,
       traps: state.traps.length,
       player: { x: player.x, y: player.y },
       enemies: state.enemies.map(({ x, y, isBoss }) => ({ x, y, isBoss })),
     };
-  });
+  }, FUSED_LEVELS);
 }
