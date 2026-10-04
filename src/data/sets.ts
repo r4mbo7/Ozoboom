@@ -1,4 +1,4 @@
-import { DEFAULT_BPM } from '../shared/tempo';
+import { DEFAULT_BPM, TICKS_PER_BAR } from '../shared/tempo';
 import type { SetDefinition } from './types';
 
 export const SETS: readonly SetDefinition[] = [
@@ -11,6 +11,7 @@ export const SETS: readonly SetDefinition[] = [
     startingWatts: 15,
     maxTraps: 6,
     levelCurve: { baseVibes: 5, vibesPerLevel: 4 },
+    pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
     tiers: [
       {
         buildupPhrases: 4,

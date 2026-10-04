@@ -77,7 +77,12 @@ export interface EnemyDefinition {
   wattsDrop: number;
   // Compounded per phrase since the start of the set: value = base * factor ** phrase.
   scalingPerPhrase: { hp: number; speed: number };
-  ranged?: { projectileSpeed: number; rangeTicks: number; keepDistance: number };
+  ranged?: {
+    projectileSpeed: number;
+    projectileRadius: number;
+    rangeTicks: number;
+    keepDistance: number;
+  };
 }
 
 export type TrapCadence = 'beat' | 'bar' | 'drop' | 'continuous';
@@ -139,6 +144,7 @@ export interface SetDefinition {
   startingWatts: number;
   maxTraps: number;
   levelCurve: { baseVibes: number; vibesPerLevel: number };
+  pickups: { lifetimeTicks: number; speed: number };
   tiers: readonly TierDefinition[];
 }
 

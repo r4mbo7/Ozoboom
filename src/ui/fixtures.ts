@@ -147,6 +147,7 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       startingWatts: 60,
       maxTraps: 6,
       levelCurve: { baseVibes: 10, vibesPerLevel: 5 },
+      pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
       tiers: [
         {
           buildupPhrases: 4,
@@ -219,7 +220,7 @@ function fixtureTrap(id: number, kind: string): TrapState {
     kind,
     ownerId: 0,
     level: 1,
-    angle: 0,
+    direction: { x: 1, y: 0 },
     hp: 100,
     cooldown: 0,
     x: 700,
@@ -233,6 +234,7 @@ export function fixtureState(overrides: Partial<SimState> = {}): SimState {
   const tick = 2 * TICKS_PER_PHRASE + 5 * TICKS_PER_BAR + 20;
   return {
     seed: 42,
+    setId: 'soiree-fixture',
     tick,
     status: 'running',
     rng: { a: 1, b: 2, c: 3, d: 4 },

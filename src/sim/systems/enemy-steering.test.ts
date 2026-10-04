@@ -131,7 +131,7 @@ describe('enemy steering', () => {
       prevX: core.x + 5,
       prevY: 200,
       level: 1,
-      angle: 0,
+      direction: { x: 1, y: 0 },
       hp: 100,
       cooldown: 0,
     });
@@ -157,7 +157,7 @@ describe('enemy steering', () => {
       prevX: core.x,
       prevY: 200,
       level: 1,
-      angle: 0,
+      direction: { x: 1, y: 0 },
       hp: 100,
       cooldown: 0,
     });

@@ -1,5 +1,5 @@
 import type { ResolvedContent } from './content';
-import type { EnemyState, SimState } from './state';
+import type { EnemyState, PlayerId, SimState } from './state';
 
 interface Point {
   x: number;
@@ -39,17 +39,22 @@ export function markedDamageMul(content: ResolvedContent): number {
   return mul;
 }
 
+// `by` is the player credited with the hit: the shooter, the owner of the trap or the caster.
 export function hurtEnemy(
   state: SimState,
   enemy: EnemyState,
   damage: number,
   markedMul: number,
+  by: PlayerId | null,
 ): void {
   if (enemy.hp <= 0) {
     return;
   }
   const dealt = enemy.marked ? damage * markedMul : damage;
   enemy.hp -= dealt;
+  if (by !== null) {
+    enemy.lastHitBy = by;
+  }
   state.stats.damageDealt += dealt;
   state.events.push({ type: 'enemyHit', id: enemy.id, damage: dealt, x: enemy.x, y: enemy.y });
 }

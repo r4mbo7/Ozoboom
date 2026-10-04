@@ -205,9 +205,17 @@ describe.each(sets)('set $id', (set) => {
         maxTraps: [set.maxTraps, wholePositive],
         baseVibes: [set.levelCurve.baseVibes, positive],
         vibesPerLevel: [set.levelCurve.vibesPerLevel, positive],
+        pickupLifetimeTicks: [set.pickups.lifetimeTicks, wholePositive],
+        pickupSpeed: [set.pickups.speed, positive],
       }),
     ).toEqual([]);
     expect(set.tiers.length).toBeGreaterThan(0);
+  });
+
+  it('flies its pickups faster than any class runs, so they always catch their player', () => {
+    const fastest = Math.max(...classes.map((definition) => definition.speed));
+
+    expect(set.pickups.speed).toBeGreaterThan(fastest);
   });
 
   it.each(set.tiers.map((tier, index) => [index, tier] as const))(

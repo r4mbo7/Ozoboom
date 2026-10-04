@@ -13,7 +13,7 @@ export function skillEffects({ state, content }: StepContext): void {
     }
     for (const enemy of state.enemies) {
       if (enemy.hp > 0 && touches(enemy, caster, show.radius)) {
-        hurtEnemy(state, enemy, show.damagePerTick, markedMul);
+        hurtEnemy(state, enemy, show.damagePerTick, markedMul, show.playerId);
       }
     }
     show.ticksLeft -= 1;

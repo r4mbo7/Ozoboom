@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { COMBAT_OPTIONS, placeEnemy } from '../fixtures';
+import {
+  COMBAT_OPTIONS,
+  FIXTURE_SET,
+  actionsFor,
+  commandFor,
+  placeEnemy,
+  stepAndRecord,
+} from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
-import { PICKUP_LIFETIME_TICKS } from './deaths';
+import type { EnemyState, PlayerId, PlayerState, SimEvent } from '../state';
 
 function arena(): Simulation {
   const simulation = createSimulation(COMBAT_OPTIONS);
@@ -62,7 +69,7 @@ describe('deaths', () => {
         amount: 1,
         x: dead.x,
         y: dead.y,
-        ticksLeft: PICKUP_LIFETIME_TICKS - 1,
+        ticksLeft: FIXTURE_SET.pickups.lifetimeTicks - 1,
       }),
     ]);
   });
@@ -78,5 +85,115 @@ describe('deaths', () => {
       expect.objectContaining({ kind: 'vibes', amount: 5, x: dead.x - 10, y: dead.y }),
       expect.objectContaining({ kind: 'watts', amount: 3, x: dead.x + 10, y: dead.y }),
     ]);
+  });
+});
+
+describe('kill credit', () => {
+  function duo(): { simulation: Simulation; second: PlayerState } {
+    const simulation = createSimulation({
+      ...COMBAT_OPTIONS,
+      players: [
+        { id: 0, classId: 'raver' },
+        { id: 1, classId: 'raver' },
+      ],
+    });
+    const second = simulation.state.players[1];
+    if (second === undefined) {
+      throw new Error('expected two players');
+    }
+    return { simulation, second };
+  }
+
+  function dying(simulation: Simulation, x: number, y: number): EnemyState {
+    const enemy = placeEnemy(simulation.state, 'grump', x, y);
+    enemy.hp = 1;
+    enemy.stunTicks = 100_000;
+    return enemy;
+  }
+
+  function creditFor(events: readonly SimEvent[], enemy: EnemyState): PlayerId | null | undefined {
+    for (const event of events) {
+      if (event.type === 'enemyDied' && event.id === enemy.id) {
+        return event.byPlayer;
+      }
+    }
+    return undefined;
+  }
+
+  it('goes to the owner of the bass bin that kills the enemy', () => {
+    const { simulation } = duo();
+    simulation.step([
+      actionsFor(1, { type: 'placeTrap', trapId: 'subwoofer', x: 400, y: 300, dx: 1, dy: 0 }),
+    ]);
+    const enemy = dying(simulation, 450, 300);
+
+    const recorded = stepAndRecord(simulation, 11);
+
+    expect(
+      creditFor(
+        recorded.map(({ event }) => event),
+        enemy,
+      ),
+    ).toBe(1);
+  });
+
+  it('goes to the owner of the trap whose projectile kills the enemy', () => {
+    const { simulation } = duo();
+    const { state } = simulation;
+    simulation.step([
+      actionsFor(1, { type: 'placeTrap', trapId: 'subwoofer', x: 400, y: 300, dx: 1, dy: 0 }),
+    ]);
+    const trapId = state.traps[0]?.id ?? -1;
+    const enemy = dying(simulation, 400, 600);
+    state.projectiles.push({
+      id: 98,
+      owner: { kind: 'trap', trapId },
+      x: 400,
+      y: 600,
+      prevX: 400,
+      prevY: 600,
+      vx: 0,
+      vy: 0,
+      radius: 4,
+      damage: 5,
+      ticksLeft: 10,
+      pierceLeft: 0,
+    });
+
+    simulation.step([]);
+
+    expect(creditFor(state.events, enemy)).toBe(1);
+  });
+
+  it('goes to the player whose nova kills the enemy', () => {
+    const { simulation, second } = duo();
+    const enemy = dying(simulation, second.x, second.y - 50);
+
+    simulation.step([commandFor(1, { skill: true })]);
+
+    expect(creditFor(simulation.state.events, enemy)).toBe(1);
+  });
+
+  it('goes to the player whose laser show kills the enemy', () => {
+    const { simulation, second } = duo();
+    const enemy = dying(simulation, second.x, second.y - 50);
+    simulation.state.laserShows = [
+      { id: 99, playerId: 1, damagePerTick: 2, radius: 300, ticksLeft: 10 },
+    ];
+
+    simulation.step([]);
+
+    expect(creditFor(simulation.state.events, enemy)).toBe(1);
+  });
+
+  it('goes to the last player who hit the enemy, whatever hit it', () => {
+    const { simulation, second } = duo();
+    const enemy = dying(simulation, second.x, second.y - 50);
+    enemy.hp = 31;
+    enemy.lastHitBy = 0;
+
+    simulation.step([commandFor(1, { skill: true })]);
+
+    expect(enemy.lastHitBy).toBe(1);
   });
 });

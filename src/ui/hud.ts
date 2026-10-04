@@ -4,7 +4,7 @@ import type { SimState } from '../sim/state';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
 import { BOLT, FOG, SUN, skillIcon, trapIcon } from './icons';
-import { type LineupSlot, lineupCursor, lineupSlots, ticksToDrop } from './lineup';
+import { type LineupSlot, lineupCursor, lineupSlots, setOf, ticksToDrop } from './lineup';
 import { selectTrap } from './navigation';
 import { promptsFor } from './prompts';
 
@@ -141,11 +141,11 @@ export function createHud(): Hud {
   let previousGameplay: InputSnapshot['gameplay'] | null = null;
   let litSegments = -1;
 
-  function build(content: GameContent): void {
+  function build(content: GameContent, setId: string): void {
     builtFor = content;
-    set = content.sets[0] ?? null;
+    set = setOf(content, setId);
     slots = [];
-    slotDefs = set === null ? [] : lineupSlots(set);
+    slotDefs = lineupSlots(set);
     const groups: HTMLElement[] = [];
     let group: HTMLElement | null = null;
     for (const slot of slotDefs) {
@@ -251,8 +251,8 @@ export function createHud(): Hud {
   }
 
   function update(state: SimState, snapshot: InputSnapshot, content: GameContent): void {
-    if (builtFor !== content) {
-      build(content);
+    if (builtFor !== content || set?.id !== state.setId) {
+      build(content, state.setId);
     }
     updateCore(state);
     updateLineup(state, content);

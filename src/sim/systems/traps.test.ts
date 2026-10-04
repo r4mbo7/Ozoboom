@@ -4,17 +4,12 @@ import {
   EFFECTS_OPTIONS,
   type TimedEvent,
   actionsFor,
-  addEnemy,
-  enemyDefinition,
   commandFor,
+  placeEnemy,
   stepAndRecord,
 } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
-import type { EnemyState, PlayerState, SimState } from '../state';
-
-const GRUMP = enemyDefinition('grump');
-const CURFEW = enemyDefinition('curfew');
-const BOUNCER = enemyDefinition('bouncer');
+import type { EnemyState, PlayerState, SimState, Vec2 } from '../state';
 
 function game(setId = 'fixture-set'): {
   simulation: Simulation;
@@ -29,16 +24,24 @@ function game(setId = 'fixture-set'): {
   return { simulation, state: simulation.state, player };
 }
 
-const placeAction = (trapId: string, x: number, y: number): PlayerAction => ({
-  type: 'placeTrap',
-  trapId,
-  x,
-  y,
-  angle: 0,
-});
+const placeAction = (
+  trapId: string,
+  x: number,
+  y: number,
+  facing: Vec2 = { x: 1, y: 0 },
+): PlayerAction => ({ type: 'placeTrap', trapId, x, y, dx: facing.x, dy: facing.y });
 
-const place = (trapId: string, x: number, y: number, input: Partial<PlayerInput> = {}) =>
-  ({ ...commandFor(0, input), actions: [placeAction(trapId, x, y)] }) satisfies PlayerCommand;
+const place = (
+  trapId: string,
+  x: number,
+  y: number,
+  facing?: Vec2,
+  input: Partial<PlayerInput> = {},
+) =>
+  ({
+    ...commandFor(0, input),
+    actions: [placeAction(trapId, x, y, facing)],
+  }) satisfies PlayerCommand;
 
 function frozen(enemy: EnemyState): EnemyState {
   enemy.stunTicks = 100_000;
@@ -65,7 +68,6 @@ describe('trap placement', () => {
         y: 450,
         prevX: 400,
         prevY: 450,
-        angle: 0,
         direction: { x: 1, y: 0 },
         hp: 100,
         cooldown: 0,
@@ -82,12 +84,20 @@ describe('trap placement', () => {
     });
   });
 
-  it('orients the trap along the aim of the player who places it', () => {
+  it('faces the trap along the direction of the placement, normalized', () => {
     const { simulation, state } = game();
 
-    simulation.step([place('beam', 400, 450, { aim: { x: 0, y: -2 } })]);
+    simulation.step([place('beam', 400, 450, { x: 0, y: -2 }, { aim: { x: 1, y: 0 } })]);
 
     expect(state.traps[0]?.direction).toEqual({ x: 0, y: -1 });
+  });
+
+  it('faces the trap along the aim of the player for a placement without direction', () => {
+    const { simulation, state } = game();
+
+    simulation.step([place('beam', 400, 450, { x: 0, y: 0 }, { aim: { x: -3, y: 0 } })]);
+
+    expect(state.traps[0]?.direction).toEqual({ x: -1, y: 0 });
   });
 
   it('applies the trap cost multiplier of the player, down to the last watt', () => {
@@ -261,8 +271,8 @@ describe('trap effects', () => {
   it('shockwave: hurts and pushes back the enemies in its radius on its beat', () => {
     const { simulation, state } = game();
     simulation.step([place('subwoofer', 400, 450)]);
-    const near = frozen(addEnemy(state, GRUMP, 450, 450));
-    const far = frozen(addEnemy(state, GRUMP, 400, 450 + 90 + 12 + 1));
+    const near = frozen(placeEnemy(state, 'grump', 450, 450));
+    const far = frozen(placeEnemy(state, 'grump', 400, 450 + 90 + 12 + 1));
 
     stepAndRecord(simulation, 10);
     const beforeBeat = near.hp;
@@ -289,7 +299,7 @@ describe('trap effects', () => {
     ]);
     player.modifiers.trapDamageMul = 1.25;
     player.modifiers.trapRadiusMul = 2;
-    const reachedOnlyWithBiggerRadius = frozen(addEnemy(state, GRUMP, 400, 450 + 150));
+    const reachedOnlyWithBiggerRadius = frozen(placeEnemy(state, 'grump', 400, 450 + 150));
 
     stepAndRecord(simulation, 11);
 
@@ -298,13 +308,13 @@ describe('trap effects', () => {
 
   it('beam: hurts every tick the enemies in the rectangle it draws along its direction', () => {
     const { simulation, state } = game();
-    const inBeam = frozen(addEnemy(state, GRUMP, 405, 450 + 150));
-    const atTheTip = frozen(addEnemy(state, GRUMP, 400, 450 + 200 + 12));
-    const aside = frozen(addEnemy(state, GRUMP, 400 + 10 + 12 + 1, 500));
-    const behind = frozen(addEnemy(state, GRUMP, 400, 450 - 12 - 1));
-    const pastTheTip = frozen(addEnemy(state, GRUMP, 400, 450 + 200 + 12 + 1));
+    const inBeam = frozen(placeEnemy(state, 'grump', 405, 450 + 150));
+    const atTheTip = frozen(placeEnemy(state, 'grump', 400, 450 + 200 + 12));
+    const aside = frozen(placeEnemy(state, 'grump', 400 + 10 + 12 + 1, 500));
+    const behind = frozen(placeEnemy(state, 'grump', 400, 450 - 12 - 1));
+    const pastTheTip = frozen(placeEnemy(state, 'grump', 400, 450 + 200 + 12 + 1));
 
-    simulation.step([place('beam', 400, 450, { aim: { x: 0, y: 1 } })]);
+    simulation.step([place('beam', 400, 450, { x: 0, y: 1 })]);
     stepAndRecord(simulation, 2);
 
     expect([inBeam, atTheTip, aside, behind, pastTheTip].map((enemy) => enemy.hp)).toEqual([
@@ -315,8 +325,8 @@ describe('trap effects', () => {
   it('mist: slows the enemies inside it and heals the players inside it on every bar', () => {
     const { simulation, state, player } = game();
     player.hp = 50;
-    const inside = frozen(addEnemy(state, GRUMP, 650, 500));
-    const outside = frozen(addEnemy(state, GRUMP, 650, 450 + 80 + 12 + 1));
+    const inside = frozen(placeEnemy(state, 'grump', 650, 500));
+    const outside = frozen(placeEnemy(state, 'grump', 650, 450 + 80 + 12 + 1));
 
     simulation.step([place('mister', 650, 450)]);
     const slowed = [inside.slowFactor, outside.slowFactor];
@@ -358,9 +368,9 @@ describe('trap effects', () => {
 
   it('lure: marks the enemies in its radius and draws them to it', () => {
     const { simulation, state } = game();
-    const drawn = addEnemy(state, GRUMP, 500, 450);
-    const almostThere = addEnemy(state, GRUMP, 400 + 16 + 12 + 1, 450);
-    const outside = addEnemy(state, GRUMP, 400, 450 + 150 + 12 + 1);
+    const drawn = placeEnemy(state, 'grump', 500, 450);
+    const almostThere = placeEnemy(state, 'grump', 400 + 16 + 12 + 1, 450);
+    const outside = placeEnemy(state, 'grump', 400, 450 + 150 + 12 + 1);
 
     simulation.step([place('lure', 400, 450)]);
 
@@ -376,8 +386,8 @@ describe('trap effects', () => {
   it('lure: marked enemies take the bonus damage of the lure from the other traps', () => {
     const { simulation, state } = game();
     state.core.watts = 1000;
-    const marked = frozen(addEnemy(state, GRUMP, 450, 500));
-    const unmarked = frozen(addEnemy(state, GRUMP, 330, 420));
+    const marked = frozen(placeEnemy(state, 'grump', 450, 500));
+    const unmarked = frozen(placeEnemy(state, 'grump', 330, 420));
     simulation.step([
       actionsFor(0, placeAction('subwoofer', 400, 450), placeAction('lure', 400, 600)),
     ]);
@@ -392,8 +402,8 @@ describe('trap effects', () => {
     const { simulation, state } = game('fast-drop');
     simulation.step([place('strobe', 400, 450)]);
     stepAndRecord(simulation, 93);
-    const inside = addEnemy(state, GRUMP, 450, 450);
-    const outside = addEnemy(state, GRUMP, 400, 450 + 120 + 12 + 1);
+    const inside = placeEnemy(state, 'grump', 450, 450);
+    const outside = placeEnemy(state, 'grump', 400, 450 + 120 + 12 + 1);
     inside.speed = 0;
     outside.speed = 0;
 
@@ -415,7 +425,7 @@ describe('heavy enemies against traps', () => {
     recorded: TimedEvent[];
   } {
     const { simulation, state } = game();
-    const bouncer = addEnemy(state, BOUNCER, 400 + 16 + 20 - 1, 450);
+    const bouncer = placeEnemy(state, 'bouncer', 400 + 16 + 20 - 1, 450);
     bouncer.speed = 0;
     if (stunned) {
       frozen(bouncer);
@@ -436,7 +446,7 @@ describe('heavy enemies against traps', () => {
 
   it('a heavy hits once on contact and again after its attack cooldown', () => {
     const { simulation, state } = game();
-    const bouncer = addEnemy(state, BOUNCER, 400 + 16 + 20 - 1, 450);
+    const bouncer = placeEnemy(state, 'bouncer', 400 + 16 + 20 - 1, 450);
     bouncer.speed = 0;
 
     simulation.step([place('mister', 400, 450)]);
@@ -457,9 +467,9 @@ describe('heavy enemies against traps', () => {
   it('a boss hits the trap, a rusher does not', () => {
     const { simulation, state } = game();
     state.core.watts = 1000;
-    const boss = addEnemy(state, CURFEW, 400 + 16 + 40 - 1, 450);
+    const boss = placeEnemy(state, 'curfew', 400 + 16 + 40 - 1, 450);
     boss.speed = 0;
-    const rusher = addEnemy(state, GRUMP, 1000, 200 + 16 + 12 - 1);
+    const rusher = placeEnemy(state, 'grump', 1000, 200 + 16 + 12 - 1);
     rusher.speed = 0;
 
     simulation.step([

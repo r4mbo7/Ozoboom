@@ -64,7 +64,7 @@ export const ENEMIES: readonly EnemyDefinition[] = [
     vibesDrop: 2,
     wattsDrop: 1,
     scalingPerPhrase: GROWING,
-    ranged: { projectileSpeed: 7, rangeTicks: 50, keepDistance: 260 },
+    ranged: { projectileSpeed: 7, projectileRadius: 5, rangeTicks: 50, keepDistance: 260 },
   },
   {
     id: 'couvre-feu',

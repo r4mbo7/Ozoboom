@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { COMBAT_OPTIONS, stepAndRecord } from '../fixtures';
+import { COMBAT_CONTENT, COMBAT_OPTIONS, stepAndRecord } from '../fixtures';
 import { createSimulation, type Simulation, type SimulationOptions } from '../index';
 import type { PickupKind, PickupState, PlayerState, SimState } from '../state';
-import { PICKUP_SPEED } from './pickups';
+
+const [COMBAT_SET] = COMBAT_CONTENT.sets;
+if (COMBAT_SET === undefined) {
+  throw new Error('expected the combat set');
+}
+const PICKUP_SPEED = COMBAT_SET.pickups.speed;
 
 function arena(options: SimulationOptions = COMBAT_OPTIONS): {
   simulation: Simulation;
@@ -50,6 +55,21 @@ describe('pickups', () => {
 
     expect(pickup).toMatchObject({ x: 460 - PICKUP_SPEED, y: 400 });
     expect(outOfReach).toMatchObject({ x: 400, y: 461 });
+  });
+
+  it('fly at the pickup speed of the set', () => {
+    const { simulation } = arena({
+      ...COMBAT_OPTIONS,
+      content: {
+        ...COMBAT_CONTENT,
+        sets: [{ ...COMBAT_SET, pickups: { ...COMBAT_SET.pickups, speed: 5 } }],
+      },
+    });
+    const pickup = drop(simulation.state, 'vibes', 400 + 60, 400);
+
+    simulation.step([]);
+
+    expect(pickup).toMatchObject({ x: 455, y: 400 });
   });
 
   it('reach further with a pickup radius modifier', () => {

@@ -1,5 +1,6 @@
 import type { TrapCadence, TrapDefinition } from '../../data/types';
 import { isBarTick } from '../../shared/tempo';
+import { normalize } from '../../shared/vec';
 import type { PlayerAction } from '../commands';
 import { lookup, type ResolvedContent } from '../content';
 import {
@@ -11,7 +12,7 @@ import {
   touches,
   wholeTicks,
 } from '../effects';
-import type { EnemyState, PlayerState, SimState, TrapState } from '../state';
+import type { EnemyState, PlayerState, SimState, TrapState, Vec2 } from '../state';
 import { statValue } from '../stats';
 import type { StepContext } from './types';
 
@@ -121,13 +122,17 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     y,
     prevX: x,
     prevY: y,
-    angle: action.angle,
-    direction: { x: player.aim.x, y: player.aim.y },
+    direction: facing(action, player),
     hp: definition.hp,
     cooldown: 0,
   });
   pay(state, cost);
   state.events.push({ type: 'trapPlaced', id, kind: definition.id, x, y });
+}
+
+function facing(action: PlaceTrap, player: PlayerState): Vec2 {
+  const direction = normalize({ x: action.dx, y: action.dy });
+  return direction.x === 0 && direction.y === 0 ? player.aim : direction;
 }
 
 function overlaps(
@@ -166,7 +171,7 @@ function fire(firing: Firing): void {
     case 'shockwave':
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && touches(enemy, trap, effect.radius * radiusMul)) {
-          hurtEnemy(state, enemy, effect.damage * damageMul, markedMul);
+          hurtEnemy(state, enemy, effect.damage * damageMul, markedMul, trap.ownerId);
           pushAway(enemy, trap, effect.knockback);
         }
       }
@@ -174,7 +179,7 @@ function fire(firing: Firing): void {
     case 'beam':
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && inBeam(enemy, trap, effect.length * radiusMul, effect.width / 2)) {
-          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul);
+          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, trap.ownerId);
         }
       }
       return;
@@ -216,9 +221,6 @@ function fire(firing: Firing): void {
 
 function inBeam(enemy: EnemyState, trap: TrapState, length: number, halfWidth: number): boolean {
   const { direction } = trap;
-  if (direction === undefined) {
-    throw new Error(`beam trap ${String(trap.id)} has no direction`);
-  }
   const dx = enemy.x - trap.x;
   const dy = enemy.y - trap.y;
   const along = dx * direction.x + dy * direction.y;

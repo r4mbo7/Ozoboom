@@ -80,6 +80,7 @@ function eventOf(name: EventName, id: number): SimEvent {
 function createFixture(): SimState {
   return {
     seed: 1,
+    setId: 'soiree-v0',
     tick: 0,
     status: 'running',
     rng: { a: 1, b: 2, c: 3, d: 4 },

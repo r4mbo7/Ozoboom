@@ -69,8 +69,9 @@ describe('buildCommand', () => {
       trapId: 'laser',
       x: 400,
       y: 700,
+      dx: 0,
+      dy: 1,
     });
-    expect(command.actions[0]).toHaveProperty('angle', expect.closeTo(Math.PI / 2, 9) as number);
   });
 
   it('keeps the current aim when the pointer is on the player', () => {
@@ -105,7 +106,7 @@ describe('buildCommand', () => {
     const distance = PLAYER.radius + TRAP_GAP + CAISSON.radius;
     expectVec(command.input.aim, { x: 0, y: -1 });
     expect(command.actions).toEqual([
-      { type: 'placeTrap', trapId: CAISSON.id, x: 400, y: 300 - distance, angle: -Math.PI / 2 },
+      { type: 'placeTrap', trapId: CAISSON.id, x: 400, y: 300 - distance, dx: 0, dy: -1 },
       { type: 'chooseUpgrade', upgradeId: 'double-tempo' },
     ]);
   });

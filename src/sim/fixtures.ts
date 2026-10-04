@@ -1,4 +1,5 @@
 import type { EnemyDefinition, GameContent, SetDefinition, TrapDefinition } from '../data/types';
+import { TICKS_PER_BAR } from '../shared/tempo';
 import { IDLE_INPUT, type PlayerAction, type PlayerCommand, type PlayerInput } from './commands';
 import type { Simulation, SimulationOptions } from './index';
 import type { EnemyState, PlayerId, SimEvent, SimState } from './state';
@@ -35,6 +36,7 @@ export const FIXTURE_SET: SetDefinition = {
   startingWatts: 50,
   maxTraps: 6,
   levelCurve: { baseVibes: 10, vibesPerLevel: 5 },
+  pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
   tiers: [
     {
       buildupPhrases: 1,
@@ -267,46 +269,8 @@ export const EFFECTS_CONTENT: GameContent = {
 
 export const EFFECTS_OPTIONS: SimulationOptions = { ...FIXTURE_OPTIONS, content: EFFECTS_CONTENT };
 
-export function addEnemy(
-  state: SimState,
-  definition: EnemyDefinition,
-  x: number,
-  y: number,
-): EnemyState {
-  const enemy: EnemyState = {
-    id: state.nextEntityId,
-    kind: definition.id,
-    x,
-    y,
-    prevX: x,
-    prevY: y,
-    radius: definition.radius,
-    hp: definition.maxHp,
-    maxHp: definition.maxHp,
-    speed: definition.speed,
-    damage: definition.damage,
-    target: 'core',
-    attackCooldown: 0,
-    slowFactor: 1,
-    stunTicks: 0,
-    marked: false,
-    isBoss: definition.behaviour === 'boss',
-  };
-  state.nextEntityId += 1;
-  state.enemies.push(enemy);
-  return enemy;
-}
-
 export function actionsFor(playerId: PlayerId, ...actions: PlayerAction[]): PlayerCommand {
   return { ...commandFor(playerId), actions };
-}
-
-export function enemyDefinition(id: string): EnemyDefinition {
-  const definition = EFFECTS_CONTENT.enemies.find((enemy) => enemy.id === id);
-  if (definition === undefined) {
-    throw new Error(`no fixture enemy "${id}"`);
-  }
-  return definition;
 }
 
 // Removes every enemy after each step: the set then runs on its grid, untouched by combat.
@@ -363,7 +327,7 @@ export const FIXTURE_SHOOTER: EnemyDefinition = {
   vibesDrop: 2,
   wattsDrop: 1,
   scalingPerPhrase: { hp: 1, speed: 1 },
-  ranged: { projectileSpeed: 7, rangeTicks: 50, keepDistance: 200 },
+  ranged: { projectileSpeed: 7, projectileRadius: 6, rangeTicks: 50, keepDistance: 200 },
 };
 
 export const FIXTURE_LURE: TrapDefinition = {
@@ -403,8 +367,13 @@ export const COMBAT_CONTENT: GameContent = {
 
 export const COMBAT_OPTIONS: SimulationOptions = { ...FIXTURE_OPTIONS, content: COMBAT_CONTENT };
 
+const FIXTURE_ENEMIES: ReadonlyMap<string, EnemyDefinition> = new Map(
+  [...EFFECTS_CONTENT.enemies, ...COMBAT_CONTENT.enemies].map((enemy) => [enemy.id, enemy]),
+);
+
+// Spawns an enemy of any fixture content where a test needs it, as the spawning system would.
 export function placeEnemy(state: SimState, kind: string, x: number, y: number): EnemyState {
-  const definition = COMBAT_CONTENT.enemies.find((enemy) => enemy.id === kind);
+  const definition = FIXTURE_ENEMIES.get(kind);
   if (definition === undefined) {
     throw new Error(`no fixture enemy "${kind}"`);
   }

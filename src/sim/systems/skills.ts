@@ -49,7 +49,7 @@ function cast(
     case 'nova':
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && touches(enemy, player, effect.radius)) {
-          hurtEnemy(state, enemy, effect.damage * power, markedMul);
+          hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id);
           pushAway(enemy, player, effect.knockback);
         }
       }
