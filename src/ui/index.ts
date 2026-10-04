@@ -1,10 +1,10 @@
 import './ui.css';
-import type { InputDevice, MenuIntents } from '../input/intents';
+import type { InputDevice } from '../input/intents';
 import type { UpgradeOffer } from '../sim/state';
 import { el } from './dom';
 import { createEnd } from './end';
 import { createHud } from './hud';
-import { HELD_MENU_INTENTS, menuEdges } from './navigation';
+import { createMenuInput } from './navigation';
 import { createTitle } from './title';
 import type { CreateUi } from './types';
 import { createUpgradeOverlay } from './upgrade';
@@ -32,7 +32,7 @@ export const createUi: CreateUi = (root, callbacks) => {
   let device: InputDevice = 'none';
   let acted = false;
   let chosenOffer: UpgradeOffer | null = null;
-  let previousMenu: MenuIntents | null = null;
+  const menuInput = createMenuInput();
   let menuOpensAt = 0;
 
   function once(action: () => void): void {
@@ -46,7 +46,7 @@ export const createUi: CreateUi = (root, callbacks) => {
     callbacks.onFeedback === undefined
       ? undefined
       : () => {
-          previousMenu = HELD_MENU_INTENTS;
+          menuInput.open();
           callbacks.onFeedback?.();
         };
 
@@ -125,13 +125,13 @@ export const createUi: CreateUi = (root, callbacks) => {
       end.show(state);
       show('end');
       menuOpensAt = performance.now() + MENU_GRACE_MS;
+      menuInput.open();
     },
     update(state, snapshot, content) {
       if (snapshot.device !== device) {
         applyDevice(snapshot.device);
       }
-      const edges = menuEdges(snapshot.menu, previousMenu);
-      previousMenu = snapshot.menu;
+      const edges = menuInput.edges(snapshot.menu, snapshot.gameplay.move);
 
       if (screen === 'title') {
         title.menu.handle(edges);
@@ -153,6 +153,7 @@ export const createUi: CreateUi = (root, callbacks) => {
       }
       if (offer !== upgrade.offer) {
         menuOpensAt = performance.now() + MENU_GRACE_MS;
+        menuInput.open();
       }
       upgrade.show(
         offer,

@@ -1,10 +1,10 @@
 import '../ui/ui.css';
 import './feedback.css';
-import type { InputDevice, InputSnapshot, MenuIntents } from '../input/intents';
+import type { InputDevice, InputSnapshot } from '../input/intents';
 import { el, fillHint, icon, setText } from '../ui/dom';
 import { formatNumber } from '../ui/format';
 import { EYE, SENT } from '../ui/icons';
-import { HELD_MENU_INTENTS, menuEdges } from '../ui/navigation';
+import { createMenuInput } from '../ui/navigation';
 import { onMouseMove } from '../ui/pointer';
 import { promptsFor } from '../ui/prompts';
 import { createToggle } from '../ui/toggle';
@@ -20,7 +20,7 @@ export interface FeedbackOptions {
 }
 
 export interface FeedbackDialog {
-  update(input: Pick<InputSnapshot, 'menu' | 'device'>): void;
+  update(input: Pick<InputSnapshot, 'menu' | 'device' | 'gameplay'>): void;
   close(): void;
 }
 
@@ -195,7 +195,8 @@ export function openFeedback(
   let busy = false;
   let closed = false;
   let device: InputDevice | null = null;
-  let previous: MenuIntents = HELD_MENU_INTENTS;
+  const menuInput = createMenuInput();
+  menuInput.open();
 
   function setType(next: FeedbackType | null): void {
     type = next;
@@ -411,8 +412,7 @@ export function openFeedback(
         device = input.device;
         showHint(view);
       }
-      const edges = menuEdges(input.menu, previous);
-      previous = input.menu;
+      const edges = menuInput.edges(input.menu, input.gameplay.move);
       if (busy) {
         return;
       }

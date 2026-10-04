@@ -207,7 +207,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       } else if (gameplay.pause || menu.back) {
         setPaused(false);
       } else {
-        pause.handle(menu);
+        pause.handle(menu, gameplay.move);
       }
       // The press that pauses or resumes, and any press during the pause, acts on nothing else:
       // the A that resumes must not place a trap.
