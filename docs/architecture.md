@@ -46,14 +46,16 @@ Ces fichiers sont l'interface entre les couches, donc entre les tâches menées 
 
 Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick, les durées en ticks.
 
-| Fichier                | Contenu                                                                                                                                                       |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/sim/state.ts`     | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas |
-| `src/sim/commands.ts`  | `PlayerCommand` : par joueur et par tick, une entrée continue (`PlayerInput`) et des actions discrètes (`PlayerAction`)                                       |
-| `src/data/types.ts`    | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`                          |
-| `src/input/intents.ts` | `InputSnapshot` produit par chaque périphérique, `InputSource`                                                                                                |
-| `src/render/types.ts`  | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme                                                                              |
-| `src/audio/types.ts`   | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setMood('set' \| 'menu')`                                                                              |
+| Fichier                 | Contenu                                                                                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/sim/state.ts`      | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas       |
+| `src/sim/commands.ts`   | `PlayerCommand` : par joueur et par tick, une entrée continue (`PlayerInput`) et des actions discrètes (`PlayerAction`)                                             |
+| `src/sim/lineup.ts`     | le line-up du set et l'heure : `lineupSlots`, `lineupCursor`, `ticksToDrop`, `setFraction` (position dans le set, dans [0, 1], jamais en arrière, 1 une fois gagné) |
+| `src/shared/palette.ts` | la palette du Cycle du soleil : `paletteAt(fraction)` (jetons en `#rrggbb`) et `lightAt(fraction)` (`additive`, `haloAlpha`)                                        |
+| `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`                                |
+| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource`                                                                                                      |
+| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme                                                                                    |
+| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setMood('set' \| 'menu')`                                                                                    |
 
 Conventions de la simulation :
 

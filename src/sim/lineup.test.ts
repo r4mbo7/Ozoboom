@@ -2,9 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { SETS } from '../data/sets';
 import type { SetDefinition } from '../data/types';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
-import type { GameStatus, SetSegment } from '../sim/state';
-import { UI_FIXTURE_CONTENT } from './fixtures';
-import { type LineupInput, lineupCursor, lineupSlots, setOf, ticksToDrop } from './lineup';
+import { FIXTURE_CONTENT, FIXTURE_OPTIONS, FIXTURE_SET, peaceful } from './fixtures';
+import { createSimulation } from './index';
+import {
+  type LineupInput,
+  lineupCursor,
+  lineupSlots,
+  setFraction,
+  setOf,
+  ticksToDrop,
+} from './lineup';
+import type { GameStatus, SetSegment } from './state';
 
 const set: SetDefinition = {
   ...firstSet(),
@@ -18,11 +26,7 @@ const BREAK_START = 4 * TICKS_PER_PHRASE;
 const DROP_START = BREAK_START + 4 * TICKS_PER_BAR;
 
 function firstSet(): SetDefinition {
-  const found = UI_FIXTURE_CONTENT.sets[0];
-  if (found === undefined) {
-    throw new Error('fixture content has no set');
-  }
-  return found;
+  return FIXTURE_SET;
 }
 
 function at(
@@ -38,7 +42,7 @@ function at(
 describe('setOf', () => {
   it('finds the set the game plays, wherever it sits in the content', () => {
     const encore: SetDefinition = { ...set, id: 'encore' };
-    const content = { ...UI_FIXTURE_CONTENT, sets: [...UI_FIXTURE_CONTENT.sets, encore] };
+    const content = { ...FIXTURE_CONTENT, sets: [...FIXTURE_CONTENT.sets, encore] };
 
     const played = setOf(content, 'encore');
 
@@ -46,7 +50,7 @@ describe('setOf', () => {
   });
 
   it('rejects a set the content does not have', () => {
-    expect(() => setOf(UI_FIXTURE_CONTENT, 'nope')).toThrow('unknown set "nope"');
+    expect(() => setOf(FIXTURE_CONTENT, 'nope')).toThrow('unknown set "nope"');
   });
 });
 
@@ -158,5 +162,44 @@ describe('ticksToDrop', () => {
     expect(ticksToDrop(set, at(4000, 0, 'drop', DROP_START))).toBeNull();
     expect(ticksToDrop(set, at(99_999, 1, 'drop', DROP_START, 'won'))).toBeNull();
     expect(ticksToDrop(set, at(99_999, 2, 'drop', DROP_START))).toBeNull();
+  });
+});
+
+describe('setFraction', () => {
+  it('is the cursor slot over the slot count', () => {
+    const tick = 2 * TICKS_PER_PHRASE + TICKS_PER_PHRASE / 2;
+
+    expect(setFraction(set, at(tick, 0, 'buildup', 0))).toBe(2.5 / 11);
+  });
+
+  it('moves over four bars of a drop, then holds until the drop ends', () => {
+    const during = (bars: number): number =>
+      setFraction(set, at(DROP_START + bars * TICKS_PER_BAR, 0, 'drop', DROP_START));
+
+    expect(during(0)).toBe(5 / 11);
+    expect(during(2)).toBe(5.5 / 11);
+    expect(during(4)).toBe(6 / 11);
+    expect(during(40)).toBe(6 / 11);
+  });
+
+  it('is 1 once the set is won or past the last tier', () => {
+    expect(setFraction(set, at(99_999, 1, 'drop', DROP_START, 'won'))).toBe(1);
+    expect(setFraction(set, at(99_999, 2, 'drop', DROP_START))).toBe(1);
+  });
+
+  it('is 0 at tick 0, never goes back and is 1 once a scripted game is won', () => {
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
+    const played = setOf(FIXTURE_CONTENT, simulation.state.setId);
+    const fractions = [setFraction(played, simulation.state)];
+
+    while (simulation.state.status === 'running') {
+      simulation.step([]);
+      fractions.push(setFraction(played, simulation.state));
+    }
+
+    expect(fractions[0]).toBe(0);
+    expect(fractions.slice(1).every((value, index) => value >= (fractions[index] ?? 0))).toBe(true);
+    expect(simulation.state.status).toBe('won');
+    expect(fractions.at(-1)).toBe(1);
   });
 });
