@@ -5,6 +5,7 @@ import type {
   EnemyDefinition,
   SetDefinition,
   SpecialEffect,
+  SpeakerDefinition,
   TrapDefinition,
 } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
@@ -24,6 +25,8 @@ export interface RenderContent {
 
 export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect'>;
 
+export type SpeakerLook = Pick<SpeakerDefinition, 'aura' | 'plugBars'>;
+
 export interface RenderContext {
   readonly textures: Textures;
   readonly layers: Layers;
@@ -33,6 +36,7 @@ export interface RenderContext {
   readonly trapLooks: ReadonlyMap<string, TrapLook>;
   readonly specials: ReadonlyMap<string, SpecialEffect>;
   readonly helpTicks: ReadonlyMap<string, number>;
+  readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
 }
 
 export interface Family {

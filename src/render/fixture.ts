@@ -36,7 +36,7 @@ export const FIXTURE_CONTENT: RenderContent = {
   ],
 };
 
-export type FixtureEvent = 'beat' | 'enemyDied' | 'coreHit';
+export type FixtureEvent = 'beat' | 'enemyDied' | 'coreHit' | 'speakerPlugged';
 
 export interface FixtureOptions {
   enemies: number;

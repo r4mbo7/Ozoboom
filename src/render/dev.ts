@@ -8,6 +8,7 @@ import { createRenderer } from './index';
 import { PALETTE_TOKENS, paletteAt } from '../shared/palette';
 import { SETS } from '../data/sets';
 import type { SetDefinition } from '../data/types';
+import { type SpeakerPose, holdParty, layStacks } from './fixture-speakers';
 import { pinFraction } from './fixture-time';
 
 function element(selector: string): HTMLElement {
@@ -53,6 +54,13 @@ const sheet = params.has('sheet') ? count('sheet', 32) : null;
 if (sheet !== null) {
   layMasks(state, sheet, (params.get('pose') ?? 'awake') as SheetPose);
 }
+if (params.has('speakers')) {
+  layStacks(state, (params.get('speakers') ?? '').split(',') as SpeakerPose[]);
+}
+const [standX = state.core.x, standY = state.core.y] = (params.get('stand') ?? '')
+  .split(',')
+  .filter(Boolean)
+  .map(Number);
 const dieAt = params.has('dieAt') ? count('dieAt', 0) : null;
 if (params.get('clean') === '1') {
   element('.panel').style.display = 'none';
@@ -171,6 +179,9 @@ function advance(events: readonly FixtureEvent[]) {
   }
   if (sheet === null) {
     advanceFixture(state, events);
+    if (state.speakers !== undefined) {
+      holdParty(state, standX, standY);
+    }
     return;
   }
   state.tick += 1;
