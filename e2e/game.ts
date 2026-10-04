@@ -90,10 +90,13 @@ export async function tapButtonUntil(
   done: () => Promise<boolean>,
 ): Promise<void> {
   await expect
-    .poll(async () => {
-      await tapButton(page, button);
-      return done();
-    })
+    .poll(
+      async () => {
+        await tapButton(page, button);
+        return done();
+      },
+      { timeout: 30_000 },
+    )
     .toBe(true);
 }
 

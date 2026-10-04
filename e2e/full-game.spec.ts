@@ -147,6 +147,9 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
       }
       if (state.status !== 'won' && state.status !== 'lost') {
         requestAnimationFrame(play);
+      } else {
+        pad.axes = [0, 0, 0, 0];
+        pad.buttons.fill(0);
       }
     };
     play();
