@@ -325,11 +325,11 @@
   white-space: nowrap;
 }
 
+/* One line on wide screens, centred even when it is wider than its column: never an orphan row. */
 .ui-hint {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 8px 24px;
+  gap: 24px;
   color: var(--ui-muted);
   font-size: 15px;
 }
