@@ -57,6 +57,17 @@ describe('player movement', () => {
     expect(player.x - startX).toBe(player.speed);
   });
 
+  it('advances at half speed with a slowFactor of 0.5', () => {
+    const { simulation, player } = soloGame();
+    const startX = player.x;
+    const speed = player.speed;
+    player.slowFactor = 0.5;
+
+    hold(simulation, { move: { x: 1, y: 0 } }, 1);
+
+    expect(player.x - startX).toBe(speed * 0.5);
+  });
+
   it('keeps the player inside the arena on every side', () => {
     const { simulation, player } = soloGame();
     const { width, height } = simulation.state.arena;

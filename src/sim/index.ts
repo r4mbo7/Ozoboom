@@ -18,6 +18,7 @@ import { setProgress } from './systems/set-progress';
 import { skillEffects } from './systems/skill-effects';
 import { skills } from './systems/skills';
 import { spawning } from './systems/spawning';
+import { specials } from './systems/specials';
 import { status } from './systems/status';
 import { tempo } from './systems/tempo';
 import { traps } from './systems/traps';
@@ -49,6 +50,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     skills,
     spawning,
     enemySteering,
+    specials,
     projectiles,
     traps,
     skillEffects,

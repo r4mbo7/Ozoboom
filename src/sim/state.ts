@@ -68,6 +68,12 @@ export interface PlayerState extends Positioned {
   invulnerableTicks?: number;
   // Levels gained whose offer is not drawn yet. Optional so that states built by hand stay valid.
   pendingLevelUps?: number;
+  // Set by a special effect (sigh, cling) and reset to 1 each tick by `specials`.
+  slowFactor?: number;
+  // Set by suppress; statValue returns the base value of every stat while this is positive.
+  suppressedTicks?: number;
+  // Set by dazzle, decremented by `specials`.
+  dazzledTicks?: number;
 }
 
 export interface EnemyState extends Positioned {
@@ -86,6 +92,16 @@ export interface EnemyState extends Positioned {
   isBoss: boolean;
   // Last player whose projectile, trap or skill hit this enemy: credited with the kill.
   lastHitBy?: PlayerId;
+  // Zombie: stand-ups left after reaching 0 hp.
+  revivesLeft?: number;
+  // Zombie: ticks left lying down before it revives.
+  downTicks?: number;
+  // Arnaqueur: vibes amount stolen from a pickup, dropped where it dies.
+  carrying?: number;
+  // Arnaqueur: running from players instead of chasing them, while carrying stolen vibes.
+  fleeing?: boolean;
+  // Collant: the player it is attached to.
+  clingingTo?: PlayerId;
 }
 
 export type ProjectileOwner =
@@ -122,6 +138,14 @@ export interface PickupState extends Positioned {
   id: EntityId;
   kind: PickupKind;
   amount: number;
+  ticksLeft: number;
+}
+
+export interface BystanderState extends Positioned {
+  id: EntityId;
+  kind: string;
+  radius: number;
+  helpTicks: number;
   ticksLeft: number;
 }
 
@@ -184,6 +208,13 @@ export type SimEvent =
   | { type: 'trapFired'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapDestroyed'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'pickupCollected'; playerId: PlayerId; kind: PickupKind; amount: number }
+  | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
+  | { type: 'enemyRevived'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'vibesStolen'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'enemyBabbled'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'bystanderSpawned'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'bystanderHelped'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'bystanderLost'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'levelUp'; playerId: PlayerId; level: number }
   | { type: 'upgradeChosen'; playerId: PlayerId; upgradeId: string }
   | { type: 'gameWon' }
@@ -206,6 +237,9 @@ export interface SimState {
   // Optional so that states built by hand before these effects existed stay valid.
   laserShows?: LaserShowState[];
   barriers?: BarrierState[];
+  // Optional: created only once a Festivalier en détresse spawns, so the replay fingerprint of a
+  // game without one stays unchanged.
+  bystanders?: BystanderState[];
   pendingUpgrades: UpgradeOffer[];
   nextEntityId: EntityId;
   stats: SimStats;

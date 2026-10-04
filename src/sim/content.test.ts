@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GameContent, TierDefinition } from '../data/types';
+import type { GameContent, SpecialEffect, TierDefinition } from '../data/types';
 import { resolveContent } from './content';
 import { FIXTURE_CONTENT, FIXTURE_SET } from './fixtures';
 
@@ -19,6 +19,7 @@ describe('resolveContent', () => {
     expect([...resolved.traps.keys()]).toEqual(['subwoofer']);
     expect([...resolved.upgrades.keys()]).toEqual(['quick-feet', 'big-bass', 'wide-nova']);
     expect(resolved.sets.get('fixture-set')).toBe(FIXTURE_SET);
+    expect([...resolved.bystanders.keys()]).toEqual([]);
   });
 
   it('rejects a tier whose boss is unknown', () => {
@@ -36,6 +37,31 @@ describe('resolveContent', () => {
 
     expect(() => resolveContent(content)).toThrow(
       'unknown spawned enemy of tier 0 of set "fixture-set": "ghost"',
+    );
+  });
+
+  it('rejects a bystander spawn rule whose bystander is unknown', () => {
+    const content = withTiers({
+      bystanderSpawns: [{ bystanderId: 'ghost', everyBars: 1, count: 1, fromPhrase: 0 }],
+    });
+
+    expect(() => resolveContent(content)).toThrow(
+      'unknown spawned bystander of tier 0 of set "fixture-set": "ghost"',
+    );
+  });
+
+  it('rejects an enemy whose special kind has no registered module', () => {
+    const [grump, ...rest] = FIXTURE_CONTENT.enemies;
+    if (grump === undefined) {
+      throw new Error('expected the grump enemy');
+    }
+    const content: GameContent = {
+      ...FIXTURE_CONTENT,
+      enemies: [{ ...grump, special: { kind: 'tickle' } as unknown as SpecialEffect }, ...rest],
+    };
+
+    expect(() => resolveContent(content)).toThrow(
+      'unknown special module for enemy "grump": "tickle"',
     );
   });
 

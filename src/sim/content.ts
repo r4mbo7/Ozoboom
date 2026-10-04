@@ -1,4 +1,5 @@
 import type {
+  BystanderDefinition,
   ClassDefinition,
   EnemyDefinition,
   GameContent,
@@ -6,6 +7,7 @@ import type {
   TrapDefinition,
   UpgradeDefinition,
 } from '../data/types';
+import { SPECIALS } from './specials';
 
 export interface ResolvedContent {
   readonly classes: ReadonlyMap<string, ClassDefinition>;
@@ -13,6 +15,7 @@ export interface ResolvedContent {
   readonly traps: ReadonlyMap<string, TrapDefinition>;
   readonly upgrades: ReadonlyMap<string, UpgradeDefinition>;
   readonly sets: ReadonlyMap<string, SetDefinition>;
+  readonly bystanders: ReadonlyMap<string, BystanderDefinition>;
 }
 
 export function resolveContent(content: GameContent): ResolvedContent {
@@ -22,8 +25,14 @@ export function resolveContent(content: GameContent): ResolvedContent {
     traps: indexById(content.traps, 'trap'),
     upgrades: indexById(content.upgrades, 'upgrade'),
     sets: indexById(content.sets, 'set'),
+    bystanders: indexById(content.bystanders ?? [], 'bystander'),
   };
 
+  for (const enemy of content.enemies) {
+    if (enemy.special !== undefined && !Object.hasOwn(SPECIALS, enemy.special.kind)) {
+      throw new Error(`unknown special module for enemy "${enemy.id}": "${enemy.special.kind}"`);
+    }
+  }
   for (const upgrade of content.upgrades) {
     if (upgrade.classId !== undefined) {
       lookup(resolved.classes, upgrade.classId, `class of upgrade "${upgrade.id}"`);
@@ -38,6 +47,9 @@ export function resolveContent(content: GameContent): ResolvedContent {
       lookup(resolved.enemies, tier.bossId, `boss of ${where}`);
       for (const spawn of tier.spawns) {
         lookup(resolved.enemies, spawn.enemyId, `spawned enemy of ${where}`);
+      }
+      for (const spawn of tier.bystanderSpawns ?? []) {
+        lookup(resolved.bystanders, spawn.bystanderId, `spawned bystander of ${where}`);
       }
     });
   }
