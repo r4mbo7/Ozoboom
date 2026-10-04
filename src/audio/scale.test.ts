@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HIJAZ_SEMITONES,
   ROOT_MIDI,
   SCALE_SEMITONES,
   SUNRISE_SEMITONES,
@@ -45,6 +46,18 @@ describe('degreeToMidi', () => {
       const pitchClass = (((degreeToMidi(degree) - ROOT_MIDI) % 12) + 12) % 12;
       expect(SCALE_SEMITONES).toContain(pitchClass);
     }
+  });
+});
+
+describe('HIJAZ_SEMITONES', () => {
+  it('raises only the third of the phrygian scale, so the roots stay the same', () => {
+    const changed = SCALE_SEMITONES.flatMap((semitones, degree) =>
+      HIJAZ_SEMITONES[degree] === semitones ? [] : [degree],
+    );
+
+    expect(changed).toEqual([2]);
+    expect(degreeToMidi(2, 0, HIJAZ_SEMITONES) - ROOT_MIDI).toBe(4);
+    expect(degreeToMidi(-1, 0, HIJAZ_SEMITONES)).toBe(degreeToMidi(-1));
   });
 });
 

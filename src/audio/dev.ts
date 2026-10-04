@@ -186,6 +186,23 @@ interface OfflineReport {
 }
 
 const MUTE_BAR = 22;
+const BAR_SECONDS = TICKS_PER_BAR * TICK_SECONDS;
+const REFERENCE_BARS = 36;
+const REFERENCE_SECONDS = 60;
+const REFERENCE_BREAK_BAR = 12;
+const REFERENCE_WINDOWS: readonly (readonly [label: string, fromBar: number, untilBar: number])[] =
+  [
+    ['montée, mesures 8 à 12', 8, 12],
+    ['break, mesures 12 à 16', 12, 16],
+    ['drop, mesures 20 à 24', 20, 24],
+  ];
+const BANDS: readonly (readonly [label: string, low: number | null, high: number | null])[] = [
+  ['grave, sous 150 Hz', null, 150],
+  ['bas médium, 150 Hz à 1 kHz', 150, 1000],
+  ['haut médium, 1 à 5 kHz', 1000, 5000],
+  ['aigu, au-dessus de 5 kHz', 5000, null],
+  ['tout le spectre', null, null],
+];
 
 function peakOf(buffer: AudioBuffer, from: number, until: number): number {
   let peak = 0;
@@ -237,9 +254,30 @@ function playScenario(set: FakeSet, tick: number, ending: 'won' | 'lost'): void 
   }
 }
 
-async function renderOffline(ending: 'won' | 'lost'): Promise<OfflineReport> {
-  const totalTicks = 24 * TICKS_PER_BAR;
-  const seconds = (totalTicks + TICKS_PER_BAR) * TICK_SECONDS;
+function playReference(set: FakeSet, tick: number): void {
+  if (!isBarTick(tick)) {
+    return;
+  }
+  const bar = barOfTick(tick);
+  if (bar === 3 || bar === 6 || bar === 9) {
+    set.state.set.phrase += 1;
+  } else if (bar === REFERENCE_BREAK_BAR) {
+    set.enter('break');
+  }
+}
+
+interface Rendered {
+  buffer: AudioBuffer;
+  drift: DriftStats;
+}
+
+async function render(
+  bars: number,
+  seconds: number,
+  script: (set: FakeSet, tick: number) => void,
+  muteBar: number | null,
+): Promise<Rendered> {
+  const totalTicks = bars * TICKS_PER_BAR;
   const context = new OfflineAudioContext(2, Math.ceil(seconds * SAMPLE_RATE), SAMPLE_RATE);
   const kicks = new Map<number, number>();
   const engine = createAudioEngine({
@@ -252,11 +290,11 @@ async function renderOffline(ending: 'won' | 'lost'): Promise<OfflineReport> {
   const drift = emptyStats();
   for (let tick = 1; tick <= totalTicks; tick += 1) {
     void context.suspend(tick * TICK_SECONDS).then(() => {
-      playScenario(set, tick, ending);
+      script(set, tick);
       set.step();
       engine.update(set.state);
-      if (isBarTick(tick) && barOfTick(tick) >= MUTE_BAR) {
-        engine.setMuted(barOfTick(tick) === MUTE_BAR);
+      if (muteBar !== null && isBarTick(tick) && barOfTick(tick) >= muteBar) {
+        engine.setMuted(barOfTick(tick) === muteBar);
       }
       queueMicrotask(() => {
         const kick = kicks.get(tick);
@@ -269,6 +307,10 @@ async function renderOffline(ending: 'won' | 'lost'): Promise<OfflineReport> {
   }
   const buffer = await context.startRendering();
   engine.destroy();
+  return { buffer, drift };
+}
+
+function clippingOf(buffer: AudioBuffer): { peak: number; clipped: number } {
   let peak = 0;
   let clipped = 0;
   for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
@@ -278,15 +320,117 @@ async function renderOffline(ending: 'won' | 'lost'): Promise<OfflineReport> {
       clipped += size >= 1 ? 1 : 0;
     }
   }
-  const muteAt = MUTE_BAR * TICKS_PER_BAR * TICK_SECONDS;
-  const bar = TICKS_PER_BAR * TICK_SECONDS;
+  return { peak, clipped };
+}
+
+async function renderOffline(ending: 'won' | 'lost'): Promise<OfflineReport> {
+  const seconds = 25 * BAR_SECONDS;
+  const { buffer, drift } = await render(
+    24,
+    seconds,
+    (set, tick) => {
+      playScenario(set, tick, ending);
+    },
+    MUTE_BAR,
+  );
+  const muteAt = MUTE_BAR * BAR_SECONDS;
   return {
     seconds,
-    peak,
-    clipped,
-    beforeMute: peakOf(buffer, muteAt - bar, muteAt),
-    afterMute: peakOf(buffer, muteAt + 0.02, muteAt + bar),
+    ...clippingOf(buffer),
+    beforeMute: peakOf(buffer, muteAt - BAR_SECONDS, muteAt),
+    afterMute: peakOf(buffer, muteAt + 0.02, muteAt + BAR_SECONDS),
     drift,
+  };
+}
+
+async function bandLevels(buffer: AudioBuffer): Promise<number[][]> {
+  const levels: number[][] = [];
+  for (const [, low, high] of BANDS) {
+    const context = new OfflineAudioContext(1, buffer.length, buffer.sampleRate);
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    let node: AudioNode = source;
+    for (const [type, hz] of [
+      ['highpass', low],
+      ['highpass', low],
+      ['lowpass', high],
+      ['lowpass', high],
+    ] as const) {
+      if (hz !== null) {
+        const filter = context.createBiquadFilter();
+        filter.type = type;
+        filter.frequency.value = hz;
+        node.connect(filter);
+        node = filter;
+      }
+    }
+    node.connect(context.destination);
+    source.start();
+    const samples = (await context.startRendering()).getChannelData(0);
+    levels.push(
+      REFERENCE_WINDOWS.map(([, fromBar, untilBar]) => {
+        const from = Math.floor(fromBar * BAR_SECONDS * buffer.sampleRate);
+        const until = Math.floor(untilBar * BAR_SECONDS * buffer.sampleRate);
+        let sum = 0;
+        for (let index = from; index < until; index += 1) {
+          sum += (samples[index] ?? 0) ** 2;
+        }
+        return 10 * Math.log10(sum / (until - from) + 1e-12);
+      }),
+    );
+  }
+  return levels;
+}
+
+function wavOf(buffer: AudioBuffer): Blob {
+  const channels = buffer.numberOfChannels;
+  const bytes = buffer.length * channels * 2;
+  const view = new DataView(new ArrayBuffer(44 + bytes));
+  const text = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) {
+      view.setUint8(offset + index, value.charCodeAt(index));
+    }
+  };
+  text(0, 'RIFF');
+  view.setUint32(4, 36 + bytes, true);
+  text(8, 'WAVE');
+  text(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, channels, true);
+  view.setUint32(24, buffer.sampleRate, true);
+  view.setUint32(28, buffer.sampleRate * channels * 2, true);
+  view.setUint16(32, channels * 2, true);
+  view.setUint16(34, 16, true);
+  text(36, 'data');
+  view.setUint32(40, bytes, true);
+  const data = Array.from({ length: channels }, (_, channel) => buffer.getChannelData(channel));
+  let offset = 44;
+  for (let frame = 0; frame < buffer.length; frame += 1) {
+    for (const samples of data) {
+      const sample = Math.max(-1, Math.min(1, samples[frame] ?? 0));
+      view.setInt16(offset, Math.round(sample * 0x7fff), true);
+      offset += 2;
+    }
+  }
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+interface ReferenceReport {
+  peak: number;
+  clipped: number;
+  drift: DriftStats;
+  levels: number[][];
+  wav: Blob;
+}
+
+async function renderReference(): Promise<ReferenceReport> {
+  const { buffer, drift } = await render(REFERENCE_BARS, REFERENCE_SECONDS, playReference, null);
+  return {
+    ...clippingOf(buffer),
+    drift,
+    levels: await bandLevels(buffer),
+    wav: wavOf(buffer),
   };
 }
 
@@ -329,6 +473,10 @@ root.innerHTML = `
     .bench button:hover { border-color: var(--uv-cyan); }
     .bench button[aria-pressed='true'] { border-color: var(--uv-magenta); color: var(--uv-magenta); box-shadow: 0 0 0.6em var(--uv-magenta); }
     .bench button.primary { border-color: var(--uv-lime); color: var(--uv-lime); }
+    .bench a { color: var(--uv-cyan); }
+    .bench .bands { overflow-x: auto; margin-top: 0.75rem; }
+    .bench table { border-spacing: 1rem 0.25rem; font-variant-numeric: tabular-nums; }
+    .bench th { text-align: left; font-weight: 400; color: color-mix(in srgb, var(--glow) 62%, var(--ink)); }
     .bench .beat { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; background: var(--bad-vibe); vertical-align: middle; }
     .bench .beat.on { background: var(--uv-cyan); box-shadow: 0 0 0.8em var(--uv-cyan); }
   </style>
@@ -402,6 +550,22 @@ root.innerHTML = `
         <dt>Coupure du son</dt><dd data-out="mute">-</dd>
         <dt>Écart kick et tick</dt><dd data-out="offlineDrift">-</dd>
       </dl>
+    </section>
+    <section>
+      <h2>Rendu de référence, 60 secondes</h2>
+      <p style="color: var(--glow); margin-bottom: 0.75rem">
+        Musique seule : montée en couches de 12 mesures, break de 4 mesures, drop de 20 mesures. Niveau efficace par bande, en dBFS.
+      </p>
+      <div class="row">
+        <button type="button" data-reference>Rendre 60 s</button>
+        <a data-out="download" download="ozoboom-reference-60s.wav" hidden>Télécharger le WAV</a>
+      </div>
+      <dl>
+        <dt>Rendu</dt><dd data-out="reference">pas encore lancé</dd>
+        <dt>Crête</dt><dd data-out="referencePeak">-</dd>
+        <dt>Écart kick et tick</dt><dd data-out="referenceDrift">-</dd>
+      </dl>
+      <div class="bands"><table data-out="bands"></table></div>
     </section>
   </div>
 `;
@@ -514,6 +678,35 @@ function refresh(): void {
     ?.classList.toggle('on', state.tick % 12 < 3 && state.status === 'running');
 }
 
+function dbfs(value: number): string {
+  return value.toFixed(1);
+}
+
+function showReference(report: ReferenceReport): void {
+  show('reference', `${String(REFERENCE_SECONDS)} s, ${String(REFERENCE_BARS)} mesures`);
+  show(
+    'referencePeak',
+    `${report.peak.toFixed(3)} (${(20 * Math.log10(report.peak)).toFixed(2)} dBFS), ${String(report.clipped)} échantillons écrêtés`,
+  );
+  show(
+    'referenceDrift',
+    `${String(report.drift.count)} temps, moyen ${ms(report.drift.sum / report.drift.count)}, max ${ms(report.drift.worst)}`,
+  );
+  const link = output('download');
+  if (link instanceof HTMLAnchorElement) {
+    URL.revokeObjectURL(link.href);
+    link.href = URL.createObjectURL(report.wav);
+    link.hidden = false;
+  }
+  const head = `<tr><th>Bande</th>${REFERENCE_WINDOWS.map(([label]) => `<th>${label}</th>`).join('')}<th>drop moins break</th></tr>`;
+  const rows = BANDS.map(([label], band) => {
+    const levels = report.levels[band] ?? [];
+    const gap = (levels[2] ?? 0) - (levels[1] ?? 0);
+    return `<tr data-band="${String(band)}"><td>${label}</td>${levels.map((level) => `<td>${dbfs(level)}</td>`).join('')}<td>${gap >= 0 ? '+' : ''}${dbfs(gap)} dB</td></tr>`;
+  });
+  output('bands').innerHTML = head + rows.join('');
+}
+
 let last = performance.now();
 let accumulator = 0;
 function frame(time: number): void {
@@ -562,6 +755,9 @@ root.addEventListener('click', (event) => {
     state.status = status as GameStatus;
   } else if (target.dataset.event !== undefined) {
     fake.queue(target.dataset.event as EventName, Number(target.dataset.count ?? 1));
+  } else if (target.dataset.reference !== undefined) {
+    show('reference', 'rendu en cours...');
+    void renderReference().then(showReference);
   } else if (offline === 'won' || offline === 'lost') {
     show('offline', 'rendu en cours...');
     void renderOffline(offline).then((report) => {

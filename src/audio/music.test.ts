@@ -1,43 +1,63 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
+import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE } from '../shared/tempo';
 import type { SetProgress } from '../sim/state';
-import { dropTickOf, layersFor, modeOf, phraseAt, segmentAt } from './music';
+import { STEP_TICKS } from './clock';
+import { HIJAZ_SEMITONES, degreeToMidi } from './scale';
+import {
+  ORIENTAL_NOTES,
+  breakCueAt,
+  dropTickOf,
+  layersFor,
+  modeOf,
+  phraseAt,
+  segmentAt,
+} from './music';
 
 describe('layersFor', () => {
   it('opens the set on kick, rolling bass and hats only', () => {
     const layers = layersFor('buildup', 0, 0);
 
     expect(layers).toMatchObject({ kick: true, bass: true, hats: true, hats16: false });
-    expect(layers).toMatchObject({ pad: false, arp: false, lead: false });
+    expect(layers).toMatchObject({ pad: false, texture: false, arp: false, lead: false });
+    expect(layers).toMatchObject({ clap: false, squelch: false, oriental: false });
   });
 
-  it('stacks the pad, then the arpeggio, then the lead, one per phrase', () => {
+  it('stacks the pad and the forest textures, then the arpeggio, then the lead, one per phrase', () => {
     const stacked = [1, 2, 3].map((phrase) => {
-      const { pad, arp, lead } = layersFor('buildup', 0, phrase);
-      return { pad, arp, lead };
+      const { pad, texture, arp, lead } = layersFor('buildup', 0, phrase);
+      return { pad, texture, arp, lead };
     });
 
     expect(stacked).toEqual([
-      { pad: true, arp: false, lead: false },
-      { pad: true, arp: true, lead: false },
-      { pad: true, arp: true, lead: true },
+      { pad: true, texture: true, arp: false, lead: false },
+      { pad: true, texture: true, arp: true, lead: false },
+      { pad: true, texture: true, arp: true, lead: true },
     ]);
   });
 
-  it('thickens the groove and opens the lead filter on higher tiers', () => {
+  it('thickens the groove, adds the acid line and opens the filters on higher tiers', () => {
     const first = layersFor('buildup', 0, 3);
     const second = layersFor('buildup', 1, 0);
 
-    expect(second.hats16).toBe(true);
-    expect(second.lead).toBe(true);
+    expect(second).toMatchObject({ hats16: true, lead: true, squelch: true });
     expect(second.leadCutoff).toBeGreaterThan(first.leadCutoff);
+    expect(second.bassCutoff).toBeGreaterThan(first.bassCutoff);
   });
 
-  it('pulls the kick, the bass and the hats out on the break', () => {
+  it('plays the oriental lead from the most intense tier, and in every break and drop', () => {
+    expect(layersFor('buildup', 0, 3).oriental).toBe(false);
+    expect(layersFor('buildup', 1, 4).oriental).toBe(true);
+    expect(layersFor('break', 0, 3).oriental).toBe(true);
+    expect(layersFor('drop', 0, 3).oriental).toBe(true);
+  });
+
+  it('empties the break down to the pad, the textures and a muffled lead', () => {
     const layers = layersFor('break', 1, 5);
 
-    expect(layers).toMatchObject({ kick: false, bass: false, hats: false, lead: false });
-    expect(layers.pad).toBe(true);
+    expect(layers).toMatchObject({ kick: false, bass: false, hats: false, hats16: false });
+    expect(layers).toMatchObject({ clap: false, arp: false, squelch: false });
+    expect(layers).toMatchObject({ pad: true, texture: true, lead: true });
+    expect(layers.leadCutoff).toBeLessThan(layersFor('drop', 1, 5).leadCutoff);
   });
 
   it('brings everything back on the drop, brighter than the buildup', () => {
@@ -45,6 +65,64 @@ describe('layersFor', () => {
 
     expect(Object.values(drop).every(Boolean)).toBe(true);
     expect(drop.leadCutoff).toBeGreaterThan(layersFor('buildup', 0, 3).leadCutoff);
+    expect(drop.bassCutoff).toBeGreaterThan(layersFor('buildup', 0, 3).bassCutoff);
+  });
+});
+
+describe('breakCueAt', () => {
+  const dropTick = 20 * TICKS_PER_BAR;
+  const beforeDrop = (ticks: number) => breakCueAt(dropTick, dropTick - ticks);
+
+  it('leaves the first bar of a four bar break to the atmosphere', () => {
+    expect(beforeDrop(4 * TICKS_PER_BAR)).toEqual({ roll: null, cut: false });
+    expect(beforeDrop(3 * TICKS_PER_BAR + STEP_TICKS)).toEqual({ roll: null, cut: false });
+  });
+
+  it('rolls the snare faster bar after bar: quarters, eighths, sixteenths, then thirty-seconds', () => {
+    const rolls = [
+      3 * TICKS_PER_BAR,
+      2 * TICKS_PER_BAR,
+      TICKS_PER_BAR,
+      2 * TICKS_PER_BEAT,
+      TICKS_PER_BEAT + STEP_TICKS,
+    ].map((ticks) => beforeDrop(ticks).roll);
+
+    expect(rolls).toEqual([
+      TICKS_PER_BEAT,
+      2 * STEP_TICKS,
+      STEP_TICKS,
+      STEP_TICKS / 2,
+      STEP_TICKS / 2,
+    ]);
+  });
+
+  it('cuts everything on the last beat before the drop', () => {
+    expect(beforeDrop(TICKS_PER_BEAT)).toEqual({ roll: null, cut: true });
+    expect(beforeDrop(STEP_TICKS)).toEqual({ roll: null, cut: true });
+  });
+
+  it('has no cue outside a break or once the drop has started', () => {
+    expect(breakCueAt(null, dropTick)).toEqual({ roll: null, cut: false });
+    expect(breakCueAt(dropTick, dropTick)).toEqual({ roll: null, cut: false });
+  });
+});
+
+describe('ORIENTAL_NOTES', () => {
+  it('loops four bars of sixteenths without overlapping notes', () => {
+    const ends = ORIENTAL_NOTES.map(([step, , steps]) => step + steps);
+    const starts = [...ORIENTAL_NOTES.slice(1).map(([step]) => step), 64];
+
+    expect(ORIENTAL_NOTES[0]?.[0]).toBe(0);
+    expect(ends).toEqual(starts);
+  });
+
+  it('leans on the flat second and the major third of the hijaz mode', () => {
+    const pitchClasses = new Set(
+      ORIENTAL_NOTES.map(([, degree]) => degreeToMidi(degree, 0, HIJAZ_SEMITONES) % 12),
+    );
+
+    expect(pitchClasses).toContain(degreeToMidi(1, 0, HIJAZ_SEMITONES) % 12);
+    expect(pitchClasses).toContain(degreeToMidi(2, 0, HIJAZ_SEMITONES) % 12);
   });
 });
 
