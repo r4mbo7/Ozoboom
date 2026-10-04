@@ -17,4 +17,18 @@ describe('createAudioEngine', () => {
 
     expect(createContext).not.toHaveBeenCalled();
   });
+
+  it('starts no menu ambience and no timer before start', () => {
+    const createContext = vi.fn<() => BaseAudioContext>();
+    const repeat = vi.fn<(callback: () => void) => () => void>();
+    const engine = createAudioEngine({ createContext, repeat });
+
+    engine.setMood('menu');
+    engine.setMood('set');
+    engine.setMood('menu');
+    engine.destroy();
+
+    expect(createContext).not.toHaveBeenCalled();
+    expect(repeat).not.toHaveBeenCalled();
+  });
 });

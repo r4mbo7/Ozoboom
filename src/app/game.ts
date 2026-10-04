@@ -20,6 +20,7 @@ import { createFixedStepLoop } from './loop';
 import { createPauseScreen } from './pause';
 import { loadPrefs, savePref } from './prefs';
 import { createSession, type Session } from './session';
+import { soundOf, type Screen } from './sound';
 
 const SET_ID = 'soiree-v0';
 const CLASS_ID = 'mage';
@@ -28,8 +29,6 @@ const DEFAULT_BREAK_BARS = 4;
 // per second 3. Past 4 ticks (138 ms, under 7.25 frames per second), the game slows down instead
 // of jumping ahead, so a hitch never lands a burst of hits the player could not react to.
 const MAX_TICKS_PER_FRAME = 4;
-
-type Screen = 'title' | 'game' | 'end';
 
 export async function startGame(root: HTMLElement, dev: DevOptions): Promise<void> {
   const { content } = dev;
@@ -49,7 +48,6 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     breakBars: (tier) => set.tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,
     trapEffectOf: (id) => content.traps.find((trap) => trap.id === id)?.effect.kind ?? id,
   });
-  audio.setMuted(prefs.muted);
 
   let screen: Screen = 'title';
   let paused = false;
@@ -75,7 +73,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     },
     onToggleMute(muted) {
       prefs.muted = muted;
-      audio.setMuted(muted || paused);
+      applySound();
       savePref(storage, 'muted', muted);
     },
     onFeedback: openForm,
@@ -90,6 +88,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     { label: 'Ton avis', button: createFeedbackButton(), activate: openForm },
   ]);
   ui.showTitle({ calmMode: prefs.calmMode, muted: prefs.muted, device: 'none' });
+  applySound();
+
+  function applySound(): void {
+    const sound = soundOf({ screen, paused, muted: prefs.muted, hidden: document.hidden });
+    audio.setMuted(sound.muted);
+    audio.setMood(sound.mood);
+  }
 
   function newSession(): Session {
     return createSession({
@@ -141,6 +146,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     controls = controlsFor(session);
     screen = 'game';
     ui.showGame();
+    applySound();
   }
 
   function setPaused(next: boolean, device = uiSnapshot?.device ?? 'none'): void {
@@ -148,7 +154,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       return;
     }
     paused = next;
-    audio.setMuted(next || prefs.muted);
+    applySound();
     if (next) {
       pause.show(device);
     } else {
@@ -203,6 +209,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     if (screen === 'game' && (status === 'won' || status === 'lost')) {
       screen = 'end';
       ui.showEnd(session.state);
+      applySound();
     }
     if (probe !== null) {
       probe.cost.sim += performance.now() - start;
@@ -256,6 +263,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     if (document.hidden && screen === 'game') {
       setPaused(true);
     }
+    applySound();
   });
   loop.start();
 }

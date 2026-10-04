@@ -53,7 +53,7 @@ Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick
 | `src/data/types.ts`    | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`                          |
 | `src/input/intents.ts` | `InputSnapshot` produit par chaque périphérique, `InputSource`                                                                                                |
 | `src/render/types.ts`  | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme                                                                              |
-| `src/audio/types.ts`   | `AudioEngine` : `start`, `update(state)`, `setMuted`                                                                                                          |
+| `src/audio/types.ts`   | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setMood('set' \| 'menu')`                                                                              |
 
 Conventions de la simulation :
 
