@@ -14,15 +14,33 @@ export interface EndScreen {
   setDevice(device: InputDevice): void;
 }
 
-const WON = {
+export interface Ending {
+  title: string;
+  text: string;
+}
+
+const SUNRISE: Ending = {
   title: 'Sunrise\u202f!',
   text: 'Le soleil se lève sur le dancefloor. Le sound system a tenu toute la nuit.',
 };
 
-const LOST = {
+const SILENCE: Ending = {
   title: 'La musique s’arrête',
   text: 'Les bad vibes ont eu raison du sound system. On rebranche et on y retourne\u202f?',
 };
+
+const EMPTY_FLOOR: Ending = {
+  title: 'Plus personne debout',
+  text: 'Le sound system tient bon, mais les bad vibes ont vidé la piste. On se relève et on y retourne\u202f?',
+};
+
+// The sim loses on a silent scene before it looks at the players: so does the text.
+export function endingOf(state: SimState): Ending {
+  if (state.status === 'won') {
+    return SUNRISE;
+  }
+  return state.core.hp <= 0 ? SILENCE : EMPTY_FLOOR;
+}
 
 export function createEnd(onRestart: () => void, onFeedback?: () => void): EndScreen {
   const element = el('section', 'ui-screen ui-overlay ui-end');
@@ -62,8 +80,9 @@ export function createEnd(onRestart: () => void, onFeedback?: () => void): EndSc
       const won = state.status === 'won';
       element.dataset.outcome = won ? 'won' : 'lost';
       emblem.replaceChildren(icon('ui-end__icon', won ? SUN : FOG));
-      setText(title, won ? WON.title : LOST.title);
-      setText(text, won ? WON.text : LOST.text);
+      const ending = endingOf(state);
+      setText(title, ending.title);
+      setText(text, ending.text);
       stats.replaceChildren(
         ...endStats(state).map((stat) => {
           const item = el('div', 'ui-stats__item');

@@ -25,3 +25,8 @@ export function createToggle(label: string, hint: string, onText: string, offTex
     },
   };
 }
+
+// The same switch on the title and in the pause: both read and write the `muted` preference.
+export function createSoundToggle(): Toggle {
+  return createToggle('Son', 'Musique et effets', 'Activé', 'Coupé');
+}
