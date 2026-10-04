@@ -91,6 +91,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       },
     },
     { label: 'Ton avis', button: createFeedbackButton(), activate: openForm },
+    { label: 'Quitter la partie', confirm: QUIT, activate: quit },
   ]);
   ui.showTitle({ calmMode: prefs.calmMode, muted: prefs.muted, device: 'none' });
   applySound();
@@ -161,6 +162,22 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     applySound();
   }
 
+  // Back to the title as on a fresh load: no end screen, a new idle game behind the title.
+  function quit(): void {
+    paused = false;
+    pause.hide();
+    screen = 'title';
+    applySound();
+    played = false;
+    session = newSession();
+    controls = controlsFor(session);
+    ui.showTitle({
+      calmMode: prefs.calmMode,
+      muted: prefs.muted,
+      device: uiSnapshot?.device ?? 'none',
+    });
+  }
+
   function setPaused(next: boolean, device = uiSnapshot?.device ?? 'none'): void {
     if (paused === next) {
       return;
@@ -185,6 +202,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       const wasPaused = paused;
       if (!paused) {
         setPaused(gameplay.pause, snapshot.device);
+      } else if ((gameplay.pause || menu.back) && pause.confirming) {
+        pause.cancel();
       } else if (gameplay.pause || menu.back) {
         setPaused(false);
       } else {
@@ -279,6 +298,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   });
   loop.start();
 }
+
+const QUIT = {
+  question: 'Quitter le set\u202f?',
+  text: 'Tu rentres avant le sunrise\u202f: la partie s’arrête ici, sans score.',
+  stay: 'Rester',
+  leave: 'Quitter',
+} as const;
 
 const IDLE_ACTIONS = {
   fire: false,
