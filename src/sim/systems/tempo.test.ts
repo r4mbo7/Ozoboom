@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE } from '../../shared/tempo';
-import { FIXTURE_OPTIONS, eventsOf, stepAndRecord } from '../fixtures';
+import { FIXTURE_OPTIONS, eventsOf, peaceful, stepAndRecord } from '../fixtures';
 import { createSimulation } from '../index';
 
 const TWO_PHRASES = 2 * TICKS_PER_PHRASE;
 
 describe('tempo', () => {
   it('emits each beat, bar and phrase exactly once, on its first tick', () => {
-    const simulation = createSimulation(FIXTURE_OPTIONS);
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
     const initial = eventsOf(simulation.state);
 
     const recorded = [...initial, ...stepAndRecord(simulation, TWO_PHRASES)];
@@ -36,7 +36,7 @@ describe('tempo', () => {
   });
 
   it('keeps the beat, bar and phrase counters of the set in step with the tick', () => {
-    const simulation = createSimulation(FIXTURE_OPTIONS);
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
     const tick = TICKS_PER_PHRASE + 3 * TICKS_PER_BAR + 2 * TICKS_PER_BEAT + 5;
 
     stepAndRecord(simulation, tick);

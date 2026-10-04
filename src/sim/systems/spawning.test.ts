@@ -1,0 +1,164 @@
+import { describe, expect, it } from 'vitest';
+import type { SetDefinition } from '../../data/types';
+import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../../shared/tempo';
+import {
+  FIXTURE_CONTENT,
+  FIXTURE_OPTIONS,
+  FIXTURE_SET,
+  peaceful,
+  placeEnemy,
+  stepAndRecord,
+  type TimedEvent,
+} from '../fixtures';
+import { createSimulation, type SimulationOptions } from '../index';
+
+const BUILDUP = TICKS_PER_PHRASE;
+const BREAK = 2 * TICKS_PER_BAR;
+
+const WAVES: SetDefinition = {
+  ...FIXTURE_SET,
+  tiers: [
+    {
+      buildupPhrases: 3,
+      breakBars: 2,
+      bossId: 'curfew',
+      spawns: [
+        { enemyId: 'grump', everyBars: 1, count: 1, fromPhrase: 0, toPhrase: 0 },
+        { enemyId: 'grump', everyBars: 4, count: 3, fromPhrase: 1 },
+        { enemyId: 'curfew', everyBars: 8, count: 2, fromPhrase: 2, toPhrase: 2 },
+      ],
+    },
+    {
+      buildupPhrases: 1,
+      breakBars: 2,
+      bossId: 'curfew',
+      spawns: [{ enemyId: 'grump', everyBars: 2, count: 1, fromPhrase: 0 }],
+    },
+  ],
+};
+
+const WAVES_OPTIONS: SimulationOptions = {
+  ...FIXTURE_OPTIONS,
+  content: { ...FIXTURE_CONTENT, sets: [WAVES] },
+};
+
+function spawnsByTick(recorded: readonly TimedEvent[]): Map<number, string[]> {
+  const byTick = new Map<number, string[]>();
+  for (const { tick, event } of recorded) {
+    if (event.type === 'enemySpawned') {
+      byTick.set(tick, [...(byTick.get(tick) ?? []), event.kind]);
+    }
+  }
+  return byTick;
+}
+
+describe('spawning', () => {
+  it('spawns the enemies of each rule on the bars of the buildup that fall in its phrases', () => {
+    const simulation = peaceful(createSimulation(WAVES_OPTIONS));
+
+    const recorded = stepAndRecord(simulation, 3 * TICKS_PER_PHRASE - 1);
+
+    const expected = new Map<number, string[]>();
+    for (let bar = 1; bar < 48; bar++) {
+      const phrase = Math.floor(bar / 16);
+      const kinds = [
+        ...(phrase === 0 ? ['grump'] : []),
+        ...(phrase >= 1 && bar % 4 === 0 ? ['grump', 'grump', 'grump'] : []),
+        ...(phrase === 2 && bar % 8 === 0 ? ['curfew', 'curfew'] : []),
+      ];
+      if (kinds.length > 0) {
+        expected.set(bar * TICKS_PER_BAR, kinds);
+      }
+    }
+    expect(spawnsByTick(recorded)).toEqual(expected);
+  });
+
+  it('counts the bars and phrases of a rule from the start of the buildup of its tier', () => {
+    const simulation = peaceful(createSimulation(WAVES_OPTIONS));
+    const secondBuildup = 3 * TICKS_PER_PHRASE + BREAK + TICKS_PER_BAR;
+    stepAndRecord(simulation, secondBuildup - 1);
+
+    const recorded = stepAndRecord(simulation, TICKS_PER_PHRASE);
+
+    const ticks = [...spawnsByTick(recorded).keys()];
+    expect(simulation.state.set.segmentStartTick).toBe(secondBuildup);
+    expect(ticks).toEqual(
+      Array.from({ length: 8 }, (_, i) => secondBuildup + 2 * i * TICKS_PER_BAR),
+    );
+  });
+
+  it('spawns nothing on the tick 0, which no step simulates', () => {
+    const simulation = createSimulation(FIXTURE_OPTIONS);
+
+    const recorded = stepAndRecord(simulation, TICKS_PER_BAR - 1);
+
+    expect(simulation.state.enemies).toEqual([]);
+    expect(recorded.filter(({ event }) => event.type === 'enemySpawned')).toEqual([]);
+  });
+
+  it('spawns on the edge of the arena, at positions drawn from the seed', () => {
+    const run = (seed: number) =>
+      stepAndRecord(createSimulation({ ...FIXTURE_OPTIONS, seed }), 3 * TICKS_PER_BAR).flatMap(
+        ({ event }) => (event.type === 'enemySpawned' ? [{ x: event.x, y: event.y }] : []),
+      );
+
+    const first = run(7);
+    const again = run(7);
+    const other = run(8);
+
+    expect(first).toHaveLength(6);
+    expect(again).toEqual(first);
+    expect(other).not.toEqual(first);
+  });
+
+  it('places each spawn inside the arena, touching one of its edges', () => {
+    const simulation = createSimulation(FIXTURE_OPTIONS);
+    const { width, height } = simulation.state.arena;
+
+    const recorded = stepAndRecord(simulation, 8 * TICKS_PER_BAR);
+
+    const spawns = recorded.flatMap(({ event }) => (event.type === 'enemySpawned' ? [event] : []));
+    expect(spawns).toHaveLength(16);
+    const radius = 12;
+    for (const { x, y } of spawns) {
+      const onEdge = x === radius || y === radius || x === width - radius || y === height - radius;
+      expect(onEdge).toBe(true);
+      expect(x).toBeGreaterThanOrEqual(radius);
+      expect(x).toBeLessThanOrEqual(width - radius);
+      expect(y).toBeGreaterThanOrEqual(radius);
+      expect(y).toBeLessThanOrEqual(height - radius);
+    }
+  });
+
+  it('compounds the hp and speed factors once per phrase since the start of the set', () => {
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
+    stepAndRecord(simulation, 2 * TICKS_PER_PHRASE);
+
+    const enemy = placeEnemy(simulation.state, 'grump', 100, 100);
+
+    expect(simulation.state.set.phrase).toBe(2);
+    expect(enemy).toMatchObject({
+      hp: 20 * 1.1 * 1.1,
+      maxHp: 20 * 1.1 * 1.1,
+      speed: 2.5 * 1.02 * 1.02,
+      damage: 5,
+      target: 'core',
+      isBoss: false,
+    });
+  });
+
+  it('lands the boss of the tier on the exact tick of the drop', () => {
+    const simulation = createSimulation(FIXTURE_OPTIONS);
+    stepAndRecord(peaceful(simulation), BUILDUP + BREAK - 1);
+
+    simulation.step([]);
+
+    const { state } = simulation;
+    const spawned = state.events.filter((event) => event.type === 'enemySpawned');
+    expect(state.tick).toBe(BUILDUP + BREAK);
+    expect(state.set.segment).toBe('drop');
+    expect(spawned).toHaveLength(1);
+    expect(state.enemies).toHaveLength(1);
+    expect(state.enemies[0]).toMatchObject({ kind: 'curfew', isBoss: true, maxHp: 500 * 1.2 });
+  });
+});

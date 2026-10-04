@@ -5,41 +5,19 @@ import {
   FIXTURE_OPTIONS,
   FIXTURE_SET,
   eventsOf,
+  peaceful,
   stepAndRecord,
 } from '../fixtures';
 import { createSimulation } from '../index';
-import type { EnemyState } from '../state';
 
 const BUILDUP = TICKS_PER_PHRASE;
 const BREAK = 2 * TICKS_PER_BAR;
 const DROP = TICKS_PER_BAR;
 const TIER = BUILDUP + BREAK + DROP;
 
-function boss(id: number): EnemyState {
-  return {
-    id,
-    kind: 'curfew',
-    x: 100,
-    y: 100,
-    prevX: 100,
-    prevY: 100,
-    radius: 40,
-    hp: 500,
-    maxHp: 500,
-    speed: 1,
-    damage: 30,
-    target: 'core',
-    attackCooldown: 0,
-    slowFactor: 1,
-    stunTicks: 0,
-    marked: false,
-    isBoss: true,
-  };
-}
-
 describe('set progress', () => {
   it('walks the fixture set through buildup, break and drop of each tier, on the bar grid', () => {
-    const simulation = createSimulation(FIXTURE_OPTIONS);
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
     const initial = eventsOf(simulation.state);
 
     const recorded = [...initial, ...stepAndRecord(simulation, 2 * TIER)];
@@ -56,7 +34,7 @@ describe('set progress', () => {
   });
 
   it('records where the current segment started', () => {
-    const simulation = createSimulation(FIXTURE_OPTIONS);
+    const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
 
     stepAndRecord(simulation, BUILDUP + 5);
 
@@ -67,16 +45,17 @@ describe('set progress', () => {
     });
   });
 
-  it('holds the drop while a boss is alive and ends it on the next bar once the boss is gone', () => {
+  it('holds the drop while its boss is alive and ends it on the next bar once the boss is gone', () => {
     const simulation = createSimulation(FIXTURE_OPTIONS);
-    stepAndRecord(simulation, BUILDUP + BREAK);
-    simulation.state.enemies.push(boss(1));
+    stepAndRecord(peaceful(simulation), BUILDUP + BREAK - 1);
 
-    const whileBossAlive = stepAndRecord(simulation, 4 * TICKS_PER_BAR);
+    const whileBossAlive = stepAndRecord(simulation, 4 * TICKS_PER_BAR + 1);
     simulation.state.enemies.length = 0;
     const afterBossGone = stepAndRecord(simulation, TICKS_PER_BAR);
 
-    expect(whileBossAlive.filter(({ event }) => event.type === 'segment')).toEqual([]);
+    expect(whileBossAlive.filter(({ event }) => event.type === 'segment')).toEqual([
+      { tick: BUILDUP + BREAK, event: { type: 'segment', segment: 'drop', tier: 0 } },
+    ]);
     expect(simulation.state.set).toMatchObject({ tier: 1, segment: 'buildup' });
     expect(afterBossGone.filter(({ event }) => event.type === 'segment')).toEqual([
       {
@@ -87,15 +66,17 @@ describe('set progress', () => {
   });
 
   it('chains an empty break straight into the drop on the same tick', () => {
-    const simulation = createSimulation({
-      ...FIXTURE_OPTIONS,
-      content: {
-        ...FIXTURE_CONTENT,
-        sets: [
-          { ...FIXTURE_SET, tiers: FIXTURE_SET.tiers.map((tier) => ({ ...tier, breakBars: 0 })) },
-        ],
-      },
-    });
+    const simulation = peaceful(
+      createSimulation({
+        ...FIXTURE_OPTIONS,
+        content: {
+          ...FIXTURE_CONTENT,
+          sets: [
+            { ...FIXTURE_SET, tiers: FIXTURE_SET.tiers.map((tier) => ({ ...tier, breakBars: 0 })) },
+          ],
+        },
+      }),
+    );
 
     const recorded = stepAndRecord(simulation, BUILDUP);
 

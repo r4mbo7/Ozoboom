@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { length, sub } from '../../shared/vec';
 import type { PlayerInput } from '../commands';
-import { FIXTURE_OPTIONS, commandFor } from '../fixtures';
+import { FIXTURE_OPTIONS, commandFor, peaceful } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { PlayerState } from '../state';
 
 function soloGame(): { simulation: Simulation; player: PlayerState } {
-  const simulation = createSimulation(FIXTURE_OPTIONS);
+  const simulation = peaceful(createSimulation(FIXTURE_OPTIONS));
   const player = simulation.state.players[0];
   if (player === undefined) {
     throw new Error('expected one player');
