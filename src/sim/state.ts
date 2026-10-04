@@ -65,6 +65,7 @@ export interface PlayerState extends Positioned {
   upgrades: string[];
   modifiers: Partial<Record<StatKey, number>>;
   downed: boolean;
+  invulnerableTicks?: number;
 }
 
 export interface EnemyState extends Positioned {
@@ -105,6 +106,7 @@ export interface TrapState extends Positioned {
   ownerId: PlayerId;
   level: number;
   angle: number;
+  direction?: Vec2;
   hp: number;
   cooldown: number;
 }
@@ -115,6 +117,24 @@ export interface PickupState extends Positioned {
   id: EntityId;
   kind: PickupKind;
   amount: number;
+  ticksLeft: number;
+}
+
+export interface LaserShowState {
+  id: EntityId;
+  playerId: PlayerId;
+  damagePerTick: number;
+  radius: number;
+  ticksLeft: number;
+}
+
+export interface BarrierState {
+  id: EntityId;
+  playerId: PlayerId;
+  x: number;
+  y: number;
+  radius: number;
+  hp: number;
   ticksLeft: number;
 }
 
@@ -155,6 +175,7 @@ export type SimEvent =
   | { type: 'coreHit'; damage: number }
   | { type: 'coreRepaired'; amount: number }
   | { type: 'trapPlaced'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'trapUpgraded'; id: EntityId; kind: string; level: number; x: number; y: number }
   | { type: 'trapFired'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapDestroyed'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'pickupCollected'; playerId: PlayerId; kind: PickupKind; amount: number }
@@ -176,6 +197,9 @@ export interface SimState {
   projectiles: ProjectileState[];
   traps: TrapState[];
   pickups: PickupState[];
+  // Optional so that states built by hand before these effects existed stay valid.
+  laserShows?: LaserShowState[];
+  barriers?: BarrierState[];
   pendingUpgrades: UpgradeOffer[];
   nextEntityId: EntityId;
   stats: SimStats;
