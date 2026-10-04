@@ -73,7 +73,6 @@ rumbleButtons.forEach((button, index) => {
   button.addEventListener('click', () => {
     selectRumble(index);
     playRumble(index);
-    button.blur();
   });
 });
 selectRumble(0);
