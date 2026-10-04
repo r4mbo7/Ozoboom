@@ -57,6 +57,8 @@ export function createInitialState(
     projectiles: [],
     traps: [],
     pickups: [],
+    laserShows: [],
+    barriers: [],
     pendingUpgrades: [],
     nextEntityId: 1,
     stats: { kills: 0, phrasesHeld: 0, damageDealt: 0, vibesCollected: 0, wattsSpent: 0 },
@@ -96,5 +98,6 @@ function createPlayer(
     upgrades: [],
     modifiers: {},
     downed: false,
+    invulnerableTicks: 0,
   };
 }

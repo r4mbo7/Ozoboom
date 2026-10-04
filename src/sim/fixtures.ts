@@ -1,7 +1,7 @@
-import type { GameContent, SetDefinition } from '../data/types';
-import { IDLE_INPUT, type PlayerCommand, type PlayerInput } from './commands';
+import type { EnemyDefinition, GameContent, SetDefinition, TrapDefinition } from '../data/types';
+import { IDLE_INPUT, type PlayerAction, type PlayerCommand, type PlayerInput } from './commands';
 import type { Simulation, SimulationOptions } from './index';
-import type { PlayerId, SimEvent, SimState } from './state';
+import type { EnemyState, PlayerId, SimEvent, SimState } from './state';
 
 export function commandFor(playerId: PlayerId, input: Partial<PlayerInput> = {}): PlayerCommand {
   return { playerId, input: { ...IDLE_INPUT, ...input }, actions: [] };
@@ -167,3 +167,143 @@ export const FIXTURE_OPTIONS: SimulationOptions = {
   setId: 'fixture-set',
   content: FIXTURE_CONTENT,
 };
+
+const trap = (
+  id: string,
+  cadence: TrapDefinition['cadence'],
+  effect: TrapDefinition['effect'],
+): TrapDefinition => ({
+  id,
+  name: id,
+  description: id,
+  cost: 20,
+  radius: 16,
+  hp: 50,
+  cadence,
+  effect,
+  maxLevel: 3,
+  levelMul: 2,
+});
+
+const [raver] = FIXTURE_CONTENT.classes;
+if (raver === undefined) {
+  throw new Error('expected the raver class');
+}
+
+export const FIXTURE_BOUNCER: EnemyDefinition = {
+  id: 'bouncer',
+  name: 'Videur',
+  behaviour: 'heavy',
+  maxHp: 200,
+  speed: 1,
+  radius: 20,
+  damage: 15,
+  attackCooldownTicks: 36,
+  aggroRadius: 100,
+  vibesDrop: 5,
+  wattsDrop: 3,
+  scalingPerPhrase: { hp: 0.1, speed: 0 },
+};
+
+export const FAST_DROP_SET: SetDefinition = {
+  ...FIXTURE_SET,
+  id: 'fast-drop',
+  tiers: FIXTURE_SET.tiers.map((tier) => ({ ...tier, buildupPhrases: 0, breakBars: 1 })),
+};
+
+export const EFFECTS_CONTENT: GameContent = {
+  ...FIXTURE_CONTENT,
+  sets: [...FIXTURE_CONTENT.sets, FAST_DROP_SET],
+  classes: [
+    ...FIXTURE_CONTENT.classes,
+    {
+      ...raver,
+      id: 'roadie',
+      skill: {
+        id: 'roadie-barrier',
+        name: 'Barrière',
+        description: 'Une barrière autour de soi.',
+        cooldownTicks: 192,
+        effect: { kind: 'barrier', hp: 60, radius: 100, durationTicks: 96 },
+      },
+      ultimate: {
+        id: 'roadie-dash',
+        name: 'Ruée',
+        description: 'Une ruée en avant.',
+        cooldownTicks: 0,
+        effect: { kind: 'dash', distance: 120, invulnerableTicks: 12 },
+      },
+    },
+    {
+      ...raver,
+      id: 'carer',
+      skill: {
+        id: 'carer-pulse',
+        name: 'Pulsation',
+        description: 'Soigne autour de soi.',
+        cooldownTicks: 192,
+        effect: { kind: 'healPulse', amount: 30, radius: 150, coreRepair: 50 },
+      },
+      ultimate: {
+        id: 'carer-dash',
+        name: 'Ruée',
+        description: 'Une ruée en avant.',
+        cooldownTicks: 0,
+        effect: { kind: 'dash', distance: 80, invulnerableTicks: 6 },
+      },
+    },
+  ],
+  enemies: [...FIXTURE_CONTENT.enemies, FIXTURE_BOUNCER],
+  traps: [
+    ...FIXTURE_CONTENT.traps,
+    trap('beam', 'continuous', { kind: 'beam', damagePerTick: 1, length: 200, width: 20 }),
+    trap('mister', 'continuous', { kind: 'mist', slowFactor: 0.5, healPerBar: 10, radius: 80 }),
+    trap('lure', 'continuous', { kind: 'lure', radius: 150, markedDamageMul: 2 }),
+    trap('strobe', 'drop', { kind: 'strobe', stunTicks: 24, radius: 120 }),
+    trap('metronome', 'bar', { kind: 'shockwave', damage: 1, radius: 10, knockback: 0 }),
+  ],
+};
+
+export const EFFECTS_OPTIONS: SimulationOptions = { ...FIXTURE_OPTIONS, content: EFFECTS_CONTENT };
+
+export function addEnemy(
+  state: SimState,
+  definition: EnemyDefinition,
+  x: number,
+  y: number,
+): EnemyState {
+  const enemy: EnemyState = {
+    id: state.nextEntityId,
+    kind: definition.id,
+    x,
+    y,
+    prevX: x,
+    prevY: y,
+    radius: definition.radius,
+    hp: definition.maxHp,
+    maxHp: definition.maxHp,
+    speed: definition.speed,
+    damage: definition.damage,
+    target: 'core',
+    attackCooldown: 0,
+    slowFactor: 1,
+    stunTicks: 0,
+    marked: false,
+    isBoss: definition.behaviour === 'boss',
+  };
+  state.nextEntityId += 1;
+  state.enemies.push(enemy);
+  return enemy;
+}
+
+export function actionsFor(playerId: PlayerId, ...actions: PlayerAction[]): PlayerCommand {
+  return { ...commandFor(playerId), actions };
+}
+
+export function enemyDefinition(id: string): EnemyDefinition {
+  const definition = EFFECTS_CONTENT.enemies.find((enemy) => enemy.id === id);
+  if (definition === undefined) {
+    throw new Error(`no fixture enemy "${id}"`);
+  }
+  return definition;
+}

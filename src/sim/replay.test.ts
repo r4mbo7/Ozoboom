@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { PlayerCommand } from './commands';
+import type { PlayerAction, PlayerCommand } from './commands';
 import { FIXTURE_OPTIONS, commandFor } from './fixtures';
 import type { SimulationOptions } from './index';
 import { hashState, runScript } from './replay';
 import type { Vec2 } from './state';
 
-const REFERENCE_HASH = '3041f828';
+const REFERENCE_HASH = '1e26455b';
 
 const DIRECTIONS: readonly Vec2[] = [
   { x: 1, y: 0 },
@@ -17,6 +17,15 @@ const DIRECTIONS: readonly Vec2[] = [
   { x: 0, y: -1 },
   { x: 1, y: -1 },
 ];
+
+const TRAP_TICKS: readonly number[] = [30, 900];
+const PLACE_SUBWOOFER: PlayerAction = {
+  type: 'placeTrap',
+  trapId: 'subwoofer',
+  x: 400,
+  y: 300,
+  angle: 0,
+};
 
 const duo: SimulationOptions = {
   ...FIXTURE_OPTIONS,
@@ -31,7 +40,17 @@ function referenceScript(ticks: number): PlayerCommand[][] {
   return Array.from({ length: ticks }, (_, tick) => {
     const move = DIRECTIONS[Math.floor(tick / 29) % DIRECTIONS.length] ?? { x: 0, y: 0 };
     const aim = DIRECTIONS[tick % DIRECTIONS.length] ?? { x: 0, y: 0 };
-    const commands = [commandFor(0, { move, aim: { x: aim.x * 3, y: aim.y * 3 } })];
+    const commands: PlayerCommand[] = [
+      {
+        ...commandFor(0, {
+          move,
+          aim: { x: aim.x * 3, y: aim.y * 3 },
+          skill: tick % 7 === 0,
+          ultimate: tick % 5 === 0,
+        }),
+        actions: TRAP_TICKS.includes(tick) ? [PLACE_SUBWOOFER] : [],
+      },
+    ];
     if (tick % 3 !== 0) {
       commands.push(commandFor(1, { move: { x: -move.y, y: move.x * 0.5 } }));
     }

@@ -62,6 +62,7 @@ Conventions de la simulation :
 - En `choosingUpgrade`, `won` et `lost`, le pas vide les événements et recopie `prev` mais `tick` ne bouge plus : la grille musicale et le set s'arrêtent.
 - `SetProgress.segmentStartTick` est le tick où le segment courant a commencé : les segments se comptent en mesures depuis là, car le drop a une durée variable.
 - Une fois le set fini, `set.tier` vaut `tiers.length`, au-delà du dernier palier : c'est ce qui donne `won`.
+- Statuts posés par un système et seulement lus par les autres : `slowFactor` et `stunTicks` d'un ennemi, remis à 1 et décomptés par `traps` ; `invulnerableTicks` d'un joueur, décompté par `skills`, aucun dégât tant qu'il est positif. Un piège s'oriente par `TrapState.direction`, vecteur unitaire, jamais par `angle`.
 - `input.move` est borné à une longueur de 1, pas normalisé : un stick à mi-course donne la mi-vitesse, une diagonale clavier la vitesse nominale.
 - Les identifiants de contenu (`classId`, `kind`, `trapId`, `upgradeId`) sont des chaînes qui pointent dans `GameContent`. La sim résout ces références une fois à la création, puis travaille avec des tables.
 - Maths autorisées dans la sim : `+ - * /`, `Math.floor`, `Math.ceil`, `Math.abs`, `Math.min`, `Math.max`, `Math.sqrt` (arrondi correct garanti par IEEE 754). Interdites car non reproductibles d'un moteur à l'autre : `Math.sin`, `Math.cos`, `Math.atan2`, `Math.pow`, `Math.exp`, `Math.hypot`. Les angles passent par des vecteurs normalisés, pas par des radians.

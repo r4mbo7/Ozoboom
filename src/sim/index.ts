@@ -6,9 +6,14 @@ import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
 import { coreWatts } from './systems/core-watts';
 import { playerMovement } from './systems/player-movement';
+import { progression } from './systems/progression';
 import { setProgress } from './systems/set-progress';
+import { skillEffects } from './systems/skill-effects';
+import { skills } from './systems/skills';
 import { status } from './systems/status';
 import { tempo } from './systems/tempo';
+import { traps } from './systems/traps';
+import { upgradeChoice } from './systems/upgrade-choice';
 import type { StepContext, System } from './systems/types';
 
 export interface SimulationOptions {
@@ -28,26 +33,23 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     beginStep,
     tempo,
     setProgress,
-    // upgrade-choice (#3)
+    upgradeChoice,
     playerMovement,
     // player-attack (#2)
-    // skills (#3)
+    skills,
     // spawning (#2)
     // enemy-steering (#2)
     // projectiles (#2)
-    // traps (#3)
+    traps,
+    skillEffects,
     // enemy-attacks (#2)
     // deaths (#2)
     // pickups (#2)
-    // progression (#3)
+    progression,
     coreWatts,
     status,
   ],
-  choosingUpgrade: [
-    beginStep,
-    // upgrade-choice (#3)
-    status,
-  ],
+  choosingUpgrade: [beginStep, upgradeChoice, status],
   won: [beginStep],
   lost: [beginStep],
 };

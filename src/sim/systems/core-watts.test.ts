@@ -17,4 +17,24 @@ describe('core watts', () => {
     expect(onFirstBar).toBe(55);
     expect(simulation.state.core.watts).toBe(65);
   });
+
+  it('adds the watts per bar bonus of every player', () => {
+    const simulation = createSimulation({
+      ...FIXTURE_OPTIONS,
+      players: [
+        { id: 0, classId: 'raver' },
+        { id: 1, classId: 'raver' },
+      ],
+    });
+    const [first, second] = simulation.state.players;
+    if (first === undefined || second === undefined) {
+      throw new Error('expected two players');
+    }
+    first.modifiers.wattsPerBarAdd = 2;
+    second.modifiers.wattsPerBarAdd = 4;
+
+    stepAndRecord(simulation, TICKS_PER_BAR);
+
+    expect(simulation.state.core.watts).toBe(50 + 5 + 2 + 4);
+  });
 });
