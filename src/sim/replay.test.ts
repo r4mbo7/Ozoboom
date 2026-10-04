@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { UpgradeDefinition } from '../data/types';
 import type { PlayerAction, PlayerCommand } from './commands';
 import { EFFECTS_CONTENT, FIXTURE_OPTIONS, FIXTURE_SET, commandFor } from './fixtures';
-import type { SimulationOptions } from './index';
+import { createSimulation, type SimulationOptions } from './index';
 import { hashState, runScript } from './replay';
-import type { Vec2 } from './state';
+import type { EnemyState, Vec2 } from './state';
 
 const REFERENCE_HASH = '40467116';
 
@@ -139,6 +140,74 @@ describe('replay of a game that plugs a speaker', () => {
     expect(state.speakers?.map((speaker) => speaker.plugged)).toEqual([true]);
     expect(state.volume).toBe(1);
     expect(hashState(state)).toBe(SPEAKER_HASH);
+  });
+});
+
+const RELIC_HASH = '10ae53f5';
+const RELIC_IDS = ['encore', 'headliner', 'afterparty'];
+
+const relicGame: SimulationOptions = {
+  ...FIXTURE_OPTIONS,
+  seed: 4321,
+  setId: 'fast-drop',
+  content: {
+    ...EFFECTS_CONTENT,
+    upgrades: [
+      ...EFFECTS_CONTENT.upgrades,
+      ...RELIC_IDS.map((id): UpgradeDefinition => ({
+        id,
+        name: id,
+        description: id,
+        family: 'relic',
+        modifiers: [{ stat: 'damageMul', mul: 1.5 }],
+        maxStacks: 1,
+      })),
+    ],
+  },
+};
+
+// Records the commands of a bot that shoots the nearest enemy until the first boss drops its
+// relics, then names one relic per tick: the first one offered wins.
+function scriptToFirstRelic(): PlayerCommand[][] {
+  const simulation = createSimulation(relicGame);
+  const script: PlayerCommand[][] = [];
+  for (let tick = 0; tick < 6000; tick += 1) {
+    const player = simulation.state.players[0];
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    const distance = (enemy: EnemyState): number =>
+      Math.hypot(enemy.x - player.x, enemy.y - player.y);
+    const [target] = [...simulation.state.enemies].sort((a, b) => distance(a) - distance(b));
+    const aim =
+      target === undefined ? { x: 1, y: 0 } : { x: target.x - player.x, y: target.y - player.y };
+    const length = Math.hypot(aim.x, aim.y) || 1;
+    const move =
+      target !== undefined && length < 250
+        ? { x: -aim.x / length, y: -aim.y / length }
+        : { x: 0, y: 0 };
+    const commands = [commandFor(0, { aim, move, fire: true, skill: tick % 7 === 0 })];
+    script.push(commands);
+    simulation.step(commands);
+    if (simulation.state.pendingUpgrades.some((offer) => offer.kind === 'relic')) {
+      break;
+    }
+  }
+  for (const upgradeId of RELIC_IDS) {
+    script.push([{ ...commandFor(0), actions: [{ type: 'chooseUpgrade', upgradeId }] }]);
+  }
+  return script;
+}
+
+describe('replay of a game that kills its first boss and picks a relic', () => {
+  it('keeps the fingerprint of the relic script', () => {
+    const script = scriptToFirstRelic();
+
+    const state = runScript(relicGame, script);
+
+    expect(state.players[0]?.upgrades.filter((id) => RELIC_IDS.includes(id))).toHaveLength(1);
+    expect(state.pendingUpgrades.some((offer) => offer.kind === 'relic')).toBe(false);
+    expect(hashState(state)).toBe(RELIC_HASH);
   });
 });
 

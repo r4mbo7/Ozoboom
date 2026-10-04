@@ -1,4 +1,5 @@
 import { lookup } from '../content';
+import { drawRelics } from '../draw';
 import { SPECIALS } from '../specials';
 import type { PickupKind, SimState } from '../state';
 import type { StepContext } from './types';
@@ -42,6 +43,9 @@ export function deaths(ctx: StepContext): void {
       byPlayer: enemy.lastHitBy ?? null,
     });
     state.stats.kills += 1;
+    if (enemy.isBoss) {
+      offerRelics(ctx);
+    }
     const spread = vibesDrop > 0 && wattsDrop > 0 ? enemy.radius / 2 : 0;
     const { lifetimeTicks } = set.pickups;
     if (vibesDrop > 0) {
@@ -52,6 +56,16 @@ export function deaths(ctx: StepContext): void {
     }
   }
   state.enemies.length = kept;
+}
+
+function offerRelics({ state, content }: StepContext): void {
+  for (const player of state.players) {
+    const options = drawRelics(state.rng, state, content, player);
+    if (options.length > 0) {
+      state.pendingUpgrades.push({ playerId: player.id, options, kind: 'relic' });
+      state.events.push({ type: 'relicOffered', playerId: player.id, options });
+    }
+  }
 }
 
 function drop(
