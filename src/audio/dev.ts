@@ -721,28 +721,28 @@ root.innerHTML = `
   <style>
     body { display: block; padding: 1.5rem; }
     .bench { max-width: 64rem; margin: 0 auto; display: grid; gap: 1rem; }
-    .bench h1 { margin: 0; color: var(--uv-magenta); letter-spacing: 0.06em; font-size: 1.6rem; }
-    .bench h1 span { color: var(--glow); font-weight: 400; }
-    .bench p { margin: 0.25rem 0 0; color: var(--uv-cyan); }
-    .bench section { background: var(--ink); border-radius: 0.75rem; padding: 1rem; }
-    .bench h2 { margin: 0 0 0.75rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--uv-cyan); }
+    .bench h1 { margin: 0; color: var(--mage); letter-spacing: 0.06em; font-size: 1.6rem; }
+    .bench h1 span { color: var(--texte); font-weight: 400; }
+    .bench p { margin: 0.25rem 0 0; color: var(--turquoise); }
+    .bench section { background: var(--sol-clair); border-radius: 0.75rem; padding: 1rem; }
+    .bench h2 { margin: 0 0 0.75rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--turquoise); }
     .bench .columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; }
     .bench dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0; }
-    .bench dt { color: color-mix(in srgb, var(--glow) 62%, var(--ink)); }
+    .bench dt { color: color-mix(in srgb, var(--texte) 62%, var(--sol-clair)); }
     .bench dd { margin: 0; font-variant-numeric: tabular-nums; }
     .bench .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
     .bench .row:last-child { margin-bottom: 0; }
-    .bench .label { min-width: 5.5rem; color: color-mix(in srgb, var(--glow) 62%, var(--ink)); }
-    .bench button { font: inherit; color: var(--glow); background: var(--night); border: 1px solid var(--bad-vibe); border-radius: 0.5rem; padding: 0.35rem 0.7rem; cursor: pointer; }
-    .bench button:hover { border-color: var(--uv-cyan); }
-    .bench button[aria-pressed='true'] { border-color: var(--uv-magenta); color: var(--uv-magenta); box-shadow: 0 0 0.6em var(--uv-magenta); }
-    .bench button.primary { border-color: var(--uv-lime); color: var(--uv-lime); }
-    .bench a { color: var(--uv-cyan); }
+    .bench .label { min-width: 5.5rem; color: color-mix(in srgb, var(--texte) 62%, var(--sol-clair)); }
+    .bench button { font: inherit; color: var(--texte); background: var(--sol); border: 1px solid var(--bad-vibe); border-radius: 0.5rem; padding: 0.35rem 0.7rem; cursor: pointer; }
+    .bench button:hover { border-color: var(--turquoise); }
+    .bench button[aria-pressed='true'] { border-color: var(--mage); color: var(--mage); box-shadow: 0 0 0.6em var(--mage); }
+    .bench button.primary { border-color: var(--healer); color: var(--healer); }
+    .bench a { color: var(--turquoise); }
     .bench .bands { overflow-x: auto; margin-top: 0.75rem; }
     .bench table { border-spacing: 1rem 0.25rem; font-variant-numeric: tabular-nums; }
-    .bench th { text-align: left; font-weight: 400; color: color-mix(in srgb, var(--glow) 62%, var(--ink)); }
+    .bench th { text-align: left; font-weight: 400; color: color-mix(in srgb, var(--texte) 62%, var(--sol-clair)); }
     .bench .beat { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; background: var(--bad-vibe); vertical-align: middle; }
-    .bench .beat.on { background: var(--uv-cyan); box-shadow: 0 0 0.8em var(--uv-cyan); }
+    .bench .beat.on { background: var(--turquoise); box-shadow: 0 0 0.8em var(--turquoise); }
   </style>
   <div class="bench">
     <header>
@@ -805,7 +805,7 @@ root.innerHTML = `
     </section>
     <section>
       <h2>Rendu hors ligne</h2>
-      <p style="color: var(--glow); margin-bottom: 0.75rem">
+      <p style="color: var(--texte); margin-bottom: 0.75rem">
         24 mesures : montée en couches, break, drop avec tous les effets et 50 morts dans la même image, deuxième palier (1), fin de partie, son coupé à la mesure 22 et rendu à la 23.
       </p>
       <div class="row">
@@ -822,7 +822,7 @@ root.innerHTML = `
     </section>
     <section>
       <h2>Rendu de référence, 60 secondes</h2>
-      <p style="color: var(--glow); margin-bottom: 0.75rem">
+      <p style="color: var(--texte); margin-bottom: 0.75rem">
         Musique seule : montée en couches de 12 mesures, break de 4 mesures, drop de 20 mesures. Niveau efficace par bande, en dBFS.
       </p>
       <div class="row">
@@ -838,7 +838,7 @@ root.innerHTML = `
     </section>
     <section>
       <h2>Ambiance menu, 30 secondes</h2>
-      <p style="color: var(--glow); margin-bottom: 0.75rem">
+      <p style="color: var(--texte); margin-bottom: 0.75rem">
         L'ambiance seule, telle qu'elle entre en pause ou sur l'écran de fin.
       </p>
       <div class="row">
@@ -853,7 +853,7 @@ root.innerHTML = `
     </section>
     <section>
       <h2>Fondus enchaînés</h2>
-      <p style="color: var(--glow); margin-bottom: 0.75rem">
+      <p style="color: var(--texte); margin-bottom: 0.75rem">
         Set 8 mesures, pause (ambiance) 8 mesures avec le son coupé à la mesure 12 et rendu à la 13, reprise, victoire à la mesure 24, puis sunrise et ambiance. Les courbes donnent, temps par temps, le niveau sous 50 Hz (kick et basse du set) par rapport à la dernière mesure du set avant la pause, et la fin le niveau de tout le spectre par demi-seconde autour de la fin du sunrise.
       </p>
       <div class="row">

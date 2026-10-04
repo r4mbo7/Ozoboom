@@ -1,10 +1,12 @@
 import './ui.css';
 import type { InputDevice } from '../input/intents';
+import { setFraction, setOf } from '../sim/lineup';
 import type { UpgradeOffer } from '../sim/state';
 import { el } from './dom';
 import { createEnd } from './end';
 import { createHud } from './hud';
 import { createMenuInput } from './navigation';
+import { createSunFollower } from './sun';
 import { createTitle } from './title';
 import type { CreateUi } from './types';
 import { createUpgradeOverlay } from './upgrade';
@@ -25,6 +27,7 @@ export function prefersCalmMode(): boolean {
 export const createUi: CreateUi = (root, callbacks) => {
   const container = el('div', 'ui');
   root.append(container);
+  const sun = createSunFollower(root);
 
   let screen: Screen = 'title';
   let calmMode = false;
@@ -97,6 +100,9 @@ export const createUi: CreateUi = (root, callbacks) => {
   function show(next: Screen): void {
     screen = next;
     acted = false;
+    if (next === 'title') {
+      sun.fix('nuit');
+    }
     title.element.hidden = next !== 'title';
     hud.element.hidden = next !== 'game';
     end.element.hidden = next !== 'end';
@@ -119,10 +125,12 @@ export const createUi: CreateUi = (root, callbacks) => {
     },
     showGame() {
       hud.reset();
+      sun.fix('nuit');
       show('game');
     },
     showEnd(state) {
       end.show(state);
+      sun.fix(state.status === 'won' ? 'jour' : 'nuit');
       show('end');
       menuOpensAt = performance.now() + MENU_GRACE_MS;
       menuInput.open();
@@ -145,6 +153,7 @@ export const createUi: CreateUi = (root, callbacks) => {
       }
 
       hud.update(state, snapshot, content);
+      sun.follow(setFraction(setOf(content, state.setId), state));
       const offer = state.status === 'choosingUpgrade' ? state.pendingUpgrades[0] : undefined;
       if (offer === undefined) {
         upgrade.hide();
@@ -167,6 +176,7 @@ export const createUi: CreateUi = (root, callbacks) => {
     destroy() {
       container.remove();
       root.classList.remove('calm');
+      sun.clear();
     },
   };
 };

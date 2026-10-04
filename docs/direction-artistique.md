@@ -21,9 +21,9 @@ La palette suit la progression du set et s'interpole en continu entre quatre mom
 | `or`        | `#f0b050`  | `#d9a441` | `#b07a1a` | `#a8781f`  | géométrie sacrée, interface     |
 | `turquoise` | `#5fd0c8`  | `#3fd0c9` | `#1c8a86` | `#1f8a84`  | eau, lumière, accents           |
 | `noyau`     | `#ffc860`  | `#ffd27a` | `#d68400` | `#c98a12`  | la scène et son volume          |
-| `mage`      | `#ff6fa8`  | `#ff6fa8` | `#b4205e` | `#b8246a`  | VJ, laser                       |
-| `tank`      | `#ff9a3d`  | `#ff9a3d` | `#c04a10` | `#bf5216`  | roadie                          |
-| `healer`    | `#7cf2b0`  | `#7cf2b0` | `#17805a` | `#167f56`  | care, brumisateur               |
+| `mage`      | `#ff6fa8`  | `#ff6fa8` | `#a61d56` | `#b8246a`  | VJ, laser                       |
+| `tank`      | `#ff9a3d`  | `#ff9a3d` | `#973a0d` | `#a64713`  | roadie                          |
+| `healer`    | `#7cf2b0`  | `#7cf2b0` | `#126346` | `#14724d`  | care, brumisateur               |
 | `bad-vibe`  | `#5a4c64`  | `#4b4762` | `#6c6276` | `#66606e`  | ennemis                         |
 | `texte`     | `#fbeee0`  | `#f6ecd2` | `#2c1e18` | `#2b2010`  | texte courant, toujours lisible |
 

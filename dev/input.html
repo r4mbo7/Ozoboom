@@ -21,7 +21,7 @@
       }
 
       .muted {
-        color: color-mix(in srgb, var(--bad-vibe) 45%, var(--glow));
+        color: color-mix(in srgb, var(--bad-vibe) 45%, var(--texte));
       }
 
       .top,
@@ -45,8 +45,8 @@
       }
 
       .top h1 span {
-        color: var(--uv-magenta);
-        text-shadow: 0 0 12px color-mix(in srgb, var(--uv-magenta) 60%, transparent);
+        color: var(--mage);
+        text-shadow: 0 0 12px color-mix(in srgb, var(--mage) 60%, transparent);
       }
 
       .top p {
@@ -63,15 +63,15 @@
       }
 
       .badge[data-device='keyboardMouse'] {
-        border-color: var(--uv-cyan);
-        color: var(--uv-cyan);
-        box-shadow: 0 0 12px color-mix(in srgb, var(--uv-cyan) 40%, transparent);
+        border-color: var(--turquoise);
+        color: var(--turquoise);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--turquoise) 40%, transparent);
       }
 
       .badge[data-device='gamepad'] {
-        border-color: var(--uv-lime);
-        color: var(--uv-lime);
-        box-shadow: 0 0 12px color-mix(in srgb, var(--uv-lime) 40%, transparent);
+        border-color: var(--healer);
+        color: var(--healer);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--healer) 40%, transparent);
       }
 
       .layout {
@@ -90,7 +90,7 @@
         padding: 14px 16px 16px;
         border: 1px solid color-mix(in srgb, var(--bad-vibe) 60%, transparent);
         border-radius: 10px;
-        background: var(--ink);
+        background: var(--sol-clair);
       }
 
       .panel h2 {
@@ -99,7 +99,7 @@
         font-weight: 600;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: var(--uv-cyan);
+        color: var(--turquoise);
       }
 
       .panel * + h2 {
@@ -114,10 +114,10 @@
         background:
           radial-gradient(
             circle at center,
-            color-mix(in srgb, var(--uv-magenta) 12%, transparent),
+            color-mix(in srgb, var(--mage) 12%, transparent),
             transparent 60%
           ),
-          var(--night);
+          var(--sol);
         overflow: hidden;
         cursor: crosshair;
         user-select: none;
@@ -140,23 +140,23 @@
       }
 
       .ray {
-        stroke: var(--uv-magenta);
+        stroke: var(--mage);
         stroke-width: 2.5;
         stroke-linecap: round;
       }
 
       .ring {
         fill: none;
-        stroke: var(--uv-cyan);
+        stroke: var(--turquoise);
         stroke-width: 2;
       }
 
       .hub {
-        fill: var(--glow);
+        fill: var(--texte);
       }
 
       .well {
-        fill: var(--night);
+        fill: var(--sol);
         stroke: var(--bad-vibe);
       }
 
@@ -167,7 +167,7 @@
       }
 
       .knob {
-        fill: var(--uv-lime);
+        fill: var(--healer);
       }
 
       .sticks {
@@ -217,14 +217,14 @@
         width: 10px;
         height: 10px;
         border-radius: 50%;
-        background: var(--night);
+        background: var(--sol);
         border: 1px solid var(--bad-vibe);
       }
 
       .row[data-on] .dot {
-        background: var(--uv-lime);
-        border-color: var(--uv-lime);
-        box-shadow: 0 0 8px var(--uv-lime);
+        background: var(--healer);
+        border-color: var(--healer);
+        box-shadow: 0 0 8px var(--healer);
       }
 
       .row b {
@@ -240,7 +240,7 @@
         min-width: 2.5em;
         text-align: right;
         font-variant-numeric: tabular-nums;
-        color: var(--uv-magenta);
+        color: var(--mage);
         font-weight: 600;
       }
 
@@ -266,16 +266,16 @@
         padding: 8px 6px;
         border: 1px solid var(--bad-vibe);
         border-radius: 6px;
-        background: var(--night);
-        color: var(--glow);
+        background: var(--sol);
+        color: var(--texte);
         font: inherit;
         font-weight: 600;
         cursor: pointer;
       }
 
       .rumble button[aria-current='true'] {
-        border-color: var(--uv-magenta);
-        box-shadow: 0 0 10px color-mix(in srgb, var(--uv-magenta) 45%, transparent);
+        border-color: var(--mage);
+        box-shadow: 0 0 10px color-mix(in srgb, var(--mage) 45%, transparent);
       }
 
       .rumble button span {
