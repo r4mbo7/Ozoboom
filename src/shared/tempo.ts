@@ -33,3 +33,7 @@ export function isBeatTick(tick: number): boolean {
 export function isBarTick(tick: number): boolean {
   return tick % TICKS_PER_BAR === 0;
 }
+
+export function isPhraseTick(tick: number): boolean {
+  return tick % TICKS_PER_PHRASE === 0;
+}
