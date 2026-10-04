@@ -1,5 +1,6 @@
+import { isBarTick } from '../shared/tempo';
 import type { ResolvedContent } from './content';
-import type { EnemyState, PlayerId, SimState } from './state';
+import type { EnemyState, PlayerId, PlayerState, SimState } from './state';
 
 interface Point {
   x: number;
@@ -80,4 +81,56 @@ export function keepWhere<T>(items: T[], keep: (item: T) => boolean): void {
     }
   }
   items.length = kept;
+}
+
+export function slowEnemies(state: SimState, at: Point, radius: number, slowFactor: number): void {
+  for (const enemy of state.enemies) {
+    if (enemy.hp > 0 && touches(enemy, at, radius)) {
+      enemy.slowFactor = Math.min(enemy.slowFactor, slowFactor);
+    }
+  }
+}
+
+export function healPlayer(player: PlayerState, amount: number): void {
+  player.hp = Math.min(player.maxHp, player.hp + amount);
+}
+
+// Heals once per bar, on the bar tick.
+export function healPlayersOnBar(state: SimState, at: Point, radius: number, amount: number): void {
+  if (!isBarTick(state.tick)) {
+    return;
+  }
+  for (const player of state.players) {
+    if (!player.downed && touches(player, at, radius)) {
+      healPlayer(player, amount);
+    }
+  }
+}
+
+export function shockwave(
+  state: SimState,
+  at: Point,
+  radius: number,
+  damage: number,
+  knockback: number,
+  markedMul: number,
+  by: PlayerId | null,
+): void {
+  for (const enemy of state.enemies) {
+    if (enemy.hp > 0 && touches(enemy, at, radius)) {
+      hurtEnemy(state, enemy, damage, markedMul, by);
+      pushAway(enemy, at, knockback);
+    }
+  }
+}
+
+// The lure replaces the step the steering just gave the enemy: same speed, slow and stun, new goal.
+export function drawTo(enemy: EnemyState, at: Point, contact: number): void {
+  const step = enemy.stunTicks > 0 ? 0 : enemy.speed * enemy.slowFactor;
+  const dx = at.x - enemy.prevX;
+  const dy = at.y - enemy.prevY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const travel = Math.max(0, Math.min(step, distance - contact));
+  enemy.x = distance === 0 ? enemy.prevX : enemy.prevX + (dx / distance) * travel;
+  enemy.y = distance === 0 ? enemy.prevY : enemy.prevY + (dy / distance) * travel;
 }

@@ -1,14 +1,16 @@
 import type { TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
-import { isBarTick } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
 import type { PlayerAction } from '../commands';
 import { lookup, type ResolvedContent } from '../content';
 import {
   compound,
+  drawTo,
+  healPlayersOnBar,
   hurtEnemy,
   keepWhere,
   markedDamageMul,
-  pushAway,
+  shockwave,
+  slowEnemies,
   touches,
   wholeTicks,
 } from '../effects';
@@ -183,12 +185,15 @@ export function fire(firing: Firing): void {
   const { state, at, effect, contact, by, power, damageMul, radiusMul, markedMul } = firing;
   switch (effect.kind) {
     case 'shockwave':
-      for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
-          hurtEnemy(state, enemy, effect.damage * damageMul, markedMul, by);
-          pushAway(enemy, at, effect.knockback);
-        }
-      }
+      shockwave(
+        state,
+        at,
+        effect.radius * radiusMul,
+        effect.damage * damageMul,
+        effect.knockback,
+        markedMul,
+        by,
+      );
       return;
     case 'beam':
       for (const enemy of state.enemies) {
@@ -199,18 +204,8 @@ export function fire(firing: Firing): void {
       return;
     case 'mist': {
       const radius = effect.radius * radiusMul;
-      for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, at, radius)) {
-          enemy.slowFactor = Math.min(enemy.slowFactor, effect.slowFactor);
-        }
-      }
-      if (isBarTick(state.tick)) {
-        for (const player of state.players) {
-          if (!player.downed && touches(player, at, radius)) {
-            player.hp = Math.min(player.maxHp, player.hp + effect.healPerBar * power);
-          }
-        }
-      }
+      slowEnemies(state, at, radius, effect.slowFactor);
+      healPlayersOnBar(state, at, radius, effect.healPerBar * power);
       return;
     }
     case 'lure':
@@ -242,17 +237,6 @@ function inBeam(enemy: EnemyState, trap: Emitter, length: number, halfWidth: num
   return (
     along >= -enemy.radius && along <= length + enemy.radius && across <= halfWidth + enemy.radius
   );
-}
-
-// The lure replaces the step the steering just gave the enemy: same speed, slow and stun, new goal.
-function drawTo(enemy: EnemyState, trap: Vec2, contact: number): void {
-  const step = enemy.stunTicks > 0 ? 0 : enemy.speed * enemy.slowFactor;
-  const dx = trap.x - enemy.prevX;
-  const dy = trap.y - enemy.prevY;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  const travel = Math.max(0, Math.min(step, distance - contact));
-  enemy.x = distance === 0 ? enemy.prevX : enemy.prevX + (dx / distance) * travel;
-  enemy.y = distance === 0 ? enemy.prevY : enemy.prevY + (dy / distance) * travel;
 }
 
 function takeHeavyBlows(state: SimState, content: ResolvedContent, trap: TrapState): void {

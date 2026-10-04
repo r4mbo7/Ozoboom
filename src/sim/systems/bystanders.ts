@@ -117,7 +117,7 @@ function touchedByEnemy(state: SimState, bystander: BystanderState): boolean {
   return false;
 }
 
-// A standing, non-downed player, or a zone heal (a trap's mist, a healPulse cast this tick)
+// A standing, non-downed player, or a zone heal (a trap's mist, a plate, a healPulse cast this tick)
 // touching the bystander, counts as a contact.
 function isAided(ctx: StepContext, bystander: BystanderState): boolean {
   const { state, content } = ctx;
@@ -129,6 +129,14 @@ function isAided(ctx: StepContext, bystander: BystanderState): boolean {
   for (const trap of state.traps) {
     const definition = content.traps.get(trap.kind);
     if (definition?.effect.kind === 'mist' && touches(bystander, trap, definition.effect.radius)) {
+      return true;
+    }
+  }
+  for (const zone of state.placed ?? []) {
+    if (
+      content.weapons.get(zone.weaponId)?.effect.kind === 'plate' &&
+      touches(bystander, zone, zone.radius)
+    ) {
       return true;
     }
   }

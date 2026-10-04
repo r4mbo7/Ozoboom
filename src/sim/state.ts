@@ -53,6 +53,8 @@ export interface WeaponSlot {
   level: number;
   // Free for the module that owns this weapon's effect kind.
   phase: number;
+  // Ring of x, y pairs written by the trail module, indexed by tick; `phase` counts the filled pairs.
+  trail?: number[];
 }
 
 export interface PlayerState extends Positioned {
