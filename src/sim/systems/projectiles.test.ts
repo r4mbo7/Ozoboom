@@ -151,6 +151,19 @@ describe('projectiles', () => {
     expect(behind.maxHp - behind.hp).toBe(10);
   });
 
+  it('credit a player hit to its player and leave the target alone', () => {
+    const { simulation } = arena();
+    const { state } = simulation;
+    const enemy = placeEnemy(state, 'doorman', 500, 100);
+    launch(state, byPlayer, { x: 470, y: 100 }, { x: 12, y: 0 });
+
+    simulation.step([]);
+
+    expect(enemy.maxHp - enemy.hp).toBe(10);
+    expect(enemy.lastHitBy).toBe(0);
+    expect(enemy.target).toBe('core');
+  });
+
   it('credit a trap hit to no player and leave the target alone', () => {
     const { simulation } = arena();
     const { state } = simulation;

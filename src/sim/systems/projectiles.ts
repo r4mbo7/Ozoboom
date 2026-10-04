@@ -1,4 +1,4 @@
-import { damageCore, damagePlayer, playerById } from '../damage';
+import { damageCore, damagePlayer } from '../damage';
 import { hurtEnemy, markedDamageMul } from '../effects';
 import type { PlayerId, ProjectileState, SimState } from '../state';
 import type { StepContext } from './types';
@@ -41,10 +41,6 @@ function hitEnemies(
       continue;
     }
     hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer);
-    const { owner } = projectile;
-    if (owner.kind === 'player' && playerById(state, owner.playerId)?.downed === false) {
-      enemy.target = owner.playerId;
-    }
     if (projectile.pierceLeft <= 0) {
       return true;
     }
