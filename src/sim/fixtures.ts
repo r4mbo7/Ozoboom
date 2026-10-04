@@ -1,4 +1,11 @@
-import type { EnemyDefinition, GameContent, SetDefinition, TrapDefinition } from '../data/types';
+import type {
+  BystanderDefinition,
+  ClassDefinition,
+  EnemyDefinition,
+  GameContent,
+  SetDefinition,
+  TrapDefinition,
+} from '../data/types';
 import { TICKS_PER_BAR } from '../shared/tempo';
 import { IDLE_INPUT, type PlayerAction, type PlayerCommand, type PlayerInput } from './commands';
 import type { Simulation, SimulationOptions } from './index';
@@ -193,6 +200,32 @@ if (raver === undefined) {
   throw new Error('expected the raver class');
 }
 
+export const FIXTURE_CARER: ClassDefinition = {
+  ...raver,
+  id: 'carer',
+  skill: {
+    id: 'carer-pulse',
+    name: 'Pulsation',
+    description: 'Soigne autour de soi.',
+    cooldownTicks: 192,
+    effect: { kind: 'healPulse', amount: 30, radius: 150, coreRepair: 50 },
+  },
+  ultimate: {
+    id: 'carer-dash',
+    name: 'Ruée',
+    description: 'Une ruée en avant.',
+    cooldownTicks: 0,
+    effect: { kind: 'dash', distance: 80, invulnerableTicks: 6 },
+  },
+};
+
+export const FIXTURE_MIST: TrapDefinition = trap('mister', 'continuous', {
+  kind: 'mist',
+  slowFactor: 0.5,
+  healPerBar: 10,
+  radius: 80,
+});
+
 export const FIXTURE_BOUNCER: EnemyDefinition = {
   id: 'bouncer',
   name: 'Videur',
@@ -237,30 +270,13 @@ export const EFFECTS_CONTENT: GameContent = {
         effect: { kind: 'dash', distance: 120, invulnerableTicks: 12 },
       },
     },
-    {
-      ...raver,
-      id: 'carer',
-      skill: {
-        id: 'carer-pulse',
-        name: 'Pulsation',
-        description: 'Soigne autour de soi.',
-        cooldownTicks: 192,
-        effect: { kind: 'healPulse', amount: 30, radius: 150, coreRepair: 50 },
-      },
-      ultimate: {
-        id: 'carer-dash',
-        name: 'Ruée',
-        description: 'Une ruée en avant.',
-        cooldownTicks: 0,
-        effect: { kind: 'dash', distance: 80, invulnerableTicks: 6 },
-      },
-    },
+    FIXTURE_CARER,
   ],
   enemies: [...FIXTURE_CONTENT.enemies, FIXTURE_BOUNCER],
   traps: [
     ...FIXTURE_CONTENT.traps,
     trap('beam', 'continuous', { kind: 'beam', damagePerTick: 1, length: 200, width: 20 }),
-    trap('mister', 'continuous', { kind: 'mist', slowFactor: 0.5, healPerBar: 10, radius: 80 }),
+    FIXTURE_MIST,
     trap('lure', 'continuous', { kind: 'lure', radius: 150, markedDamageMul: 2 }),
     trap('strobe', 'drop', { kind: 'strobe', stunTicks: 24, radius: 120 }),
     trap('metronome', 'bar', { kind: 'shockwave', damage: 1, radius: 10, knockback: 0 }),
@@ -379,3 +395,59 @@ export function placeEnemy(state: SimState, kind: string, x: number, y: number):
   }
   return spawnEnemy(state, definition, x, y, definition.behaviour === 'boss');
 }
+
+export const FIXTURE_BYSTANDER: BystanderDefinition = {
+  id: 'festivalier',
+  name: 'Festivalier en détresse',
+  description: 'À aider, pas à chasser.',
+  radius: 14,
+  speed: 2,
+  helpTicks: 10,
+  vibesReward: 5,
+  vibesPenalty: 3,
+  lifetimeBars: 4,
+};
+
+export const BYSTANDER_SET: SetDefinition = {
+  ...FIXTURE_SET,
+  id: 'bystander-set',
+  tiers: FIXTURE_SET.tiers.map((tier) => ({
+    ...tier,
+    spawns: [],
+    bystanderSpawns: [{ bystanderId: FIXTURE_BYSTANDER.id, everyBars: 2, count: 1, fromPhrase: 0 }],
+  })),
+};
+
+// A fixture with no bad vibes scheduled, the carer's heal pulse, a mist trap, and a Festivalier
+// spawning every other bar: bystander tests place exactly the enemies and traps they need.
+export const BYSTANDER_CONTENT: GameContent = {
+  ...FIXTURE_CONTENT,
+  classes: [...FIXTURE_CONTENT.classes, FIXTURE_CARER],
+  traps: [...FIXTURE_CONTENT.traps, FIXTURE_MIST],
+  bystanders: [FIXTURE_BYSTANDER],
+  sets: [BYSTANDER_SET],
+};
+
+export const BYSTANDER_OPTIONS: SimulationOptions = {
+  ...FIXTURE_OPTIONS,
+  setId: BYSTANDER_SET.id,
+  content: BYSTANDER_CONTENT,
+};
+
+// No bad vibe and no Festivalier spawns scheduled: tests place exactly the bystander they need.
+export const BYSTANDER_QUIET_SET: SetDefinition = {
+  ...BYSTANDER_SET,
+  id: 'bystander-quiet-set',
+  tiers: BYSTANDER_SET.tiers.map((tier) => ({ ...tier, bystanderSpawns: [] })),
+};
+
+export const BYSTANDER_QUIET_CONTENT: GameContent = {
+  ...BYSTANDER_CONTENT,
+  sets: [BYSTANDER_QUIET_SET],
+};
+
+export const BYSTANDER_QUIET_OPTIONS: SimulationOptions = {
+  ...FIXTURE_OPTIONS,
+  setId: BYSTANDER_QUIET_SET.id,
+  content: BYSTANDER_QUIET_CONTENT,
+};

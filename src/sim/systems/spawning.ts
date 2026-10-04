@@ -3,7 +3,7 @@ import { nextFloat } from '../../shared/prng';
 import { BARS_PER_PHRASE, TICKS_PER_BAR, isBarTick } from '../../shared/tempo';
 import { lookup } from '../content';
 import { compound } from '../effects';
-import type { EnemyState, SimState } from '../state';
+import type { Arena, EnemyState, SimState, Vec2 } from '../state';
 import type { StepContext } from './types';
 
 export function spawning({ state, content, set }: StepContext): void {
@@ -70,25 +70,27 @@ export function spawnEnemy(
 }
 
 function spawnAtEdge(state: SimState, definition: EnemyDefinition, isBoss: boolean): void {
-  const { width, height } = state.arena;
-  const radius = definition.radius;
+  const { x, y } = edgePosition(state.rng, state.arena, definition.radius);
+  spawnEnemy(state, definition, x, y, isBoss);
+}
+
+// A point on the edge of the arena, drawn uniformly along its perimeter, as bad vibes spawn.
+export function edgePosition(rng: SimState['rng'], arena: Arena, radius: number): Vec2 {
+  const { width, height } = arena;
   const spanX = width - 2 * radius;
   const spanY = height - 2 * radius;
-  let along = nextFloat(state.rng) * 2 * (spanX + spanY);
+  let along = nextFloat(rng) * 2 * (spanX + spanY);
   if (along < spanX) {
-    spawnEnemy(state, definition, radius + along, radius, isBoss);
-    return;
+    return { x: radius + along, y: radius };
   }
   along -= spanX;
   if (along < spanY) {
-    spawnEnemy(state, definition, width - radius, radius + along, isBoss);
-    return;
+    return { x: width - radius, y: radius + along };
   }
   along -= spanY;
   if (along < spanX) {
-    spawnEnemy(state, definition, width - radius - along, height - radius, isBoss);
-    return;
+    return { x: width - radius - along, y: height - radius };
   }
   along -= spanX;
-  spawnEnemy(state, definition, radius, height - radius - along, isBoss);
+  return { x: radius, y: height - radius - along };
 }

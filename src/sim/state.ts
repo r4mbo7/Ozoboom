@@ -145,6 +145,9 @@ export interface BystanderState extends Positioned {
   id: EntityId;
   kind: string;
   radius: number;
+  // Random point halfway to the core, picked once at spawn: where it walks to, then stops.
+  targetX: number;
+  targetY: number;
   helpTicks: number;
   ticksLeft: number;
 }
