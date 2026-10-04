@@ -1,0 +1,269 @@
+import { describe, expect, it } from 'vitest';
+import { StandardButton } from './bindings';
+import { fakeGamepad } from './fakes';
+import { INITIAL_GAMEPAD_STATE, reduceGamepad, type GamepadLike } from './gamepad';
+import type { InputSnapshot } from './intents';
+import {
+  INITIAL_KEYBOARD_MOUSE_STATE,
+  reduceKeyboard,
+  reducePointer,
+  takeKeyboardMouseFrame,
+  type KeyEventLike,
+  type PointerEventLike,
+} from './keyboard-mouse';
+import { INITIAL_MERGE_STATE, mergeFrames } from './merge';
+
+function createHarness() {
+  let keyboardMouse = INITIAL_KEYBOARD_MOUSE_STATE;
+  let gamepad = INITIAL_GAMEPAD_STATE;
+  let merge = INITIAL_MERGE_STATE;
+  let pads: (GamepadLike | null)[] = [];
+  return {
+    key(type: KeyEventLike['type'], code: string) {
+      keyboardMouse = reduceKeyboard(keyboardMouse, { type, code });
+    },
+    pointer(event: PointerEventLike) {
+      keyboardMouse = reducePointer(keyboardMouse, event);
+    },
+    plug(...next: (GamepadLike | null)[]) {
+      pads = next;
+    },
+    poll(now = 0): InputSnapshot {
+      const taken = takeKeyboardMouseFrame(keyboardMouse);
+      keyboardMouse = taken.state;
+      const reduced = reduceGamepad(gamepad, pads);
+      gamepad = reduced.state;
+      const merged = mergeFrames(merge, taken.frame, reduced.frame, now);
+      merge = merged.state;
+      return merged.snapshot;
+    },
+  };
+}
+
+describe('discrete intents', () => {
+  it('last a single poll while the key stays down', () => {
+    const input = createHarness();
+    input.key('keydown', 'KeyF');
+
+    const first = input.poll();
+    const second = input.poll();
+
+    expect(first.gameplay.placeTrap).toBe(true);
+    expect(second.gameplay.placeTrap).toBe(false);
+  });
+
+  it('are not lost when the key is tapped between two polls', () => {
+    const input = createHarness();
+    input.key('keydown', 'Escape');
+    input.key('keyup', 'Escape');
+
+    const snapshot = input.poll();
+
+    expect(snapshot.gameplay.pause).toBe(true);
+    expect(snapshot.menu.back).toBe(true);
+  });
+
+  it('last a single poll while a gamepad button stays down', () => {
+    const input = createHarness();
+    input.plug(fakeGamepad({ pressed: [StandardButton.A] }));
+
+    const first = input.poll();
+    const second = input.poll();
+
+    expect(first.menu.confirm).toBe(true);
+    expect(second.menu.confirm).toBe(false);
+  });
+
+  it('select the last trap slot pressed during the poll', () => {
+    const input = createHarness();
+    input.key('keydown', 'Digit2');
+    input.key('keydown', 'Digit4');
+
+    expect(input.poll().gameplay.selectTrap).toBe(3);
+    expect(input.poll().gameplay.selectTrap).toBeNull();
+  });
+});
+
+describe('continuous intents', () => {
+  it('stay true while held on either device', () => {
+    const input = createHarness();
+    input.key('keydown', 'Space');
+    input.plug(fakeGamepad({ pressed: [StandardButton.X, StandardButton.Y] }));
+
+    const first = input.poll();
+    const second = input.poll();
+    input.key('keyup', 'Space');
+    input.plug(fakeGamepad());
+    const released = input.poll();
+
+    expect(first.gameplay).toMatchObject({ fire: true, skill: true, ultimate: true });
+    expect(second.gameplay).toMatchObject({ fire: true, skill: true, ultimate: true });
+    expect(released.gameplay).toMatchObject({ fire: false, skill: false, ultimate: false });
+  });
+
+  it('add keyboard and stick movement, capped to a unit length', () => {
+    const input = createHarness();
+    input.key('keydown', 'KeyD');
+    input.plug(fakeGamepad({ axes: [0, 1, 0, 0] }));
+
+    const { move } = input.poll().gameplay;
+
+    expect(move.x).toBeCloseTo(Math.SQRT1_2, 10);
+    expect(move.y).toBeCloseTo(Math.SQRT1_2, 10);
+  });
+});
+
+describe('menu repeat', () => {
+  it('repeats after 400 ms then every 120 ms while held', () => {
+    const input = createHarness();
+    input.key('keydown', 'ArrowDown');
+
+    const fired = [0, 16, 399, 400, 519, 520, 639, 640, 700].map(
+      (now) => [now, input.poll(now).menu.down] as const,
+    );
+
+    expect(fired).toEqual([
+      [0, true],
+      [16, false],
+      [399, false],
+      [400, true],
+      [519, false],
+      [520, true],
+      [639, false],
+      [640, true],
+      [700, false],
+    ]);
+  });
+
+  it('starts over on release and press', () => {
+    const input = createHarness();
+    input.key('keydown', 'KeyS');
+    input.poll(0);
+    input.key('keyup', 'KeyS');
+    input.poll(100);
+    input.key('keydown', 'KeyS');
+
+    expect(input.poll(450).menu.down).toBe(true);
+    expect(input.poll(800).menu.down).toBe(false);
+    expect(input.poll(850).menu.down).toBe(true);
+  });
+
+  it('does not burst after a long stall', () => {
+    const input = createHarness();
+    input.key('keydown', 'ArrowUp');
+    input.poll(0);
+
+    expect(input.poll(5000).menu.up).toBe(true);
+    expect(input.poll(5016).menu.up).toBe(false);
+    expect(input.poll(5120).menu.up).toBe(true);
+  });
+
+  it('repeats the gamepad directional pad', () => {
+    const input = createHarness();
+    input.plug(fakeGamepad({ pressed: [StandardButton.DpadLeft] }));
+
+    expect(input.poll(0).menu.left).toBe(true);
+    expect(input.poll(200).menu.left).toBe(false);
+    expect(input.poll(400).menu.left).toBe(true);
+  });
+
+  it('never repeats confirm and back', () => {
+    const input = createHarness();
+    input.key('keydown', 'Enter');
+    input.plug(fakeGamepad({ pressed: [StandardButton.B] }));
+    input.poll(0);
+
+    expect(input.poll(1000).menu).toMatchObject({ confirm: false, back: false });
+  });
+});
+
+describe('device detection', () => {
+  it('starts with no device', () => {
+    expect(createHarness().poll().device).toBe('none');
+  });
+
+  it('follows the last device that produced an input', () => {
+    const input = createHarness();
+    input.key('keydown', 'KeyW');
+    const keyboard = input.poll().device;
+    input.plug(fakeGamepad({ pressed: [StandardButton.A] }));
+    const gamepad = input.poll().device;
+    const gamepadStillHeld = input.poll().device;
+    input.pointer({ type: 'move', x: 1, y: 1 });
+    const mouse = input.poll().device;
+
+    expect([keyboard, gamepad, gamepadStillHeld, mouse]).toEqual([
+      'keyboardMouse',
+      'gamepad',
+      'gamepad',
+      'keyboardMouse',
+    ]);
+  });
+
+  it('does not switch to a gamepad whose sticks rest in the dead zone', () => {
+    const input = createHarness();
+    input.key('keydown', 'KeyW');
+    input.poll();
+    input.plug(fakeGamepad({ axes: [0.1, -0.12, 0.05, 0.15] }));
+
+    expect(input.poll().device).toBe('keyboardMouse');
+  });
+
+  it('falls back to no device when the active gamepad is unplugged', () => {
+    const input = createHarness();
+    input.plug(fakeGamepad({ pressed: [StandardButton.A] }));
+    input.poll();
+    input.plug(null);
+
+    expect(input.poll().device).toBe('none');
+  });
+
+  it('keeps the keyboard when an idle gamepad is unplugged', () => {
+    const input = createHarness();
+    input.plug(fakeGamepad());
+    input.poll();
+    input.key('keydown', 'KeyW');
+    input.poll();
+    input.plug();
+
+    expect(input.poll().device).toBe('keyboardMouse');
+  });
+});
+
+describe('aim', () => {
+  it('comes from the pointer after the mouse moves, keeping the last stick aim', () => {
+    const input = createHarness();
+    input.pointer({ type: 'move', x: 300, y: 200 });
+
+    const snapshot = input.poll();
+
+    expect(snapshot).toMatchObject({
+      aimFromPointer: true,
+      pointerScreen: { x: 300, y: 200 },
+      gameplay: { aim: { x: 1, y: 0 } },
+    });
+  });
+
+  it('comes from the right stick once it moves, and is kept when the stick rests', () => {
+    const input = createHarness();
+    input.pointer({ type: 'move', x: 300, y: 200 });
+    input.poll();
+    input.plug(fakeGamepad({ axes: [0, 0, -0.5, 0] }));
+    const aiming = input.poll();
+    input.plug(fakeGamepad());
+    const resting = input.poll();
+
+    expect(aiming).toMatchObject({ aimFromPointer: false, gameplay: { aim: { x: -1, y: 0 } } });
+    expect(resting).toMatchObject({ aimFromPointer: false, gameplay: { aim: { x: -1, y: 0 } } });
+  });
+
+  it('stays on the pointer while the right stick is held still', () => {
+    const input = createHarness();
+    input.plug(fakeGamepad({ axes: [0, 0, 0, 1] }));
+    input.poll();
+    input.pointer({ type: 'move', x: 1, y: 1 });
+    input.poll();
+
+    expect(input.poll().aimFromPointer).toBe(true);
+  });
+});
