@@ -3,6 +3,7 @@ import type { MenuIntents } from '../input/intents';
 import {
   HELD_MENU_INTENTS,
   NO_MENU_INTENTS,
+  createMenuInput,
   menuEdges,
   navigateMenu,
   selectTrap,
@@ -13,6 +14,9 @@ function menu(overrides: Partial<MenuIntents>): MenuIntents {
 }
 
 const noTrapIntent = { nextTrap: false, previousTrap: false, selectTrap: null };
+
+const still = { x: 0, y: 0 };
+const pushingRight = { x: 1, y: 0 };
 
 describe('menuEdges', () => {
   it('keeps an intent on the update where it starts', () => {
@@ -39,6 +43,81 @@ describe('menuEdges', () => {
     expect(held).toEqual(NO_MENU_INTENTS);
     expect(released).toEqual(NO_MENU_INTENTS);
     expect(pressedAgain.confirm).toBe(true);
+  });
+});
+
+describe('createMenuInput', () => {
+  it('ignores the presses on the frame the menu opens', () => {
+    const input = createMenuInput();
+    input.open();
+
+    const edges = input.edges(menu({ down: true, confirm: true }), { x: 0, y: 1 });
+
+    expect(edges).toEqual(NO_MENU_INTENTS);
+  });
+
+  it('reads a press made after the menu opened', () => {
+    const input = createMenuInput();
+    input.open();
+    input.edges(menu({}), still);
+
+    const edges = input.edges(menu({ down: true }), { x: 0, y: 1 });
+
+    expect(edges.down).toBe(true);
+  });
+
+  it('ignores a direction held as the menu opened, its repeats included, until it is released', () => {
+    const input = createMenuInput();
+    input.edges(menu({ right: true }), pushingRight);
+    input.open();
+
+    const whileHeld = [
+      input.edges(menu({}), pushingRight),
+      input.edges(menu({ right: true }), pushingRight),
+      input.edges(menu({}), pushingRight),
+      input.edges(menu({ right: true }), pushingRight),
+    ];
+    const released = input.edges(menu({}), still);
+    const pushedAgain = input.edges(menu({ right: true }), pushingRight);
+
+    expect(whileHeld).toEqual([NO_MENU_INTENTS, NO_MENU_INTENTS, NO_MENU_INTENTS, NO_MENU_INTENTS]);
+    expect(released).toEqual(NO_MENU_INTENTS);
+    expect(pushedAgain).toEqual(menu({ right: true }));
+  });
+
+  it('only holds back the directions still pushed', () => {
+    const input = createMenuInput();
+    input.open();
+    input.edges(menu({}), pushingRight);
+
+    const edges = input.edges(menu({ down: true, right: true }), { x: 1, y: 1 });
+
+    expect(edges).toEqual(menu({ down: true }));
+  });
+
+  it('ignores the validation that opened the menu, and reads the next one', () => {
+    const input = createMenuInput();
+    input.open();
+
+    const opening = input.edges(menu({ confirm: true }), still);
+    const between = input.edges(menu({}), still);
+    const next = input.edges(menu({ confirm: true }), still);
+
+    expect(opening).toEqual(NO_MENU_INTENTS);
+    expect(between).toEqual(NO_MENU_INTENTS);
+    expect(next).toEqual(menu({ confirm: true }));
+  });
+
+  it('holds back again on every opening', () => {
+    const input = createMenuInput();
+    input.open();
+    input.edges(menu({}), still);
+    input.edges(menu({ left: true }), { x: -1, y: 0 });
+
+    input.open();
+    const edges = input.edges(menu({ left: true }), { x: -1, y: 0 });
+
+    expect(edges).toEqual(NO_MENU_INTENTS);
   });
 });
 

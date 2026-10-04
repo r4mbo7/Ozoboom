@@ -1,4 +1,5 @@
 import type { GameplayIntents, MenuIntents } from '../input/intents';
+import type { Vec2 } from '../sim/state';
 
 export const NO_MENU_INTENTS: Readonly<MenuIntents> = {
   up: false,
@@ -21,13 +22,52 @@ export const HELD_MENU_INTENTS: Readonly<MenuIntents> = {
 
 export function menuEdges(current: MenuIntents, previous: MenuIntents | null): MenuIntents {
   const before = previous ?? NO_MENU_INTENTS;
+  return eachIntent((intent) => current[intent] && !before[intent]);
+}
+
+function eachIntent(value: (intent: keyof MenuIntents) => boolean): MenuIntents {
   return {
-    up: current.up && !before.up,
-    down: current.down && !before.down,
-    left: current.left && !before.left,
-    right: current.right && !before.right,
-    confirm: current.confirm && !before.confirm,
-    back: current.back && !before.back,
+    up: value('up'),
+    down: value('down'),
+    left: value('left'),
+    right: value('right'),
+    confirm: value('confirm'),
+    back: value('back'),
+  };
+}
+
+export interface MenuInput {
+  // A menu opens: what is held at that moment waits for its release.
+  open(): void;
+  // The intents that start on this update, for the menu on screen.
+  edges(menu: MenuIntents, move: Vec2): MenuIntents;
+}
+
+// Menu intents are presses and the repeats of a held direction. A direction held in combat shows in
+// the move (keys and left stick): after an opening, it stays ignored, repeats included, until that
+// move lets go of it. A validation is a press, ignored on the update the menu opens.
+export function createMenuInput(): MenuInput {
+  let previous: MenuIntents | null = null;
+  let waiting: MenuIntents = NO_MENU_INTENTS;
+  return {
+    open() {
+      waiting = HELD_MENU_INTENTS;
+    },
+    edges(menu, move) {
+      const pushed: Readonly<Record<keyof MenuIntents, boolean>> = {
+        up: move.y < 0,
+        down: move.y > 0,
+        left: move.x < 0,
+        right: move.x > 0,
+        confirm: false,
+        back: false,
+      };
+      const held = waiting;
+      waiting = eachIntent((intent) => held[intent] && (menu[intent] || pushed[intent]));
+      const started = menuEdges(menu, previous);
+      previous = menu;
+      return eachIntent((intent) => started[intent] && !waiting[intent]);
+    },
   };
 }
 

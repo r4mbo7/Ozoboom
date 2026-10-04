@@ -1,7 +1,8 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
+import type { Vec2 } from '../sim/state';
 import { el, fillHint, setText } from '../ui/dom';
 import { createMenu } from '../ui/menu';
-import { menuEdges } from '../ui/navigation';
+import { createMenuInput } from '../ui/navigation';
 import { promptsFor } from '../ui/prompts';
 
 export interface PauseConfirmation {
@@ -27,7 +28,7 @@ export interface PauseScreen {
   // Leaves the confirmation for the pause menu, on the entry that asked it.
   cancel(): void;
   // Moves the selection and activates the selected item; `back` is the caller's to handle.
-  handle(menu: MenuIntents): void;
+  handle(menu: MenuIntents, move: Vec2): void;
 }
 
 interface View {
@@ -72,7 +73,7 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
   const confirmation = view('alertdialog', '', '');
   layer.append(main.section, confirmation.section);
 
-  let previousMenu: MenuIntents | null = null;
+  const menuInput = createMenuInput();
   let device: InputDevice = 'none';
   let pending: PauseItem | null = null;
 
@@ -125,6 +126,7 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
       prompts.style,
     );
     confirmMenu.select(0);
+    menuInput.open();
     main.section.hidden = true;
     confirmation.section.hidden = false;
   }
@@ -157,7 +159,7 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
         prompts.style,
       );
       menu.select(0);
-      previousMenu = null;
+      menuInput.open();
       main.section.hidden = false;
     },
     hide() {
@@ -166,10 +168,8 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
       confirmation.section.hidden = true;
     },
     cancel,
-    handle(intents) {
-      const edges = menuEdges(intents, previousMenu);
-      previousMenu = intents;
-      (pending === null ? menu : confirmMenu).handle(edges);
+    handle(intents, move) {
+      (pending === null ? menu : confirmMenu).handle(menuInput.edges(intents, move));
     },
   };
 }
