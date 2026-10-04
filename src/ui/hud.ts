@@ -5,7 +5,7 @@ import { skillCooldownTicks, statValue } from '../sim/stats';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
 import { BOLT, FOG, SUN, skillIcon, trapIcon } from './icons';
-import { type LineupSlot, lineupCursor, lineupSlots, setOf, ticksToDrop } from './lineup';
+import { type LineupSlot, lineupCursor, lineupSlots, setOf, ticksToDrop } from '../sim/lineup';
 import { selectTrap } from './navigation';
 import { promptsFor } from './prompts';
 

@@ -1,6 +1,8 @@
 import type { GameContent, SetDefinition, TierDefinition } from '../data/types';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
-import type { GameStatus, SetProgress } from '../sim/state';
+import type { GameStatus, SetProgress } from './state';
+
+const DROP_RAMP_TICKS = 4 * TICKS_PER_BAR;
 
 export type LineupSlotKind = 'phrase' | 'break' | 'drop' | 'sunrise';
 
@@ -65,6 +67,12 @@ export function lineupCursor(set: SetDefinition, state: LineupInput): LineupCurs
     case 'drop':
       return { slot: base + tier.buildupPhrases + 1, fraction: null };
   }
+}
+
+export function setFraction(set: SetDefinition, state: LineupInput): number {
+  const { slot, fraction } = lineupCursor(set, state);
+  const inSlot = fraction ?? Math.min(1, elapsedInSegment(state) / DROP_RAMP_TICKS);
+  return (slot + inSlot) / slotCount(set.tiers);
 }
 
 export function ticksToDrop(set: SetDefinition, state: LineupInput): number | null {

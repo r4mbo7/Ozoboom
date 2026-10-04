@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { paletteAt } from '../shared/palette';
 import { PALETTE, cssColor, parseHexColor } from './palette';
 
 function cssColorTokens(css: string): Record<string, string> {
@@ -11,8 +12,12 @@ function cssColorTokens(css: string): Record<string, string> {
   return tokens;
 }
 
+function pick(tokens: Record<string, string>, names: string[]): Record<string, string> {
+  return Object.fromEntries(names.map((name) => [name, tokens[name] ?? 'missing']));
+}
+
 describe('palette', () => {
-  it('matches the color tokens declared in style.css', () => {
+  it('keeps the legacy color tokens declared in style.css', () => {
     const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 
     const declared = cssColorTokens(css);
@@ -20,8 +25,17 @@ describe('palette', () => {
       Object.entries(PALETTE).map(([token, color]) => [token, cssColor(color)]),
     );
 
-    expect(Object.keys(declared)).toHaveLength(8);
-    expect(rendered).toEqual(declared);
+    expect(pick(declared, Object.keys(PALETTE))).toEqual(rendered);
+  });
+
+  it('declares the sun cycle tokens in style.css with their night values', () => {
+    const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+
+    const declared = cssColorTokens(css);
+    const { badVibe, ...night } = paletteAt(0.4);
+
+    expect(badVibe).toBe('#4b4762');
+    expect(pick(declared, Object.keys(night))).toEqual(night);
   });
 
   it('round-trips a hex color', () => {
