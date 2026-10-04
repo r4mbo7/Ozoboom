@@ -22,6 +22,14 @@ import {
   degreeToHz,
   midiToHz,
 } from './scale';
+import {
+  SPEAKER_LAYER_IDS,
+  SPEAKER_VOICES,
+  entryTickOf,
+  isSpeakerLayerId,
+  presenceAt,
+  type SpeakerLayerId,
+} from './speaker-layers';
 import { playNoise, playTone } from './synth';
 
 export type MusicMode = 'playing' | 'won' | 'lost';
@@ -38,6 +46,7 @@ export interface Layers {
   lead: boolean;
   squelch: boolean;
   oriental: boolean;
+  speakers: readonly SpeakerLayerId[];
   leadCutoff: number;
   bassCutoff: number;
 }
@@ -205,7 +214,21 @@ export function breakCueAt(dropTick: number | null, tick: number): BreakCue {
   return { roll: left <= 2 * TICKS_PER_BAR ? 2 * STEP_TICKS : TICKS_PER_BEAT, cut: false };
 }
 
-export function layersFor(segment: SetSegment, tier: number, phrase: number): Layers {
+export function layersFor(
+  segment: SetSegment,
+  tier: number,
+  phrase: number,
+  heard: readonly string[] = [],
+): Layers {
+  const speakers = SPEAKER_LAYER_IDS.filter((id) => heard.includes(id));
+  return { ...segmentLayers(segment, tier, phrase), speakers };
+}
+
+function segmentLayers(
+  segment: SetSegment,
+  tier: number,
+  phrase: number,
+): Omit<Layers, 'speakers'> {
   switch (segment) {
     case 'buildup':
       return {
@@ -674,6 +697,8 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let tier = 0;
   let dropTick: number | null = null;
   let followedTick = -1;
+  const entries = new Map<SpeakerLayerId, number>();
+  const plugging = new Set<SpeakerLayerId>();
 
   function openBus(): Bus {
     const input = context.createBiquadFilter();
@@ -763,6 +788,29 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     }
   }
 
+  function followSpeakers(state: SimState) {
+    plugging.clear();
+    const plugged = new Set<string>();
+    for (const speaker of state.speakers ?? []) {
+      if (!isSpeakerLayerId(speaker.id)) {
+        continue;
+      }
+      if (speaker.plugged) {
+        plugged.add(speaker.id);
+        if (!entries.has(speaker.id)) {
+          entries.set(speaker.id, entryTickOf(state.tick, cursor));
+        }
+      } else if (speaker.plugTicks > 0) {
+        plugging.add(speaker.id);
+      }
+    }
+    for (const id of [...entries.keys()]) {
+      if (!plugged.has(id)) {
+        entries.delete(id);
+      }
+    }
+  }
+
   function playStep(
     target: Bus,
     step: number,
@@ -784,7 +832,10 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       }
       return;
     }
-    const layers = layersFor(current, tier, phraseAt(state.set, state.tick, step));
+    const layers = layersFor(current, tier, phraseAt(state.set, state.tick, step), [
+      ...entries.keys(),
+      ...plugging,
+    ]);
     const scale = scaleOf(layers);
     const sixteenth = (step % TICKS_PER_BAR) / STEP_TICKS;
     const inBeat = sixteenth % 4;
@@ -833,6 +884,19 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       orientalLead(target.lead, at, sixteenth + 16 * (bar % 4), layers.leadCutoff, level, until);
     } else if (layers.lead) {
       lead(input, at, sixteenth + 16 * (bar % 2), layers.leadCutoff, until);
+    }
+    for (const id of layers.speakers) {
+      SPEAKER_VOICES[id]({
+        out: input,
+        at,
+        bar,
+        sixteenth,
+        chord,
+        scale,
+        kick: layers.kick,
+        light: current === 'break',
+        ...presenceAt(step, entries.get(id) ?? null, current === 'break'),
+      });
     }
     if (layers.pad && sixteenth === 0) {
       const barEnd = tickToTime(clock, (bar + 1) * TICKS_PER_BAR);
@@ -894,6 +958,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         sustain(target, state, currentTime, clock);
       }
 
+      followSpeakers(state);
       const range = stepsToSchedule(
         clock,
         cursor,
