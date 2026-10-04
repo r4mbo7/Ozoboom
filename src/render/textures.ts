@@ -18,6 +18,11 @@ import { type SpecialTextures, createSpecialTextures, specialShapes } from './te
 import { type PlayerTextures, playerShapes, playerTextures } from './textures-players';
 import { createSpeakerShapes } from './textures-speakers';
 import { trap } from './textures-traps';
+import {
+  type WeaponTextures,
+  createWeaponTextures,
+  destroyWeaponTextures,
+} from './textures-weapons';
 
 export type { Shape } from './paint';
 
@@ -41,6 +46,7 @@ export interface Textures {
   readonly masks: MaskSet;
   readonly traps: Readonly<Record<TrapLook, Shape>>;
   readonly specials: SpecialTextures;
+  readonly weapons: WeaponTextures;
 }
 
 export const STREAK_HEAD = 40 / 48;
@@ -205,6 +211,7 @@ export function createTextures(): Textures {
       strobe: trap('strobe'),
     },
     specials: createSpecialTextures(),
+    weapons: createWeaponTextures(),
   };
 }
 
@@ -219,4 +226,5 @@ export function destroyTextures(textures: Textures): void {
     shape.texture.destroy(true);
   }
   textures.masks.destroy();
+  destroyWeaponTextures(textures.weapons);
 }

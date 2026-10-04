@@ -11,6 +11,7 @@ import {
   spawnEnemy,
   spawnPickup,
 } from './fixture';
+import { advanceWeapons } from './fixture-weapon-fire';
 
 function killRandomEnemy(state: SimState, events: SimEvent[]): void {
   const index = Math.floor(nextRandom(state.rng) * state.enemies.length);
@@ -113,6 +114,9 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
   }
 
   for (const projectile of state.projectiles) {
+    if (projectile.owner.kind === 'weapon') {
+      continue;
+    }
     projectile.ticksLeft -= 1;
     if (projectile.ticksLeft <= 0) {
       fire(state, projectile);
@@ -139,6 +143,8 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
       trap.direction = { x: Math.cos(turned), y: Math.sin(turned) };
     }
   }
+
+  advanceWeapons(state);
 
   state.set.beat = Math.floor(tick / TICKS_PER_BEAT);
   state.set.bar = Math.floor(tick / TICKS_PER_BAR);

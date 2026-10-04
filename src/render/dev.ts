@@ -4,6 +4,12 @@ import { FIXTURE_CONTENT, type FixtureEvent, createFixtureState } from './fixtur
 import { type SheetPose, killMasks, layMasks } from './fixture-sheet';
 import { advanceSpecials, createSpecialsState } from './fixture-specials';
 import { advanceFixture } from './fixture-step';
+import {
+  BASE_WEAPON_IDS,
+  EVOLVED_WEAPON_IDS,
+  giveWeapons,
+  layWeaponSheet,
+} from './fixture-weapons';
 import { createRenderer } from './index';
 import { PALETTE_TOKENS, paletteAt } from '../shared/palette';
 import { SETS } from '../data/sets';
@@ -61,6 +67,15 @@ const [standX = state.core.x, standY = state.core.y] = (params.get('stand') ?? '
   .split(',')
   .filter(Boolean)
   .map(Number);
+const weaponParam = params.get('weapons') ?? '';
+const weaponIds = /^\d+$/.test(weaponParam)
+  ? BASE_WEAPON_IDS.slice(0, Number(weaponParam))
+  : weaponParam.split(',').filter(Boolean);
+giveWeapons(state, weaponIds);
+const weaponSheet = params.has('weaponSheet') ? count('weaponSheet', 32) : null;
+if (weaponSheet !== null) {
+  layWeaponSheet(state, weaponSheet, params.has('evolved') ? EVOLVED_WEAPON_IDS : BASE_WEAPON_IDS);
+}
 const dieAt = params.has('dieAt') ? count('dieAt', 0) : null;
 if (params.get('clean') === '1') {
   element('.panel').style.display = 'none';
@@ -177,7 +192,7 @@ function advance(events: readonly FixtureEvent[]) {
     advanceSpecials(state);
     return;
   }
-  if (sheet === null) {
+  if (sheet === null && weaponSheet === null) {
     advanceFixture(state, events);
     if (state.speakers !== undefined) {
       holdParty(state, standX, standY);

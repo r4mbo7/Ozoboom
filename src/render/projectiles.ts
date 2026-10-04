@@ -37,6 +37,9 @@ export function createProjectiles(ctx: RenderContext): Family {
       lightShots.begin();
       for (const projectile of state.projectiles) {
         const { owner } = projectile;
+        if (owner.kind === 'weapon') {
+          continue;
+        }
         const x = lerp(projectile.prevX, projectile.x, alpha);
         const y = lerp(projectile.prevY, projectile.y, alpha);
         const rotation = Math.atan2(projectile.vy, projectile.vx);

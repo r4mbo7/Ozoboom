@@ -93,6 +93,7 @@ export class Scene implements Renderer {
           new Map((set.speakers ?? []).map((def) => [def.id, def])),
         ]),
       ),
+      weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
     };
     const traps = createTraps(ctx);
     this.families = [

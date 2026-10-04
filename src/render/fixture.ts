@@ -12,10 +12,12 @@ import type {
 import { BYSTANDERS } from '../data/bystanders';
 import { ENEMIES } from '../data/enemies';
 import { SETS } from '../data/sets';
+import { WEAPONS } from '../data/weapons';
 import type { RenderContent } from './context';
 
 export const FIXTURE_CONTENT: RenderContent = {
   classes: [{ id: 'mage' }, { id: 'tank' }, { id: 'healer' }],
+  weapons: WEAPONS,
   sets: SETS,
   enemies: ENEMIES,
   bystanders: BYSTANDERS,
@@ -63,7 +65,6 @@ const BREEDS: readonly Breed[] = ENEMIES.filter(({ behaviour }) => behaviour !==
 );
 const BOSS: Breed = { kind: 'couvre-feu', radius: 40, speed: 0.4, holdAt: 240, share: 0 };
 const ARENA = { width: 1600, height: 1000 };
-const CORE_RADIUS = 46;
 export const PLAYER_ORBIT = 230;
 export const PARTY_OFFSET = 64;
 const PARTY = ['mage', 'tank', 'healer'];
@@ -225,7 +226,7 @@ export function createFixtureState(options: FixtureOptions): SimState {
     core: {
       x: ARENA.width / 2,
       y: ARENA.height / 2,
-      radius: CORE_RADIUS,
+      radius: 46,
       hp: 100,
       maxHp: 100,
       watts: 20,
