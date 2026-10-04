@@ -24,5 +24,7 @@ export function tempo({ state }: StepContext): void {
     return;
   }
   set.phrase = phraseOfTick(tick);
+  // The game freezes once lost, so the phrases started are the phrases held to their end.
+  state.stats.phrasesHeld = set.phrase;
   events.push({ type: 'phrase', phrase: set.phrase });
 }
