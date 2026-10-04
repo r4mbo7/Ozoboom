@@ -110,8 +110,14 @@ export interface EnemyState extends Positioned {
   carrying?: number;
   // Arnaqueur: running from players instead of chasing them, while carrying stolen vibes.
   fleeing?: boolean;
+  // Arnaqueur: reached the edge with its loot; `deaths` removes it without a kill or a drop.
+  escaped?: boolean;
   // Collant: the player it is attached to.
   clingingTo?: PlayerId;
+  // Collant: ticks left before it may attach to a player again, after detaching.
+  clingCooldown?: number;
+  // Collant: hp as of the previous tick's check, to size the latest hit for detaching.
+  hpWatermark?: number;
 }
 
 export type ProjectileOwner =
@@ -249,6 +255,7 @@ export type SimEvent =
   | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyRevived'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'vibesStolen'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'enemyFled'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'enemyBabbled'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderSpawned'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderHelped'; id: EntityId; kind: string; x: number; y: number }

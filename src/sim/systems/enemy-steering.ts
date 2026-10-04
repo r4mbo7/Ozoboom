@@ -3,6 +3,8 @@ import { distanceSquared } from '../../shared/vec';
 import { lookup, type ResolvedContent } from '../content';
 import { playerById } from '../damage';
 import type { Circle } from '../spatial-hash';
+import { STEERING_TARGETS } from '../specials';
+import type { SteeringOverride } from '../specials/types';
 import type { EnemyState, SimState } from '../state';
 import type { StepContext } from './types';
 
@@ -12,7 +14,8 @@ const LEASH_IN_AGGRO_RADII = 2;
 const SEPARATION_WEIGHT = 0.5;
 const separation = { x: 0, y: 0 };
 
-export function enemySteering({ state, content, enemyGrid }: StepContext): void {
+export function enemySteering(ctx: StepContext): void {
+  const { state, content, enemyGrid } = ctx;
   enemyGrid.rebuild(state.enemies);
   for (const enemy of state.enemies) {
     if (enemy.hp <= 0) {
@@ -23,16 +26,17 @@ export function enemySteering({ state, content, enemyGrid }: StepContext): void 
     if (enemy.stunTicks > 0) {
       continue;
     }
-    const target = targetOf(state, enemy);
-    const speed = enemy.speed * enemy.slowFactor;
+    const override = steeringOverride(ctx, enemy, definition);
+    const target = override?.target ?? targetOf(state, enemy);
+    const speed = enemy.speed * enemy.slowFactor * (override?.speedMul ?? 1);
     const dx = target.x - enemy.x;
     const dy = target.y - enemy.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     const gap = distance - enemy.radius - target.radius;
     const advance =
-      definition.ranged === undefined
-        ? Math.min(speed, Math.max(0, gap))
-        : Math.min(speed, Math.max(-speed, gap - definition.ranged.keepDistance));
+      override === undefined && definition.ranged !== undefined
+        ? Math.min(speed, Math.max(-speed, gap - definition.ranged.keepDistance))
+        : Math.min(speed, Math.max(0, gap));
     let moveX = distance === 0 ? 0 : (dx / distance) * advance;
     let moveY = distance === 0 ? 0 : (dy / distance) * advance;
     if (definition.behaviour === 'horde') {
@@ -47,6 +51,15 @@ export function enemySteering({ state, content, enemyGrid }: StepContext): void 
       pushTraps(state, content, enemy);
     }
   }
+}
+
+function steeringOverride(
+  ctx: StepContext,
+  enemy: EnemyState,
+  definition: EnemyDefinition,
+): SteeringOverride | undefined {
+  const { special } = definition;
+  return special === undefined ? undefined : STEERING_TARGETS[special.kind]?.(ctx, enemy, special);
 }
 
 export function targetOf(state: SimState, enemy: EnemyState): Circle {

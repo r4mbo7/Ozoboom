@@ -12,6 +12,16 @@ export function deaths(ctx: StepContext): void {
       kept += 1;
       continue;
     }
+    if (enemy.escaped === true) {
+      state.events.push({
+        type: 'enemyFled',
+        id: enemy.id,
+        kind: enemy.kind,
+        x: enemy.x,
+        y: enemy.y,
+      });
+      continue;
+    }
     const definition = lookup(content.enemies, enemy.kind, 'enemy');
     if (definition.special?.kind === 'revive') {
       SPECIALS.revive(ctx, enemy, definition.special);
@@ -21,7 +31,8 @@ export function deaths(ctx: StepContext): void {
         continue;
       }
     }
-    const { vibesDrop, wattsDrop } = definition;
+    const vibesDrop = definition.vibesDrop + (enemy.carrying ?? 0);
+    const { wattsDrop } = definition;
     state.events.push({
       type: 'enemyDied',
       id: enemy.id,
