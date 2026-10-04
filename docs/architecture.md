@@ -26,6 +26,7 @@ src/
   input/    périphériques vers intentions
   audio/    Web Audio, calé sur le tempo
   ui/       écrans et HUD (DOM)
+  feedback/ bouton « Ton avis » : formulaire, contexte joint, envoi vers GitHub (DOM)
   net/      plus tard : transport, lobby, synchronisation
   app/      assemblage : boucle, écrans, chargement
 ```
@@ -36,6 +37,7 @@ Règles de dépendance, vérifiées par ESLint (`eslint.config.js`) :
 - `data` ne dépend que de `shared`.
 - `sim` ne dépend que de `shared` et `data`. Interdits dans `sim`, `data` et `shared` : les globales du navigateur, `Math.random`, `Date`, `pixi.js` et tout import des couches au-dessus.
 - `render`, `input`, `audio`, `ui` dépendent de `sim` en lecture et de `shared`.
+- `ui` et `feedback` ne dépendent ni de `render`, ni d'`audio`, ni de `net`, ni d'`app`. `feedback` réutilise les briques de `ui`.
 - `app` assemble tout.
 
 ## Contrats partagés
