@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { UPGRADES } from '../data/upgrades';
 import { FIXTURE_OPTIONS } from './fixtures';
 import { createSimulation } from './index';
 import type { PlayerState } from './state';
-import { applyModifiers, refreshDerivedStats, statValue } from './stats';
+import { applyModifiers, refreshDerivedStats, skillCooldownTicks, statValue } from './stats';
 
 function freshPlayer(): PlayerState {
   const player = createSimulation(FIXTURE_OPTIONS).state.players[0];
@@ -90,5 +91,47 @@ describe('refreshDerivedStats', () => {
       maxHp: 100,
       speed: 4,
     });
+  });
+});
+
+describe('skillCooldownTicks', () => {
+  it('rounds the shortened cooldown to whole ticks, as the sim arms it', () => {
+    const player = freshPlayer();
+    const loop = UPGRADES.find((upgrade) => upgrade.id === 'boucle-vj');
+    if (loop === undefined) {
+      throw new Error('expected the Boucle VJ upgrade');
+    }
+    applyModifiers(player, loop.modifiers);
+    applyModifiers(player, loop.modifiers);
+
+    const ticks = skillCooldownTicks(player, { cooldownTicks: 192 });
+
+    expect(ticks).toBe(123);
+  });
+
+  it('keeps the base cooldown without modifier', () => {
+    const player = freshPlayer();
+
+    const ticks = skillCooldownTicks(player, { cooldownTicks: 192 });
+
+    expect(ticks).toBe(192);
+  });
+});
+
+describe('player modifiers', () => {
+  it('are read only in stats.ts, so every stat goes through statValue', () => {
+    const sources = import.meta.glob<string>('/src/**/*.ts', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    });
+
+    const offenders = Object.entries(sources)
+      .filter(([path]) => path !== '/src/sim/stats.ts' && !path.endsWith('.test.ts'))
+      .filter(([, source]) => /\bmodifiers(\?\.|\.|\[)/.test(source))
+      .map(([path]) => path);
+
+    expect(Object.keys(sources)).toContain('/src/sim/stats.ts');
+    expect(offenders).toEqual([]);
   });
 });

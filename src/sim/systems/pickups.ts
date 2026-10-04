@@ -1,5 +1,6 @@
 import { lookup, type ResolvedContent } from '../content';
 import type { PickupState, PlayerState, SimState } from '../state';
+import { statValue } from '../stats';
 import type { StepContext } from './types';
 
 export function pickups({ state, content, set }: StepContext): void {
@@ -30,9 +31,11 @@ function nearestCollector(
     if (player.downed) {
       continue;
     }
-    const reach =
-      lookup(content.classes, player.classId, 'class').pickupRadius *
-      (player.modifiers.pickupRadiusMul ?? 1);
+    const reach = statValue(
+      player,
+      'pickupRadiusMul',
+      lookup(content.classes, player.classId, 'class').pickupRadius,
+    );
     const dx = player.x - pickup.x;
     const dy = player.y - pickup.y;
     const squared = dx * dx + dy * dy;

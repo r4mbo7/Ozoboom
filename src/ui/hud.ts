@@ -1,6 +1,7 @@
 import type { ClassDefinition, GameContent, SetDefinition, SkillDefinition } from '../data/types';
 import type { InputDevice, InputSnapshot } from '../input/intents';
-import type { SimState } from '../sim/state';
+import type { PlayerState, SimState } from '../sim/state';
+import { skillCooldownTicks, statValue } from '../sim/stats';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
 import { BOLT, FOG, SUN, skillIcon, trapIcon } from './icons';
@@ -12,6 +13,13 @@ export interface Hud {
   readonly element: HTMLElement;
   update(state: SimState, snapshot: InputSnapshot, content: GameContent): void;
   reset(): void;
+}
+
+export function skillCharge(
+  player: Pick<PlayerState, 'modifiers' | 'skillCooldown'>,
+  skill: Pick<SkillDefinition, 'cooldownTicks'>,
+): number {
+  return 1 - ratio(player.skillCooldown, skillCooldownTicks(player, skill));
 }
 
 const VU_SEGMENTS = 20;
@@ -274,7 +282,6 @@ export function createHud(): Hud {
 
     selectedTrap = selectTrap(selectedTrap, tiles.length, snapshot.gameplay, previousGameplay);
     previousGameplay = snapshot.gameplay;
-    const costMul = player.modifiers.trapCostMul ?? 1;
     const maxTraps = set?.maxTraps ?? 0;
     setText(wattsValue, formatNumber(state.core.watts));
     setText(trapsCount, `${String(state.traps.length)} / ${String(maxTraps)} posés`);
@@ -287,16 +294,15 @@ export function createHud(): Hud {
       setFlag(
         tile,
         'unaffordable',
-        trap.cost * costMul > state.core.watts || state.traps.length >= maxTraps,
+        statValue(player, 'trapCostMul', trap.cost) > state.core.watts ||
+          state.traps.length >= maxTraps,
       );
     });
     setText(trapName, content.traps[selectedTrap]?.name ?? '');
 
     if (definition !== null) {
-      const total = definition.skill.cooldownTicks * (player.modifiers.skillCooldownMul ?? 1);
-      const charge = total > 0 ? 1 - ratio(player.skillCooldown, total) : 1;
       const skillReady = player.skillCooldown <= 0;
-      setVar(skill.root, '--charge', String(skillReady ? 1 : charge));
+      setVar(skill.root, '--charge', String(skillCharge(player, definition.skill)));
       setFlag(skill.root, 'ready', skillReady);
       setText(skill.status, skillReady ? 'Prête' : 'Recharge');
       setVar(ultimate.root, '--charge', player.ultimateReady ? '1' : '0');

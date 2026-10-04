@@ -1,4 +1,5 @@
-import type { ClassDefinition, StatKey, StatModifier } from '../data/types';
+import type { ClassDefinition, SkillDefinition, StatKey, StatModifier } from '../data/types';
+import { wholeTicks } from './effects';
 import type { PlayerState } from './state';
 
 const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
@@ -28,6 +29,13 @@ export function statValue(
     return base;
   }
   return ADDITIVE[key] ? base + modifier : base * modifier;
+}
+
+export function skillCooldownTicks(
+  player: Pick<PlayerState, 'modifiers'>,
+  skill: Pick<SkillDefinition, 'cooldownTicks'>,
+): number {
+  return wholeTicks(statValue(player, 'skillCooldownMul', skill.cooldownTicks));
 }
 
 export function applyModifiers(
