@@ -8,6 +8,7 @@ import type {
   SimState,
   TrapState,
 } from '../sim/state';
+import { BYSTANDERS } from '../data/bystanders';
 import { ENEMIES } from '../data/enemies';
 import { SETS } from '../data/sets';
 import type { RenderContent } from './context';
@@ -15,7 +16,8 @@ import type { RenderContent } from './context';
 export const FIXTURE_CONTENT: RenderContent = {
   classes: [{ id: 'mage' }],
   sets: SETS,
-  enemies: ENEMIES.map(({ id, behaviour }) => ({ id, behaviour })),
+  enemies: ENEMIES,
+  bystanders: BYSTANDERS,
   traps: [
     {
       id: 'caisson-de-basse',

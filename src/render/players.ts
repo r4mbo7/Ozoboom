@@ -37,11 +37,14 @@ export function createPlayers(ctx: RenderContext): Family {
         body.alpha = player.downed ? 0.6 + 0.4 * pulse : 1;
         placeOutline(outline, body, t.playerRing.texture, t.playerRing.radius, frame);
 
-        halo.visible = !player.downed;
-        setTint(halo, color);
+        const dazzled = (player.dazzledTicks ?? 0) > 0;
+        halo.visible = !player.downed && !((player.suppressedTicks ?? 0) > 0);
+        setTint(halo, dazzled ? palette.texte : color);
         halo.position.set(x, y);
-        halo.scale.set(((player.radius * 3.2) / t.halo.radius) * (1 + 0.1 * pulse));
-        halo.alpha = light.haloAlpha;
+        halo.scale.set(
+          ((player.radius * (dazzled ? 4.6 : 3.2)) / t.halo.radius) * (1 + 0.1 * pulse),
+        );
+        halo.alpha = dazzled ? Math.min(1, light.haloAlpha * 1.6) : light.haloAlpha;
 
         aim.visible = !player.downed;
         setTint(aim, color);
