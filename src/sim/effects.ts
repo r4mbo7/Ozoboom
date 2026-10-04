@@ -30,6 +30,11 @@ export function pushAway(body: Point, from: Point, distance: number): void {
   body.y += (dy / length) * distance;
 }
 
+export function markEnemy(state: SimState, enemy: EnemyState, ticks: number): void {
+  enemy.marked = true;
+  enemy.markedUntilTick = Math.max(enemy.markedUntilTick ?? 0, state.tick + ticks);
+}
+
 export function markedDamageMul(content: ResolvedContent): number {
   let mul = 1;
   for (const trap of content.traps.values()) {

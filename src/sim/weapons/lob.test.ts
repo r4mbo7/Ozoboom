@@ -65,4 +65,42 @@ describe('lob', () => {
 
     expect(simulation.state.projectiles).toHaveLength(0);
   });
+
+  describe('with dropRain', () => {
+    const rain = thrownWeapon(
+      'rain',
+      { kind: 'lob', damage: 30, radius: 80, range: 100, flightTicks: 10, dropRain: true },
+      [0, 4, 8, 12],
+    );
+
+    it('lobs only on the first beat of the bar, within range, outside the drop', () => {
+      const { simulation } = armedArena(rain);
+      stand(simulation, 400, 350);
+      stand(simulation, 800, 800);
+
+      const lobbed: number[] = [];
+      let ids = simulation.state.nextEntityId;
+      while (simulation.state.tick < 48) {
+        simulation.step([]);
+        if (simulation.state.nextEntityId > ids) {
+          lobbed.push(simulation.state.tick);
+          ids = simulation.state.nextEntityId;
+        }
+      }
+
+      expect(lobbed).toEqual([48]);
+    });
+
+    it('lobs from the first beat across the whole arena during the drop', () => {
+      const { simulation } = armedArena(rain);
+      stand(simulation, 900, 800);
+      simulation.state.set.segment = 'drop';
+
+      stepTo(simulation, 12);
+
+      expect(simulation.state.projectiles.map(({ arc }) => [arc?.toX, arc?.toY])).toEqual([
+        [900, 800],
+      ]);
+    });
+  });
 });

@@ -1,4 +1,9 @@
-import type { SetDefinition, UpgradeDefinition, WeaponDefinition } from '../data/types';
+import type {
+  FusionDefinition,
+  SetDefinition,
+  UpgradeDefinition,
+  WeaponDefinition,
+} from '../data/types';
 import { nextInt } from '../shared/prng';
 import type { ResolvedContent } from './content';
 import type { PlayerState, RngState, SimState } from './state';
@@ -8,6 +13,7 @@ export const DEFAULT_WEAPON_SLOTS = 3;
 const RARE_FROM_VOLUME = 2;
 const LEGENDARY_FROM_VOLUME = 3;
 const AFFINITY_WEIGHT = 2;
+const FUSION_WEIGHT = 3;
 
 interface Candidate {
   id: string;
@@ -20,6 +26,31 @@ export function isEligible(upgrade: UpgradeDefinition, player: PlayerState): boo
   }
   const stacks = player.upgrades.filter((id) => id === upgrade.id).length;
   return stacks < upgrade.maxStacks;
+}
+
+// The recipe that turns `weapon`, a fused form, out of what the player holds: the base weapon at
+// its maximum level and the upgrade at its maximum stacks, a recipe serving once per player.
+export function openFusion(
+  weapon: WeaponDefinition,
+  player: PlayerState,
+  content: ResolvedContent,
+): FusionDefinition | undefined {
+  if (weapon.evolvedFrom === undefined || player.fused?.includes(weapon.id)) {
+    return undefined;
+  }
+  return content.fusions.find((fusion) => {
+    const base = content.weapons.get(fusion.weaponId);
+    const upgrade = content.upgrades.get(fusion.upgradeId);
+    const held = player.weapons?.find((slot) => slot.id === fusion.weaponId);
+    return (
+      fusion.resultId === weapon.id &&
+      base !== undefined &&
+      upgrade !== undefined &&
+      held !== undefined &&
+      held.level >= base.maxLevel &&
+      player.upgrades.filter((id) => id === upgrade.id).length >= upgrade.maxStacks
+    );
+  });
 }
 
 export function weaponSlotCount(set: SetDefinition): number {
@@ -76,7 +107,9 @@ function candidates(
     }
   }
   for (const weapon of content.weapons.values()) {
-    if (isWeaponOffered(weapon, player, state, set)) {
+    if (openFusion(weapon, player, content) !== undefined) {
+      pool.push({ id: weapon.id, weight: FUSION_WEIGHT });
+    } else if (isWeaponOffered(weapon, player, state, set)) {
       const weight = weapon.classAffinity === player.classId ? AFFINITY_WEIGHT : 1;
       pool.push({ id: weapon.id, weight });
     }

@@ -89,6 +89,8 @@ export interface PlayerState extends Positioned {
   // Set by dazzle, decremented by `specials`.
   dazzledTicks?: number;
   weapons?: WeaponSlot[];
+  // Fused forms already taken: a recipe serves once per player.
+  fused?: string[];
 }
 
 export interface EnemyState extends Positioned {
@@ -104,6 +106,8 @@ export interface EnemyState extends Positioned {
   slowFactor: number;
   stunTicks: number;
   marked: boolean;
+  // Tick from which the mark lapses, whatever put it there (lure, ribbon): the longest wins.
+  markedUntilTick?: number;
   isBoss: boolean;
   // Last player whose projectile, trap or skill hit this enemy: credited with the kill.
   lastHitBy?: PlayerId;

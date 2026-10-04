@@ -142,7 +142,15 @@ export type WeaponEffect =
   | { kind: 'sweep'; damage: number; radius: number; arcDegrees: number }
   | { kind: 'spark'; damage: number; speed: number; pierce: number; rangeTicks: number }
   | { kind: 'hoop'; damage: number; radius: number; wideRadius: number; knockback: number }
-  | { kind: 'lob'; damage: number; radius: number; range: number; flightTicks: number }
+  | {
+      kind: 'lob';
+      damage: number;
+      radius: number;
+      range: number;
+      flightTicks: number;
+      // On the drop, the lob reaches the whole arena instead of `range`.
+      dropRain?: boolean;
+    }
   | { kind: 'boomerang'; damage: number; heal: number; range: number; speed: number }
   | {
       kind: 'plate';
@@ -162,7 +170,13 @@ export type WeaponEffect =
       turnsPerBar: number;
     }
   | { kind: 'trail'; speedMul: number; slowFactor: number; healPerBar: number; lengthTicks: number }
-  | { kind: 'ribbon'; length: number; markedTicks: number };
+  | {
+      kind: 'ribbon';
+      length: number;
+      markedTicks: number;
+      // On the drop, the ribbon crosses the whole arena instead of `length`.
+      dropCrossesArena?: boolean;
+    };
 
 export interface WeaponDefinition {
   id: string;

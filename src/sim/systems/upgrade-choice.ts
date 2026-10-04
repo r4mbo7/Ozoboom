@@ -1,12 +1,13 @@
 import type { WeaponDefinition } from '../../data/types';
 import { lookup } from '../content';
-import { isEligible, isWeaponOffered } from '../draw';
+import { isEligible, isWeaponOffered, openFusion } from '../draw';
 import type { PlayerState } from '../state';
 import { applyModifiers, refreshDerivedStats } from '../stats';
 import { presentNextOffer } from './progression';
 import type { StepContext } from './types';
 
-export function upgradeChoice({ state, content, set, commands }: StepContext): void {
+export function upgradeChoice(ctx: StepContext): void {
+  const { state, content, set, commands } = ctx;
   for (const player of state.players) {
     for (const action of commands.get(player.id)?.actions ?? []) {
       if (action.type !== 'chooseUpgrade') {
@@ -17,7 +18,13 @@ export function upgradeChoice({ state, content, set, commands }: StepContext): v
         continue;
       }
       const weapon = content.weapons.get(action.upgradeId);
-      if (weapon !== undefined) {
+      if (weapon?.evolvedFrom !== undefined) {
+        const fusion = openFusion(weapon, player, content);
+        if (fusion === undefined) {
+          continue;
+        }
+        evolve(ctx, player, fusion.weaponId, weapon);
+      } else if (weapon !== undefined) {
         if (!isWeaponOffered(weapon, player, state, set)) {
           continue;
         }
@@ -46,4 +53,32 @@ function gainWeapon(player: PlayerState, weapon: WeaponDefinition): void {
     return;
   }
   player.weapons = [...(player.weapons ?? []), { id: weapon.id, level: 1, phase: 0 }];
+}
+
+function evolve(
+  { state, content }: StepContext,
+  player: PlayerState,
+  baseId: string,
+  result: WeaponDefinition,
+): void {
+  const slot = player.weapons?.find((held) => held.id === baseId);
+  if (slot === undefined) {
+    throw new Error(`fusion to "${result.id}" without "${baseId}" held`);
+  }
+  const old = lookup(content.weapons, baseId, 'weapon');
+  if (slot.trail !== undefined && old.effect.kind === 'trail') {
+    applyModifiers(player, [{ stat: 'speedMul', mul: 1 / old.effect.speedMul }]);
+    refreshDerivedStats(player, lookup(content.classes, player.classId, 'class'));
+  }
+  slot.id = result.id;
+  slot.level = 1;
+  slot.phase = 0;
+  delete slot.trail;
+  player.fused = [...(player.fused ?? []), result.id];
+  state.events.push({
+    type: 'weaponEvolved',
+    playerId: player.id,
+    weaponId: baseId,
+    resultId: result.id,
+  });
 }

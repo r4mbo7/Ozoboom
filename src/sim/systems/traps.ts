@@ -8,6 +8,7 @@ import {
   healPlayersOnBar,
   hurtEnemy,
   keepWhere,
+  markEnemy,
   markedDamageMul,
   shockwave,
   slowEnemies,
@@ -17,6 +18,9 @@ import {
 import type { EnemyState, PlayerId, PlayerState, SimState, TrapState, Vec2 } from '../state';
 import { statValue } from '../stats';
 import type { StepContext } from './types';
+
+// Marks the lure does not renew lapse after the next tick, whose earlier systems still see it.
+const LURE_MARK_TICKS = 2;
 
 type PlaceTrap = Extract<PlayerAction, { type: 'placeTrap' }>;
 
@@ -211,7 +215,7 @@ export function fire(firing: Firing): void {
     case 'lure':
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
-          enemy.marked = true;
+          markEnemy(state, enemy, LURE_MARK_TICKS);
           drawTo(enemy, at, contact + enemy.radius);
         }
       }

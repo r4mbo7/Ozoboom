@@ -13,6 +13,12 @@ export function beginStep({ state }: StepContext): void {
   if (state.status === 'running') {
     state.tick += 1;
   }
+  for (const enemy of state.enemies) {
+    if (enemy.markedUntilTick !== undefined && enemy.markedUntilTick <= state.tick) {
+      enemy.marked = false;
+      delete enemy.markedUntilTick;
+    }
+  }
 }
 
 function rememberPositions(entities: readonly Positioned[]): void {
