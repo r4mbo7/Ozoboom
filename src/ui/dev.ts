@@ -33,7 +33,7 @@ const initial: UiFixtureScreen =
     : (UI_FIXTURE_SCREENS.find((screen) => screen === requested) ?? 'title');
 let current = initial;
 let device: InputDevice = params.get('device') === 'gamepad' ? 'gamepad' : 'keyboardMouse';
-let state: SimState = fixtureForScreen(initial);
+let state: SimState = fixtureForScreen(initial, params.has('late'));
 let pending: InputSnapshot = idleSnapshot({ device });
 const titleOptions = {
   calmMode: params.has('calm') || prefersCalmMode(),
@@ -89,13 +89,14 @@ function openForm(): void {
 function open(screen: UiFixtureScreen): void {
   feedback?.close();
   current = screen;
-  state = fixtureForScreen(screen);
+  state = fixtureForScreen(screen, params.has('late'));
   switch (screen) {
     case 'title':
       ui.showTitle({ ...titleOptions, device });
       break;
     case 'game':
     case 'upgrade':
+    case 'volume':
       ui.showGame();
       break;
     case 'won':
@@ -133,6 +134,10 @@ window.addEventListener('keydown', (event) => {
     if (feedback === null) {
       openForm();
     }
+  } else if (event.code === 'F7') {
+    open('volume');
+  } else if (event.code === 'KeyV') {
+    state = { ...state, events: [{ type: 'volumeChanged', volume: state.volume ?? 0 }] };
   } else if (/^F[1-5]$/.test(event.code)) {
     const screen = UI_FIXTURE_SCREENS[Number(event.code.slice(1)) - 1];
     if (screen !== undefined) {
@@ -150,11 +155,31 @@ if (requested === 'feedback') {
   openForm();
 }
 
+let ticks = 0;
+const FIRE_EVERY_TICKS = 12;
+
 window.setInterval(() => {
+  ticks += 1;
+  const player = state.players[0];
+  const held = player?.weapons?.[0];
+  if (
+    current === 'volume' &&
+    ticks % FIRE_EVERY_TICKS === 0 &&
+    player !== undefined &&
+    held !== undefined
+  ) {
+    state = {
+      ...state,
+      events: [
+        { type: 'weaponFired', playerId: player.id, weaponId: held.id, x: player.x, y: player.y },
+      ],
+    };
+  }
   const snapshot: InputSnapshot = { ...pending, device };
   pending = idleSnapshot({ device });
   if (feedback === null) {
     ui.update(state, snapshot, UI_FIXTURE_CONTENT);
+    state = { ...state, events: [] };
   } else {
     feedback.update(snapshot);
   }

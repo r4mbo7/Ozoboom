@@ -1,4 +1,4 @@
-import type { SkillEffect, TrapEffect, UpgradeFamily } from '../data/types';
+import type { SkillEffect, TrapEffect, UpgradeFamily, WeaponEffect } from '../data/types';
 
 export const BOLT = '<path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z" fill="currentColor"/>';
 
@@ -10,6 +10,9 @@ export const SUN =
   '<circle cx="12" cy="12" r="4.5" fill="currentColor"/>' +
   '<g stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
   '<path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></g>';
+
+export const MOON =
+  '<path d="M19.5 14.6A8.2 8.2 0 0 1 9.4 4.5a8.2 8.2 0 1 0 10.1 10.1z" fill="currentColor"/>';
 
 export const SPEECH =
   '<path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
@@ -83,5 +86,61 @@ export function familyIcon(family: UpgradeFamily): string {
       return '<path d="M12 2.5 20 6v6c0 4.6-3.4 8.2-8 9.5-4.6-1.3-8-4.9-8-9.5V6z" fill="currentColor"/>';
     case 'relic':
       return '<path d="M12 2 4 9l8 13 8-13z" fill="currentColor"/>';
+  }
+}
+
+const STROKE = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"';
+
+export function weaponIcon(effect: WeaponEffect): string {
+  switch (effect.kind) {
+    case 'sweep':
+      return (
+        `<path d="M4 20 15 9" ${STROKE} stroke-width="2.6"/>` +
+        `<path d="M13 3.5a9 9 0 0 1 7.5 7.5" ${STROKE}/>` +
+        '<circle cx="16.5" cy="7.5" r="2" fill="currentColor"/>'
+      );
+    case 'spark':
+      return (
+        `<path d="M3 20 14 9" ${STROKE} stroke-width="2.6"/>` +
+        '<circle cx="17" cy="6" r="3" fill="currentColor"/>' +
+        `<path d="M20.5 11.5 22 13M12 2.5 11 1" ${STROKE} stroke-width="1.6"/>`
+      );
+    case 'hoop':
+      return (
+        `<circle cx="12" cy="12" r="9" ${STROKE}/>` + `<circle cx="12" cy="12" r="4.5" ${STROKE}/>`
+      );
+    case 'lob':
+      return (
+        `<path d="M3 19c3-12 15-12 18 0" ${STROKE} stroke-dasharray="1 3.4"/>` +
+        '<circle cx="12" cy="8.5" r="3.4" fill="currentColor"/>'
+      );
+    case 'boomerang':
+      return `<path d="M5 5c6 0 12 4.5 14 14-4-5-8-6.5-14-5.5z" ${STROKE} stroke-linejoin="round"/>`;
+    case 'plate':
+      return (
+        `<ellipse cx="12" cy="7.5" rx="8.5" ry="3" ${STROKE}/>` +
+        `<path d="M12 10.5V21M8 21h8" ${STROKE}/>`
+      );
+    case 'totem':
+      return (
+        `<rect x="7" y="3" width="10" height="5" rx="1.4" ${STROKE}/>` +
+        `<rect x="7" y="9.5" width="10" height="5" rx="1.4" ${STROKE}/>` +
+        `<rect x="7" y="16" width="10" height="5" rx="1.4" ${STROKE}/>`
+      );
+    case 'orbit':
+      return (
+        `<circle cx="12" cy="12" r="8.5" ${STROKE} stroke-dasharray="2 3.4"/>` +
+        '<circle cx="12" cy="12" r="2.5" fill="currentColor"/>' +
+        '<circle cx="12" cy="3.5" r="2" fill="currentColor"/><circle cx="19.4" cy="16.3" r="2" fill="currentColor"/>' +
+        '<circle cx="4.6" cy="16.3" r="2" fill="currentColor"/>'
+      );
+    case 'trail':
+      return (
+        '<circle cx="18.5" cy="12" r="3.2" fill="currentColor"/>' +
+        `<path d="M3 12h9" ${STROKE} stroke-dasharray="1 3.2"/>` +
+        `<circle cx="15" cy="12" r="6.5" ${STROKE} stroke-width="1.4" opacity="0.6"/>`
+      );
+    case 'ribbon':
+      return `<path d="M2.5 15c3-8 6-8 9.5 0s6.5 8 9.5 0" ${STROKE} stroke-width="2.6"/>`;
   }
 }
