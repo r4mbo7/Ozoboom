@@ -6,7 +6,13 @@ import type { StepContext } from './types';
 export function specials(ctx: StepContext): void {
   const { state, content } = ctx;
   for (const player of state.players) {
-    if (player.slowFactor !== undefined) {
+    const timedSlow =
+      player.slowFactorExpiresTick !== undefined && player.slowFactorExpiresTick > state.tick
+        ? (player.slowFactorValue ?? 1)
+        : undefined;
+    if (timedSlow !== undefined) {
+      player.slowFactor = timedSlow;
+    } else if (player.slowFactor !== undefined) {
       player.slowFactor = 1;
     }
     if (player.suppressedTicks !== undefined && player.suppressedTicks > 0) {

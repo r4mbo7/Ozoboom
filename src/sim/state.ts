@@ -78,8 +78,8 @@ export interface PlayerState extends Positioned {
   // Set by a special effect (sigh, cling) and reset to 1 each tick by `specials`.
   slowFactor?: number;
   // Tick at which the current slowFactor effect ends, and the value it keeps posing until then.
-  // Needed because `specials` resets slowFactor to 1 every tick: the module that owns the longer
-  // of two overlapping effects re-poses it from here, so they never stack.
+  // `specials` re-poses it each tick until it expires, even once the enemy that caused it is gone;
+  // the longer of two overlapping effects wins, so they never stack.
   slowFactorExpiresTick?: number;
   slowFactorValue?: number;
   // Set by suppress; statValue returns the base value of every stat while this is positive.

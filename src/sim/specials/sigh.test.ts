@@ -115,4 +115,19 @@ describe('sigh', () => {
 
     expect(player.slowFactor).toBeUndefined();
   });
+
+  it('keeps the slow for its whole duration after the sighing bad vibe is gone', () => {
+    const { simulation, player } = soloPlayer();
+    const whiner = spawnEnemy(simulation.state, WHINER_LONG, 10, 10, false);
+    fireAt(simulation, whiner.id, player);
+    simulation.step([]);
+
+    whiner.hp = 0;
+    for (let i = 0; i < 10; i++) {
+      simulation.step([]);
+    }
+
+    expect(simulation.state.enemies).not.toContain(whiner);
+    expect(player.slowFactor).toBe(0.4);
+  });
 });

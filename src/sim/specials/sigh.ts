@@ -22,8 +22,8 @@ export const sigh: SpecialModule = (ctx, enemy, effect) => {
       player.slowFactorExpiresTick = expiresAtTick;
       player.slowFactorValue = effect.slowFactor;
     }
+    player.slowFactor = Math.min(player.slowFactor ?? 1, player.slowFactorValue ?? 1);
   }
-  renew(state);
 };
 
 // Predicts this tick's move, the same way `projectiles` resolves hits right after `specials`:
@@ -43,16 +43,4 @@ function aboutToBeTouched(state: SimState, projectile: ProjectileState): PlayerS
     }
   }
   return undefined;
-}
-
-function renew(state: SimState): void {
-  for (const player of state.players) {
-    if (
-      player.slowFactorExpiresTick !== undefined &&
-      player.slowFactorExpiresTick > state.tick &&
-      player.slowFactorValue !== undefined
-    ) {
-      player.slowFactor = player.slowFactorValue;
-    }
-  }
 }
