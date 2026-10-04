@@ -51,12 +51,21 @@ export function applyModifiers(
   }
 }
 
+// Recomputes maxHp and speed, leaving hp untouched: for a temporary effect (suppress) that must
+// not cost or grant hp points while it holds the derived stats down to their base value.
+export function applyDerivedStats(
+  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'maxHp' | 'speed'>,
+  definition: Pick<ClassDefinition, 'maxHp' | 'speed'>,
+): void {
+  player.maxHp = statValue(player, 'maxHpAdd', definition.maxHp);
+  player.speed = statValue(player, 'speedMul', definition.speed);
+}
+
 export function refreshDerivedStats(
   player: PlayerState,
   definition: Pick<ClassDefinition, 'maxHp' | 'speed'>,
 ): void {
-  const maxHp = statValue(player, 'maxHpAdd', definition.maxHp);
-  player.hp += maxHp - player.maxHp;
-  player.maxHp = maxHp;
-  player.speed = statValue(player, 'speedMul', definition.speed);
+  const previousMaxHp = player.maxHp;
+  applyDerivedStats(player, definition);
+  player.hp += player.maxHp - previousMaxHp;
 }
