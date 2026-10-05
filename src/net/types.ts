@@ -28,6 +28,8 @@ export interface Transport {
   readonly id: PeerId;
   send(to: PeerId, message: NetMessage): void;
   broadcast(message: NetMessage): void;
+  // Drops one peer's connection; both sides see 'left'.
+  disconnect(peer: PeerId): void;
   onMessage(listener: (from: PeerId, message: NetMessage) => void): () => void;
   onPeer(listener: (peer: PeerId, change: 'joined' | 'left') => void): () => void;
   close(): void;

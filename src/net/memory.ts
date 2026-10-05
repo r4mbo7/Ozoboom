@@ -26,6 +26,8 @@ interface Node {
 
 export function createMemoryTransports(count: number): MemoryTransport[] {
   const nodes = new Map<PeerId, Node>();
+  const severed = new Set<string>();
+  const link = (a: PeerId, b: PeerId): string => [a, b].sort().join('|');
 
   function deliver(node: Node): boolean {
     const delivery = node.inbox.shift();
@@ -69,7 +71,13 @@ export function createMemoryTransports(count: number): MemoryTransport[] {
 
     const send = (to: PeerId, message: NetMessage): void => {
       const target = nodes.get(to);
-      if (node.closed || target === undefined || target.closed || to === id) {
+      if (
+        node.closed ||
+        target === undefined ||
+        target.closed ||
+        to === id ||
+        severed.has(link(id, to))
+      ) {
         return;
       }
       target.inbox.push({ kind: 'message', from: id, message: structuredClone(message) });
@@ -82,6 +90,15 @@ export function createMemoryTransports(count: number): MemoryTransport[] {
         for (const peer of nodes.keys()) {
           send(peer, message);
         }
+      },
+      disconnect(peer) {
+        const other = nodes.get(peer);
+        if (other === undefined || other.closed || node.closed || severed.has(link(id, peer))) {
+          return;
+        }
+        severed.add(link(id, peer));
+        other.inbox.push({ kind: 'peer', peer: id, change: 'left' });
+        node.inbox.push({ kind: 'peer', peer, change: 'left' });
       },
       onMessage(listener) {
         node.messageListeners.add(listener);

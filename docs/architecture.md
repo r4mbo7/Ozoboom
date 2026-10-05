@@ -47,18 +47,18 @@ Ces fichiers sont l'interface entre les couches, donc entre les tâches menées 
 
 Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick, les durées en ticks.
 
-| Fichier                 | Contenu                                                                                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/sim/state.ts`      | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas       |
-| `src/sim/commands.ts`   | `PlayerCommand` : par joueur et par tick, une entrée continue (`PlayerInput`) et des actions discrètes (`PlayerAction`)                                             |
-| `src/sim/lineup.ts`     | le line-up du set et l'heure : `lineupSlots`, `lineupCursor`, `ticksToDrop`, `setFraction` (position dans le set, dans [0, 1], jamais en arrière, 1 une fois gagné) |
-| `src/shared/palette.ts` | la palette du Cycle du soleil : `paletteAt(fraction)` (jetons en `#rrggbb`) et `lightAt(fraction)` (`additive`, `haloAlpha`)                                        |
-| `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`                                |
-| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource` (vue fusionnée), `DeviceId` et `InputHub` (un instantané par périphérique, pour la coop locale)      |
-| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme et le cadrage (`CameraFocus` : suivre un joueur, ou cadrer tout le monde)          |
-| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setMood('set' \| 'menu')`                                                                                    |
-| `src/ui/types.ts`       | `Ui` et `UiCallbacks` : écrans (titre, salon, jeu, fin, avis), `UiFrame` (les joueurs de cet écran et leurs instantanés), `LobbyModel` rendu par le salon           |
-| `src/net/types.ts`      | `Transport` (envoyer, diffuser, écouter), `NetMessage` (salon, lancement, commande, trame, empreinte, divergence), `CommandSource` consommée par la boucle          |
+| Fichier                 | Contenu                                                                                                                                                                    |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/sim/state.ts`      | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas              |
+| `src/sim/commands.ts`   | `PlayerCommand` : par joueur et par tick, une entrée continue (`PlayerInput`) et des actions discrètes (`PlayerAction`)                                                    |
+| `src/sim/lineup.ts`     | le line-up du set et l'heure : `lineupSlots`, `lineupCursor`, `ticksToDrop`, `setFraction` (position dans le set, dans [0, 1], jamais en arrière, 1 une fois gagné)        |
+| `src/shared/palette.ts` | la palette du Cycle du soleil : `paletteAt(fraction)` (jetons en `#rrggbb`) et `lightAt(fraction)` (`additive`, `haloAlpha`)                                               |
+| `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`                                       |
+| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource` (vue fusionnée), `DeviceId` et `InputHub` (un instantané par périphérique, pour la coop locale)             |
+| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme et le cadrage (`CameraFocus` : suivre un joueur, ou cadrer tout le monde)                 |
+| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setMood('set' \| 'menu')`                                                                                           |
+| `src/ui/types.ts`       | `Ui` et `UiCallbacks` : écrans (titre, salon, jeu, fin, avis), `UiFrame` (les joueurs de cet écran et leurs instantanés), `LobbyModel` rendu par le salon                  |
+| `src/net/types.ts`      | `Transport` (envoyer, diffuser, couper un pair, écouter), `NetMessage` (salon, lancement, commande, trame, empreinte, divergence), `CommandSource` consommée par la boucle |
 
 Conventions de la simulation :
 
@@ -128,7 +128,7 @@ Un site statique ne peut pas tenir un classement fiable : il faut un petit servi
 
 - `sim`, `data`, `shared` : tests unitaires Vitest, rapides, sans navigateur. Structure Given / When / Then. C'est là que vit l'essentiel de la couverture.
 - Déterminisme : tests de rejeu qui fixent l'empreinte de l'état final pour une graine et une suite de commandes données. Toute dérive casse le test. La même partie scriptée donne la même empreinte dans Chromium, Firefox et WebKit (`dev/replay.html`, Playwright) que dans Node.
-- Réseau : le lockstep se teste en Vitest sur un transport en mémoire ; deux pages Playwright jouent une partie `?dev=fast` par un courtier PeerJS local (`peer`) et finissent sur la même empreinte.
+- Réseau : le lockstep se teste en Vitest sur un transport en mémoire ; deux pages Playwright jouent une partie `?dev=fast` par un courtier PeerJS local (`peer`) et finissent sur la même empreinte. Playwright lance le courtier sur `E2E_PEER_PORT` (9000 par défaut) et construit le jeu avec `VITE_PEER_SERVER=localhost:<port>` ; en production la variable est absente et le jeu prend le courtier public. `peerjs` ne se charge qu'à l'ouverture d'un salon (import dynamique) ; `dev/net.html` est le banc du salon.
 - Contenu : un test valide `GameContent` (identifiants uniques, références résolues, valeurs positives).
 - Rendu et interface : tests de fumée dans un vrai navigateur (Playwright) dès qu'il y a un écran à tester.
 - Équilibrage : des simulations en masse sans écran, lancées en ligne de commande, sortent des courbes de survie par classe.
