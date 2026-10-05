@@ -56,7 +56,9 @@ test('a different version is refused with the reason and the host version', asyn
   await guestPage.goto(`./dev/net.html?version=autre#rejoindre=${code}`);
 
   await expect(guestPage.locator('#status')).toHaveText('refusé: version');
-  await expect(guestPage.locator('#log')).toContainText("version de l'hôte dev");
+  const hostVersion = await hostPage.locator('#version').textContent();
+  expect(hostVersion).toBeTruthy();
+  await expect(guestPage.locator('#log')).toContainText(`version de l'hôte ${hostVersion ?? ''}`);
   expect(await seatsOf(hostPage)).toHaveLength(1);
 });
 
