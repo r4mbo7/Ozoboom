@@ -6,7 +6,7 @@ import type { SimulationOptions } from '../index';
 import { hashState, runScript } from '../replay';
 import type { Vec2 } from '../state';
 
-const REFERENCE_HASH = 'bc899ce0';
+const REFERENCE_HASH = '5d291f8a';
 
 const SPECIALS_SET: SetDefinition = {
   id: 'specials-fixture-set',

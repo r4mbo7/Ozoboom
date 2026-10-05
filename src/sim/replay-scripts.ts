@@ -200,10 +200,66 @@ export function playThrown(): {
   return { simulation, recorded: stepAndRecord(simulation, 900) };
 }
 
+// Three players, the first one fragile: the team has someone to stand back up.
+export const TRIO: SimulationOptions = (() => {
+  const [raver] = FIXTURE_CONTENT.classes;
+  if (raver === undefined) {
+    throw new Error('expected the raver class');
+  }
+  return {
+    ...FIXTURE_OPTIONS,
+    seed: 909,
+    players: [
+      { id: 0, classId: 'fragile', name: 'Ana' },
+      { id: 1, classId: 'sturdy', name: 'Bo' },
+      { id: 2, classId: 'sturdy', name: 'Cy' },
+    ],
+    content: {
+      ...FIXTURE_CONTENT,
+      classes: [
+        ...FIXTURE_CONTENT.classes,
+        { ...raver, id: 'fragile', maxHp: 20 },
+        { ...raver, id: 'sturdy', maxHp: 400 },
+      ],
+      sets: [{ ...FIXTURE_SET, reviveBars: 1, perPlayer: { spawnMul: 0.5, enemyHpMul: 0.25 } }],
+    },
+  };
+})();
+
+// Plays the team and counts how often a player went down and was stood back up.
+export function playTeam(): { state: SimState; downs: number; revives: number } {
+  const simulation = createSimulation(TRIO);
+  const [fragile, ...friends] = simulation.state.players;
+  if (fragile === undefined) {
+    throw new Error('expected a team');
+  }
+  let downs = 0;
+  let revives = 0;
+  for (let tick = 0; tick < 2000; tick += 1) {
+    const aim = DIRECTIONS[Math.floor(tick / 31) % DIRECTIONS.length] ?? { x: 1, y: 0 };
+    const commands: PlayerCommand[] = [
+      { ...commandFor(fragile.id, { move: aim, aim, fire: true }), actions: [choose(tick)] },
+    ];
+    for (const friend of friends) {
+      const toward = fragile.downed
+        ? { x: fragile.x - friend.x, y: fragile.y - friend.y }
+        : { x: 0, y: 0 };
+      commands.push({
+        ...commandFor(friend.id, { move: toward, aim, fire: true }),
+        actions: [choose(tick)],
+      });
+    }
+    simulation.step(commands);
+    downs += simulation.state.events.filter((event) => event.type === 'playerDowned').length;
+    revives += simulation.state.events.filter((event) => event.type === 'playerRevived').length;
+  }
+  return { state: simulation.state, downs, revives };
+}
+
 export const REPLAY_SCRIPTS: readonly ReplayScript[] = [
   {
     id: 'reference',
-    hash: '40467116',
+    hash: 'a979d6ec',
     run: () => runScript(DUO, referenceCommands(2000)),
   },
   {
@@ -220,6 +276,11 @@ export const REPLAY_SCRIPTS: readonly ReplayScript[] = [
     id: 'thrown',
     hash: 'bd478e05',
     run: () => playThrown().simulation.state,
+  },
+  {
+    id: 'team',
+    hash: '06d58fdd',
+    run: () => playTeam().state,
   },
 ];
 

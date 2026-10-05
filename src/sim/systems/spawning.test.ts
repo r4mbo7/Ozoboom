@@ -10,7 +10,7 @@ import {
   stepAndRecord,
   type TimedEvent,
 } from '../fixtures';
-import { createSimulation, type SimulationOptions } from '../index';
+import { createSimulation, type Simulation, type SimulationOptions } from '../index';
 
 const BUILDUP = TICKS_PER_PHRASE;
 const BREAK = 2 * TICKS_PER_BAR;
@@ -160,5 +160,66 @@ describe('spawning', () => {
     expect(spawned).toHaveLength(1);
     expect(state.enemies).toHaveLength(1);
     expect(state.enemies[0]).toMatchObject({ kind: 'curfew', isBoss: true, maxHp: 500 * 1.2 });
+  });
+});
+
+describe('spawning for a team', () => {
+  const SCALED: SetDefinition = {
+    ...FIXTURE_SET,
+    tiers: [
+      {
+        buildupPhrases: 1,
+        breakBars: 2,
+        bossId: 'curfew',
+        spawns: [{ enemyId: 'grump', everyBars: 4, count: 4, fromPhrase: 0 }],
+      },
+    ],
+    perPlayer: { spawnMul: 0.5, enemyHpMul: 0.25 },
+  };
+  const playersOf = (count: number): SimulationOptions => ({
+    ...FIXTURE_OPTIONS,
+    players: ([0, 1, 2, 3] as const).slice(0, count).map((id) => ({ id, classId: 'raver' })),
+    content: { ...FIXTURE_CONTENT, sets: [SCALED] },
+  });
+
+  it('gives six spawns for a rule of four with two players', () => {
+    const simulation = createSimulation(playersOf(2));
+
+    const recorded = stepAndRecord(simulation, 4 * TICKS_PER_BAR);
+
+    expect(spawnsByTick(recorded).get(4 * TICKS_PER_BAR)).toHaveLength(6);
+  });
+
+  it('keeps the count of the rule for one player', () => {
+    const simulation = createSimulation(playersOf(1));
+
+    const recorded = stepAndRecord(simulation, 4 * TICKS_PER_BAR);
+
+    expect(spawnsByTick(recorded).get(4 * TICKS_PER_BAR)).toHaveLength(4);
+  });
+
+  it('gives a bad vibe a quarter more hp with two players', () => {
+    const solo = createSimulation(playersOf(1));
+    const duo = createSimulation(playersOf(2));
+    stepAndRecord(solo, 4 * TICKS_PER_BAR);
+    stepAndRecord(duo, 4 * TICKS_PER_BAR);
+
+    expect(solo.state.enemies[0]?.maxHp).toBe(20);
+    expect(duo.state.enemies[0]?.maxHp).toBe(20 * 1.25);
+    expect(duo.state.enemies[0]?.hp).toBe(20 * 1.25);
+  });
+
+  it('scales the boss of the drop too', () => {
+    const solo = createSimulation(playersOf(1));
+    const trio = createSimulation(playersOf(3));
+    for (const simulation of [solo, trio]) {
+      stepAndRecord(peaceful(simulation), BUILDUP + BREAK - 1);
+      simulation.step([]);
+    }
+
+    const bossOf = (simulation: Simulation) =>
+      simulation.state.enemies.find((enemy) => enemy.isBoss);
+    expect(bossOf(solo)?.maxHp).toBe(500 * 1.2);
+    expect(bossOf(trio)?.maxHp).toBe(500 * 1.2 * 1.5);
   });
 });

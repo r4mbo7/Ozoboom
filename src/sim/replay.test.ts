@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hashState, runScript } from './replay';
-import { DUO, referenceCommands, replayScript, RELIC_IDS } from './replay-scripts';
+import { DUO, playTeam, referenceCommands, replayScript, RELIC_IDS } from './replay-scripts';
 
 describe('replay', () => {
   it('reaches the same state twice from the same seed and script', () => {
@@ -28,7 +28,7 @@ describe('replay', () => {
     expect(state.set.segment).toBe('drop');
     expect(state.stats.kills).toBe(30);
     expect(state.stats.phrasesHeld).toBe(2);
-    expect(state.players.map((player) => player.upgrades)).toEqual([[], ['big-bass']]);
+    expect(state.players.map((player) => player.upgrades)).toEqual([['big-bass'], ['big-bass']]);
     expect(hashState(state)).toBe(replayScript('reference').hash);
   });
 });
@@ -50,6 +50,16 @@ describe('replay of a game that kills its first boss and picks a relic', () => {
     expect(state.players[0]?.upgrades.filter((id) => RELIC_IDS.includes(id))).toHaveLength(1);
     expect(state.pendingUpgrades.some((offer) => offer.kind === 'relic')).toBe(false);
     expect(hashState(state)).toBe(replayScript('relic').hash);
+  });
+});
+
+describe('replay of a team of three', () => {
+  it('keeps the fingerprint of the team script', () => {
+    const { state, downs, revives } = playTeam();
+
+    expect(downs).toBe(4);
+    expect(revives).toBe(2);
+    expect(hashState(state)).toBe(replayScript('team').hash);
   });
 });
 

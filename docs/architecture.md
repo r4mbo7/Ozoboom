@@ -87,6 +87,8 @@ Conventions de la simulation :
 - Les agrès posés (`SimState.placed`, assiettes et totem) passent par `place` (`src/sim/weapons/place.ts`) ; les systèmes `placedZones` (avant `enemySteering` : ralentit, soigne, retire à l'expiration ; `bystanders` y compte une assiette comme une aide) et `placedTotems` (après : attire puis repousse) les font vivre. La traînée du monocycle est un anneau borné dans `WeaponSlot.trail`, et sa vitesse un modificateur `speedMul`. `mist`, `lure` et `shockwave` partagent leurs briques avec les pièges dans `src/sim/effects.ts`.
 - `SimState.volume` compte les enceintes branchées du set ; `SimState.speakers` tient leur position et leur progression de branchement, posé par `createInitialState` à partir de `SetDefinition.speakers`.
 - Le système `speakers` suit `traps` : l'aura d'une enceinte branchée passe par `fire` de `traps.ts`, comme un piège (onde de choc sur le temps, le reste en continu). Les effets du Volume se lisent par `volumeMul` (`src/sim/volume.ts`) ; le score d'une partie est `scoreOf` (`src/sim/score.ts`).
+- Le système `revive` suit `playerMovement` : l'allié debout au contact au plus grand `reviveMul` fait monter `PlayerState.reviveTicks` de `reviveMul` par tick, qui retombe à 0 sans contact ; à `reviveBars` mesures l'allié se relève à mi-vie, invulnérable un temps. `bystanders` compte le même `reviveMul` au contact du Festivalier. Une vibe ramassée va à chaque joueur debout, `stats.vibesCollected` la compte une fois.
+- `spawning` multiplie le `count` d'une règle par `1 + spawnMul × (joueurs - 1)` (arrondi, au moins `count`) et la vie d'une bad vibe à l'apparition, boss compris, par `1 + enemyHpMul × (joueurs - 1)`, avec `SetDefinition.perPlayer` ; en solo le facteur vaut 1.
 
 ## Boucle
 

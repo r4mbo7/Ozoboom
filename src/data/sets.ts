@@ -13,6 +13,8 @@ export const SETS: readonly SetDefinition[] = [
     levelCurve: { baseVibes: 5, vibesPerLevel: 4 },
     pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
     weaponSlots: 3,
+    reviveBars: 1,
+    perPlayer: { spawnMul: 0.5, enemyHpMul: 0.25 },
     speakers: [
       {
         id: 'dome-chill',
