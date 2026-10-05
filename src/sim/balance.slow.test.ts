@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { env } from 'node:process';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { CONTENT } from '../data/content';
 import { BALANCE_SEEDS, balanceTable, playTeam, teamsOf, type TeamResult } from './balance';
 
@@ -11,15 +11,19 @@ const gap = (a: number, b: number) => Math.round(Math.abs(a - b) * 10) / 10;
 
 // The whole matrix takes minutes: `pnpm balance` runs it and writes the table to balance.md,
 // `pnpm test` skips it. BALANCE_QUICK=1 plays only the teams the targets below look at.
+// A describe body runs at collection even when skipped: the games are played in beforeAll.
 describe.skipIf(env.BALANCE === undefined)('team balance on the real set', () => {
   const started = Date.now();
-  const teams = teamsOf(CLASS_IDS, 4).filter(
-    (team) =>
-      env.BALANCE_QUICK === undefined ||
-      new Set(team).size === 1 ||
-      (team.length === 3 && new Set(team).size === 3),
-  );
-  const results: TeamResult[] = teams.map((team) => playTeam(team, SEEDS));
+  let results: TeamResult[] = [];
+  beforeAll(() => {
+    const teams = teamsOf(CLASS_IDS, 4).filter(
+      (team) =>
+        env.BALANCE_QUICK === undefined ||
+        new Set(team).size === 1 ||
+        (team.length === 3 && new Set(team).size === 3),
+    );
+    results = teams.map((team) => playTeam(team, SEEDS));
+  }, 0);
   const phrasesOf = (team: readonly string[]) =>
     results.find((result) => result.team.join() === team.join())?.phrases ?? NaN;
 
