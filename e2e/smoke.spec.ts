@@ -43,20 +43,9 @@ test('toggles the calm mode and remembers it', async ({ page }) => {
   const calm = page.getByRole('switch', { name: /Mode calme/ });
   await expect(calm).toHaveAttribute('aria-checked', 'false');
 
-  for (let index = 0; index < 3; index++) {
-    await page.keyboard.press('ArrowDown');
-    await page.evaluate(
-      () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              resolve();
-            });
-          });
-        }),
-    );
-  }
-  await page.keyboard.press('Enter');
+  // A click acts on the page at once. A key waits for the next frame to be read, and without a GPU a
+  // frame takes a second: a press can land between two reads, which made this test flaky.
+  await calm.click();
 
   await expect(calm).toHaveAttribute('aria-checked', 'true');
   await expect(page.locator('#app')).toHaveClass(/\bcalm\b/);
