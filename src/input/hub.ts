@@ -25,11 +25,13 @@ interface PadState {
 export interface HubState {
   readonly keyboardMouse: MergeState;
   readonly pads: ReadonlyMap<number, PadState>;
+  readonly merged: PadState;
 }
 
 export const INITIAL_HUB_STATE: HubState = {
   keyboardMouse: INITIAL_MERGE_STATE,
   pads: new Map(),
+  merged: { gamepad: INITIAL_GAMEPAD_STATE, merge: INITIAL_MERGE_STATE },
 };
 
 const IDLE_GAMEPAD_FRAME: GamepadFrame = {
@@ -64,7 +66,11 @@ export function stepHub(
   keyboardMouse: KeyboardMouseFrame,
   pads: readonly (GamepadLike | null)[],
   now: number,
-): { snapshots: ReadonlyMap<DeviceId, InputSnapshot>; state: HubState } {
+): {
+  snapshots: ReadonlyMap<DeviceId, InputSnapshot>;
+  merged: InputSnapshot;
+  state: HubState;
+} {
   const snapshots = new Map<DeviceId, InputSnapshot>();
 
   const keyboard = mergeFrames(state.keyboardMouse, keyboardMouse, IDLE_GAMEPAD_FRAME, now);
@@ -85,18 +91,39 @@ export function stepHub(
     snapshots.set(gamepadDeviceId(pad.index), { ...merged.snapshot, device: 'gamepad' });
   }
 
-  return { snapshots, state: { keyboardMouse: keyboard.state, pads: nextPads } };
+  const mergedGamepad = reduceGamepad(state.merged.gamepad, pads);
+  const merged = mergeFrames(state.merged.merge, keyboardMouse, mergedGamepad.frame, now);
+
+  return {
+    snapshots,
+    merged: merged.snapshot,
+    state: {
+      keyboardMouse: keyboard.state,
+      pads: nextPads,
+      merged: { gamepad: mergedGamepad.state, merge: merged.state },
+    },
+  };
 }
 
 export function createInputHub(target: HTMLElement): InputHub {
   const keyboardMouse = attachKeyboardMouse(target);
   let state = INITIAL_HUB_STATE;
+  let merged = mergeFrames(
+    INITIAL_MERGE_STATE,
+    IDLE_KEYBOARD_MOUSE_FRAME,
+    IDLE_GAMEPAD_FRAME,
+    0,
+  ).snapshot;
 
   return {
     poll() {
       const stepped = stepHub(state, keyboardMouse.take(), navigatorGamepads(), performance.now());
       state = stepped.state;
+      merged = stepped.merged;
       return stepped.snapshots;
+    },
+    merged() {
+      return merged;
     },
     rumble(device, strength, durationMs) {
       const index = gamepadIndex(device);

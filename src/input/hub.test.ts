@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { StandardButton } from './bindings';
 import { fakeGamepad } from './fakes';
-import type { GamepadLike } from './gamepad';
+import {
+  INITIAL_GAMEPAD_STATE,
+  reduceGamepad,
+  type GamepadLike,
+  type GamepadState,
+} from './gamepad';
 import { INITIAL_HUB_STATE, stepHub, type HubState } from './hub';
+import { INITIAL_MERGE_STATE, mergeFrames, type MergeState } from './merge';
 import type { DeviceId, InputSnapshot } from './intents';
 import {
   INITIAL_KEYBOARD_MOUSE_STATE,
@@ -17,7 +23,14 @@ function createHarness() {
   let keyboardMouse = INITIAL_KEYBOARD_MOUSE_STATE;
   let hub: HubState = INITIAL_HUB_STATE;
   let pads: (GamepadLike | null)[] = [];
+  let merged: InputSnapshot | undefined;
+  let reference: { gamepad: GamepadState; merge: MergeState; snapshot?: InputSnapshot } = {
+    gamepad: INITIAL_GAMEPAD_STATE,
+    merge: INITIAL_MERGE_STATE,
+  };
   return {
+    merged: () => merged,
+    reference: () => reference.snapshot,
     key(type: KeyEventLike['type'], code: string) {
       keyboardMouse = reduceKeyboard(keyboardMouse, { type, code });
     },
@@ -32,6 +45,10 @@ function createHarness() {
       keyboardMouse = taken.state;
       const stepped = stepHub(hub, taken.frame, pads, now);
       hub = stepped.state;
+      merged = stepped.merged;
+      const pad = reduceGamepad(reference.gamepad, pads);
+      const expected = mergeFrames(reference.merge, taken.frame, pad.frame, now);
+      reference = { gamepad: pad.state, merge: expected.state, snapshot: expected.snapshot };
       return stepped.snapshots;
     },
   };
@@ -153,5 +170,29 @@ describe('input hub', () => {
     input.plug(fakeGamepad({ index: 0, connected: false }));
 
     expect([...input.poll().keys()]).toEqual(['keyboardMouse']);
+  });
+});
+
+describe('merged view', () => {
+  it('matches the single-source merge of the same frames', () => {
+    const input = createHarness();
+    input.key('keydown', 'KeyD');
+    input.pointer({ type: 'move', x: 40, y: 20 });
+    input.plug(
+      fakeGamepad({ index: 1, axes: [0, 1, 0, 0.5], pressed: [StandardButton.A] }),
+      fakeGamepad({ index: 2, pressed: [StandardButton.X] }),
+    );
+
+    const polls = [0, 16, 32].map((now) => {
+      input.poll(now);
+      return [input.merged(), input.reference()] as const;
+    });
+    input.key('keyup', 'KeyD');
+    input.plug(null, null);
+    input.poll(48);
+
+    for (const [merged, expected] of polls) expect(merged).toEqual(expected);
+    expect(input.merged()).toEqual(input.reference());
+    expect(polls[0]?.[0]?.device).toBe('gamepad');
   });
 });
