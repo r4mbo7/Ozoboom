@@ -25,7 +25,7 @@ async function holdKeys(page: Page, held: Set<string>, wanted: ReadonlySet<strin
 test('plays a whole game with the keyboard only, from the title to a restart', async ({ page }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await expect(page.getByRole('button', { name: 'Jouer' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 

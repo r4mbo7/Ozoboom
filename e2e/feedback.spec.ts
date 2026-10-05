@@ -108,7 +108,7 @@ test('sends feedback from the title, before any game', async ({ page }) => {
   const feedback = page.getByRole('button', { name: /^Ton avis/ });
   await expect(feedback).toBeVisible();
 
-  for (let index = 0; index < 3; index++) {
+  for (let index = 0; index < 5; index++) {
     await press(page, 'ArrowDown');
   }
   await expect(feedback).toHaveAttribute('aria-current', 'true');
@@ -132,7 +132,7 @@ test('sends feedback from the pause, and the game stays paused', async ({ page }
   const errors = collectConsoleErrors(page);
   await interceptNewTabs(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 
   await press(page, 'Escape');
@@ -175,7 +175,7 @@ test('sends feedback from the end screen, with the stats of the game', async ({ 
   const errors = collectConsoleErrors(page);
   await interceptNewTabs(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   // The test is about the form, not about losing: the scene goes silent until the game is lost.
   // Once is not enough, as the scene may repair itself before the sim checks the status.

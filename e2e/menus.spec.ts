@@ -50,7 +50,7 @@ async function expectRestingCursorIgnored(
 
 async function startGame(page: Page): Promise<void> {
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 }
 
@@ -94,7 +94,7 @@ test('the title shows again under a resting cursor without moving the selection'
   const feedback = page.getByRole('button', { name: /^Ton avis/ });
   const sound = page.getByRole('switch', { name: /^Son/ });
   const spot = await centerOf(sound);
-  for (let index = 0; index < 3; index++) {
+  for (let index = 0; index < 5; index++) {
     await page.keyboard.press('ArrowDown');
     await frames(page);
   }

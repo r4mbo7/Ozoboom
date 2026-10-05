@@ -1,16 +1,19 @@
 import './ui.css';
 import type { InputDevice } from '../input/intents';
+import { CLASSES } from '../data/classes';
 import { setFraction, setOf } from '../sim/lineup';
+import type { ClassInfo } from './class-picker';
 import { el } from './dom';
 import { createEnd } from './end';
 import { createHud } from './hud';
+import { createLobby } from './lobby';
 import { createMenuInput } from './navigation';
 import { createNotice } from './notice';
 import { createSunFollower } from './sun';
 import { createTitle } from './title';
-import type { CreateUi, LobbyModel, Notice } from './types';
 import type { GameContent } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
+import type { LobbyModel, Notice, Ui, UiCallbacks } from './types';
 import { createUpgradeOverlay } from './upgrade';
 
 export type {
@@ -47,19 +50,18 @@ const NOTICES: Readonly<Record<Notice, { title: string; text: string; glyph: str
   },
 };
 
-function lobbyText(model: LobbyModel): string {
-  const lines = [model.error ?? '', model.code === null ? '' : `Code du salon : ${model.code}`];
-  lines.push(...model.seats.map((seat) => `${String(seat.playerId + 1)}. ${seat.name}`));
-  return lines.filter((line) => line !== '').join(' · ');
-}
-
 const MENU_GRACE_MS = 500;
 
 export function prefersCalmMode(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export const createUi: CreateUi = (root, callbacks) => {
+// The classes offered are the data ones: only a harness shows others.
+export function createUi(
+  root: HTMLElement,
+  callbacks: UiCallbacks,
+  classes: readonly ClassInfo[] = CLASSES,
+): Ui {
   const container = el('div', 'ui');
   root.append(container);
   const sun = createSunFollower(root);
@@ -88,24 +90,33 @@ export const createUi: CreateUi = (root, callbacks) => {
           callbacks.onFeedback?.(details);
         };
 
-  const title = createTitle({
-    ...(feedback === undefined ? {} : { feedback }),
-    start() {
-      once(() => {
-        callbacks.onStart();
-      });
+  const title = createTitle(
+    {
+      ...(feedback === undefined ? {} : { feedback }),
+      start() {
+        once(() => {
+          callbacks.onStart();
+        });
+      },
+      playTogether() {
+        callbacks.onPlayTogether();
+      },
+      chooseClass(classId) {
+        callbacks.onChooseClass(classId);
+      },
+      toggleCalmMode() {
+        calmMode = !calmMode;
+        applyOptions();
+        callbacks.onToggleCalmMode(calmMode);
+      },
+      toggleMute() {
+        muted = !muted;
+        applyOptions();
+        callbacks.onToggleMute(muted);
+      },
     },
-    toggleCalmMode() {
-      calmMode = !calmMode;
-      applyOptions();
-      callbacks.onToggleCalmMode(calmMode);
-    },
-    toggleMute() {
-      muted = !muted;
-      applyOptions();
-      callbacks.onToggleMute(muted);
-    },
-  });
+    classes,
+  );
   const hud = createHud();
   const upgrade = createUpgradeOverlay((playerId, upgradeId) => {
     callbacks.onChooseUpgrade(playerId, upgradeId);
@@ -115,11 +126,39 @@ export const createUi: CreateUi = (root, callbacks) => {
       callbacks.onRestart();
     });
   }, feedback);
-  const lobby = createNotice('Salon', () => {
-    once(() => {
-      callbacks.onLeaveLobby();
-    });
-  });
+  const lobby = createLobby(
+    {
+      joinSeat(device) {
+        callbacks.onJoinSeat(device);
+      },
+      leaveSeat(playerId) {
+        callbacks.onLeaveSeat(playerId);
+      },
+      seatClass(playerId, classId) {
+        callbacks.onSeatClass(playerId, classId);
+      },
+      seatName(playerId, name) {
+        callbacks.onSeatName(playerId, name);
+      },
+      createRoom() {
+        callbacks.onCreateRoom();
+      },
+      joinRoom(code) {
+        callbacks.onJoinRoom(code);
+      },
+      launch() {
+        once(() => {
+          callbacks.onLaunch();
+        });
+      },
+      leave() {
+        once(() => {
+          callbacks.onLeaveLobby();
+        });
+      },
+    },
+    classes,
+  );
   const notice = createNotice(
     'Interruption',
     () => {
@@ -166,8 +205,7 @@ export const createUi: CreateUi = (root, callbacks) => {
   }
 
   function updateLobby(model: LobbyModel): void {
-    const name = model.mode === 'online' ? 'Salon en ligne' : 'Salon local';
-    lobby.show('Salon', name, lobbyText(model));
+    lobby.setModel(model);
   }
 
   applyOptions();
@@ -180,6 +218,7 @@ export const createUi: CreateUi = (root, callbacks) => {
       muted = options.muted;
       applyOptions();
       applyDevice(options.device);
+      title.setClass(options.classId);
       show('title');
       title.menu.select(0);
     },
@@ -187,6 +226,7 @@ export const createUi: CreateUi = (root, callbacks) => {
       sun.fix('nuit');
       show('lobby');
       updateLobby(model);
+      lobby.open();
       menuInput.open();
     },
     updateLobby,
@@ -225,7 +265,7 @@ export const createUi: CreateUi = (root, callbacks) => {
         return;
       }
       if (screen === 'lobby') {
-        lobby.menu.handle(edges);
+        lobby.update(frame, edges);
         return;
       }
       if (screen === 'notice') {
@@ -251,4 +291,4 @@ export const createUi: CreateUi = (root, callbacks) => {
       sun.clear();
     },
   };
-};
+}

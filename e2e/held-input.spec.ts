@@ -115,7 +115,7 @@ test('an arrow key held at a level up leaves the first card selected until it is
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   const upgrade = page.getByRole('region', { name: 'Choix d’amélioration' });
   const cards = upgrade.getByRole('button');
@@ -142,7 +142,7 @@ test('a key held when the game is lost leaves « Rejouer » selected until it is
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   const end = page.getByRole('region', { name: 'Fin de partie' });
   const restart = end.getByRole('button', { name: 'Rejouer' });

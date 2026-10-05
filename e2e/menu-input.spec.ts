@@ -80,7 +80,7 @@ test('Space does nothing in any menu, even after a click on a button', async ({ 
   await expect(calm).toHaveAttribute('aria-checked', 'true');
   await expectSpaceIgnored(page);
 
-  await clickAndLeave(page, page.getByRole('button', { name: 'Jouer' }));
+  await clickAndLeave(page, page.getByRole('button', { name: 'Jouer', exact: true }));
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   await press(page, 'Escape');
   const pause = page.getByRole('dialog', { name: 'Pause' });
@@ -166,7 +166,7 @@ test('the left stick alone walks through a menu, and still moves the player in g
   const errors = collectConsoleErrors(page);
   await plugFakeGamepad(page);
   await page.goto('./?dev=fast');
-  const play = page.getByRole('button', { name: 'Jouer' });
+  const play = page.getByRole('button', { name: 'Jouer', exact: true });
   const sound = page.getByRole('switch', { name: /^Son/ });
   await expect(play).toHaveAttribute('aria-current', 'true');
 
@@ -181,7 +181,7 @@ test('the left stick alone walks through a menu, and still moves the player in g
     async () => (await sound.getAttribute('aria-checked')) === 'false',
   );
   await repeatUntil(
-    () => tiltLeftStick(page, -0.9, 0.2),
+    () => tiltLeftStick(page, 0.2, -0.9),
     async () => (await play.getAttribute('aria-current')) === 'true',
   );
   await tapButtonUntil(page, PAD.A, () => page.getByRole('region', { name: 'Pièges' }).isVisible());
