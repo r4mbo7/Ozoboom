@@ -4,6 +4,7 @@ import { createRoom, type RefusalReason, type Room, type StartMessage } from './
 import type { Seat } from './types';
 
 const V1 = 'v1';
+const CLASS_IDS = ['mage', 'ranger', 'tank', 'a', 'b', 'c'];
 
 function network(count: number): MemoryTransport[] {
   return createMemoryTransports(count);
@@ -13,7 +14,7 @@ function join(
   transport: MemoryTransport,
   profile: { version?: string; name: string; classId: string },
 ) {
-  const room = createRoom(transport, 'guest', { version: V1, ...profile });
+  const room = createRoom(transport, 'guest', { version: V1, classIds: CLASS_IDS, ...profile });
   const refusals: [RefusalReason, string][] = [];
   const starts: StartMessage[] = [];
   const changes: (readonly Seat[])[] = [];
@@ -24,7 +25,12 @@ function join(
 }
 
 function host(transport: MemoryTransport): Room {
-  return createRoom(transport, 'host', { version: V1, name: 'Hôte', classId: 'mage' });
+  return createRoom(transport, 'host', {
+    version: V1,
+    classIds: CLASS_IDS,
+    name: 'Hôte',
+    classId: 'mage',
+  });
 }
 
 describe('createRoom as host', () => {
@@ -152,7 +158,30 @@ describe('createRoom as host', () => {
 
     h.flush();
 
-    expect(room.seats[1]?.name).toHaveLength(24);
+    expect(room.seats[1]?.name).toHaveLength(12);
+  });
+
+  it('names a blank player after the seat', () => {
+    const [h, g] = network(2) as [MemoryTransport, MemoryTransport];
+    const room = host(h);
+    join(g, { name: '   ', classId: 'a' });
+
+    h.flush();
+
+    expect(room.seats[1]?.name).toBe('Joueur 2');
+  });
+
+  it('gives an unknown class the first known one, at entry and on change', () => {
+    const [h, g1, g2] = network(3) as [MemoryTransport, MemoryTransport, MemoryTransport];
+    const room = host(h);
+    join(g1, { name: 'Ana', classId: 'inconnue' });
+    const second = join(g2, { name: 'Bob', classId: 'tank' });
+    h.flush();
+
+    second.room.setSeat({ classId: 'nope' });
+    h.flush();
+
+    expect(room.seats.map((seat) => seat.classId)).toEqual(['mage', 'mage', 'mage']);
   });
 
   it('starts with the seated players and tells the guests', () => {

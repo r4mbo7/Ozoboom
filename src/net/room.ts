@@ -1,10 +1,10 @@
+import { trimPlayerName } from '../shared/player-name';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId } from '../sim/state';
 import type { NetMessage, PeerId, Role, Seat, Transport } from './types';
 
 const PLAYER_IDS: readonly PlayerId[] = [0, 1, 2, 3];
 export const MAX_SEATS = PLAYER_IDS.length;
-export const MAX_NAME_LENGTH = 24;
 
 export type RefusalReason = 'version' | 'full' | 'started';
 export type StartMessage = Extract<NetMessage, { type: 'start' }>;
@@ -13,6 +13,8 @@ export interface RoomProfile {
   version: string;
   name: string;
   classId: string;
+  // Known classes: an unknown one becomes the first of the list.
+  classIds: readonly string[];
 }
 
 export interface Room {
@@ -31,11 +33,13 @@ export interface Room {
   dispose(): void;
 }
 
-function clipName(name: string): string {
-  return name.trim().slice(0, MAX_NAME_LENGTH);
+function cleanName(name: string, playerId: PlayerId): string {
+  return trimPlayerName(name) || `Joueur ${String(playerId + 1)}`;
 }
 
 export function createRoom(transport: Transport, role: Role, profile: RoomProfile): Room {
+  const knownClass = (classId: string): string =>
+    profile.classIds.includes(classId) ? classId : (profile.classIds[0] ?? classId);
   const changeListeners = new Set<(seats: readonly Seat[]) => void>();
   const refusedListeners = new Set<(reason: RefusalReason, hostVersion: string) => void>();
   const startListeners = new Set<(start: StartMessage) => void>();
@@ -46,8 +50,8 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
           {
             playerId: 0,
             peer: transport.id,
-            name: clipName(profile.name),
-            classId: profile.classId,
+            name: cleanName(profile.name, 0),
+            classId: knownClass(profile.classId),
           },
         ]
       : [];
@@ -88,8 +92,8 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
       seat.peer === peer
         ? {
             ...seat,
-            name: change.name === undefined ? seat.name : clipName(change.name),
-            classId: change.classId ?? seat.classId,
+            name: change.name === undefined ? seat.name : cleanName(change.name, seat.playerId),
+            classId: change.classId === undefined ? seat.classId : knownClass(change.classId),
           }
         : seat,
     );
@@ -117,13 +121,14 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         } else if (seats.length >= MAX_SEATS) {
           refuse(from, 'full');
         } else {
+          const playerId = firstFreePlayerId();
           seats = [
             ...seats,
             {
-              playerId: firstFreePlayerId(),
+              playerId,
               peer: from,
-              name: clipName(message.name),
-              classId: message.classId,
+              name: cleanName(message.name, playerId),
+              classId: knownClass(message.classId),
             },
           ].sort((a, b) => a.playerId - b.playerId);
           publish();

@@ -106,6 +106,7 @@ async function open(role: 'host' | 'guest', code: string): Promise<void> {
       version,
       name: nameInput.value,
       classId: classSelect.value,
+      classIds: CLASSES.map((c) => c.id),
     });
     room.onChange(renderSeats);
     room.onRefused((reason, hostVersion) => {
