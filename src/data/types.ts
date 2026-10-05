@@ -29,14 +29,15 @@ export interface AttackDefinition {
   pierce: number;
   count: number;
   spreadRadians: number;
+  knockback?: number;
 }
 
 export type SkillEffect =
   | { kind: 'nova'; damage: number; radius: number; knockback: number }
   | { kind: 'laserShow'; damagePerTick: number; radius: number; durationTicks: number }
-  | { kind: 'dash'; distance: number; invulnerableTicks: number }
+  | { kind: 'dash'; distance: number; invulnerableTicks: number; tauntRadius?: number }
   | { kind: 'barrier'; hp: number; radius: number; durationTicks: number }
-  | { kind: 'healPulse'; amount: number; radius: number; coreRepair: number };
+  | { kind: 'healPulse'; amount: number; radius: number; coreRepair: number; revive?: boolean };
 
 export interface SkillDefinition {
   id: string;
@@ -55,6 +56,7 @@ export interface ClassDefinition {
   speed: number;
   radius: number;
   pickupRadius: number;
+  reviveMul?: number;
   attack: AttackDefinition;
   skill: SkillDefinition;
   ultimate: SkillDefinition;
@@ -261,6 +263,8 @@ export interface SetDefinition {
   speakers?: readonly SpeakerDefinition[];
   // Absent means 3.
   weaponSlots?: number;
+  reviveBars?: number;
+  perPlayer?: { spawnMul: number; enemyHpMul: number };
 }
 
 export interface GameContent {

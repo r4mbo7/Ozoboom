@@ -91,6 +91,8 @@ export interface PlayerState extends Positioned {
   weapons?: WeaponSlot[];
   // Fused forms already taken: a recipe serves once per player.
   fused?: string[];
+  name?: string;
+  reviveTicks?: number;
 }
 
 export interface EnemyState extends Positioned {
@@ -257,6 +259,10 @@ export type SimEvent =
   | { type: 'playerHit'; playerId: PlayerId; damage: number }
   | { type: 'playerDowned'; playerId: PlayerId }
   | { type: 'playerRevived'; playerId: PlayerId }
+  | { type: 'playerReviving'; playerId: PlayerId; byPlayer: PlayerId; progress: number }
+  | { type: 'playerHealed'; playerId: PlayerId; amount: number }
+  | { type: 'taunted'; playerId: PlayerId; x: number; y: number; radius: number; count: number }
+  | { type: 'barrierBroken'; id: EntityId; x: number; y: number }
   | { type: 'skillUsed'; playerId: PlayerId }
   | { type: 'ultimateUsed'; playerId: PlayerId }
   | { type: 'coreHit'; damage: number }
