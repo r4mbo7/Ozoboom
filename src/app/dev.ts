@@ -8,7 +8,7 @@ import type { SimState } from '../sim/state';
 //   scene) played four times faster, to reach the end of a game in an end-to-end test;
 // - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
 //   weapons and a plugged speaker, to measure a frame.
-// Both expose `window.ozoboom` (live state and frame timings) and log the timings every second.
+// Both expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
 export type DevMode = 'fast' | 'bench';
 
 export interface DevOptions {
@@ -105,7 +105,7 @@ export interface DevProbe {
   endFrame(time: number): void;
 }
 
-export function createDevProbe(state: () => SimState): DevProbe {
+export function createDevProbe(state: () => SimState, seats: () => readonly unknown[]): DevProbe {
   const cost: FrameCost = { sim: 0, render: 0, ui: 0 };
   const total: FrameCost = { sim: 0, render: 0, ui: 0 };
   let frames = 0;
@@ -122,6 +122,9 @@ export function createDevProbe(state: () => SimState): DevProbe {
       },
       get report() {
         return report;
+      },
+      get seats() {
+        return seats();
       },
     },
   });

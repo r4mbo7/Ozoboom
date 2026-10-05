@@ -1,6 +1,6 @@
 import type { Mood } from '../audio/types';
 
-export type Screen = 'title' | 'game' | 'end';
+export type Screen = 'title' | 'lobby' | 'game' | 'end';
 
 export interface SoundScene {
   readonly screen: Screen;
@@ -14,11 +14,11 @@ export interface Sound {
   readonly muted: boolean;
 }
 
-// The pause and the end screen play the chill menu ambience, the game plays the set. The title
+// The pause, the lobby and the end screen play the chill menu ambience, the game plays the set. The title
 // stays silent, and so does everything while the player has turned the sound off or looks away.
 export function soundOf({ screen, paused, muted, hidden }: SoundScene): Sound {
   return {
-    mood: screen === 'end' || paused ? 'menu' : 'set',
+    mood: screen === 'end' || screen === 'lobby' || paused ? 'menu' : 'set',
     muted: muted || hidden || screen === 'title',
   };
 }

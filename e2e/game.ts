@@ -1,6 +1,14 @@
 import { type Page, expect } from '@playwright/test';
 import type { SimState } from '../src/sim/state';
 
+export interface SeatSummary {
+  playerId: number;
+  name: string | null;
+  classId: string;
+  device: string | null;
+  local: boolean;
+}
+
 export interface FakePad {
   axes: number[];
   buttons: number[];
@@ -9,7 +17,7 @@ export interface FakePad {
 declare global {
   interface Window {
     // Exposed by the game behind `?dev=fast` and `?dev=bench` only (src/app/dev.ts).
-    ozoboom?: { readonly state: SimState };
+    ozoboom?: { readonly state: SimState; readonly seats: readonly SeatSummary[] };
     fakePad?: FakePad;
     fakePads?: (FakeSlot | null)[];
   }

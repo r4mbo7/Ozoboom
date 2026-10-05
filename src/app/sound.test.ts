@@ -25,6 +25,10 @@ describe('soundOf', () => {
     expect(soundOf({ ...playing, screen: 'end' })).toEqual({ mood: 'menu', muted: false });
   });
 
+  it('plays the menu ambience in the lobby, where the seat cues are heard', () => {
+    expect(soundOf({ ...playing, screen: 'lobby' })).toEqual({ mood: 'menu', muted: false });
+  });
+
   it('keeps the title silent', () => {
     expect(soundOf({ ...playing, screen: 'title' }).muted).toBe(true);
   });
