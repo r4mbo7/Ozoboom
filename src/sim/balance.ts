@@ -6,7 +6,7 @@ import { createSimulation } from './index';
 import type { PlayerId, SimState } from './state';
 
 export const BALANCE_SET_ID = 'soiree-v0';
-export const BALANCE_SEEDS: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+export const BALANCE_SEEDS: readonly number[] = Array.from({ length: 20 }, (_, index) => index + 1);
 
 const MAX_TICKS = 60_000;
 const PLAYER_IDS: readonly PlayerId[] = [0, 1, 2, 3];

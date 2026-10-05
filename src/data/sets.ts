@@ -14,7 +14,7 @@ export const SETS: readonly SetDefinition[] = [
     pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
     weaponSlots: 3,
     reviveBars: 1,
-    perPlayer: { spawnMul: 0.7, enemyHpMul: 0.42 },
+    perPlayer: { spawnMul: 0.72, enemyHpMul: 0.44 },
     speakers: [
       {
         id: 'dome-chill',

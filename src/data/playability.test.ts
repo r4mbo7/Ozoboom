@@ -138,4 +138,30 @@ describe('the roadie charge', () => {
       3 * TICKS_PER_BAR,
     );
   });
+
+  it('stays a skill: at least two bars to recharge, a radius under 200', () => {
+    expect(find(CONTENT.classes, 'tank').skill.cooldownTicks).toBeGreaterThanOrEqual(
+      2 * TICKS_PER_BAR,
+    );
+    expect(tauntRadius).toBeLessThan(200);
+  });
+});
+
+describe('the roles of the three classes', () => {
+  const [vj, roadie, care] = ['mage', 'tank', 'healer'].map((id) => find(CONTENT.classes, id));
+
+  it('give the roadie the most life, the VJ the least and the care in between', () => {
+    expect(roadie?.maxHp).toBeGreaterThan(care?.maxHp ?? Infinity);
+    expect(care?.maxHp).toBeGreaterThan(vj?.maxHp ?? Infinity);
+  });
+
+  it('let the care really repair the stage', () => {
+    const effect = (kind: 'skill' | 'ultimate') => {
+      const found = care?.[kind].effect;
+      return found?.kind === 'healPulse' ? found.coreRepair : 0;
+    };
+
+    expect(effect('skill')).toBeGreaterThanOrEqual(25);
+    expect(effect('ultimate')).toBeGreaterThanOrEqual(60);
+  });
 });

@@ -66,8 +66,8 @@ export const CLASSES: readonly ClassDefinition[] = [
       name: 'Charge',
       description:
         'Tu fonces devant toi, intouchable, et les bad vibes alentour ne voient plus que toi.',
-      cooldownTicks: TICKS_PER_BAR,
-      effect: { kind: 'dash', distance: 160, invulnerableTicks: 10, tauntRadius: 260 },
+      cooldownTicks: 2 * TICKS_PER_BAR,
+      effect: { kind: 'dash', distance: 160, invulnerableTicks: 10, tauntRadius: 190 },
     },
     ultimate: {
       id: 'flight-case',
@@ -83,7 +83,7 @@ export const CLASSES: readonly ClassDefinition[] = [
     name: 'Le care',
     role: 'Healer : soigne, répare la scène, relève ses amis.',
     color: '#7cf2b0',
-    maxHp: 220,
+    maxHp: 120,
     speed: 7,
     radius: 14,
     pickupRadius: 140,
@@ -102,8 +102,8 @@ export const CLASSES: readonly ClassDefinition[] = [
       id: 'soin',
       name: 'Soin',
       description: 'Tu soignes ceux qui sont près de toi et tu répares un peu la scène.',
-      cooldownTicks: 4 * TICKS_PER_BAR,
-      effect: { kind: 'healPulse', amount: 30, radius: 160, coreRepair: 6 },
+      cooldownTicks: 6 * TICKS_PER_BAR,
+      effect: { kind: 'healPulse', amount: 30, radius: 160, coreRepair: 25 },
     },
     ultimate: {
       id: 'rappel',
@@ -111,7 +111,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       description:
         'Sur le drop, tu relèves tes amis à terre et tu soignes tout le monde autour de toi.',
       cooldownTicks: 0,
-      effect: { kind: 'healPulse', amount: 60, radius: 400, coreRepair: 20, revive: true },
+      effect: { kind: 'healPulse', amount: 60, radius: 400, coreRepair: 60, revive: true },
     },
   },
 ];
