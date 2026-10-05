@@ -2,6 +2,7 @@ import { TICK_MS } from '../shared/tempo';
 import { applyModifiers } from '../sim/stats';
 import { FIXTURE_CONTENT, createFixtureState } from './fixture';
 import type { FixtureEvent } from './fixture-classes';
+import { layCoop, reviveEvents } from './fixture-coop';
 import { type SheetPose, killMasks, layMasks } from './fixture-sheet';
 import { advanceSpecials, createSpecialsState } from './fixture-specials';
 import { advanceFixture } from './fixture-step';
@@ -12,6 +13,7 @@ import {
   layWeaponSheet,
 } from './fixture-weapons';
 import { createRenderer } from './index';
+import type { CameraFocus } from './types';
 import { PALETTE_TOKENS, paletteAt } from '../shared/palette';
 import { SETS } from '../data/sets';
 import type { SetDefinition } from '../data/types';
@@ -45,6 +47,7 @@ const pointer = element('#pointer');
 const calmButton = element('#calm');
 const downedButton = element('#downed');
 const invulnerableButton = element('#invulnerable');
+const focusButton = element('#focus');
 const hourInput = element('#hour') as HTMLInputElement;
 const hourValue = element('#hour-value');
 
@@ -57,6 +60,11 @@ const state = specialsScene
       showcase: params.has('showcase'),
     });
 state.core.hp = (state.core.maxHp * count('coreHp', 100)) / 100;
+const coop = params.has('coop');
+if (coop) {
+  layCoop(state);
+}
+const reviveProgress = params.has('revive') ? count('revive', 0) : null;
 const sheet = params.has('sheet') ? count('sheet', 32) : null;
 if (sheet !== null) {
   layMasks(state, sheet, (params.get('pose') ?? 'awake') as SheetPose);
@@ -117,7 +125,12 @@ if (pinned === null) {
 let calmMode = params.get('calm') === '1' || matchMedia('(prefers-reduced-motion: reduce)').matches;
 let queued: FixtureEvent[] = [];
 
-const renderer = await createRenderer(stage, { calmMode }, FIXTURE_CONTENT);
+let focus: CameraFocus =
+  params.get('focus') === 'everyone' ? { kind: 'everyone' } : { kind: 'player', playerId: 0 };
+await Promise.all(
+  ['400 1em "Space Grotesk"', '700 1em "Space Grotesk"'].map((face) => document.fonts.load(face)),
+);
+const renderer = await createRenderer(stage, { calmMode, focus }, FIXTURE_CONTENT);
 const population = `${String(state.enemies.length)} ennemis · ${String(state.projectiles.length)} projectiles`;
 stats.textContent = population;
 
@@ -140,7 +153,10 @@ function setInvulnerable(invulnerable: boolean) {
 }
 
 setPressed(calmButton, calmMode);
-setDowned(params.get('downed') === '1');
+if (!coop) {
+  setDowned(params.get('downed') === '1');
+}
+setPressed(focusButton, focus.kind === 'everyone');
 setInvulnerable(params.get('invulnerable') === '1');
 
 calmButton.addEventListener('click', () => {
@@ -150,6 +166,11 @@ calmButton.addEventListener('click', () => {
 });
 downedButton.addEventListener('click', () => {
   setDowned(player?.downed !== true);
+});
+focusButton.addEventListener('click', () => {
+  focus = focus.kind === 'everyone' ? { kind: 'player', playerId: 0 } : { kind: 'everyone' };
+  renderer.setOptions({ focus });
+  setPressed(focusButton, focus.kind === 'everyone');
 });
 invulnerableButton.addEventListener('click', () => {
   setInvulnerable(invulnerableButton.getAttribute('aria-pressed') !== 'true');
@@ -191,6 +212,11 @@ if (logFps) {
 function advance(events: readonly FixtureEvent[]) {
   if (specialsScene) {
     advanceSpecials(state);
+    return;
+  }
+  if (coop) {
+    state.tick += 1;
+    state.events = reviveProgress === null ? [] : reviveEvents(reviveProgress);
     return;
   }
   if (sheet === null && weaponSheet === null) {
