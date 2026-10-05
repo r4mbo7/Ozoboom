@@ -140,6 +140,19 @@ describe('revive', () => {
     expect(downed.downed).toBe(true);
   });
 
+  it('starts a new revive from 0 for a player stood back up by other means', () => {
+    const { simulation, downed, raver } = team();
+    moveNextTo(raver, downed);
+    stepAndRecord(simulation, 10);
+
+    downed.downed = false;
+    simulation.step([]);
+    downed.downed = true;
+    simulation.step([]);
+
+    expect(downed.reviveTicks).toBe(1);
+  });
+
   it('does not count a downed ally as a helper', () => {
     const { simulation, downed, raver } = team();
     raver.downed = true;

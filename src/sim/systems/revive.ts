@@ -10,6 +10,9 @@ export function revive({ state, content, set }: StepContext): void {
   const needed = (set.reviveBars ?? 1) * TICKS_PER_BAR;
   for (const player of state.players) {
     if (!player.downed) {
+      if ((player.reviveTicks ?? 0) > 0) {
+        player.reviveTicks = 0;
+      }
       continue;
     }
     const helper = bestHelper(state, content, player);
