@@ -16,6 +16,7 @@ import {
 import { type MaskSet, createMasks } from './textures-enemies';
 import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
 import { type PlayerTextures, playerShapes, playerTextures } from './textures-players';
+import { type ClassFxTextures, createClassFxTextures } from './textures-class';
 import { createSpeakerShapes } from './textures-speakers';
 import { trap } from './textures-traps';
 import {
@@ -47,6 +48,7 @@ export interface Textures {
   readonly traps: Readonly<Record<TrapLook, Shape>>;
   readonly specials: SpecialTextures;
   readonly weapons: WeaponTextures;
+  readonly classFx: ClassFxTextures;
 }
 
 export const STREAK_HEAD = 40 / 48;
@@ -212,6 +214,7 @@ export function createTextures(): Textures {
     },
     specials: createSpecialTextures(),
     weapons: createWeaponTextures(),
+    classFx: createClassFxTextures(),
   };
 }
 
@@ -219,6 +222,9 @@ export function destroyTextures(textures: Textures): void {
   const shapes = [
     ...Object.values(textures).filter((value): value is Shape => 'texture' in value),
     ...Object.values(textures.traps),
+    textures.classFx.barrier,
+    textures.classFx.disc,
+    textures.classFx.trail,
     ...specialShapes(textures.specials),
     ...playerShapes(textures.players),
   ];

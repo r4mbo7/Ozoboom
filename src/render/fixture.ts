@@ -14,9 +14,10 @@ import { ENEMIES } from '../data/enemies';
 import { SETS } from '../data/sets';
 import { WEAPONS } from '../data/weapons';
 import type { RenderContent } from './context';
+import { FIXTURE_CLASSES } from './fixture-classes';
 
 export const FIXTURE_CONTENT: RenderContent = {
-  classes: [{ id: 'mage' }, { id: 'tank' }, { id: 'healer' }],
+  classes: FIXTURE_CLASSES,
   weapons: WEAPONS,
   sets: SETS,
   enemies: ENEMIES,
@@ -37,8 +38,6 @@ export const FIXTURE_CONTENT: RenderContent = {
     { id: 'stroboscope', radius: 15, effect: { kind: 'strobe', stunTicks: 30, radius: 100 } },
   ],
 };
-
-export type FixtureEvent = 'beat' | 'enemyDied' | 'coreHit' | 'speakerPlugged';
 
 export interface FixtureOptions {
   enemies: number;

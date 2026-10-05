@@ -5,8 +5,9 @@ import type { SimEvent, SimState, Vec2 } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import { type Camera, frameCamera, screenToWorld } from './camera';
 import { createBystanders } from './bystanders';
-import type { Family, RenderContent, RenderContext } from './context';
+import type { ClassSkillEffects, Family, RenderContent, RenderContext } from './context';
 import { createCore } from './core';
+import { createClassEffects } from './class-effects';
 import { createEffects } from './effects';
 import { createEnemies } from './enemies';
 import { type Frame, advanceFrame, createFrame } from './frame';
@@ -94,8 +95,15 @@ export class Scene implements Renderer {
         ]),
       ),
       weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
+      skillEffects: new Map(
+        content.classes.map((def): [string, ClassSkillEffects] => [
+          def.id,
+          { skill: def.skill.effect, ultimate: def.ultimate.effect },
+        ]),
+      ),
     };
     const traps = createTraps(ctx);
+    const enemies = createEnemies(ctx);
     this.families = [
       createGround(ctx),
       createSpeakers(ctx),
@@ -103,12 +111,15 @@ export class Scene implements Renderer {
       traps,
       createPickups(ctx),
       createBystanders(ctx),
-      createEnemies(ctx),
+      enemies,
       createSpecials(ctx),
       createProjectiles(ctx),
       createWeapons(ctx),
       createPlayers(ctx),
       createEffects(ctx, (id) => traps.reachOf(id)),
+      createClassEffects(ctx, (id, untilTick) => {
+        enemies.blink(id, untilTick);
+      }),
     ];
   }
 

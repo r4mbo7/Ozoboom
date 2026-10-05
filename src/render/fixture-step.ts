@@ -1,7 +1,6 @@
 import type { SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import {
-  type FixtureEvent,
   PARTY_OFFSET,
   PLAYER_ORBIT,
   TAU,
@@ -11,6 +10,8 @@ import {
   spawnEnemy,
   spawnPickup,
 } from './fixture';
+import { advanceClassFx } from './fixture-class-fx';
+import type { FixtureEvent } from './fixture-classes';
 import { advanceWeapons } from './fixture-weapon-fire';
 
 function killRandomEnemy(state: SimState, events: SimEvent[]): void {
@@ -92,6 +93,8 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
       mate.aim = player.aim;
     }
   }
+
+  advanceClassFx(state, queued, events);
 
   for (let index = 0; index < state.enemies.length; index += 1) {
     const enemy = state.enemies[index];
