@@ -46,6 +46,8 @@ export interface CoreState {
   hp: number;
   maxHp: number;
   watts: number;
+  // Repaired so far in the current bar: present only under `SetDefinition.coreRepairPerBar`, once something was repaired.
+  repairedThisBar?: number;
 }
 
 export interface WeaponSlot {

@@ -264,6 +264,8 @@ export interface SetDefinition {
   // Absent means 3.
   weaponSlots?: number;
   reviveBars?: number;
+  // Most the core can be repaired per bar, all sources together. Absent means no cap.
+  coreRepairPerBar?: number;
   perPlayer?: { spawnMul: number; enemyHpMul: number };
 }
 
