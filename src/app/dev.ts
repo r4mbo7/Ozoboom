@@ -1,11 +1,13 @@
 import type { GameContent } from '../data/types';
+import { layoutGround, shoreAt } from '../render/ground-layout';
 import { spawnEnemy } from '../sim/systems/spawning';
 import type { SimState } from '../sim/state';
 
 // Development modes, only behind the `dev` URL parameter, never by default:
 // - `?dev=fast`: a short set (one phrase per tier, one-bar break, weaker bad vibes, sturdier
 //   scene) played four times faster, to reach the end of a game in an end-to-end test;
-// - `?dev=bench`: the real set with 300 bad vibes that neither die nor kill, to measure a frame.
+// - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
+//   weapons and a plugged speaker, to measure a frame.
 // Both expose `window.ozoboom` (live state and frame timings) and log the timings every second.
 export type DevMode = 'fast' | 'bench';
 
@@ -45,31 +47,51 @@ export function fastContent(content: GameContent): GameContent {
   };
 }
 
-export function crowd(state: SimState, content: GameContent, count: number): void {
+const BENCH_WEAPONS = ['baton-du-diable', 'monocycle', 'assiettes-chinoises'] as const;
+const BENCH_SPEAKER = 'foret';
+const SHORE_BAND = { from: 40, width: 360 } as const;
+const SHORE_MARGIN = 60;
+
+// The load of a crowded night: 300 bad vibes on the lake shore that neither die nor kill, the three
+// weapon slots full and one speaker plugged, so that every system and every layer draws.
+export function benchScene(
+  state: SimState,
+  content: GameContent,
+  seed: number,
+  count: number,
+): void {
   const kinds = content.enemies.filter((enemy) => enemy.behaviour !== 'boss');
+  const layout = layoutGround(seed, state.arena);
   const { width, height } = state.arena;
   for (let index = 0; index < count; index++) {
     const kind = kinds[index % kinds.length];
     if (kind === undefined) {
       throw new Error('The bench needs at least one enemy that is not a boss');
     }
-    const turn = (index / count) * 2 * Math.PI * 7;
-    const distance = 160 + ((index * 37) % 420);
-    const x = Math.min(
-      Math.max(state.core.x + Math.cos(turn) * distance, kind.radius),
-      width - kind.radius,
-    );
     const y = Math.min(
-      Math.max(state.core.y + Math.sin(turn) * distance, kind.radius),
+      Math.max(SHORE_MARGIN + ((index * 61) % (height - 2 * SHORE_MARGIN)), kind.radius),
       height - kind.radius,
+    );
+    const x = Math.min(
+      shoreAt(layout, y) + SHORE_BAND.from + ((index * 37) % SHORE_BAND.width),
+      width - kind.radius,
     );
     const enemy = spawnEnemy(state, kind, x, y, false);
     enemy.hp = enemy.maxHp = Number.MAX_SAFE_INTEGER;
+    enemy.damage = 0;
   }
   state.core.hp = state.core.maxHp = Number.MAX_SAFE_INTEGER;
   for (const player of state.players) {
-    player.hp = player.maxHp = Number.MAX_SAFE_INTEGER;
+    player.x = player.prevX = shoreAt(layout, state.arena.height / 2) + SHORE_BAND.from + 40;
+    player.y = player.prevY = state.arena.height / 2;
+    player.weapons = BENCH_WEAPONS.map((id) => ({ id, level: 1, phase: 0 }));
   }
+  const speaker = state.speakers?.find((candidate) => candidate.id === BENCH_SPEAKER);
+  if (speaker === undefined) {
+    throw new Error(`The bench needs the speaker ${BENCH_SPEAKER}`);
+  }
+  speaker.plugged = true;
+  state.volume = (state.volume ?? 0) + 1;
 }
 
 export interface FrameCost {

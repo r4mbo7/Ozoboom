@@ -36,22 +36,41 @@ test('plays a whole game with the keyboard only, from the title to a restart', a
   // fire until the first level, then stand still and let the bad vibes win.
   const held = new Set<string>();
   const upgrade = page.getByRole('region', { name: 'Choix d’amélioration' });
+  const cards = upgrade.getByRole('button');
+  let navigated = false;
+
+  // An offer ignores the keys pressed while it opens, and a boss relic can follow a level on the
+  // very next frame: press until the choice counts, then look again for the next offer.
+  async function chooseOffers() {
+    await holdKeys(page, held, new Set());
+    while ((await readGame(page))?.status === 'choosingUpgrade') {
+      await expect(upgrade).toBeVisible();
+      if (!navigated) {
+        navigated = true;
+        await expect
+          .poll(async () => {
+            await page.keyboard.press('ArrowRight');
+            return cards.first().getAttribute('aria-current');
+          })
+          .toBeNull();
+      }
+      const before = (await readGame(page))?.choices ?? 0;
+      await expect
+        .poll(async () => {
+          await page.keyboard.press('Enter');
+          return (await readGame(page))?.choices ?? 0;
+        })
+        .toBeGreaterThan(before);
+    }
+  }
+
   for (;;) {
     const game = await readGame(page);
     if (game === null) {
       throw new Error('The game state is not exposed');
     }
     if (game.status === 'choosingUpgrade') {
-      await holdKeys(page, held, new Set());
-      await expect(upgrade).toBeVisible();
-      await page.keyboard.press('ArrowRight');
-      await expect
-        .poll(async () => {
-          await page.keyboard.press('Enter');
-          return (await readGame(page))?.status;
-        })
-        .not.toBe('choosingUpgrade');
-      await expect(upgrade).toBeHidden();
+      await chooseOffers();
       await expect(page.getByRole('region', { name: 'Niveau' })).toContainText('2');
       break;
     }
@@ -77,8 +96,20 @@ test('plays a whole game with the keyboard only, from the title to a restart', a
     await holdKeys(page, held, wanted);
   }
 
+  // The boss drops a relic on the way to the end: it needs a choice too.
   const end = page.getByRole('region', { name: 'Fin de partie' });
-  await expect(end).toBeVisible({ timeout: 120_000 });
+  for (;;) {
+    await expect
+      .poll(async () => (await readGame(page))?.status, { timeout: 120_000 })
+      .not.toBe('running');
+    const status = (await readGame(page))?.status;
+    if (status === 'choosingUpgrade') {
+      await chooseOffers();
+    } else {
+      break;
+    }
+  }
+  await expect(end).toBeVisible();
   // The scene or the player falls first depending on the seed: the end tells which one did.
   const silent = await page.evaluate(() => (window.ozoboom?.state.core.hp ?? 0) <= 0);
   await expect(end).toContainText(silent ? 'La musique s’arrête' : 'Plus personne debout');

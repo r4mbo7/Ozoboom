@@ -7,8 +7,9 @@ const URL = `http://localhost:${String(PORT)}/`;
 export default defineConfig({
   testDir: 'e2e',
   fullyParallel: true,
-  // Without a GPU every game renders in software: one worker keeps CI frame rates comparable.
-  ...(process.env.CI ? { workers: 1 } : {}),
+  // Without a GPU every game renders in software and takes several cores: one worker keeps CI frame
+  // rates comparable, and four keep a many-core laptop from starving its own browsers to a timeout.
+  workers: process.env.CI ? 1 : 4,
   forbidOnly: Boolean(process.env.CI),
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
