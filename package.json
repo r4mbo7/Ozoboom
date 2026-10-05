@@ -27,6 +27,7 @@
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.13.0",
+    "peer": "^1.0.2",
     "prettier": "^3.9.9",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.0",
@@ -34,6 +35,7 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
+    "peerjs": "^1.5.5",
     "pixi.js": "^8.22.0"
   }
 }

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0618" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Ozoboom - banc réseau</title>
+    <style>
+      body.dev {
+        display: block;
+        place-items: normal;
+        padding: 20px 32px 16px;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      code,
+      pre {
+        font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      }
+
+      fieldset,
+      section {
+        margin: 0 0 12px;
+      }
+
+      #log {
+        max-height: 40vh;
+        overflow: auto;
+      }
+
+      #error {
+        color: #ff6b8a;
+      }
+    </style>
+  </head>
+  <body class="dev">
+    <main id="app"></main>
+    <script type="module" src="/src/net/dev.ts"></script>
+  </body>
+</html>
