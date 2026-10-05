@@ -11,7 +11,14 @@ declare global {
     // Exposed by the game behind `?dev=fast` and `?dev=bench` only (src/app/dev.ts).
     ozoboom?: { readonly state: SimState };
     fakePad?: FakePad;
+    fakePads?: (FakeSlot | null)[];
   }
+}
+
+// One slot of navigator.getGamepads(): `null` leaves the slot empty, like a controller unplugged.
+// `rumbles` records the [strength, duration] of every vibration the game asks of that controller.
+export interface FakeSlot extends FakePad {
+  rumbles: [number, number][];
 }
 
 // Buttons of the standard Gamepad API mapping, named after the Xbox controller.
@@ -63,6 +70,43 @@ export async function plugFakeGamepad(page: Page): Promise<void> {
       } as unknown as Gamepad,
     ];
   });
+}
+
+// Like plugFakeGamepad, with `count` controllers in window.fakePads, one per getGamepads() slot.
+// Set a slot to null to unplug it, and back to a fresh slot to plug it again.
+export async function plugFakeGamepads(page: Page, count: number): Promise<void> {
+  await page.addInitScript((slots) => {
+    const pads: (FakeSlot | null)[] = Array.from({ length: slots }, () => ({
+      axes: [0, 0, 0, 0],
+      buttons: new Array<number>(17).fill(0),
+      rumbles: [],
+    }));
+    window.fakePads = pads;
+    navigator.getGamepads = () =>
+      pads.map((pad, index) => {
+        if (pad === null) return null;
+        return {
+          index,
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)',
+          mapping: 'standard',
+          connected: true,
+          timestamp: performance.now(),
+          axes: [...pad.axes],
+          buttons: pad.buttons.map((value) => ({
+            pressed: value > 0.5,
+            touched: value > 0.5,
+            value,
+          })),
+          vibrationActuator: {
+            playEffect: (_type: string, params: { strongMagnitude: number; duration: number }) => {
+              pad.rumbles.push([params.strongMagnitude, params.duration]);
+              return Promise.resolve('complete');
+            },
+          },
+          hapticActuators: [],
+        } as unknown as Gamepad;
+      });
+  }, count);
 }
 
 // The game reads the gamepad once per frame, like a real one: a tap holds the button, or a tilt

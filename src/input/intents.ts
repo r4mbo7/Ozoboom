@@ -38,6 +38,8 @@ export type DeviceId = 'keyboardMouse' | `gamepad:${number}`;
 
 export interface InputHub {
   poll(): ReadonlyMap<DeviceId, InputSnapshot>;
+  // The merged view of the last poll(), as createInputSource gives it: for the title and solo.
+  merged(): InputSnapshot;
   rumble(device: DeviceId, strength: number, durationMs: number): void;
   destroy(): void;
 }
