@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { paletteAt } from '../shared/palette';
+import { MASK_BODY, MARK, maskTone } from './face-kit';
 import { LAKE_SKY_MIX, SOL_CLAIR_SHARE, TREE_COUNT, layoutGround, shoreAt } from './ground-layout';
 import { MAX_FIREFLIES, contrast, firefliesAt, mixColor, shadowAt } from './ground-sun';
 import { createPixiPalette, writePixiPalette } from './palette';
@@ -110,19 +111,40 @@ describe('layout', () => {
 });
 
 describe('legibility of the bad vibes', () => {
-  it.each(MOMENTS)('stand out from the ground at %s', (_moment, fraction) => {
-    const palette = pixiPaletteAt(fraction);
+  const FRACTIONS = Array.from({ length: 201 }, (_, index) => index / 200);
+
+  function groundsOf(palette: ReturnType<typeof pixiPaletteAt>) {
     const share = (amount: number) => mixColor(palette.sol, palette.solClair, amount);
-    const grounds = [
+    return [
       palette.sol,
       share(SOL_CLAIR_SHARE.lawn),
       share(SOL_CLAIR_SHARE.tufts),
       share(SOL_CLAIR_SHARE.floor),
       mixColor(palette.turquoise, palette.solClair, LAKE_SKY_MIX),
     ];
+  }
 
-    for (const ground of grounds) {
-      expect(contrast(palette.badVibe, ground)).toBeGreaterThan(1.5);
+  it('stand out from every ground at every hour of the set, by their rim or their body', () => {
+    const faint: string[] = [];
+
+    for (const fraction of FRACTIONS) {
+      const palette = pixiPaletteAt(fraction);
+      const rim = palette.badVibeRim;
+      const body = maskTone(rim, MASK_BODY);
+      for (const ground of groundsOf(palette)) {
+        const silhouette = Math.max(contrast(rim, ground), contrast(body, ground));
+        if (silhouette < 3) {
+          faint.push(`${fraction.toFixed(3)}: ${silhouette.toFixed(2)}:1`);
+        }
+      }
     }
+
+    expect(faint).toEqual([]);
+  });
+
+  it.each(MOMENTS)('show a face that reads on the body at %s', (_moment, fraction) => {
+    const rim = pixiPaletteAt(fraction).badVibeRim;
+
+    expect(contrast(maskTone(rim, MARK), maskTone(rim, MASK_BODY))).toBeGreaterThanOrEqual(4.5);
   });
 });

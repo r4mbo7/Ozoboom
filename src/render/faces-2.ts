@@ -1,11 +1,14 @@
 import { SHADE, SHADE_SOFT, TAU, WHITE, circle, polygon, type Ctx } from './paint';
 import {
   INK,
+  MARK,
+  MASK_BODY,
   type Pose,
   body,
   crossEye,
   dot,
   eye,
+  gladBody,
   hand,
   limb,
   line,
@@ -28,7 +31,7 @@ export function fatigue(ctx: Ctx, pose: Pose): void {
       ctx.beginPath();
       ctx.arc(x, -2, 6.4, 0, Math.PI);
       ctx.closePath();
-      ctx.fillStyle = INK;
+      ctx.fillStyle = MARK;
       ctx.fill();
       line(ctx, 4.4, [x - 9, -3], [x + 9, -1]);
     }
@@ -43,6 +46,9 @@ export function fatigue(ctx: Ctx, pose: Pose): void {
   ctx.ellipse(0, 19, 8 + open * 5, 3 + open * 11, 0, 0, TAU);
   ctx.fillStyle = INK;
   ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = MARK;
+  ctx.stroke();
 }
 
 export function filmeur(ctx: Ctx, pose: Pose): void {
@@ -62,14 +68,17 @@ export function filmeur(ctx: Ctx, pose: Pose): void {
   ctx.rotate(0.22);
   ctx.beginPath();
   ctx.roundRect(-11, -18, 22, 36, 4);
-  ctx.fillStyle = INK;
+  ctx.fillStyle = MASK_BODY;
   ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = MARK;
+  ctx.stroke();
   ctx.beginPath();
   ctx.roundRect(-8, -14, 16, 26, 2);
   ctx.fillStyle = pose.asleep || pose.down ? SHADE : WHITE;
   ctx.fill();
   if (!shut(pose) && pose.t < 0.5) {
-    dot(ctx, 4, -9, 2.4);
+    dot(ctx, 4, -9, 2.4, INK);
   }
   ctx.restore();
   hand(ctx, 33, -4, 6.5);
@@ -91,6 +100,9 @@ export function bavard(ctx: Ctx, pose: Pose): void {
   ctx.ellipse(0, 14, 15, 4 + open * 11, 0, 0, TAU);
   ctx.fillStyle = INK;
   ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = MARK;
+  ctx.stroke();
   if (open > 0.5) {
     ctx.beginPath();
     ctx.ellipse(0, 14 + open * 7, 8, 3.6, 0, 0, TAU);
@@ -116,7 +128,7 @@ export function zombie(ctx: Ctx, pose: Pose): void {
   for (const x of [-12, 12]) {
     ctx.beginPath();
     ctx.ellipse(x, 6, 9, 4.2, 0, 0, TAU);
-    ctx.fillStyle = 'rgb(20 20 20 / 0.55)';
+    ctx.fillStyle = 'rgb(128 128 128 / 0.6)';
     ctx.fill();
   }
   if (shut(pose)) {
@@ -127,7 +139,7 @@ export function zombie(ctx: Ctx, pose: Pose): void {
     ctx.beginPath();
     ctx.arc(12, 0, 6, 0, Math.PI);
     ctx.closePath();
-    ctx.fillStyle = INK;
+    ctx.fillStyle = MARK;
     ctx.fill();
     line(ctx, 3.8, [3, -2], [21, 0]);
   }
@@ -142,6 +154,9 @@ export function zombie(ctx: Ctx, pose: Pose): void {
   ]);
   ctx.fillStyle = INK;
   ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = MARK;
+  ctx.stroke();
   for (const x of [-5, 5]) {
     line(ctx, 2, [x, 20], [x, 25]);
   }
@@ -157,11 +172,11 @@ export function neutral(ctx: Ctx, pose: Pose): void {
 }
 
 export function smile(ctx: Ctx): void {
-  body(ctx, () => {
+  gladBody(ctx, () => {
     circle(ctx, 37);
   });
   for (const x of [-13, 13]) {
-    mouthArc(ctx, x, -3, 7, 1, 2, 4.2);
+    mouthArc(ctx, x, -3, 7, 1, 2, 4.2, INK);
   }
   ctx.beginPath();
   ctx.arc(0, 4, 22, 0.1 * Math.PI, 0.9 * Math.PI);

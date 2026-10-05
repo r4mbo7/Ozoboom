@@ -10,22 +10,23 @@ Trois mots pour trancher un doute : **lumineux, rythmé, bienveillant**.
 
 ## Lumière et couleur
 
-Règle de lecture : **ce qui est à nous est vivant, coloré et net ; ce qui est hostile est gris, terne et flou.** La nuit, nos éléments émettent de la lumière (mélange additif, halos). Le jour, ils gardent leur saturation et un contour sombre (mélange normal, halos réduits de moitié). Les ennemis restent gris à toute heure et explosent en couleur quand ils meurent.
+Règle de lecture : **ce qui est à nous est vivant, coloré et net ; ce qui est hostile est sombre, terne et à contre-jour.** La nuit, nos éléments émettent de la lumière (mélange additif, halos). Le jour, ils gardent leur saturation et un contour sombre (mélange normal, halos réduits de moitié). Les ennemis sont des silhouettes sombres bordées de la lumière de l'heure (« Contre-jour », choisi le 2026-10-05) : le liseré clair les détache du sol la nuit, le corps sombre le jour, et leur silhouette tient 3:1 sur tout sol à toute heure (`src/render/ground.test.ts`). Ils explosent en couleur quand ils meurent.
 
 La palette suit la progression du set et s'interpole en continu entre quatre moments : crépuscule au début, nuit de 25 à 60 %, aube à 85 %, plein jour au sunrise. Valeurs de départ, à valider à l'écran.
 
-| Jeton       | Crépuscule | Nuit      | Aube      | Plein jour | Usage                           |
-| ----------- | ---------- | --------- | --------- | ---------- | ------------------------------- |
-| `sol`       | `#2a1830`  | `#060a1c` | `#e9c9b6` | `#efe2c2`  | fond, jamais de noir pur        |
-| `sol-clair` | `#5a2c48`  | `#101a3c` | `#f8e3d2` | `#fbf3dc`  | piste de danse, surfaces        |
-| `or`        | `#f0b050`  | `#d9a441` | `#b07a1a` | `#a8781f`  | géométrie sacrée, interface     |
-| `turquoise` | `#5fd0c8`  | `#3fd0c9` | `#1c8a86` | `#1f8a84`  | eau, lumière, accents           |
-| `noyau`     | `#ffc860`  | `#ffd27a` | `#d68400` | `#c98a12`  | la scène et son volume          |
-| `mage`      | `#ff6fa8`  | `#ff6fa8` | `#a61d56` | `#b8246a`  | VJ, laser                       |
-| `tank`      | `#ff9a3d`  | `#ff9a3d` | `#973a0d` | `#a64713`  | roadie                          |
-| `healer`    | `#7cf2b0`  | `#7cf2b0` | `#126346` | `#14724d`  | care, brumisateur               |
-| `bad-vibe`  | `#5a4c64`  | `#4b4762` | `#6c6276` | `#66606e`  | ennemis                         |
-| `texte`     | `#fbeee0`  | `#f6ecd2` | `#2c1e18` | `#2b2010`  | texte courant, toujours lisible |
+| Jeton          | Crépuscule | Nuit      | Aube      | Plein jour | Usage                           |
+| -------------- | ---------- | --------- | --------- | ---------- | ------------------------------- |
+| `sol`          | `#2a1830`  | `#060a1c` | `#e9c9b6` | `#efe2c2`  | fond, jamais de noir pur        |
+| `sol-clair`    | `#5a2c48`  | `#101a3c` | `#f8e3d2` | `#fbf3dc`  | piste de danse, surfaces        |
+| `or`           | `#f0b050`  | `#d9a441` | `#b07a1a` | `#a8781f`  | géométrie sacrée, interface     |
+| `turquoise`    | `#5fd0c8`  | `#3fd0c9` | `#1c8a86` | `#1f8a84`  | eau, lumière, accents           |
+| `noyau`        | `#ffc860`  | `#ffd27a` | `#d68400` | `#c98a12`  | la scène et son volume          |
+| `mage`         | `#ff6fa8`  | `#ff6fa8` | `#a61d56` | `#b8246a`  | VJ, laser                       |
+| `tank`         | `#ff9a3d`  | `#ff9a3d` | `#973a0d` | `#a64713`  | roadie                          |
+| `healer`       | `#7cf2b0`  | `#7cf2b0` | `#126346` | `#14724d`  | care, brumisateur               |
+| `bad-vibe`     | `#5a4c64`  | `#4b4762` | `#6c6276` | `#66606e`  | zones des ennemis               |
+| `bad-vibe-rim` | `#f2c4a0`  | `#b8c4ee` | `#fff0e4` | `#fffaf0`  | liseré des masques et des tirs  |
+| `texte`        | `#fbeee0`  | `#f6ecd2` | `#2c1e18` | `#2b2010`  | texte courant, toujours lisible |
 
 Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distinguer les classes et les pièges à la forme seule. La couleur renforce, elle ne porte jamais seule une information.
 
@@ -35,8 +36,8 @@ Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distingue
 - Noyau, pièges et projectiles : trait fin à double contour, en géométrie sacrée (hexagramme pour la scène).
 - Joueurs : festivaliers vus du ciel, « Arts du festival », choisis le 2026-10-04. Chacun tient un objet qui dit sa classe sans la couleur : la VJ fait tourner des poi (deux boules en orbite), le roadie porte un flight case au-dessus de la tête (rectangle à coins), le care marche sous un parasol rayé (disque à secteurs). Le viseur est un trait fin devant le personnage.
 - À plusieurs : le nom du joueur flotte au-dessus de lui, en Space Grotesk, à taille d'écran constante, dans la couleur de sa classe (fond sombre la nuit, contour sombre le jour) ; il n'y en a pas en solo. Un allié à terre garde sa teinte grise, un anneau de perles à la couleur de sa classe se remplit pendant la relève, un halo doux s'ouvre quand il se relève. Un joueur hors de l'écran est signalé par une flèche au bord, dans la couleur de sa classe. La caméra qui cadre tout le monde recule jusqu'aux trois cinquièmes de l'échelle d'un joueur, puis les flèches prennent le relais.
-- Bad vibes : des masques gris de mauvaises humeurs, un visage par sorte (voir le bestiaire de `game-design.md`), reconnaissable en un coup d'œil à 16 pixels : la forme du masque et la bouche portent l'identité, les yeux l'intention. Chassée, une bad vibe sourit un temps puis éclate en couleurs. Les grandes figures des drops sont des masques plus grands et plus sévères.
-- Festivalier en détresse : masque pâle et inquiet, croix de soin qui pulse au-dessus. Il n'est pas gris : c'est quelqu'un à aider.
+- Bad vibes : des masques sombres de mauvaises humeurs, bordés d'un liseré clair, aux traits et aux yeux clairs, un visage par sorte (voir le bestiaire de `game-design.md`), reconnaissable en un coup d'œil à 16 pixels : la forme du masque et la bouche portent l'identité, les yeux l'intention. Chassée, une bad vibe sourit un temps puis éclate en couleurs. Les grandes figures des drops sont des masques plus grands et plus sévères.
+- Festivalier en détresse : masque pâle et inquiet, croix de soin qui pulse au-dessus. Il n'est pas sombre : c'est quelqu'un à aider.
 - Décor : rive du lac, arbres, ombres portées selon la position du soleil, reflets sur l'eau, lucioles la nuit.
 - Les pièges ressemblent au matériel de festival : caisson de basse, laser, brumisateur, déco UV, stroboscope.
 - Pièges, couleur de leur effet : caisson `turquoise`, laser `mage`, brumisateur `healer`, déco UV `or`, stroboscope `texte`. Le niveau se lit à son nombre de traits sous la silhouette. Ramassables : vibes `or`, watts `turquoise`. Noyau : la part allumée de l'anneau extérieur `or` est la vie restante.

@@ -1,6 +1,8 @@
-import { SHADE, SHADE_SOFT, TAU, WHITE, circle, polygon, type Ctx } from './paint';
+import { TAU, WHITE, circle, polygon, type Ctx } from './paint';
 import {
   INK,
+  MARK,
+  MASK_BODY,
   type Pose,
   body,
   dot,
@@ -10,6 +12,7 @@ import {
   line,
   shut,
   sleepingEye,
+  stroke,
   wave,
 } from './face-kit';
 
@@ -26,13 +29,13 @@ export function random(ctx: Ctx, pose: Pose): void {
     ctx.lineTo(-13, -12);
     ctx.lineCap = 'round';
     ctx.lineWidth = 3.6;
-    ctx.strokeStyle = INK;
+    ctx.strokeStyle = MARK;
     ctx.stroke();
     dot(ctx, -13, -6.4, 1.9);
   }
   circle(ctx, 4.5, 2, 20);
   ctx.lineWidth = 3.4;
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = MARK;
   ctx.stroke();
 }
 
@@ -75,7 +78,7 @@ export function meprisant(ctx: Ctx, pose: Pose): void {
       ctx.beginPath();
       ctx.arc(x, -9, 7, 0, Math.PI);
       ctx.closePath();
-      ctx.fillStyle = INK;
+      ctx.fillStyle = MARK;
       ctx.fill();
       line(ctx, 4.4, [x - 9, -11], [x + 9, -9]);
     }
@@ -104,10 +107,10 @@ export function maleAlpha(ctx: Ctx, pose: Pose): void {
   for (const x of [-15, 15]) {
     ctx.beginPath();
     ctx.roundRect(x - 12, -16, 24, 15, 5);
-    ctx.fillStyle = INK;
+    ctx.fillStyle = MARK;
     ctx.fill();
     if (!shut(pose)) {
-      line(ctx, 2.4, [x - 7, -12], [x - 2, -6]);
+      stroke(ctx, INK, 2.4, [x - 7, -12], [x - 2, -6]);
     }
   }
   line(ctx, 4, [-3, -12], [3, -12]);
@@ -137,7 +140,7 @@ export function collant(ctx: Ctx, pose: Pose): void {
   ctx.fillStyle = shut(pose) ? WHITE : INK;
   ctx.fill();
   ctx.lineWidth = 3.4;
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = MARK;
   ctx.stroke();
   if (!shut(pose)) {
     ctx.beginPath();
@@ -183,11 +186,11 @@ export function arnaqueur(ctx: Ctx, pose: Pose): void {
       [side * 8, 38],
       [side * 20, 14],
     ]);
-    ctx.fillStyle = SHADE_SOFT;
+    ctx.fillStyle = MASK_BODY;
     ctx.fill();
     ctx.lineJoin = 'round';
     ctx.lineWidth = 3.4;
-    ctx.strokeStyle = INK;
+    ctx.strokeStyle = MARK;
     ctx.stroke();
   }
   body(ctx, () => {
@@ -201,28 +204,25 @@ export function arnaqueur(ctx: Ctx, pose: Pose): void {
       ctx.ellipse(x, 6, 7.5, 5, 0, 0, TAU);
       ctx.fillStyle = WHITE;
       ctx.fill();
-      ctx.lineWidth = 2.6;
-      ctx.strokeStyle = INK;
-      ctx.stroke();
-      dot(ctx, x + 3.4, 6, 3);
+      dot(ctx, x + 3.4, 6, 3, INK);
       line(ctx, 3.6, [x - 9, 0], [x + 8, 2]);
     }
   }
   line(ctx, 3.4, [-8, 22], [6, 24], [13, 19]);
   ctx.beginPath();
   ctx.ellipse(0, -14, 40, 9, 0, 0, TAU);
-  ctx.fillStyle = SHADE;
+  ctx.fillStyle = MASK_BODY;
   ctx.fill();
   ctx.lineWidth = 3.4;
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = MARK;
   ctx.stroke();
   ctx.beginPath();
   ctx.roundRect(-17, -38, 34, 28, 8);
-  ctx.fillStyle = SHADE;
+  ctx.fillStyle = MASK_BODY;
   ctx.fill();
   ctx.stroke();
   ctx.beginPath();
   ctx.rect(-17, -19, 34, 6);
-  ctx.fillStyle = INK;
+  ctx.fillStyle = MARK;
   ctx.fill();
 }

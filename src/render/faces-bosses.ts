@@ -1,5 +1,17 @@
-import { SHADE_SOFT, TAU, WHITE, circle, polygon, type Ctx } from './paint';
-import { INK, type Pose, body, dot, eye, line, mouthArc, shut } from './face-kit';
+import { TAU, WHITE, circle, polygon, type Ctx } from './paint';
+import {
+  INK,
+  MARK,
+  MASK_BODY,
+  type Pose,
+  body,
+  dot,
+  eye,
+  line,
+  mouthArc,
+  shut,
+  stroke,
+} from './face-kit';
 
 export function couvreFeu(ctx: Ctx, pose: Pose): void {
   body(ctx, () => {
@@ -24,22 +36,22 @@ export function couvreFeu(ctx: Ctx, pose: Pose): void {
     ctx.beginPath();
     ctx.ellipse(-16, 3, 8, 4.4, 0, 0, TAU);
     ctx.ellipse(16, 3, 8, 4.4, 0, 0, TAU);
-    ctx.fillStyle = INK;
+    ctx.fillStyle = MARK;
     ctx.fill();
   }
   line(ctx, 4.6, [-22, 25], [-6, 22]);
   ctx.beginPath();
   ctx.roundRect(2, 17, 24, 12, 5);
   circle(ctx, 8.5, 29, 23);
-  ctx.fillStyle = SHADE_SOFT;
+  ctx.fillStyle = MASK_BODY;
   ctx.fill();
   ctx.lineWidth = 3.2;
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = MARK;
   ctx.stroke();
   dot(ctx, 29, 23, 3.4);
   ctx.beginPath();
   ctx.roundRect(40, -56, 8, 8, 2);
-  ctx.fillStyle = INK;
+  ctx.fillStyle = MARK;
   ctx.fill();
   circle(ctx, 14, 44, -36);
   ctx.fillStyle = WHITE;
@@ -47,8 +59,8 @@ export function couvreFeu(ctx: Ctx, pose: Pose): void {
   ctx.lineWidth = 3.4;
   ctx.stroke();
   const angle = Math.floor(pose.t * 4) * (Math.PI / 2);
-  line(ctx, 3.2, [44, -36], [44 + Math.sin(angle) * 9, -36 - Math.cos(angle) * 9]);
-  dot(ctx, 44, -36, 2.2);
+  stroke(ctx, INK, 3.2, [44, -36], [44 + Math.sin(angle) * 9, -36 - Math.cos(angle) * 9]);
+  dot(ctx, 44, -36, 2.2, INK);
 }
 
 export function batterieAPlat(ctx: Ctx, pose: Pose): void {
@@ -58,10 +70,10 @@ export function batterieAPlat(ctx: Ctx, pose: Pose): void {
   });
   ctx.beginPath();
   ctx.roundRect(-11, -42, 22, 10, 3);
-  ctx.fillStyle = SHADE_SOFT;
+  ctx.fillStyle = MASK_BODY;
   ctx.fill();
   ctx.lineWidth = 3.4;
-  ctx.strokeStyle = INK;
+  ctx.strokeStyle = MARK;
   ctx.stroke();
   ctx.beginPath();
   ctx.roundRect(-24, -22, 48, 14, 5);

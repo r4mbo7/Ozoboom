@@ -1,7 +1,6 @@
 import type { TrapEffect } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import {
-  SHADE,
   SHADE_DEEP,
   TAU,
   WHITE,
@@ -13,6 +12,7 @@ import {
   star,
   type Shape,
 } from './paint';
+import { MASK_BODY } from './face-kit';
 import { type MaskSet, createMasks } from './textures-enemies';
 import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
 import { type PlayerTextures, playerShapes, playerTextures } from './textures-players';
@@ -196,13 +196,13 @@ export function createTextures(): Textures {
     }),
     enemyShot: paint(32, 32, 8, (ctx) => {
       ctx.lineCap = 'round';
-      ctx.strokeStyle = SHADE;
+      ctx.strokeStyle = WHITE;
       ctx.lineWidth = 7;
       ctx.beginPath();
       ctx.moveTo(-13, 0);
       ctx.lineTo(8, 0);
       ctx.stroke();
-      ctx.strokeStyle = WHITE;
+      ctx.strokeStyle = MASK_BODY;
       ctx.lineWidth = 3;
       ctx.stroke();
     }),

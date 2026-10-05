@@ -45,7 +45,7 @@ export function createProjectiles(ctx: RenderContext): Family {
         const rotation = Math.atan2(projectile.vy, projectile.vx);
         if (owner.kind === 'enemy') {
           const sprite = enemyShots.acquire(projectile.id);
-          setTint(sprite, palette.badVibe);
+          setTint(sprite, palette.badVibeRim);
           sprite.visible = true;
           sprite.position.set(x, y);
           sprite.rotation = rotation;

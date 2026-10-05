@@ -34,7 +34,7 @@ La scène principale et son sound system. Sa vie est son volume. Les ennemis le 
 
 ## Les ennemis : bad vibes
 
-Des masques gris de mauvaises humeurs : les relous que l'on croise en festival. Bestiaire **tranché le 2026-10-04** ; chaque sorte a un déplacement (nuée, rapide, lourd, à distance, boss) et au plus un effet spécial, qui est une donnée pointant sur un module de la sim.
+Des masques sombres de mauvaises humeurs : les relous que l'on croise en festival. Bestiaire **tranché le 2026-10-04** ; chaque sorte a un déplacement (nuée, rapide, lourd, à distance, boss) et au plus un effet spécial, qui est une donnée pointant sur un module de la sim.
 
 | Bad vibe           | Déplacement | Effet spécial                                                                  | Arrive          |
 | ------------------ | ----------- | ------------------------------------------------------------------------------ | --------------- |

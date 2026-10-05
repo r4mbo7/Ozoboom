@@ -140,8 +140,8 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
 
   function tintOf(palette: PixiPalette, tone: { token: PaletteToken; amount: number } | undefined) {
     return tone === undefined
-      ? palette.badVibe
-      : mixColor(palette.badVibe, palette[tone.token], tone.amount);
+      ? palette.badVibeRim
+      : mixColor(palette.badVibeRim, palette[tone.token], tone.amount);
   }
 
   let latest: Frame = createFrame();
@@ -174,7 +174,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
     },
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, calm } = frame;
-      const downTint = mixColor(palette.badVibe, DOWN_GRAY, DOWN_MIX);
+      const downTint = mixColor(palette.badVibeRim, DOWN_GRAY, DOWN_MIX);
       views.begin();
       for (const enemy of state.enemies) {
         const mask = maskOf(enemy.kind);
