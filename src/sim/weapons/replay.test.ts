@@ -5,7 +5,7 @@ import { createSimulation } from '../index';
 import { hashState } from '../replay';
 import { thrownWeapon } from './thrown.test-support';
 
-const REFERENCE_HASH = '1625ac91';
+const REFERENCE_HASH = 'bd478e05';
 const SCRIPT_TICKS = 900;
 
 const content: GameContent = {

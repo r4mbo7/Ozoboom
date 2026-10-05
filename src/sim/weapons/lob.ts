@@ -13,7 +13,11 @@ export const lob: WeaponModule = {
     if (effect.dropRain === true && !raining && ctx.state.tick % TICKS_PER_BAR !== 0) {
       return;
     }
-    const range = raining ? Math.hypot(ctx.set.arena.width, ctx.set.arena.height) : effect.range;
+    const range = raining
+      ? Math.sqrt(
+          ctx.set.arena.width * ctx.set.arena.width + ctx.set.arena.height * ctx.set.arena.height,
+        )
+      : effect.range;
     const aim = densestSpot(ctx, player, range, effect.radius);
     if (aim === null) {
       return;

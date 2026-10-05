@@ -19,7 +19,7 @@ export function upgradeChoice(ctx: StepContext): void {
       }
       const weapon = content.weapons.get(action.upgradeId);
       if (weapon?.evolvedFrom !== undefined) {
-        const fusion = openFusion(weapon, player, content);
+        const fusion = openFusion(weapon, player, state, content);
         if (fusion === undefined) {
           continue;
         }

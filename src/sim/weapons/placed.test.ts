@@ -78,7 +78,10 @@ function tough(enemy: EnemyState): EnemyState {
 }
 
 function travelled(enemy: EnemyState): number {
-  return Math.hypot(enemy.x - enemy.prevX, enemy.y - enemy.prevY);
+  return Math.sqrt(
+    (enemy.x - enemy.prevX) * (enemy.x - enemy.prevX) +
+      (enemy.y - enemy.prevY) * (enemy.y - enemy.prevY),
+  );
 }
 
 describe('plate', () => {
@@ -261,6 +264,21 @@ describe('trail', () => {
     expect(player.hp).toBe(player.maxHp - 7);
   });
 
+  it('reads its newest places first, even when the ring starts filling mid-cycle', () => {
+    const { simulation, player } = armed('unicycle');
+    player.weapons = [];
+    stepTo(simulation, 13);
+    player.weapons = [{ id: 'unicycle', level: 1, phase: 0 }];
+    stepTo(simulation, 23, { x: 1, y: 0 });
+    const across = tough(placeEnemy(simulation.state, 'grump', player.x - 30, player.y + 10));
+    const corner = tough(placeEnemy(simulation.state, 'grump', 14, 14));
+
+    simulation.step([]);
+
+    expect(travelled(across)).toBeCloseTo(2.5 * 0.7);
+    expect(travelled(corner)).toBeCloseTo(2.5);
+  });
+
   it('keeps its trail in a ring that never grows', () => {
     const { simulation, player } = armed('unicycle');
 
@@ -297,7 +315,7 @@ describe('replay', () => {
   }
 
   it('fixes the fingerprint of a scripted game with the three weapons', () => {
-    expect(play()).toBe('a0468c44');
+    expect(play()).toBe('3eff9aaa');
   });
 
   it('plays the same game twice', () => {

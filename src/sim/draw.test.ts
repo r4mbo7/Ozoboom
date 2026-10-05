@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { GameContent, UpgradeDefinition, WeaponDefinition } from '../data/types';
+import type {
+  GameContent,
+  SetDefinition,
+  UpgradeDefinition,
+  WeaponDefinition,
+} from '../data/types';
 import { resolveContent } from './content';
 import { drawOffer } from './draw';
 import { FIXTURE_CONTENT, FIXTURE_OPTIONS, FIXTURE_SET } from './fixtures';
@@ -31,8 +36,9 @@ function setup(
   weapons: WeaponDefinition[],
   slots = 3,
   fusions: GameContent['fusions'] = [],
+  speakers: SetDefinition['speakers'] = [],
 ) {
-  const set = { ...FIXTURE_SET, weaponSlots: slots };
+  const set = { ...FIXTURE_SET, weaponSlots: slots, speakers };
   const content: GameContent = { ...FIXTURE_CONTENT, upgrades, weapons, fusions, sets: [set] };
   const { state } = createSimulation({ ...FIXTURE_OPTIONS, content });
   const player = state.players[0];
@@ -117,6 +123,63 @@ describe('draw', () => {
 
     expect(withThree).toEqual([]);
     expect(withFour).toEqual(['ribbon']);
+  });
+
+  it('opens a weapon only once the speaker that unlocks it is plugged', () => {
+    const { state, draw } = setup(
+      [],
+      [weapon('free'), weapon('plates')],
+      3,
+      [],
+      [
+        {
+          id: 'dome',
+          name: 'Dôme',
+          description: 'Dôme',
+          x: 10,
+          y: 10,
+          radius: 5,
+          plugBars: 1,
+          aura: { kind: 'mist', slowFactor: 1, healPerBar: 0, radius: 10 },
+          unlocksWeaponId: 'plates',
+        },
+      ],
+    );
+
+    const unplugged = seen(draw, 50);
+    state.speakers = (state.speakers ?? []).map((speaker) => ({ ...speaker, plugged: true }));
+
+    expect(unplugged).toEqual(new Set(['free']));
+    expect(seen(draw, 50)).toEqual(new Set(['free', 'plates']));
+  });
+
+  it('holds a fusion back until every speaker of the set is plugged', () => {
+    const { state, player, draw } = setup(
+      [upgrade('twin')],
+      [weapon('base', { maxLevel: 1 }), weapon('fused', { evolvedFrom: 'base' })],
+      3,
+      [{ weaponId: 'base', upgradeId: 'twin', resultId: 'fused' }],
+      [
+        {
+          id: 'dome',
+          name: 'Dôme',
+          description: 'Dôme',
+          x: 10,
+          y: 10,
+          radius: 5,
+          plugBars: 1,
+          aura: { kind: 'mist', slowFactor: 1, healPerBar: 0, radius: 10 },
+        },
+      ],
+    );
+    player.weapons = [{ id: 'base', level: 1, phase: 0 }];
+    player.upgrades = ['twin'];
+
+    const unplugged = seen(draw, 30);
+    state.speakers = (state.speakers ?? []).map((speaker) => ({ ...speaker, plugged: true }));
+
+    expect(unplugged.has('fused')).toBe(false);
+    expect(seen(draw, 30).has('fused')).toBe(true);
   });
 
   it('never draws a relic in a level offer', () => {

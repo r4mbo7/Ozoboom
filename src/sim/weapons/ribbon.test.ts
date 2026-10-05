@@ -56,9 +56,9 @@ describe('ribbon', () => {
     expect(firedTicks(simulation, TICKS_PER_BAR)).toEqual([6, 18, 30, 42]);
   });
 
-  it('marks the bad vibes along the aim, within its length, and no others', () => {
+  it('marks the bad vibes on the way to the closest one, within its length, and no others', () => {
     const { simulation } = ribbonArena(MARKED_TICKS, 200);
-    const ahead = stand(simulation, 550, 400);
+    const ahead = stand(simulation, 480, 400);
     const tooFar = stand(simulation, 700, 400);
     const beside = stand(simulation, 500, 480);
     const behind = stand(simulation, 300, 400);
@@ -73,13 +73,13 @@ describe('ribbon', () => {
     ]);
   });
 
-  it('follows the aim of the player', () => {
+  it('aims at the closest bad vibe, not where the player aims', () => {
     const { simulation } = ribbonArena();
     const above = stand(simulation, 400, 300);
-    const right = stand(simulation, 500, 400);
+    const right = stand(simulation, 520, 400);
 
     while (simulation.state.tick < 6) {
-      simulation.step([commandFor(0, { aim: { x: 0, y: -1 } })]);
+      simulation.step([commandFor(0, { aim: { x: 1, y: 0 } })]);
     }
 
     expect([above.marked, right.marked]).toEqual([true, false]);
@@ -90,6 +90,7 @@ describe('ribbon', () => {
     const enemy = stand(simulation, 500, 400);
     stepTo(simulation, 6);
     moveTo(enemy, 300);
+    stand(simulation, 440, 400);
     const atFirst = damageTaken(simulation, enemy);
     stepTo(simulation, 6 + MARKED_TICKS - 1);
     const atLast = damageTaken(simulation, enemy);

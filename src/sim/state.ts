@@ -279,7 +279,16 @@ export type SimEvent =
   | { type: 'levelUp'; playerId: PlayerId; level: number }
   | { type: 'upgradeChosen'; playerId: PlayerId; upgradeId: string }
   | { type: 'weaponGained'; playerId: PlayerId; weaponId: string }
-  | { type: 'weaponFired'; playerId: PlayerId; weaponId: string; x: number; y: number }
+  // dx, dy: unit direction of the shot (towards the closest bad vibe, or along the aim).
+  | {
+      type: 'weaponFired';
+      playerId: PlayerId;
+      weaponId: string;
+      x: number;
+      y: number;
+      dx?: number;
+      dy?: number;
+    }
   | { type: 'weaponEvolved'; playerId: PlayerId; weaponId: string; resultId: string }
   | { type: 'placedSpawned'; id: EntityId; weaponId: string; x: number; y: number }
   | { type: 'placedRemoved'; id: EntityId; weaponId: string; x: number; y: number }

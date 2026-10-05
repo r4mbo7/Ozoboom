@@ -5,7 +5,7 @@ export interface RngState {
   d: number;
 }
 
-const UINT32_RANGE = 2 ** 32;
+const UINT32_RANGE = 0x1_0000_0000;
 const SEEDING_ROUNDS = 12;
 
 export function seedRng(seed: number): RngState {

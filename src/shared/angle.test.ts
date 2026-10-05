@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-properties -- Math's trigonometry is the reference the series is checked against. */
 import { describe, expect, it } from 'vitest';
 import { angleOf, rotate, unitFromAngle } from './angle';
 import { length } from './vec';

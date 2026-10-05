@@ -177,11 +177,13 @@ function scriptToFirstRelic(): PlayerCommand[][] {
       throw new Error('expected one player');
     }
     const distance = (enemy: EnemyState): number =>
-      Math.hypot(enemy.x - player.x, enemy.y - player.y);
+      Math.sqrt(
+        (enemy.x - player.x) * (enemy.x - player.x) + (enemy.y - player.y) * (enemy.y - player.y),
+      );
     const [target] = [...simulation.state.enemies].sort((a, b) => distance(a) - distance(b));
     const aim =
       target === undefined ? { x: 1, y: 0 } : { x: target.x - player.x, y: target.y - player.y };
-    const length = Math.hypot(aim.x, aim.y) || 1;
+    const length = Math.sqrt(aim.x * aim.x + aim.y * aim.y) || 1;
     const move =
       target !== undefined && length < 250
         ? { x: -aim.x / length, y: -aim.y / length }

@@ -33,9 +33,14 @@ export function isEligible(upgrade: UpgradeDefinition, player: PlayerState): boo
 export function openFusion(
   weapon: WeaponDefinition,
   player: PlayerState,
+  state: SimState,
   content: ResolvedContent,
 ): FusionDefinition | undefined {
-  if (weapon.evolvedFrom === undefined || player.fused?.includes(weapon.id)) {
+  if (
+    weapon.evolvedFrom === undefined ||
+    player.fused?.includes(weapon.id) ||
+    !fusionsOpen(state)
+  ) {
     return undefined;
   }
   return content.fusions.find((fusion) => {
@@ -71,7 +76,20 @@ export function isWeaponOffered(
   if (weapon.evolvedFrom !== undefined || (player.weapons?.length ?? 0) >= weaponSlotCount(set)) {
     return false;
   }
+  const opener = (set.speakers ?? []).find((speaker) => speaker.unlocksWeaponId === weapon.id);
+  if (opener !== undefined && !isPlugged(state, opener.id)) {
+    return false;
+  }
   return (weapon.unlockedBySpeakers ?? 0) <= pluggedSpeakers(state);
+}
+
+function isPlugged(state: SimState, speakerId: string): boolean {
+  return (state.speakers ?? []).some((speaker) => speaker.id === speakerId && speaker.plugged);
+}
+
+// Every speaker of the set plugged opens the fusions; a set without speakers never holds them back.
+function fusionsOpen(state: SimState): boolean {
+  return (state.speakers ?? []).every((speaker) => speaker.plugged);
 }
 
 function pluggedSpeakers(state: SimState): number {
@@ -107,7 +125,7 @@ function candidates(
     }
   }
   for (const weapon of content.weapons.values()) {
-    if (openFusion(weapon, player, content) !== undefined) {
+    if (openFusion(weapon, player, state, content) !== undefined) {
       pool.push({ id: weapon.id, weight: FUSION_WEIGHT });
     } else if (isWeaponOffered(weapon, player, state, set)) {
       const weight = weapon.classAffinity === player.classId ? AFFINITY_WEIGHT : 1;
