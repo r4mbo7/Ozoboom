@@ -1,7 +1,12 @@
 .ui {
-  --ui-panel: color-mix(in srgb, var(--sol-clair) 78%, transparent);
+  --ui-panel: color-mix(in srgb, var(--sol-clair) 92%, transparent);
   --ui-line: color-mix(in srgb, var(--texte) 16%, transparent);
   --ui-muted: color-mix(in srgb, var(--texte) 76%, var(--sol-clair));
+  --ui-turquoise: color-mix(in srgb, var(--turquoise) 60%, var(--texte));
+  --ui-or: color-mix(in srgb, var(--or) 50%, var(--texte));
+  --ui-noyau: color-mix(in srgb, var(--noyau) 45%, var(--texte));
+  --ui-mage: color-mix(in srgb, var(--mage) 80%, var(--texte));
+  --ui-tank: color-mix(in srgb, var(--tank) 80%, var(--texte));
   --ui-lift:
     0 10px 30px color-mix(in srgb, var(--sol) 45%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--texte) 12%, transparent);
@@ -189,7 +194,7 @@
 }
 
 .ui-action[aria-current] .ui-action__icon {
-  color: var(--turquoise);
+  color: var(--ui-turquoise);
 }
 
 .ui-field {
@@ -367,7 +372,7 @@
 }
 
 .ui-kicker {
-  color: var(--mage);
+  color: var(--ui-mage);
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.2em;
@@ -450,7 +455,7 @@
 }
 
 .ui-title__logo {
-  color: var(--or);
+  color: color-mix(in srgb, var(--or) 80%, var(--texte));
   font-family: var(--font-title);
   font-size: clamp(40px, 11vw, 104px);
   font-weight: 900;
@@ -941,7 +946,7 @@
   height: 52px;
   border: 2px dashed var(--ui-line);
   border-radius: 50%;
-  color: var(--turquoise);
+  color: var(--ui-turquoise);
   font-size: 30px;
   font-weight: 500;
   line-height: 1;
@@ -1212,7 +1217,7 @@
 }
 
 .ui-hud__core[data-critical] :is(.ui-panel__label, .ui-panel__value) {
-  color: var(--tank);
+  color: var(--ui-tank);
 }
 
 .ui-lineup__now {
@@ -1227,7 +1232,7 @@
 }
 
 .ui-hud__lineup[data-drop] .ui-lineup__next {
-  color: var(--tank);
+  color: var(--ui-tank);
 }
 
 .ui-lineup {
@@ -1258,7 +1263,7 @@
   left: calc(var(--sun) * 100%);
   width: 22px;
   height: 22px;
-  color: var(--or);
+  color: var(--ui-or);
   filter: drop-shadow(0 0 calc(7px * var(--ui-halo)) var(--or));
   translate: -50% 0;
 }
@@ -1353,7 +1358,7 @@
 }
 
 .ui-slot--sunrise[data-state='current'] {
-  color: var(--noyau);
+  color: var(--ui-noyau);
   box-shadow: none;
   filter: drop-shadow(0 0 calc(6px * var(--ui-halo)) var(--noyau));
 }
@@ -1442,7 +1447,7 @@
   align-self: center;
   width: 20px;
   height: 20px;
-  color: var(--turquoise);
+  color: var(--ui-turquoise);
   filter: drop-shadow(0 0 calc(4px * var(--ui-halo)) var(--turquoise));
 }
 
@@ -1540,7 +1545,7 @@
 }
 
 .ui-trap[data-selected] .ui-trap__icon {
-  color: var(--turquoise);
+  color: var(--ui-turquoise);
   filter: drop-shadow(0 0 calc(6px * var(--ui-halo)) var(--turquoise));
 }
 
@@ -1556,7 +1561,7 @@
 .ui-trap__bolt {
   width: 12px;
   height: 12px;
-  color: var(--turquoise);
+  color: var(--ui-turquoise);
 }
 
 .ui-traps__name {
@@ -1613,7 +1618,7 @@
 }
 
 .ui-skill[data-ready] .ui-skill__glyph {
-  color: var(--skill);
+  color: color-mix(in srgb, var(--skill) 60%, var(--texte));
 }
 
 .ui-skill__key {
@@ -1646,7 +1651,7 @@
 }
 
 .ui-skill[data-ready] .ui-skill__status {
-  color: var(--skill);
+  color: color-mix(in srgb, var(--skill) 60%, var(--texte));
   font-weight: 700;
 }
 
@@ -1738,7 +1743,7 @@
   border: 1.5px solid color-mix(in srgb, var(--or) 55%, transparent);
   border-radius: 24px;
   background: color-mix(in srgb, var(--sol) 60%, transparent);
-  color: var(--or);
+  color: var(--ui-or);
 }
 
 .ui-gear__slot[data-empty] {
@@ -1892,7 +1897,7 @@
 }
 
 .ui-card__recipe {
-  color: var(--mage);
+  color: var(--ui-mage);
   font-size: 14px;
   font-weight: 700;
 }
@@ -1947,7 +1952,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--family);
+  color: color-mix(in srgb, var(--family) 60%, var(--texte));
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -2035,7 +2040,7 @@
 }
 
 .ui-end[data-outcome='won'] .ui-end__emblem {
-  color: var(--tank);
+  color: var(--ui-tank);
   filter: drop-shadow(0 0 calc(16px * var(--ui-halo)) var(--tank));
 }
 
@@ -2054,7 +2059,7 @@
 }
 
 .ui-end[data-outcome='won'] .ui-end__title {
-  color: var(--tank);
+  color: var(--ui-tank);
   text-shadow:
     0 0 calc(0.3em * var(--ui-halo)) color-mix(in srgb, var(--tank) 70%, transparent),
     0 0 calc(0.7em * var(--ui-halo)) color-mix(in srgb, var(--or) 45%, transparent);
@@ -2131,7 +2136,7 @@
   flex: none;
   width: 22px;
   height: 22px;
-  color: var(--who);
+  color: color-mix(in srgb, var(--who) 80%, var(--texte));
 }
 
 .ui-who__name {
@@ -2349,7 +2354,7 @@
 }
 
 .ui-band[data-critical] .ui-band__row:not(.ui-band__row--vibes) .ui-band__value {
-  color: var(--tank);
+  color: var(--ui-tank);
 }
 
 .ui-band[data-downed] {
@@ -2391,7 +2396,7 @@
 .ui-band__weapon-icon {
   width: 16px;
   height: 16px;
-  color: var(--or);
+  color: var(--ui-or);
 }
 
 .ui-band__weapon-level {

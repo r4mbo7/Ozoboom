@@ -20,7 +20,8 @@ import {
 import { createUi, prefersCalmMode } from './index';
 import { LOBBY_CLASSES, LOBBY_FIXTURES, ROOM_CODE, lobbyFixture } from './lobby-fixtures';
 import { SEAT_IDS, defaultName } from './lobby-model';
-import { createSunFollower } from './sun';
+import { SUN_PALETTES, type SunMoment } from '../shared/palette';
+import { applyPalette, uiPaletteAt } from './sun';
 import type { LobbyModel, LobbySeat, LocalPlayer, UiFrame } from './types';
 
 const found = document.querySelector<HTMLElement>('#app');
@@ -59,7 +60,15 @@ let feedback: FeedbackDialog | null = null;
 // The lobby the harness plays the app of: it keeps the model and answers every gesture.
 let lobby: LobbyModel | null = null;
 let driven: PlayerId = 0;
-const sky = params.get('sun') === 'jour' ? createSunFollower(root) : null;
+const sunParam = params.get('sun');
+const sunMoment = (Object.keys(SUN_PALETTES) as SunMoment[]).find((moment) => moment === sunParam);
+const sunFraction = sunParam === null || sunParam === '' ? Number.NaN : Number(sunParam);
+const sky =
+  sunMoment !== undefined
+    ? SUN_PALETTES[sunMoment]
+    : Number.isNaN(sunFraction)
+      ? null
+      : uiPaletteAt(sunFraction);
 
 function origin(): string {
   return `${window.location.origin}${window.location.pathname}`;
@@ -375,7 +384,6 @@ window.setInterval(() => {
       ],
     };
   }
-  sky?.fix('jour');
   const snapshot: InputSnapshot = { ...pending, device };
   const second: InputSnapshot = { ...pendingSecond, device };
   pending = idleSnapshot({ device });
@@ -392,5 +400,8 @@ window.setInterval(() => {
     state = { ...state, events: [] };
   } else {
     feedback.update(snapshot);
+  }
+  if (sky !== null) {
+    applyPalette(root, sky);
   }
 }, TICK_MS);
