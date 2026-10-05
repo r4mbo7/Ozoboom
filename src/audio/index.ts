@@ -120,8 +120,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
   const begin = async () => {
     const context = (options.createContext ?? (() => new AudioContext()))();
-    const master = createMasterChain(context);
-    master.setMuted(muted);
+    const master = createMasterChain(context, muted);
     running = {
       context,
       master,
