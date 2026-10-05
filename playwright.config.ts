@@ -7,6 +7,8 @@ const URL = `http://localhost:${String(PORT)}/`;
 const PEER_PORT = Number(process.env.E2E_PEER_PORT ?? 9000);
 // The CI builds once with the broker address and shares dist/ between its shards.
 const SERVE_ONLY = Boolean(process.env.E2E_PREBUILT);
+// VS Code's snap leaks its GIO modules, built for an older glibc, and they crash WebKit's network process.
+delete process.env.GIO_MODULE_DIR;
 
 export default defineConfig({
   testDir: 'e2e',
