@@ -69,6 +69,25 @@ test.describe('the HUD of a team', () => {
     await expect(page.locator('.ui-band__weapon:visible')).toHaveCount(0);
   });
 
+  test('shows each band the prompts of the device of its player', async ({ page }) => {
+    await page.goto('/dev/ui.html?screen=team&locals=3&pads=2');
+
+    const keys = page.locator('.ui-band:not(.ui-band--compact)').locator('.ui-skill__key');
+    await expect(keys).toHaveText(['E', 'R', 'X', 'Y', 'X', 'Y']);
+  });
+
+  test('keeps the traps out of the play area when several players share the screen', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/dev/ui.html?screen=team&locals=4');
+
+    const traps = await page.getByRole('region', { name: 'Pièges' }).boundingBox();
+    const band = await page.locator('.ui-band').first().boundingBox();
+    expect(traps?.y).toBeLessThan(320);
+    expect(band?.height).toBeLessThan(125);
+  });
+
   test('shows four full bands when four players sit at the screen', async ({ page }) => {
     await page.goto('/dev/ui.html?screen=team&locals=4');
 

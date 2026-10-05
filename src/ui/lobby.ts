@@ -96,7 +96,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
   const heading = el('h2', 'ui-lobby__title');
   const lead = el('p', 'ui-lobby__lead');
   const header = el('header', 'ui-lobby__header');
-  header.append(el('p', 'ui-kicker', 'Salon'), heading, lead);
+  header.append(el('p', 'ui-kicker', 'À plusieurs'), heading, lead);
 
   const error = el('p', 'ui-lobby__error');
   error.setAttribute('role', 'alert');
@@ -291,6 +291,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
   let cursor = 0;
   let cursorView = lobbyView(model);
   const seatCursors = new Map<PlayerId, number>();
+  let activeSeat: PlayerId | null = null;
   const seatInputs = new Map<PlayerId, MenuInput>();
   const deviceInputs = new Map<DeviceId, MenuInput>();
 
@@ -320,6 +321,10 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
 
   function paintCursors(): void {
     const marked: (HTMLElement | null)[] = [];
+    const typing = model.seats.find(
+      (seat) => cards[seat.playerId]?.input === document.activeElement,
+    );
+    const lead = typing?.playerId ?? activeSeat ?? model.seats[0]?.playerId;
     if (model.mode === 'local') {
       for (const seat of model.seats) {
         const row = rowsOfSeat(seat)[seatCursors.get(seat.playerId) ?? 0];
@@ -346,6 +351,19 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       } else {
         node.removeAttribute('aria-current');
       }
+      const seat = model.seats.find(
+        (candidate) =>
+          cards[candidate.playerId]?.field === node ||
+          cards[candidate.playerId]?.stepper.element === node,
+      );
+      setFlag(
+        node,
+        'quiet',
+        model.mode === 'local' &&
+          model.seats.length > 1 &&
+          seat !== undefined &&
+          seat.playerId !== lead,
+      );
     }
   }
 
@@ -470,6 +488,9 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       const step = stepRow(rows.length, seatCursors.get(seat.playerId) ?? 0, own);
       const row = rows[step.index];
       seatCursors.set(seat.playerId, step.index);
+      if (Object.values(own).some(Boolean)) {
+        activeSeat = seat.playerId;
+      }
       if (step.side !== 0) {
         side(seat, rows[step.index], step.side);
       }
