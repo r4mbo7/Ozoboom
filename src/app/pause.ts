@@ -12,6 +12,16 @@ export interface PauseConfirmation {
   readonly leave: string;
 }
 
+export interface PauseText {
+  readonly heading: string;
+  readonly text: string;
+}
+
+const PAUSE_TEXT: PauseText = {
+  heading: 'La piste t’attend',
+  text: 'Le set reprend là où tu l’as laissé.',
+};
+
 export interface PauseItem {
   readonly label: string;
   // A button built elsewhere, for an entry that must look the same on every screen.
@@ -23,7 +33,8 @@ export interface PauseItem {
 
 export interface PauseScreen {
   readonly confirming: boolean;
-  show(device: InputDevice): void;
+  // `text` replaces the line under the heading, for a pause that does not stop the set.
+  show(device: InputDevice, text?: PauseText): void;
   hide(): void;
   // Leaves the confirmation for the pause menu, on the entry that asked it.
   cancel(): void;
@@ -67,7 +78,7 @@ function button(className: string, label: string): HTMLButtonElement {
 // one selected when it opens: adding an entry is adding an item.
 export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]): PauseScreen {
   const layer = el('div', 'ui');
-  const main = view('dialog', 'La piste t’attend', 'Le set reprend là où tu l’as laissé.');
+  const main = view('dialog', PAUSE_TEXT.heading, PAUSE_TEXT.text);
   main.section.setAttribute('aria-label', 'Pause');
   main.nav.setAttribute('aria-label', 'Menu de pause');
   const confirmation = view('alertdialog', '', '');
@@ -145,8 +156,10 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
     get confirming() {
       return pending !== null;
     },
-    show(next) {
+    show(next, text = PAUSE_TEXT) {
       device = next;
+      setText(main.heading, text.heading);
+      setText(main.text, text.text);
       const prompts = promptsFor(device);
       const navigate = items.length > 1 ? [{ keys: prompts.navigate, label: 'naviguer' }] : [];
       fillHint(

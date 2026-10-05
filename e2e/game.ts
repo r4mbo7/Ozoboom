@@ -17,7 +17,18 @@ export interface FakePad {
 declare global {
   interface Window {
     // Exposed by the game behind `?dev=fast` and `?dev=bench` only (src/app/dev.ts).
-    ozoboom?: { readonly state: SimState; readonly seats: readonly SeatSummary[] };
+    ozoboom?: {
+      readonly state: SimState;
+      readonly seats: readonly SeatSummary[];
+      readonly hash: string;
+      readonly online: {
+        readonly role: 'host' | 'guest';
+        readonly pending: number;
+        readonly roundTripMs: number | null;
+        readonly connectMs: number | null;
+      } | null;
+      forceVersion: string | null;
+    };
     fakePad?: FakePad;
     fakePads?: (FakeSlot | null)[];
   }

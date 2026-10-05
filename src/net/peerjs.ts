@@ -48,7 +48,19 @@ function describeError(context: string, error: unknown): Error {
   return new Error(`${context}: ${String(error)}`, { cause: error });
 }
 
-export async function createPeerTransport(options: PeerTransportOptions): Promise<Transport> {
+interface PairStats {
+  type: string;
+  nominated?: boolean;
+  currentRoundTripTime?: number;
+}
+
+export interface PeerTransport extends Transport {
+  // Smallest recent round trip to a connected peer, from RTCPeerConnection.getStats; null when
+  // there is no peer or the browser reports none.
+  roundTripMs(): Promise<number | null>;
+}
+
+export async function createPeerTransport(options: PeerTransportOptions): Promise<PeerTransport> {
   const { Peer: PeerClass } = await import('peerjs');
   const peerOptions = parsePeerServer(options.server ?? import.meta.env.VITE_PEER_SERVER);
   const timeoutMs = options.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
@@ -203,6 +215,20 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
     onPeer(listener) {
       peerListeners.add(listener);
       return () => peerListeners.delete(listener);
+    },
+    async roundTripMs() {
+      const measures: number[] = [];
+      for (const connection of connections.values()) {
+        const rtc = connection.peerConnection as RTCPeerConnection | undefined;
+        const report = await rtc?.getStats();
+        for (const stat of (report?.values() ?? []) as Iterable<PairStats>) {
+          const rtt = stat.currentRoundTripTime;
+          if (stat.type === 'candidate-pair' && stat.nominated === true && (rtt ?? 0) > 0) {
+            measures.push((rtt ?? 0) * 1000);
+          }
+        }
+      }
+      return measures.length === 0 ? null : Math.min(...measures);
     },
     close() {
       closed = true;

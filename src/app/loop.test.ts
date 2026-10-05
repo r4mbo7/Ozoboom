@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TICK_MS } from '../shared/tempo';
-import { createFixedStepLoop, type FixedStepLoop, type LoopCallbacks } from './loop';
+import { createFixedStepLoop, dueTicks, type FixedStepLoop, type LoopCallbacks } from './loop';
 
 interface Harness {
   readonly loop: FixedStepLoop;
@@ -287,4 +287,80 @@ describe('createFixedStepLoop', () => {
       expect(() => createHarness(32, maxTicksPerFrame)).toThrow(RangeError);
     },
   );
+});
+
+describe('a step that has nothing to run', () => {
+  function waitingHarness(available: () => boolean) {
+    let clockMs = 0;
+    let pending: ((timeMs: number) => void) | null = null;
+    let steps = 0;
+    const alphas: number[] = [];
+    const loop = createFixedStepLoop(
+      {
+        tickMs: 30,
+        maxTicksPerFrame: 4,
+        now: () => clockMs,
+        requestFrame(callback) {
+          pending = callback;
+          return 1;
+        },
+        cancelFrame() {
+          pending = null;
+        },
+      },
+      {
+        step() {
+          if (!available()) {
+            return false;
+          }
+          steps += 1;
+        },
+        render(alpha) {
+          alphas.push(alpha);
+        },
+      },
+    );
+    return {
+      loop,
+      alphas,
+      steps: () => steps,
+      frame(elapsedMs: number) {
+        clockMs += elapsedMs;
+        pending?.(clockMs);
+      },
+    };
+  }
+
+  it('attempts one step per frame, holds the interpolation, and owes no waited time', () => {
+    let ready = false;
+    const attempts = { count: 0 };
+    const harness = waitingHarness(() => {
+      attempts.count += 1;
+      return ready;
+    });
+    harness.loop.start();
+
+    harness.frame(100);
+    harness.frame(100);
+
+    expect(attempts.count).toBe(2);
+    expect(harness.steps()).toBe(0);
+    expect(harness.alphas).toEqual([1, 1]);
+
+    ready = true;
+    harness.frame(10);
+
+    expect(harness.steps()).toBe(1);
+    expect(harness.alphas.at(-1)).toBeCloseTo(10 / 30);
+  });
+});
+
+describe('dueTicks', () => {
+  it('owes the whole ticks elapsed and keeps the remainder', () => {
+    expect(dueTicks(100, 30, 4)).toEqual({ ticks: 3, spentMs: 90 });
+  });
+
+  it('drops the time past the bound', () => {
+    expect(dueTicks(10_000, 30, 4)).toEqual({ ticks: 4, spentMs: 10_000 });
+  });
 });

@@ -1,5 +1,6 @@
 import { createAudioEngine } from '../audio';
 import {
+  APP_VERSION,
   type FeedbackDialog,
   buildFeedbackReport,
   feedbackMeta,
@@ -10,7 +11,9 @@ import { createInputHub } from '../input';
 import type { DeviceId, InputSnapshot } from '../input/intents';
 import { createRenderer } from '../render';
 import { TICK_MS } from '../shared/tempo';
+import { parseJoinCode } from '../net/code';
 import { createLocalSource } from '../net/local';
+import { GUEST_BUFFER_TICKS } from '../net/lockstep';
 import type { CameraFocus } from '../render/types';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId } from '../sim/state';
@@ -24,7 +27,8 @@ import {
 } from '../ui';
 import { BENCH_ENEMIES, type DevOptions, benchScene, createDevProbe } from './dev';
 import { createFpsMeter } from './fps';
-import { createFixedStepLoop } from './loop';
+import { createFixedStepLoop, dueTicks } from './loop';
+import { type Interruption, type OnlineMatch, createOnline } from './online';
 import {
   IDLE_SNAPSHOT,
   createMatch,
@@ -37,6 +41,8 @@ import { createPauseScreen } from './pause';
 import { loadPrefs, savePref } from './prefs';
 import { createSeats, type LaunchedSeats } from './seats';
 import { soundOf, type Screen } from './sound';
+import { createToast } from './toast';
+import { playerLabel } from '../ui/hud-model';
 
 const SET_ID = 'soiree-v0';
 const DEFAULT_CLASS_ID = 'mage';
@@ -47,10 +53,9 @@ const DEFAULT_BREAK_BARS = 4;
 // per second 3. Past 4 ticks (138 ms, under 7.25 frames per second), the game slows down instead
 // of jumping ahead, so a hitch never lands a burst of hits the player could not react to.
 const MAX_TICKS_PER_FRAME = 4;
-
-function noop(): void {
-  // The callbacks of the online lobby, which only the online game wires (#147).
-}
+// An online guest with frames to spare plays up to this many extra steps a frame to get back to
+// the host's pace.
+const CATCH_UP_TICKS_PER_FRAME = 2;
 
 export async function startGame(root: HTMLElement, dev: DevOptions): Promise<void> {
   const { content } = dev;
@@ -93,6 +98,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   let paused = false;
   let frozenAlpha = 0;
   let match = soloMatch();
+  let onlineMatch: OnlineMatch | null = null;
+  let onlineLobby = false;
+  let interruption: Interruption | null = null;
+  let catchUp = 0;
+  let backgroundTimer: ReturnType<typeof setTimeout> | undefined;
+  let backgroundSince = 0;
   const seats = createSeats(classIds, prefs.classId);
   // Who plays again on « Rejouer » after a game of the lobby: the same seats.
   let launched: LaunchedSeats | null = null;
@@ -108,13 +119,25 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       : createDevProbe(
           () => match.session.state,
           () => match.seats,
+          () =>
+            onlineMatch === null
+              ? null
+              : {
+                  role: onlineMatch.role,
+                  pending: match.source.pending,
+                  roundTripMs: online.roundTripMs,
+                  connectMs: online.connectMs,
+                },
         );
+  const toast = createToast(root);
   renderer.setOptions({ focus: match.focus });
 
   const ui = createUi(root, {
     onStart: play,
     onRestart() {
-      if (launched === null) {
+      if (onlineMatch !== null) {
+        online.relaunch();
+      } else if (launched === null) {
         play();
       } else {
         launch(launched);
@@ -151,22 +174,54 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       }
     },
     onSeatClass(playerId, classId) {
+      if (onlineLobby) {
+        void audio.start();
+        online.setSeatClass(classId);
+        return;
+      }
       seats.setClass(playerId, classId);
       ui.updateLobby(seats.model());
     },
     onSeatName(playerId, name) {
+      if (onlineLobby) {
+        online.setSeatName(name);
+        return;
+      }
       seats.setName(playerId, name);
       ui.updateLobby(seats.model());
     },
-    onCreateRoom: noop,
-    onJoinRoom: noop,
+    onGoOnline: openOnline,
+    onCreateRoom() {
+      void audio.start();
+      online.createRoom();
+    },
+    onJoinRoom(code) {
+      void audio.start();
+      online.joinRoom(code);
+    },
     onLaunch() {
-      if (seats.count > 0) {
+      if (onlineLobby) {
+        void audio.start();
+        online.launch();
+      } else if (seats.count > 0) {
         launch(seats.launch());
       }
     },
     onLeaveLobby: toTitle,
     onLeaveNotice: quit,
+  });
+  const online = createOnline({
+    ui,
+    setId: SET_ID,
+    classIds,
+    classId: () => prefs.classId,
+    version: () => probe?.forcedVersion ?? APP_VERSION,
+    onMatch: startOnline,
+    onInterruption: interrupt,
+    onGuestLeft(playerId) {
+      const player = match.session.state.players.find((candidate) => candidate.id === playerId);
+      toast.show(`${player === undefined ? 'Un joueur' : playerLabel(player)} a quitté le set`);
+    },
   });
   const soundToggle = createSoundToggle();
   soundToggle.set(!prefs.muted);
@@ -185,7 +240,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       },
     },
     { label: 'Ton avis', button: createFeedbackButton(), activate: openForm },
-    { label: 'Quitter la partie', confirm: QUIT, activate: quit },
+    {
+      label: 'Quitter la partie',
+      get confirm() {
+        return onlineMatch === null ? QUIT : QUIT_ONLINE;
+      },
+      activate: quit,
+    },
   ]);
   showTitle();
   applySound();
@@ -200,7 +261,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function applySound(): void {
-    const sound = soundOf({ screen, paused, muted: prefs.muted, hidden: document.hidden });
+    const sound = soundOf({
+      screen,
+      // Online, the pause menu stops nothing: the set goes on, and so does its music.
+      paused: paused && onlineMatch === null,
+      muted: prefs.muted,
+      hidden: document.hidden,
+    });
     audio.setMuted(sound.muted);
     audio.setMood(sound.mood);
   }
@@ -241,7 +308,23 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     const device = uiSnapshot?.device ?? 'none';
     const report = buildFeedbackReport(
       played ? match.session.state : null,
-      feedbackMeta({ device, calmMode: prefs.calmMode, averageFps: fps.average() }),
+      feedbackMeta({
+        device,
+        calmMode: prefs.calmMode,
+        averageFps: fps.average(),
+        ...(onlineMatch === null
+          ? {}
+          : {
+              online: {
+                role: onlineMatch.role,
+                players: onlineMatch.start.players.length,
+                roundTripMs: online.roundTripMs,
+                ...(interruption?.desyncTick === undefined
+                  ? {}
+                  : { desyncTick: interruption.desyncTick }),
+              },
+            }),
+      }),
     );
     feedback = openFeedback(root, report, githubFormLink(), {
       device,
@@ -282,6 +365,48 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     beginGame();
   }
 
+  function openOnline(): void {
+    void audio.start();
+    onlineLobby = true;
+    screen = 'lobby';
+    applySound();
+    online.open();
+  }
+
+  function startOnline(started: OnlineMatch): void {
+    void audio.start();
+    onlineLobby = false;
+    onlineMatch = started;
+    interruption = null;
+    launched = null;
+    toast.clear();
+    const { seed, setId, players } = started.start;
+    setMatch(
+      createMatch({
+        seed,
+        setId,
+        content,
+        slots: players,
+        locals: new Map([[started.localPlayer, null]]),
+        source: started.source,
+        focus: { kind: 'player', playerId: started.localPlayer },
+      }),
+    );
+    paused = false;
+    pause.hide();
+    beginGame();
+  }
+
+  // A game that cannot go on: nothing steps any more, and the notice offers the way out.
+  function interrupt(next: Interruption): void {
+    interruption = next;
+    paused = false;
+    pause.hide();
+    screen = 'end';
+    ui.showNotice(next.notice, next.details);
+    applySound();
+  }
+
   function openLobby(): void {
     void audio.start();
     seats.clear();
@@ -291,6 +416,11 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function toTitle(): void {
+    onlineLobby = false;
+    online.leave();
+    onlineMatch = null;
+    interruption = null;
+    toast.clear();
     seats.clear();
     screen = 'title';
     applySound();
@@ -314,7 +444,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     paused = next;
     applySound();
     if (next) {
-      pause.show(device);
+      pause.show(device, onlineMatch === null ? undefined : ONLINE_PAUSE);
     } else {
       pause.hide();
     }
@@ -355,6 +485,9 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       }
       if (!paused) {
         match.frame(view);
+      } else if (onlineMatch !== null) {
+        // The set goes on under the pause menu: the character stands still.
+        match.frame(stillView(view));
       }
       uiPlayers = quiet
         ? match.players.map(({ playerId, snapshot }) => ({
@@ -373,29 +506,88 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     };
   }
 
-  function step(): void {
-    if (screen === 'title' || screen === 'lobby' || paused) {
+  function step(): false | undefined {
+    if (onlineMatch === null) {
+      if (screen === 'title' || screen === 'lobby' || paused) {
+        return;
+      }
+      stepOnce();
       return;
     }
+    if (screen !== 'game') {
+      return;
+    }
+    if (!stepOnce()) {
+      return false;
+    }
+    while (catchUp > 0 && match.source.pending > GUEST_BUFFER_TICKS && playing()) {
+      catchUp -= 1;
+      if (!stepOnce()) {
+        break;
+      }
+    }
+  }
+
+  function playing(): boolean {
+    return screen === 'game';
+  }
+
+  // False when the source has no commands yet: an online guest waits for the host's frame.
+  function stepOnce(): boolean {
     const start = performance.now();
     if (!match.step((point) => renderer.screenToWorld(point))) {
-      return;
+      return false;
     }
     const { session } = match;
     audio.update(session.state);
     const { status } = session.state;
     if (screen === 'game' && (status === 'won' || status === 'lost')) {
       screen = 'end';
-      ui.showEnd(session.state);
+      ui.showEnd(session.state, onlineMatch === null ? undefined : { role: onlineMatch.role });
+      online.matchEnded();
       applySound();
     }
     if (probe !== null) {
       probe.cost.sim += performance.now() - start;
     }
+    return true;
+  }
+
+  // A hidden tab gets no animation frames: an online game keeps its place in the set by timer,
+  // without drawing. Browsers slow timers down in the background, so this is best effort.
+  function runInBackground(): void {
+    backgroundTimer = undefined;
+    if (!document.hidden || onlineMatch === null) {
+      return;
+    }
+    const tickMs = TICK_MS / dev.speed;
+    const now = performance.now();
+    const { ticks, spentMs } = dueTicks(
+      now - backgroundSince,
+      tickMs,
+      MAX_TICKS_PER_FRAME * dev.speed,
+    );
+    backgroundSince = ticks === 0 ? backgroundSince : Math.min(now, backgroundSince + spentMs);
+    catchUp = CATCH_UP_TICKS_PER_FRAME;
+    for (let index = 0; index < ticks; index++) {
+      if (step() === false) {
+        break;
+      }
+    }
+    match.session.endFrame();
+    backgroundTimer = setTimeout(runInBackground, tickMs);
+  }
+
+  function startBackground(): void {
+    if (backgroundTimer === undefined && onlineMatch !== null) {
+      match.frame(stillView(view));
+      backgroundSince = performance.now();
+      backgroundTimer = setTimeout(runInBackground, TICK_MS / dev.speed);
+    }
   }
 
   function render(alpha: number): void {
-    if (paused) {
+    if (paused && onlineMatch === null) {
       alpha = frozenAlpha;
     } else {
       frozenAlpha = alpha;
@@ -426,6 +618,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         requestAnimationFrame((time) => {
           fps.frame(time);
           beginFrame();
+          catchUp = CATCH_UP_TICKS_PER_FRAME;
           callback(time);
         }),
       cancelFrame: (handle) => {
@@ -438,13 +631,45 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   window.addEventListener('resize', () => {
     renderer.resize(stage.clientWidth, stage.clientHeight);
   });
+  // Closing the tab tells the others at once, instead of leaving them to wait for the connection
+  // to time out.
+  window.addEventListener('pagehide', (event) => {
+    if (!event.persisted) {
+      online.leave();
+    }
+  });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && screen === 'game') {
+    if (document.hidden && screen === 'game' && onlineMatch === null) {
       setPaused(true);
+    }
+    if (document.hidden) {
+      startBackground();
+    } else {
+      clearTimeout(backgroundTimer);
+      backgroundTimer = undefined;
     }
     applySound();
   });
   loop.start();
+
+  // A link to a room opens the lobby on the guest's side.
+  const linked = parseJoinCode(window.location.hash);
+  if (linked !== null) {
+    openOnline();
+    online.joinRoom(linked);
+  }
+}
+
+// The view of a player who lets go: no press, no movement.
+function stillView(view: InputView): InputView {
+  const still = (snapshot: InputSnapshot): InputSnapshot => {
+    const quiet = withoutPresses(snapshot);
+    return { ...quiet, gameplay: { ...quiet.gameplay, move: { x: 0, y: 0 } } };
+  };
+  return {
+    merged: still(view.merged),
+    devices: new Map([...view.devices].map(([device, snapshot]) => [device, still(snapshot)])),
+  };
 }
 
 const QUIT = {
@@ -452,4 +677,16 @@ const QUIT = {
   text: 'Tu rentres avant le sunrise\u202f: la partie s’arrête ici, sans score.',
   stay: 'Rester',
   leave: 'Quitter',
+} as const;
+
+const QUIT_ONLINE = {
+  question: 'Quitter le set\u202f?',
+  text: 'Tu laisses les autres joueurs\u202f: ton personnage reste immobile et le set continue sans toi.',
+  stay: 'Rester',
+  leave: 'Quitter',
+} as const;
+
+const ONLINE_PAUSE = {
+  heading: 'Le set continue',
+  text: 'En ligne, la pause n’arrête pas le set : ton personnage reste immobile pendant que les autres jouent.',
 } as const;
