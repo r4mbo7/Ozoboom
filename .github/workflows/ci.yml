@@ -33,7 +33,8 @@ jobs:
         with:
           path: dist
 
-  e2e:
+  # The e2e build differs from the deployed one: it bakes in the address of the local PeerJS broker.
+  e2e-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -43,16 +44,86 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm exec playwright test
+      - run: pnpm build
+        env:
+          VITE_PEER_SERVER: localhost:9000
+      - uses: actions/upload-artifact@v7
+        with:
+          name: e2e-dist
+          path: dist
+          retention-days: 1
+
+  e2e-chromium:
+    needs: e2e-build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    env:
+      E2E_PREBUILT: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - uses: actions/download-artifact@v8
+        with:
+          name: e2e-dist
+          path: dist
+      - run: pnpm exec playwright test --project chromium --shard ${{ matrix.shard }}/6
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-chromium-${{ matrix.shard }}
           path: |
             playwright-report
             test-results
           retention-days: 7
+
+  # The lockstep needs one fingerprint in every engine: only the determinism spec runs there.
+  e2e-engines:
+    needs: e2e-build
+    runs-on: ubuntu-latest
+    env:
+      E2E_PREBUILT: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps firefox webkit
+      - uses: actions/download-artifact@v8
+        with:
+          name: e2e-dist
+          path: dist
+      - run: pnpm exec playwright test --project firefox --project webkit
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-engines
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  # The one verdict the merge and the deployment wait for: a skipped or cancelled shard fails it.
+  e2e:
+    if: always()
+    needs: [e2e-build, e2e-chromium, e2e-engines]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          test "${{ needs.e2e-build.result }}" = success
+          test "${{ needs.e2e-chromium.result }}" = success
+          test "${{ needs.e2e-engines.result }}" = success
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

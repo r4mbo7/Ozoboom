@@ -5,6 +5,8 @@ const PORT = Number(process.env.E2E_PORT ?? 4173);
 const URL = `http://localhost:${String(PORT)}/`;
 // Local PeerJS broker for the online tests, so no test needs the Internet.
 const PEER_PORT = Number(process.env.E2E_PEER_PORT ?? 9000);
+// The CI builds once with the broker address and shares dist/ between its shards.
+const SERVE_ONLY = Boolean(process.env.E2E_PREBUILT);
 
 export default defineConfig({
   testDir: 'e2e',
@@ -34,7 +36,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `pnpm build && pnpm preview --port ${String(PORT)} --strictPort`,
+      command: `${SERVE_ONLY ? '' : 'pnpm build && '}pnpm preview --port ${String(PORT)} --strictPort`,
       env: { VITE_PEER_SERVER: `localhost:${String(PEER_PORT)}` },
       url: URL,
       // Never reuse a server: one left running by another checkout would serve a stale build.
