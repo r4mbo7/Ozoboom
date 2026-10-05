@@ -38,7 +38,7 @@ Règles de dépendance, vérifiées par ESLint (`eslint.config.js`) :
 - `sim` ne dépend que de `shared` et `data`. Interdits dans `sim`, `data` et `shared` : les globales du navigateur, `Math.random`, `Date`, `pixi.js` et tout import des couches au-dessus.
 - `render`, `input`, `audio`, `ui` dépendent de `sim` en lecture et de `shared`.
 - `ui` et `feedback` ne dépendent ni de `render`, ni d'`audio`, ni de `net`, ni d'`app`. `feedback` réutilise les briques de `ui`.
-- `net` ne dépend que de `sim` (types, `hashState`) et de `shared` ; `peerjs` ne s'importe que dans `src/net/peerjs.ts`.
+- `net` ne dépend que de `sim` (types, `hashState`), de `shared` et de `data` ; `peerjs` ne s'importe que dans `src/net/peerjs.ts`, nulle part ailleurs (`app` compris).
 - `app` assemble tout.
 
 ## Contrats partagés

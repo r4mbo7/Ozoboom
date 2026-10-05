@@ -11,6 +11,13 @@ const hostGlobals = [
   ...new Set([...Object.keys(globals.browser), ...Object.keys(globals.node)]),
 ].map((name) => ({ name, message: simulationMessage }));
 
+const peerjsOnly = [
+  {
+    name: 'peerjs',
+    message: "peerjs ne s'importe que dans src/net/peerjs.ts (ADR 0007).",
+  },
+];
+
 const forbiddenOutsideLayers = (layers) =>
   layers.flatMap((layer) => [`**/${layer}`, `**/${layer}/**`]);
 
@@ -40,6 +47,12 @@ export default defineConfig(
     extends: [tseslint.configs.disableTypeChecked],
   },
   {
+    files: ['src/**'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: peerjsOnly }],
+    },
+  },
+  {
     files: ['src/sim/**', 'src/data/**', 'src/shared/**'],
     rules: {
       'no-restricted-globals': [
@@ -65,6 +78,7 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
+          paths: peerjsOnly,
           patterns: [
             {
               group: [
@@ -86,6 +100,7 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
+          paths: peerjsOnly,
           patterns: [
             {
               group: [
@@ -95,6 +110,27 @@ export default defineConfig(
               ],
               message:
                 "ui et feedback lisent l'état de la sim : ni rendu, ni audio, ni réseau, ni assemblage (docs/architecture.md).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/net/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: peerjsOnly,
+          patterns: [
+            {
+              group: [
+                'pixi.js',
+                'pixi.js/*',
+                ...forbiddenOutsideLayers(['render', 'input', 'audio', 'ui', 'feedback', 'app']),
+              ],
+              message: 'net ne dépend que de sim, shared et data (docs/architecture.md).',
             },
           ],
         },
@@ -113,6 +149,7 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
+          paths: peerjsOnly,
           patterns: [
             {
               group: forbiddenOutsideLayers(['sim', 'data']),
@@ -129,10 +166,31 @@ export default defineConfig(
       'no-restricted-imports': [
         'error',
         {
+          paths: peerjsOnly,
           patterns: [
             {
               group: forbiddenOutsideLayers(['sim']),
               message: 'data ne dépend que de shared (docs/architecture.md).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/net/peerjs.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'pixi.js',
+                'pixi.js/*',
+                ...forbiddenOutsideLayers(['render', 'input', 'audio', 'ui', 'feedback', 'app']),
+              ],
+              message: 'net ne dépend que de sim, shared et data (docs/architecture.md).',
             },
           ],
         },
