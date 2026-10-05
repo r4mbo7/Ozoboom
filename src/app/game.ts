@@ -11,6 +11,7 @@ import { createInputSource } from '../input';
 import { createRenderer } from '../render';
 import { TICK_MS } from '../shared/tempo';
 import { length, normalize } from '../shared/vec';
+import { createLocalSource } from '../net/local';
 import { IDLE_INPUT } from '../sim/commands';
 import { createFeedbackButton, createSoundToggle, createUi, prefersCalmMode } from '../ui';
 import { Controls } from './controls';
@@ -245,6 +246,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     uiSnapshot = snapshot;
   }
 
+  const commandSource = createLocalSource();
+
   function step(): void {
     if (screen === 'title' || paused) {
       return;
@@ -254,7 +257,14 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     if (player === undefined) {
       throw new Error('The game has no player 0');
     }
-    session.step([controls.command(player, (point) => renderer.screenToWorld(point))]);
+    const commands = commandSource.next([
+      controls.command(player, (point) => renderer.screenToWorld(point)),
+    ]);
+    if (commands === null) {
+      return;
+    }
+    session.step(commands);
+    commandSource.stepped(session.state);
     audio.update(session.state);
     const { status } = session.state;
     if (screen === 'game' && (status === 'won' || status === 'lost')) {
