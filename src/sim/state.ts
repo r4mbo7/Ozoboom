@@ -148,6 +148,8 @@ export interface ProjectileState extends Positioned {
   damage: number;
   ticksLeft: number;
   pierceLeft: number;
+  // Distance an enemy it hits is pushed away from it.
+  knockback?: number;
   // Enemies a piercing projectile already went through, so it hits each one once.
   hitIds?: EntityId[];
   // The diabolo's lobbed arc: a parabola from launch to (toX, toY) over ticksTotal ticks.

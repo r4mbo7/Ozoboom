@@ -96,8 +96,13 @@ export function slowEnemies(state: SimState, at: Point, radius: number, slowFact
   }
 }
 
-export function healPlayer(player: PlayerState, amount: number): void {
-  player.hp = Math.min(player.maxHp, player.hp + amount);
+export function healPlayer(state: SimState, player: PlayerState, amount: number): void {
+  const healed = Math.min(player.maxHp - player.hp, amount);
+  if (healed <= 0) {
+    return;
+  }
+  player.hp += healed;
+  state.events.push({ type: 'playerHealed', playerId: player.id, amount: healed });
 }
 
 // Heals once per bar, on the bar tick.
@@ -107,7 +112,7 @@ export function healPlayersOnBar(state: SimState, at: Point, radius: number, amo
   }
   for (const player of state.players) {
     if (!player.downed && touches(player, at, radius)) {
-      healPlayer(player, amount);
+      healPlayer(state, player, amount);
     }
   }
 }

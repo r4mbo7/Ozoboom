@@ -30,7 +30,7 @@ export const trail: WeaponModule = {
     if (isBarTick(state.tick)) {
       for (const ally of state.players) {
         if (!ally.downed && onTrail(ally, ring, state.tick, slot.phase, player.radius)) {
-          healPlayer(ally, effect.healPerBar * power);
+          healPlayer(state, ally, effect.healPerBar * power);
         }
       }
     }

@@ -69,7 +69,7 @@ Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fai
 | Healer | le bénévole care   | soigne, répare la scène, ralentit      | piéger      | `uv-lime`    |
 
 - En solo chaque classe doit rester jouable, en coop elle brille. L'équilibrage se règle dans les données, jamais dans la logique.
-- Chaque classe a : une attaque de base, une compétence active, et un ultime déclenché sur le drop. La VJ : nova et laser show. Le roadie : attaque courte qui repousse, charge qui attire les bad vibes traversées, flight case (barrière qui encaisse) en ultime. Le care : soin de zone qui répare la scène, rappel (relève et soigne tous les alliés) en ultime.
+- Chaque classe a : une attaque de base, une compétence active, et un ultime déclenché sur le drop. La VJ : nova et laser show. Le roadie : attaque courte qui repousse, charge qui attire à l'arrivée les bad vibes autour de lui, flight case (barrière qui encaisse un nombre de coups puis se brise) en ultime. Le care : soin de zone qui répare la scène, rappel (relève à mi-vie les alliés à terre et soigne les autres, dans un grand rayon) en ultime.
 - Les classes, ennemis, pièges et améliorations sont des données déclaratives (voir `architecture.md`), pour itérer vite.
 
 ## Les pièges

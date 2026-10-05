@@ -26,6 +26,7 @@ export function playerAttack({ state, content, commands }: StepContext): void {
       damage: statValue(player, 'damageMul', attack.damage),
       ticks: attack.rangeTicks,
       pierce: statValue(player, 'pierceAdd', attack.pierce),
+      ...(attack.knockback === undefined ? {} : { knockback: attack.knockback }),
     };
     for (let i = 0; i < count; i++) {
       const offset =
@@ -50,6 +51,7 @@ interface Shot {
   damage: number;
   ticks: number;
   pierce: number;
+  knockback?: number;
 }
 
 function fire(state: SimState, player: PlayerState, direction: Vec2, shot: Shot): void {
@@ -66,6 +68,7 @@ function fire(state: SimState, player: PlayerState, direction: Vec2, shot: Shot)
     damage: shot.damage,
     ticksLeft: shot.ticks,
     pierceLeft: shot.pierce,
+    ...(shot.knockback === undefined ? {} : { knockback: shot.knockback }),
   });
   state.nextEntityId += 1;
 }

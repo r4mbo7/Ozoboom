@@ -1,5 +1,5 @@
 import { damageCore, damagePlayer, playerById } from '../damage';
-import { hurtEnemy, markedDamageMul, pushAway } from '../effects';
+import { healPlayer, hurtEnemy, markedDamageMul, pushAway } from '../effects';
 import type { PlayerId, PlayerState, ProjectileState, SimState } from '../state';
 import type { StepContext } from './types';
 
@@ -108,7 +108,7 @@ function flyHome(state: SimState, projectile: ProjectileState): boolean {
   const distance = Math.sqrt(dx * dx + dy * dy);
   const speed = Math.sqrt(projectile.vx * projectile.vx + projectile.vy * projectile.vy);
   if (distance <= speed + ally.radius) {
-    ally.hp = Math.min(ally.maxHp, ally.hp + (projectile.heal ?? 0));
+    healPlayer(state, ally, projectile.heal ?? 0);
     return true;
   }
   projectile.vx = (dx / distance) * speed;
@@ -131,6 +131,9 @@ function hitEnemies(
       continue;
     }
     hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer);
+    if (projectile.knockback !== undefined) {
+      pushAway(enemy, projectile, projectile.knockback);
+    }
     if (projectile.pierceLeft <= 0) {
       return true;
     }

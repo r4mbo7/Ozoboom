@@ -2,7 +2,7 @@ import type { SkillEffect } from '../../data/types';
 import { normalize } from '../../shared/vec';
 import { IDLE_INPUT, type PlayerInput } from '../commands';
 import { lookup } from '../content';
-import { hurtEnemy, markedDamageMul, pushAway, touches } from '../effects';
+import { healPlayer, hurtEnemy, markedDamageMul, pushAway, touches } from '../effects';
 import type { PlayerState, SimState } from '../state';
 import { skillCooldownTicks, statValue } from '../stats';
 import type { StepContext } from './types';
@@ -70,6 +70,9 @@ function cast(
       player.x = clamp(player.x + direction.x * distance, player.radius, width - player.radius);
       player.y = clamp(player.y + direction.y * distance, player.radius, height - player.radius);
       player.invulnerableTicks = Math.max(player.invulnerableTicks ?? 0, effect.invulnerableTicks);
+      if (effect.tauntRadius !== undefined) {
+        taunt(state, player, effect.tauntRadius);
+      }
       return;
     }
     case 'barrier':
@@ -85,8 +88,15 @@ function cast(
       return;
     case 'healPulse': {
       for (const ally of state.players) {
-        if (!ally.downed && touches(ally, player, effect.radius)) {
-          ally.hp = Math.min(ally.maxHp, ally.hp + effect.amount * power);
+        if (!touches(ally, player, effect.radius)) {
+          continue;
+        }
+        if (!ally.downed) {
+          healPlayer(state, ally, effect.amount * power);
+        } else if (effect.revive === true) {
+          ally.downed = false;
+          ally.hp = ally.maxHp / 2;
+          state.events.push({ type: 'playerRevived', playerId: ally.id });
         }
       }
       const { core } = state;
@@ -98,6 +108,24 @@ function cast(
       return;
     }
   }
+}
+
+function taunt(state: SimState, player: PlayerState, radius: number): void {
+  let count = 0;
+  for (const enemy of state.enemies) {
+    if (enemy.hp > 0 && touches(enemy, player, radius)) {
+      enemy.target = player.id;
+      count += 1;
+    }
+  }
+  state.events.push({
+    type: 'taunted',
+    playerId: player.id,
+    x: player.x,
+    y: player.y,
+    radius,
+    count,
+  });
 }
 
 function takeId(state: SimState): number {
