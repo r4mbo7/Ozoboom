@@ -441,6 +441,18 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     paintCursors();
   }
 
+  // Made when the seat shows, so a key pressed after that counts, and one still held from before
+  // waits for its release.
+  function seatInput(playerId: PlayerId): MenuInput {
+    let input = seatInputs.get(playerId);
+    if (input === undefined) {
+      input = createMenuInput();
+      input.open();
+      seatInputs.set(playerId, input);
+    }
+    return input;
+  }
+
   function rowsOfSeat(seat: LobbySeat): readonly Row[] {
     return seatRows(seat).filter((row) => row !== 'online' || actions.goOnline !== undefined);
   }
@@ -452,12 +464,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       if (seat.remote || player === undefined) {
         continue;
       }
-      let input = seatInputs.get(seat.playerId);
-      if (input === undefined) {
-        input = createMenuInput();
-        input.open();
-        seatInputs.set(seat.playerId, input);
-      }
+      const input = seatInput(seat.playerId);
       const own = input.edges(player.snapshot.menu, player.snapshot.gameplay.move);
       const rows = rowsOfSeat(seat);
       const step = stepRow(rows.length, seatCursors.get(seat.playerId) ?? 0, own);
@@ -619,6 +626,11 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       if (seatAt(model, playerId) === null) {
         seatCursors.delete(playerId);
         seatInputs.delete(playerId);
+      }
+    }
+    for (const seat of model.seats) {
+      if (!seat.remote) {
+        seatInput(seat.playerId);
       }
     }
     paintHint();

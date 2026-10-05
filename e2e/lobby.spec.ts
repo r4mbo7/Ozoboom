@@ -17,6 +17,11 @@ async function tap(page: Page, key: string): Promise<void> {
   await page.waitForTimeout(120);
 }
 
+// A device first seen with a key held waits for its release: press until the gesture has had its effect.
+async function tapUntil(page: Page, key: string, done: () => boolean): Promise<void> {
+  await expect.poll(async () => (done() ? true : (await tap(page, key), done()))).toBe(true);
+}
+
 function lobbyOf(page: Page) {
   return page.getByRole('region', { name: 'Salon' });
 }
@@ -133,6 +138,7 @@ test.describe('local lobby', () => {
     const lines = logs(page);
     await page.goto(`${LOBBY}local-two`);
 
+    await expect(lobbyOf(page).getByRole('textbox', { name: 'Nom du joueur 2' })).toBeVisible();
     await tap(page, 'ArrowDown');
     await tap(page, 'ArrowRight');
     expect(lines).toContain('[ui] onSeatClass 0 tank');
@@ -147,6 +153,7 @@ test.describe('local lobby', () => {
   test('lets the first player launch from their own seat', async ({ page }) => {
     const lines = logs(page);
     await page.goto(`${LOBBY}local-two`);
+    await expect(lobbyOf(page).getByRole('textbox', { name: 'Nom du joueur 1' })).toBeVisible();
     await tap(page, 'ArrowUp');
     await tap(page, 'ArrowUp');
     await tap(page, 'Enter');
@@ -157,6 +164,7 @@ test.describe('local lobby', () => {
     const lines = logs(page);
     await page.goto(`${LOBBY}local-two`);
     const name = lobbyOf(page).getByRole('textbox', { name: 'Nom du joueur 1' });
+    await expect(name).toBeVisible();
 
     await tap(page, 'Enter');
     await expect(name).toBeFocused();
@@ -172,10 +180,8 @@ test.describe('lobby devices and the way online', () => {
   test('lets each device without a seat take one under its own id', async ({ page }) => {
     const lines = logs(page);
     await page.goto(`${LOBBY}local-empty&devices`);
-    await tap(page, 'Enter');
-    expect(lines).toContain('[ui] onJoinSeat keyboardMouse');
-    await tap(page, 'KeyJ');
-    expect(lines).toContain('[ui] onJoinSeat gamepad:1');
+    await tapUntil(page, 'Enter', () => lines.includes('[ui] onJoinSeat keyboardMouse'));
+    await tapUntil(page, 'KeyJ', () => lines.includes('[ui] onJoinSeat gamepad:1'));
     await expect(lobbyOf(page).getByRole('textbox', { name: 'Nom du joueur 2' })).toBeVisible();
   });
 
@@ -189,6 +195,7 @@ test.describe('lobby devices and the way online', () => {
     await expect(lobbyOf(page).getByRole('button', { name: 'Créer un salon' })).toBeVisible();
 
     await page.goto(`${LOBBY}local-two`);
+    await expect(lobbyOf(page).getByRole('textbox', { name: 'Nom du joueur 1' })).toBeVisible();
     await tap(page, 'ArrowUp');
     await tap(page, 'Enter');
     expect(lines.filter((line) => line === '[ui] onGoOnline')).toHaveLength(2);
