@@ -6,8 +6,13 @@ test.describe.configure({ timeout: 240_000 });
 
 const FAST = './?dev=fast';
 
+// Two games render in software at once: a small screen keeps each one's frames cheap, so that the
+// clicks and the lockstep of one page are not starved by the other.
+const SMALL_SCREEN = { width: 480, height: 320 };
+test.use({ viewport: SMALL_SCREEN });
+
 async function newPage(browser: Browser): Promise<Page> {
-  return (await browser.newContext()).newPage();
+  return (await browser.newContext({ viewport: SMALL_SCREEN })).newPage();
 }
 
 function lobbyOf(page: Page) {
@@ -64,11 +69,21 @@ test('two pages play a set to the end and finish on the same fingerprint', async
       .toBe(1);
   }
 
-  for (const page of [host, guest]) {
-    await expect
-      .poll(() => status(page), { timeout: 200_000, intervals: [1000] })
-      .toMatch(/^(won|lost)$/);
-  }
+  // A level can offer cards to each player on the way: pick the first one until the set ends.
+  await expect
+    .poll(
+      async () => {
+        const states = await Promise.all([host, guest].map(status));
+        for (const [index, state] of states.entries()) {
+          if (state === 'choosingUpgrade') {
+            await [host, guest][index]?.keyboard.press('Enter');
+          }
+        }
+        return states.every((state) => state === 'won' || state === 'lost');
+      },
+      { timeout: 200_000, intervals: [1000] },
+    )
+    .toBe(true);
   const [hostHash, guestHash] = await Promise.all(
     [host, guest].map((page) => page.evaluate(() => window.ozoboom?.hash)),
   );
@@ -126,7 +141,12 @@ test('a solo game never loads PeerJS, and the first online room does', async ({ 
   const loadsLibrary: Promise<boolean>[] = [];
   page.on('response', (response) => {
     if (response.url().endsWith('.js')) {
-      loadsLibrary.push(response.text().then((text) => text.includes('DataConnection')));
+      loadsLibrary.push(
+        response.text().then(
+          (text) => text.includes('DataConnection'),
+          () => false,
+        ),
+      );
     }
   });
 
