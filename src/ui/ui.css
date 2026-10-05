@@ -98,8 +98,8 @@
   background:
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--or) 34%, transparent),
-      color-mix(in srgb, var(--turquoise) 28%, transparent)
+      color-mix(in srgb, var(--turquoise) 34%, transparent),
+      color-mix(in srgb, var(--turquoise) 14%, transparent)
     ),
     var(--sol-clair);
   font-size: 22px;
@@ -1530,14 +1530,16 @@
 }
 
 .ui-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
   width: 100%;
   margin: 16px 0 12px;
 }
 
 .ui-stats__item {
+  flex: 1 1 140px;
   display: flex;
   flex-direction: column-reverse;
   justify-content: flex-end;
@@ -1910,10 +1912,6 @@
 
   .ui-card__name {
     font-size: 21px;
-  }
-
-  .ui-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .ui-stats__value {

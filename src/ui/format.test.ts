@@ -41,7 +41,7 @@ describe('endStats', () => {
       { label: 'Phrases tenues', value: '6' },
       { label: 'Temps', value: '2:05' },
       { label: 'Bad vibes dissipées', value: '1\u202f042' },
-      { label: 'Volume de la scène', value: '25\u202f%' },
+      { label: 'Vie de la scène', value: '25\u202f%' },
       { label: 'Score', value: '12\u202f510' },
     ]);
   });
