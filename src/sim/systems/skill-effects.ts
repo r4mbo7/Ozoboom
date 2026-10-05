@@ -22,6 +22,11 @@ export function skillEffects({ state, content }: StepContext): void {
     holdBack(state, barrier);
     barrier.ticksLeft -= 1;
   }
+  for (const barrier of barriers) {
+    if (barrier.hp <= 0) {
+      state.events.push({ type: 'barrierBroken', id: barrier.id, x: barrier.x, y: barrier.y });
+    }
+  }
   keepWhere(laserShows, (show) => show.ticksLeft > 0);
   keepWhere(barriers, (barrier) => barrier.ticksLeft > 0 && barrier.hp > 0);
 }

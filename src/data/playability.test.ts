@@ -14,19 +14,35 @@ function find<T extends { id: string }>(items: readonly T[], id: string): T {
 const seconds = (ticks: number) => ticks / TICK_RATE_HZ;
 
 const mage = find(CONTENT.classes, 'mage');
+const startingClasses = ['mage', 'tank', 'healer'].map((id) => find(CONTENT.classes, id));
 const desagreable = find(CONTENT.enemies, 'desagreable');
 const meprisant = find(CONTENT.enemies, 'meprisant');
 const caisson = find(CONTENT.traps, 'caisson-de-basse');
 const set = find(CONTENT.sets, 'soiree-v0');
 
-describe('starting values of soiree-v0 with the mage', () => {
+describe.each(startingClasses)('starting values of soiree-v0 with $id', (player) => {
   it('let the player cross the arena corner to corner in under ten seconds', () => {
     const { width, height } = set.arena;
     const diagonal = Math.sqrt(width * width + height * height);
 
-    expect(seconds(diagonal / mage.speed)).toBeLessThan(10);
+    expect(seconds(diagonal / player.speed)).toBeLessThan(10);
   });
 
+  it('let the player kill a first phrase désagréable in two or three hits', () => {
+    const hits = Math.ceil(desagreable.maxHp / player.attack.damage);
+
+    expect(hits).toBeGreaterThanOrEqual(2);
+    expect(hits).toBeLessThanOrEqual(3);
+  });
+
+  it('reach a désagréable from where the player stands', () => {
+    const reach = player.attack.projectileSpeed * player.attack.rangeTicks;
+
+    expect(reach).toBeGreaterThan(player.radius + desagreable.radius + 40);
+  });
+});
+
+describe('starting values of soiree-v0', () => {
   it('bring a désagréable from any edge to the core in six to twelve seconds', () => {
     const { width, height } = set.arena;
     const contact = set.core.radius + desagreable.radius;
@@ -35,13 +51,6 @@ describe('starting values of soiree-v0 with the mage', () => {
 
     expect(seconds(fromNearestEdge / desagreable.speed)).toBeGreaterThanOrEqual(6);
     expect(seconds(fromFarthestEdge / desagreable.speed)).toBeLessThanOrEqual(12);
-  });
-
-  it('let the mage kill a first phrase désagréable in two or three hits', () => {
-    const hits = Math.ceil(desagreable.maxHp / mage.attack.damage);
-
-    expect(hits).toBeGreaterThanOrEqual(2);
-    expect(hits).toBeLessThanOrEqual(3);
   });
 
   it('price a bass bin at two to four bars of watts', () => {
@@ -113,4 +122,20 @@ describe('circus weapons at level 1', () => {
       expect(Math.sqrt(dx * dx + dy * dy)).toBeGreaterThan(300);
     },
   );
+});
+
+describe('the roadie charge', () => {
+  const dash = find(CONTENT.classes, 'tank').skill.effect;
+  const tauntRadius = dash.kind === 'dash' ? (dash.tauntRadius ?? 0) : 0;
+
+  it('draws a crowd wider than the aggro of a désagréable, which then keeps chasing the roadie', () => {
+    expect(tauntRadius + desagreable.radius).toBeGreaterThan(desagreable.aggroRadius);
+    expect(tauntRadius + desagreable.radius).toBeLessThan(desagreable.aggroRadius * 2);
+  });
+
+  it('is ready again within three bars', () => {
+    expect(find(CONTENT.classes, 'tank').skill.cooldownTicks).toBeLessThanOrEqual(
+      3 * TICKS_PER_BAR,
+    );
+  });
 });

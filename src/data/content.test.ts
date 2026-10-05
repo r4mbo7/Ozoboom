@@ -551,10 +551,10 @@ describe('CONTENT texts', () => {
 });
 
 describe('V0.1 scope', () => {
-  it('has the mage as the VJ with nova and laser show', () => {
+  it('has the three classes, the VJ, the roadie and the care', () => {
     const mage = classes.find((definition) => definition.id === 'mage');
 
-    expect(classes).toHaveLength(1);
+    expect(classes.map((definition) => definition.id)).toEqual(['mage', 'tank', 'healer']);
     expect(mage?.color).toBe('#ff2bd6');
     expect(mage?.skill.effect.kind).toBe('nova');
     expect(mage?.ultimate.effect.kind).toBe('laserShow');
