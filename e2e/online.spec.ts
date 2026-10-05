@@ -17,6 +17,7 @@ function lobbyOf(page: Page) {
 async function createRoom(page: Page): Promise<string> {
   await page.goto(FAST);
   await page.getByRole('button', { name: 'Jouer à plusieurs' }).click();
+  await lobbyOf(page).getByRole('button', { name: 'Jouer en ligne' }).click();
   await lobbyOf(page).getByRole('button', { name: 'Créer un salon' }).click();
   const code = lobbyOf(page).locator('.ui-lobby__code');
   await expect(code).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/, { timeout: 30_000 });
@@ -97,6 +98,7 @@ test('a guest with another version of the game is refused', async ({ browser }) 
     }
   });
   await guest.getByRole('button', { name: 'Jouer à plusieurs' }).click();
+  await lobbyOf(guest).getByRole('button', { name: 'Jouer en ligne' }).click();
   await lobbyOf(guest).getByRole('textbox', { name: 'Code du salon' }).fill(code);
   await lobbyOf(guest).getByRole('button', { name: 'Rejoindre' }).click();
 
@@ -136,6 +138,7 @@ test('a solo game never loads PeerJS, and the first online room does', async ({ 
 
   await page.goto(FAST);
   await page.getByRole('button', { name: 'Jouer à plusieurs' }).click();
+  await lobbyOf(page).getByRole('button', { name: 'Jouer en ligne' }).click();
   await lobbyOf(page).getByRole('button', { name: 'Créer un salon' }).click();
   await expect(lobbyOf(page).locator('.ui-lobby__code')).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/, {
     timeout: 30_000,
