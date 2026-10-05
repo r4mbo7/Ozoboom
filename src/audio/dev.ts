@@ -9,12 +9,21 @@ import {
   isBeatTick,
   isPhraseTick,
 } from '../shared/tempo';
-import type { GameStatus, SetSegment, SimEvent, SimState, SpeakerState } from '../sim/state';
+import type {
+  GameStatus,
+  PlayerState,
+  SetSegment,
+  SimEvent,
+  SimState,
+  SpeakerState,
+} from '../sim/state';
 import { TICK_SECONDS } from './clock';
 import { CROSSFADE_SECONDS, createFader } from './fade';
 import { createAudioEngine, heardNow } from './index';
+import { createMasterChain } from './master';
+import { createSfx, type SfxLookups, type SkillSound } from './sfx';
 import { SPEAKER_LAYER_IDS, type SpeakerLayerId } from './speaker-layers';
-import type { AudioEngine, Mood } from './types';
+import type { AudioEngine, Cue, Mood } from './types';
 
 const BREAK_BARS = 4;
 const PLUG_TICKS = 2 * TICKS_PER_BAR;
@@ -32,8 +41,63 @@ type EventName =
   | 'upgradeChosen'
   | 'skillUsed'
   | 'ultimateUsed'
+  | 'skillCharge'
+  | 'skillCase'
+  | 'skillHeal'
+  | 'skillRecall'
+  | 'taunted'
+  | 'barrierBroken'
+  | 'playerHealed'
+  | 'playerDowned'
+  | 'playerRevived'
+  | 'playerReviving'
   | 'gameWon'
   | 'gameLost';
+
+const CUES: readonly Cue[] = ['seatTaken', 'seatFreed', 'launch'];
+const CUE_LABELS: Readonly<Record<Cue, string>> = {
+  seatTaken: 'place prise',
+  seatFreed: 'place libérée',
+  launch: 'lancement',
+};
+
+const DEV_SKILLS: Readonly<Record<string, SkillSound>> = {
+  'dev-nova:skill': { kind: 'nova' },
+  'dev-nova:ultimate': { kind: 'laserShow' },
+  'dev-charge:skill': { kind: 'dash' },
+  'dev-malle:skill': { kind: 'barrier' },
+  'dev-soin:skill': { kind: 'healPulse' },
+  'dev-soin:ultimate': { kind: 'healPulse', revive: true },
+};
+const DEV_LOOKUPS: SfxLookups = {
+  skillSoundOf: (classId, slot) => DEV_SKILLS[`${classId}:${slot}`],
+};
+const DEV_CLASS_IDS = ['dev-nova', 'dev-charge', 'dev-malle', 'dev-soin'] as const;
+
+function devPlayer(id: 0 | 1 | 2 | 3, classId: string): PlayerState {
+  return {
+    id,
+    classId,
+    x: 0,
+    y: 0,
+    prevX: 0,
+    prevY: 0,
+    radius: 14,
+    hp: 100,
+    maxHp: 100,
+    speed: 1,
+    aim: { x: 1, y: 0 },
+    level: 1,
+    vibes: 0,
+    vibesToNextLevel: 10,
+    attackCooldown: 0,
+    skillCooldown: 0,
+    ultimateReady: false,
+    upgrades: [],
+    modifiers: {},
+    downed: false,
+  };
+}
 
 const EVENT_LABELS: Readonly<Record<EventName, string>> = {
   playerFired: 'playerFired',
@@ -46,6 +110,16 @@ const EVENT_LABELS: Readonly<Record<EventName, string>> = {
   upgradeChosen: 'upgradeChosen',
   skillUsed: 'skillUsed',
   ultimateUsed: 'ultimateUsed',
+  skillCharge: 'skillUsed charge',
+  skillCase: 'skillUsed flight case',
+  skillHeal: 'skillUsed soin',
+  skillRecall: 'ultimateUsed rappel',
+  taunted: 'taunted',
+  barrierBroken: 'barrierBroken',
+  playerHealed: 'playerHealed',
+  playerDowned: 'playerDowned',
+  playerRevived: 'playerRevived',
+  playerReviving: 'playerReviving',
   gameWon: 'gameWon',
   gameLost: 'gameLost',
 };
@@ -74,6 +148,26 @@ function eventOf(name: EventName, id: number): SimEvent {
       return { type: 'skillUsed', playerId: 0 };
     case 'ultimateUsed':
       return { type: 'ultimateUsed', playerId: 0 };
+    case 'skillCharge':
+      return { type: 'skillUsed', playerId: 1 };
+    case 'skillCase':
+      return { type: 'skillUsed', playerId: 2 };
+    case 'skillHeal':
+      return { type: 'skillUsed', playerId: 3 };
+    case 'skillRecall':
+      return { type: 'ultimateUsed', playerId: 3 };
+    case 'taunted':
+      return { type: 'taunted', playerId: 1, x: 0, y: 0, radius: 120, count: 4 };
+    case 'barrierBroken':
+      return { type: 'barrierBroken', id, x: 0, y: 0 };
+    case 'playerHealed':
+      return { type: 'playerHealed', playerId: 0, amount: 10 };
+    case 'playerDowned':
+      return { type: 'playerDowned', playerId: 0 };
+    case 'playerRevived':
+      return { type: 'playerRevived', playerId: 0 };
+    case 'playerReviving':
+      return { type: 'playerReviving', playerId: 0, byPlayer: 1, progress: 0.5 };
     case 'gameWon':
       return { type: 'gameWon' };
     case 'gameLost':
@@ -91,7 +185,7 @@ function createFixture(): SimState {
     arena: { width: 1600, height: 1000 },
     set: { tier: 0, segment: 'buildup', phrase: 0, bar: 0, beat: 0, segmentStartTick: 0 },
     core: { x: 800, y: 500, radius: 48, hp: 1000, maxHp: 1000, watts: 0 },
-    players: [],
+    players: DEV_CLASS_IDS.map((classId, id) => devPlayer(id as 0 | 1 | 2 | 3, classId)),
     speakers: SPEAKER_LAYER_IDS.map((id): SpeakerState => ({
       id,
       x: 0,
@@ -328,6 +422,7 @@ async function drive(
   const kicks = new Map<number, number>();
   const pumps = new Set<() => void>();
   const engine = createAudioEngine({
+    sfxLookups: DEV_LOOKUPS,
     createContext: () => context,
     breakBars: () => BREAK_BARS,
     onKickScheduled: (tick, time) => kicks.set(tick, time),
@@ -410,6 +505,73 @@ async function renderOffline(ending: 'won' | 'lost'): Promise<OfflineReport> {
     afterMute: peakOf(buffer, muteAt + 0.02, muteAt + BAR_SECONDS),
     drift,
   };
+}
+
+const SOUNDS_SECONDS = 20;
+const SOUNDS_ORDER: readonly EventName[] = [
+  'skillUsed',
+  'ultimateUsed',
+  'skillCharge',
+  'skillCase',
+  'skillHeal',
+  'skillRecall',
+  'taunted',
+  'barrierBroken',
+  'playerHealed',
+  'playerDowned',
+  'playerReviving',
+  'playerRevived',
+];
+const SOUNDS_SPACING = 1.05;
+const SOUNDS_CROWD_FROM = 17.2;
+const SOUNDS_CROWD_UNTIL = 19.6;
+
+interface SoundsReport {
+  peak: number;
+  clipped: number;
+  wav: Blob;
+}
+
+// Effects only, through the real master chain: scheduling each batch at its own time on the offline
+// clock needs no tick loop, and keeps the music out of the file.
+async function renderSounds(): Promise<SoundsReport> {
+  const context = new OfflineAudioContext(2, SOUNDS_SECONDS * SAMPLE_RATE, SAMPLE_RATE);
+  const master = createMasterChain(context);
+  const sfx = createSfx(master.sfx, (kind) => kind, DEV_LOOKUPS);
+  const players = DEV_CLASS_IDS.map((classId, id) => ({ id, classId }));
+  const batch = (at: number, events: readonly SimEvent[]) => {
+    sfx.beginFrame();
+    sfx.play(events, at, players);
+  };
+  let at = 0.3;
+  let id = 1;
+  for (const name of SOUNDS_ORDER) {
+    if (name === 'playerHealed') {
+      for (let drop = 0; drop < 3; drop += 1) {
+        batch(at + drop * 0.18, [eventOf(name, id)]);
+      }
+    } else if (name === 'playerReviving') {
+      const beat = 60 / 145;
+      for (let tick = 0; tick < 24; tick += 1) {
+        batch(at + (tick * beat) / 12, [eventOf(name, id)]);
+      }
+    } else {
+      batch(at, [eventOf(name, id)]);
+    }
+    id += 1;
+    at += name === 'playerReviving' ? 2 * (60 / 145) + 0.6 : SOUNDS_SPACING;
+  }
+  for (const cue of CUES) {
+    sfx.beginFrame();
+    sfx.cue(cue, at);
+    at += cue === 'launch' ? 0 : SOUNDS_SPACING * 0.7;
+  }
+  const crowd = SOUNDS_ORDER.flatMap((name) => Array.from({ length: 300 }, () => eventOf(name, 1)));
+  for (let when = SOUNDS_CROWD_FROM; when < SOUNDS_CROWD_UNTIL; when += 0.1) {
+    batch(when, crowd);
+  }
+  const buffer = await context.startRendering();
+  return { ...clippingOf(buffer), wav: wavOf(buffer) };
 }
 
 const LAYERS_BARS = 18;
@@ -909,6 +1071,9 @@ root.innerHTML = `
     <section>
       <h2>Événements</h2>
       <div class="row">
+        ${CUES.map((cue) => `<button type="button" data-cue="${cue}">cue ${CUE_LABELS[cue]}</button>`).join('')}
+      </div>
+      <div class="row">
         ${EVENT_NAMES.map((name) => `<button type="button" data-event="${name}">${EVENT_LABELS[name]}</button>`).join('')}
         <button type="button" data-event="enemyDied" data-count="50">50 × enemyDied</button>
       </div>
@@ -928,6 +1093,20 @@ root.innerHTML = `
         <dt>Échantillons écrêtés</dt><dd data-out="clipped">-</dd>
         <dt>Coupure du son</dt><dd data-out="mute">-</dd>
         <dt>Écart kick et tick</dt><dd data-out="offlineDrift">-</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>Sons de l'équipe, 20 secondes</h2>
+      <p style="color: var(--texte); margin-bottom: 0.75rem">
+        Effets seuls, par la chaîne maître : compétences par sorte, appel, malle qui cède, soin, chute, relève, cues du salon, puis une foule de 300 événements de chaque par image.
+      </p>
+      <div class="row">
+        <button type="button" data-sounds>Rendre 20 s</button>
+        <a data-out="soundsDownload" download="ozoboom-sons-equipe-20s.wav" hidden>Télécharger le WAV</a>
+      </div>
+      <dl>
+        <dt>Rendu</dt><dd data-out="sounds">pas encore lancé</dd>
+        <dt>Crête</dt><dd data-out="soundsPeak">-</dd>
       </dl>
     </section>
     <section>
@@ -1034,6 +1213,7 @@ const kicks = new Map<number, number>();
 const arrivals = new Map<number, number>();
 
 const engine = createAudioEngine({
+  sfxLookups: DEV_LOOKUPS,
   breakBars: () => BREAK_BARS,
   createContext: () => {
     context = new AudioContext();
@@ -1209,6 +1389,18 @@ root.addEventListener('click', (event) => {
       fake.plug(id);
       target.setAttribute('aria-pressed', 'true');
     }
+  } else if (target.dataset.cue !== undefined) {
+    engine.cue(target.dataset.cue as Cue);
+  } else if (target.dataset.sounds !== undefined) {
+    show('sounds', 'rendu en cours...');
+    void renderSounds().then((report) => {
+      show('sounds', `${String(SOUNDS_SECONDS)} s`);
+      show(
+        'soundsPeak',
+        `${report.peak.toFixed(3)} (${dbOf(report.peak)}FS), ${String(report.clipped)} échantillons écrêtés`,
+      );
+      downloadLink('soundsDownload', report.wav);
+    });
   } else if (target.dataset.layers !== undefined) {
     show('layers', 'rendu en cours...');
     void renderLayers().then((report) => {
