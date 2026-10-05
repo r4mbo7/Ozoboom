@@ -28,6 +28,7 @@ import type { LobbyModel, LobbySeat, UiFrame } from './types';
 
 export interface LobbyActions {
   joinSeat(device: DeviceId): void;
+  goOnline?(): void;
   leaveSeat(playerId: PlayerId): void;
   seatClass(playerId: PlayerId, classId: string): void;
   seatName(playerId: PlayerId, name: string): void;
@@ -178,12 +179,13 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     return { element: item, field, input, stepper, tag, host, name, role, join, wait };
   }
 
+  const onlineButton = button('Jouer en ligne');
   const launchButton = button('Lancer le set', 'ui-button ui-button--primary');
   const waiting = el('p', 'ui-lobby__waiting', 'En attente de l’hôte');
   waiting.setAttribute('role', 'status');
   const leaveButton = button('Retour au titre');
   const footer = el('div', 'ui-lobby__actions');
-  footer.append(launchButton, waiting, leaveButton);
+  footer.append(launchButton, waiting, onlineButton, leaveButton);
   const hint = el('p', 'ui-hint');
 
   const body = el('div', 'ui-lobby__body');
@@ -248,6 +250,9 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
   onPointerClick(joinButton, joinNow);
   onPointerClick(copyButton, copyNow);
   onPointerClick(launchButton, launchNow);
+  onPointerClick(onlineButton, () => {
+    actions.goOnline?.();
+  });
   onPointerClick(leaveButton, () => {
     actions.leave();
   });
@@ -287,6 +292,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
   let cursorView = lobbyView(model);
   const seatCursors = new Map<PlayerId, number>();
   const seatInputs = new Map<PlayerId, MenuInput>();
+  const deviceInputs = new Map<DeviceId, MenuInput>();
 
   function rowElement(row: Row, seat: LobbySeat | null): HTMLElement | null {
     const card = seat === null ? undefined : cards[seat.playerId];
@@ -305,6 +311,8 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
         return card?.stepper.element ?? null;
       case 'launch':
         return launchButton;
+      case 'online':
+        return onlineButton;
       case 'leave':
         return leaveButton;
     }
@@ -314,7 +322,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     const marked: (HTMLElement | null)[] = [];
     if (model.mode === 'local') {
       for (const seat of model.seats) {
-        const row = seatRows(seat)[seatCursors.get(seat.playerId) ?? 0];
+        const row = rowsOfSeat(seat)[seatCursors.get(seat.playerId) ?? 0];
         marked.push(row === undefined ? null : rowElement(row, seat));
       }
     } else {
@@ -328,6 +336,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       joinButton,
       copyButton,
       launchButton,
+      onlineButton,
       leaveButton,
       ...cards.flatMap((card) => [card.field, card.stepper.element]),
     ];
@@ -395,6 +404,9 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       case 'launch':
         launchNow();
         break;
+      case 'online':
+        actions.goOnline?.();
+        break;
       case 'leave':
         actions.leave();
         break;
@@ -429,6 +441,10 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     paintCursors();
   }
 
+  function rowsOfSeat(seat: LobbySeat): readonly Row[] {
+    return seatRows(seat).filter((row) => row !== 'online' || actions.goOnline !== undefined);
+  }
+
   function updateLocal(frame: UiFrame, edges: MenuIntents): void {
     let acted = false;
     for (const seat of model.seats) {
@@ -443,7 +459,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
         seatInputs.set(seat.playerId, input);
       }
       const own = input.edges(player.snapshot.menu, player.snapshot.gameplay.move);
-      const rows = seatRows(seat);
+      const rows = rowsOfSeat(seat);
       const step = stepRow(rows.length, seatCursors.get(seat.playerId) ?? 0, own);
       const row = rows[step.index];
       seatCursors.set(seat.playerId, step.index);
@@ -460,7 +476,25 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     }
     if (!acted && edges.back && model.seats.length === 0) {
       actions.leave();
-    } else if (!acted && edges.confirm) {
+    } else if (!acted && frame.devices !== undefined) {
+      for (const { device: id, snapshot } of frame.devices) {
+        let input = deviceInputs.get(id);
+        if (input === undefined) {
+          input = createMenuInput();
+          input.open();
+          deviceInputs.set(id, input);
+        }
+        const pressed = input.edges(snapshot.menu, snapshot.gameplay.move).confirm;
+        if (
+          pressed &&
+          model.seats.length < SEAT_COUNT &&
+          !model.seats.some((seat) => seat.device === id)
+        ) {
+          actions.joinSeat(id);
+          break;
+        }
+      }
+    } else if (!acted && frame.devices === undefined && edges.confirm) {
       const taker = deviceOf(frame.snapshot.device);
       if (
         taker !== null &&
@@ -571,6 +605,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
 
     const guest = view === 'room' && !hosting;
     launchButton.hidden = guest || view === 'entry';
+    onlineButton.hidden = view !== 'local' || actions.goOnline === undefined;
     launchButton.setAttribute('aria-disabled', String(!model.canLaunch));
     waiting.hidden = !guest;
     setText(leaveButton, view === 'room' ? 'Quitter le salon' : 'Retour au titre');
@@ -608,6 +643,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       cursor = 0;
       seatCursors.clear();
       seatInputs.clear();
+      deviceInputs.clear();
       blurInputs();
       paintCursors();
     },

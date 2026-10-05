@@ -140,6 +140,13 @@ export function createUi(
       seatName(playerId, name) {
         callbacks.onSeatName(playerId, name);
       },
+      ...(callbacks.onGoOnline === undefined
+        ? {}
+        : {
+            goOnline() {
+              callbacks.onGoOnline?.();
+            },
+          }),
       createRoom() {
         callbacks.onCreateRoom();
       },

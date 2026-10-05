@@ -148,6 +148,7 @@ test.describe('local lobby', () => {
     const lines = logs(page);
     await page.goto(`${LOBBY}local-two`);
     await tap(page, 'ArrowUp');
+    await tap(page, 'ArrowUp');
     await tap(page, 'Enter');
     expect(lines).toContain('[ui] onLaunch');
   });
@@ -164,6 +165,33 @@ test.describe('local lobby', () => {
     expect(lines.filter((line) => /onSeatClass|onLeave|onLaunch/.test(line))).toEqual([]);
     await page.keyboard.press('Escape');
     await expect(name).not.toBeFocused();
+  });
+});
+
+test.describe('lobby devices and the way online', () => {
+  test('lets each device without a seat take one under its own id', async ({ page }) => {
+    const lines = logs(page);
+    await page.goto(`${LOBBY}local-empty&devices`);
+    await tap(page, 'Enter');
+    expect(lines).toContain('[ui] onJoinSeat keyboardMouse');
+    await tap(page, 'KeyJ');
+    expect(lines).toContain('[ui] onJoinSeat gamepad:1');
+    await expect(lobbyOf(page).getByRole('textbox', { name: 'Nom du joueur 2' })).toBeVisible();
+  });
+
+  test('goes online from the local lobby, with the mouse and with the keyboard', async ({
+    page,
+  }) => {
+    const lines = logs(page);
+    await page.goto(`${LOBBY}local-empty`);
+    await lobbyOf(page).getByRole('button', { name: 'Jouer en ligne' }).click();
+    expect(lines).toContain('[ui] onGoOnline');
+    await expect(lobbyOf(page).getByRole('button', { name: 'Créer un salon' })).toBeVisible();
+
+    await page.goto(`${LOBBY}local-two`);
+    await tap(page, 'ArrowUp');
+    await tap(page, 'Enter');
+    expect(lines.filter((line) => line === '[ui] onGoOnline')).toHaveLength(2);
   });
 });
 

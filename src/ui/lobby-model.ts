@@ -79,7 +79,8 @@ export function deviceLabel(device: DeviceId | null): string {
   return `Manette ${String(Number(device.slice('gamepad:'.length)) + 1)}`;
 }
 
-export type Row = 'create' | 'code' | 'join' | 'copy' | 'name' | 'class' | 'launch' | 'leave';
+export type Row =
+  'create' | 'code' | 'join' | 'copy' | 'name' | 'class' | 'launch' | 'online' | 'leave';
 
 export function rowsOf(model: LobbyModel): readonly Row[] {
   const view = lobbyView(model);
@@ -102,7 +103,7 @@ export function rowsOf(model: LobbyModel): readonly Row[] {
 }
 
 export function seatRows(seat: LobbySeat): readonly Row[] {
-  return seat.host ? ['name', 'class', 'launch'] : ['name', 'class'];
+  return seat.host ? ['name', 'class', 'launch', 'online'] : ['name', 'class'];
 }
 
 export interface RowStep {

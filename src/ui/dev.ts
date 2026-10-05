@@ -21,7 +21,7 @@ import { createUi, prefersCalmMode } from './index';
 import { LOBBY_CLASSES, LOBBY_FIXTURES, ROOM_CODE, lobbyFixture } from './lobby-fixtures';
 import { SEAT_IDS, defaultName } from './lobby-model';
 import { createSunFollower } from './sun';
-import type { LobbyModel, LobbySeat, LocalPlayer } from './types';
+import type { LobbyModel, LobbySeat, LocalPlayer, UiFrame } from './types';
 
 const found = document.querySelector<HTMLElement>('#app');
 if (found === null) {
@@ -160,6 +160,10 @@ const ui = createUi(
       console.info('[ui] onSeatName', playerId, name);
       patchSeat(playerId, { name });
     },
+    onGoOnline: () => {
+      console.info('[ui] onGoOnline');
+      showLobby(lobbyFixture('entry', origin()));
+    },
     onCreateRoom: () => {
       console.info('[ui] onCreateRoom');
       showLobby(lobbyFixture('host', origin()));
@@ -261,6 +265,8 @@ window.addEventListener('keydown', (event) => {
   } else if (/^Digit[1-5]$/.test(event.code)) {
     const selectTrap = Number(event.code.slice(-1)) - 1;
     pending = { ...pending, gameplay: { ...pending.gameplay, selectTrap } };
+  } else if (event.code === 'KeyJ') {
+    padPressed = true;
   } else if (event.code === 'KeyP') {
     const local = lobby?.seats.filter((seat) => !seat.remote) ?? [];
     const next = local.find((seat) => seat.playerId > driven) ?? local[0];
@@ -316,6 +322,26 @@ function playersOf(snapshot: InputSnapshot): LocalPlayer[] {
     playerId: seat.playerId,
     snapshot: seat.playerId === driven ? snapshot : idleSnapshot({ device: 'gamepad' }),
   }));
+}
+
+// With `?devices`, the frame lists every device: the keyboard, a first pad, and a second one that
+// presses A when J is pressed.
+let padPressed = false;
+
+function devicesOf(snapshot: InputSnapshot): Pick<UiFrame, 'devices'> {
+  if (!params.has('devices')) {
+    return {};
+  }
+  const pad = idleSnapshot({ device: 'gamepad' });
+  const pressed = { ...pad, menu: { ...pad.menu, confirm: padPressed } };
+  padPressed = false;
+  return {
+    devices: [
+      { device: 'keyboardMouse', snapshot },
+      { device: 'gamepad:0', snapshot: pad },
+      { device: 'gamepad:1', snapshot: pressed },
+    ],
+  };
 }
 
 let ticks = 0;
