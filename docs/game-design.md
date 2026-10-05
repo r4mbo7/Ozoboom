@@ -167,7 +167,7 @@ Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-0
 
 - 2 à 4 joueurs. **Coop locale et coop en ligne en V0.2**, décidé le 2026-10-05 : en local, le clavier et la souris comptent pour un joueur et chaque manette pour un autre ; en ligne, un lien d'invitation, sans compte, pair à pair avec le navigateur d'un joueur qui fait l'hôte et fait foi (ADR 0007).
 - Un allié à terre se relève par un coéquipier qui reste une mesure à son contact, deux temps pour le care ; il revient avec la moitié de sa vie. Tous à terre, la scène est seule : la partie finit vite.
-- Vibes, watts et Volume sont d'équipe, le noyau est commun. La difficulté monte avec le nombre de joueurs (apparitions et vie des bad vibes, données du set).
+- Vibes, watts et Volume sont d'équipe, le noyau est commun. La difficulté monte avec le nombre de joueurs (apparitions et vie des bad vibes, données du set). Cible mesurée sans écran (`pnpm balance`) : une équipe de N joueurs de la même classe tient autant de phrases que cette classe seule, à plus ou moins une ; chaque classe seule tient au moins autant que la VJ moins une phrase ; trois classes différentes tiennent au moins autant que trois VJ.
 - Chaque joueur porte un nom libre, affiché au-dessus de lui et dans le HUD. En ligne, chacun suit son personnage à la caméra ; en local, la caméra cadre tout le monde.
 
 ## Classement public
