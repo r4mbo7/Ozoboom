@@ -1,6 +1,7 @@
 import type { DataConnection, Peer, PeerOptions } from 'peerjs';
 import { hostPeerId } from './code';
 import { decodeMessage, encodeMessage } from './wire';
+import { roundTripFromStats, type StatEntry } from './stats';
 import type { NetMessage, PeerId, Transport } from './types';
 
 export type PeerTransportOptions = (
@@ -41,12 +42,6 @@ function describeError(context: string, error: unknown): Error {
     return new Error(`${context}${type}: ${error.message}`, { cause: error });
   }
   return new Error(`${context}: ${String(error)}`, { cause: error });
-}
-
-interface PairStats {
-  type: string;
-  nominated?: boolean;
-  currentRoundTripTime?: number;
 }
 
 export interface PeerTransport extends Transport {
@@ -219,11 +214,9 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
       for (const connection of connections.values()) {
         const rtc = connection.peerConnection as RTCPeerConnection | undefined;
         const report = await rtc?.getStats();
-        for (const stat of (report?.values() ?? []) as Iterable<PairStats>) {
-          const rtt = stat.currentRoundTripTime;
-          if (stat.type === 'candidate-pair' && stat.nominated === true && (rtt ?? 0) > 0) {
-            measures.push((rtt ?? 0) * 1000);
-          }
+        const rtt = roundTripFromStats((report?.values() ?? []) as Iterable<StatEntry>);
+        if (rtt !== null) {
+          measures.push(rtt);
         }
       }
       return measures.length === 0 ? null : Math.min(...measures);
