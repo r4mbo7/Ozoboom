@@ -23,7 +23,7 @@ export function softClipCurve(size = 4097): Float32Array<ArrayBuffer> {
   return curve;
 }
 
-export function createMasterChain(context: BaseAudioContext): MasterChain {
+export function createMasterChain(context: BaseAudioContext, muted = false): MasterChain {
   const music = context.createGain();
   music.gain.value = 0.5;
   const sfx = context.createGain();
@@ -48,6 +48,7 @@ export function createMasterChain(context: BaseAudioContext): MasterChain {
   clipper.oversample = 'none';
 
   const mute = context.createGain();
+  mute.gain.value = muted ? 0 : 1;
 
   music.connect(glue);
   sfx.connect(glue);

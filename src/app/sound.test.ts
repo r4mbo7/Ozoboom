@@ -29,8 +29,8 @@ describe('soundOf', () => {
     expect(soundOf({ ...playing, screen: 'lobby' })).toEqual({ mood: 'menu', muted: false });
   });
 
-  it('keeps the title silent', () => {
-    expect(soundOf({ ...playing, screen: 'title' }).muted).toBe(true);
+  it('plays the menu ambience on the title', () => {
+    expect(soundOf({ ...playing, screen: 'title' })).toEqual({ mood: 'menu', muted: false });
   });
 
   it('plays nothing on any screen while the player has turned the sound off', () => {
@@ -47,6 +47,7 @@ describe('soundOf', () => {
   });
 
   it('plays nothing while the page is hidden, menu ambience included', () => {
+    expect(soundOf({ ...playing, screen: 'title', hidden: true }).muted).toBe(true);
     expect(soundOf({ ...playing, paused: true, hidden: true }).muted).toBe(true);
     expect(soundOf({ ...playing, screen: 'end', hidden: true }).muted).toBe(true);
   });
