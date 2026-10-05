@@ -186,3 +186,62 @@ describe('resolveContent', () => {
     expect(() => resolveContent(content)).toThrow('set "fixture-set" has no tier');
   });
 });
+
+describe('resolveContent co-op fields', () => {
+  const withClass = (change: object): GameContent => ({
+    ...FIXTURE_CONTENT,
+    classes: FIXTURE_CONTENT.classes.map((definition, index) =>
+      index === 0
+        ? {
+            ...definition,
+            ...change,
+            attack: { ...definition.attack, ...(change as { attack?: object }).attack },
+          }
+        : definition,
+    ),
+  });
+  const withSet = (change: object): GameContent => ({
+    ...FIXTURE_CONTENT,
+    sets: [{ ...FIXTURE_SET, ...change }],
+  });
+
+  it.each([0, -1, Number.NaN])('rejects a reviveMul of %s', (value) => {
+    const content = withClass({ reviveMul: value });
+
+    expect(() => resolveContent(content)).toThrow('reviveMul of class "raver" must be positive');
+  });
+
+  it.each([0, -1])('rejects a reviveBars of %s', (value) => {
+    const content = withSet({ reviveBars: value });
+
+    expect(() => resolveContent(content)).toThrow(
+      'reviveBars of set "fixture-set" must be positive',
+    );
+  });
+
+  it.each(['spawnMul', 'enemyHpMul'] as const)('rejects a null or negative perPlayer.%s', (key) => {
+    const valid = { spawnMul: 1, enemyHpMul: 1 };
+
+    for (const value of [0, -0.5]) {
+      const content = withSet({ perPlayer: { ...valid, [key]: value } });
+      expect(() => resolveContent(content)).toThrow(
+        `perPlayer.${key} of set "fixture-set" must be positive`,
+      );
+    }
+  });
+
+  it('rejects a negative knockback and accepts none or zero', () => {
+    expect(() => resolveContent(withClass({ attack: { knockback: -1 } }))).toThrow(
+      'attack knockback of class "raver" must not be negative',
+    );
+    expect(() => resolveContent(withClass({ attack: { knockback: 0 } }))).not.toThrow();
+    expect(() => resolveContent(FIXTURE_CONTENT)).not.toThrow();
+  });
+
+  it('accepts valid co-op fields', () => {
+    const content = withSet({ reviveBars: 2, perPlayer: { spawnMul: 1.2, enemyHpMul: 1.1 } });
+
+    expect(() => resolveContent(withClass({ reviveMul: 2 }))).not.toThrow();
+    expect(() => resolveContent(content)).not.toThrow();
+  });
+});

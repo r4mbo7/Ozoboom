@@ -64,7 +64,14 @@ export function resolveContent(content: GameContent): ResolvedContent {
     lookup(resolved.upgrades, fusion.upgradeId, `upgrade of fusion to "${fusion.resultId}"`);
     lookup(resolved.weapons, fusion.resultId, `result of fusion to "${fusion.resultId}"`);
   }
+  for (const definition of content.classes) {
+    requirePositive(definition.reviveMul, `reviveMul of class "${definition.id}"`);
+    requireNonNegative(definition.attack.knockback, `attack knockback of class "${definition.id}"`);
+  }
   for (const set of content.sets) {
+    requirePositive(set.reviveBars, `reviveBars of set "${set.id}"`);
+    requirePositive(set.perPlayer?.spawnMul, `perPlayer.spawnMul of set "${set.id}"`);
+    requirePositive(set.perPlayer?.enemyHpMul, `perPlayer.enemyHpMul of set "${set.id}"`);
     if (set.tiers.length === 0) {
       throw new Error(`set "${set.id}" has no tier`);
     }
@@ -98,6 +105,18 @@ export function lookup<T>(table: ReadonlyMap<string, T>, id: string, what: strin
     throw new Error(`unknown ${what}: "${id}"`);
   }
   return entry;
+}
+
+function requirePositive(value: number | undefined, what: string): void {
+  if (value !== undefined && !(Number.isFinite(value) && value > 0)) {
+    throw new Error(`${what} must be positive, got ${String(value)}`);
+  }
+}
+
+function requireNonNegative(value: number | undefined, what: string): void {
+  if (value !== undefined && !(Number.isFinite(value) && value >= 0)) {
+    throw new Error(`${what} must not be negative, got ${String(value)}`);
+  }
 }
 
 function indexById<T extends { readonly id: string }>(

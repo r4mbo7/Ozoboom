@@ -7,6 +7,7 @@ import type { CoreState, PlayerId, PlayerState, SimState, SpeakerState, Vec2 } f
 export interface PlayerSlot {
   id: PlayerId;
   classId: string;
+  name?: string;
 }
 
 const SPAWN_DIRECTIONS: readonly Vec2[] = [
@@ -116,5 +117,6 @@ function createPlayer(
     downed: false,
     invulnerableTicks: 0,
     weapons: [],
+    ...(slot.name === undefined ? {} : { name: slot.name }),
   };
 }
