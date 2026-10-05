@@ -10,7 +10,7 @@ test('shows an interruption over the game, and its button leaves for the title',
   await page.goto('/dev/ui.html?screen=game&notice=hostLeft');
 
   const notice = page.getByRole('region', { name: 'Interruption' });
-  await expect(notice.getByRole('heading', { name: 'L’hôte a quitté la partie' })).toBeVisible();
+  await expect(notice.getByRole('heading', { name: 'L’hôte a quitté le set' })).toBeVisible();
   await expect(notice).toContainText('Sans lui, le sound system s’éteint.');
   await notice.getByRole('button', { name: 'Retour au titre' }).click();
 

@@ -148,3 +148,24 @@ export function cardFor(
     rarityLabel: null,
   };
 }
+
+function listOf(names: readonly string[]): string {
+  const last = names.at(-1);
+  return names.length < 2 || last === undefined
+    ? names.join('')
+    : `${names.slice(0, -1).join(', ')} et ${last}`;
+}
+
+export interface Waiting {
+  // One line per remote player who still has an offer.
+  choosing: string[];
+  // Once every player of this screen has chosen: who the set waits for.
+  waiting: string | null;
+}
+
+export function waitingFor(remote: readonly string[], localsDone: boolean): Waiting {
+  return {
+    choosing: remote.map((name) => `${name} choisit…`),
+    waiting: remote.length > 0 && localsDone ? `En attente de ${listOf(remote)}` : null,
+  };
+}

@@ -1,8 +1,55 @@
-import type { GameContent, SetDefinition, WeaponDefinition } from '../data/types';
+import type { GameContent, SetDefinition, SkillDefinition, WeaponDefinition } from '../data/types';
 import { NIGHT_END, NIGHT_START, type PaletteToken } from '../shared/palette';
 import { TICKS_PER_BAR } from '../shared/tempo';
 import type { PlayerState, SimState } from '../sim/state';
+import { skillCooldownTicks } from '../sim/stats';
 import { ratio } from './format';
+import type { UiFrame } from './types';
+
+export function skillCharge(
+  player: Pick<PlayerState, 'modifiers' | 'skillCooldown'>,
+  skill: Pick<SkillDefinition, 'cooldownTicks'>,
+): number {
+  return 1 - ratio(player.skillCooldown, skillCooldownTicks(player, skill));
+}
+
+const CLASS_TOKENS: Readonly<Record<string, PaletteToken>> = {
+  mage: 'mage',
+  tank: 'tank',
+  healer: 'healer',
+};
+
+export function classToken(classId: string): PaletteToken {
+  return CLASS_TOKENS[classId] ?? 'or';
+}
+
+export function playerLabel(player: Pick<PlayerState, 'id' | 'name'>): string {
+  return player.name ?? `Joueur ${String(player.id + 1)}`;
+}
+
+export interface Roster {
+  // More than one player in the sim: the HUD shows a band per player. Alone, it is the solo HUD.
+  team: boolean;
+  // The players of this screen, in the order of the frame.
+  locals: PlayerState[];
+  // The other players of the sim, remote ones, in the order of the sim.
+  others: PlayerState[];
+}
+
+export function rosterOf(
+  state: Pick<SimState, 'players'>,
+  frame: Pick<UiFrame, 'players'>,
+): Roster {
+  const locals = frame.players.flatMap((local) => {
+    const player = state.players.find((candidate) => candidate.id === local.playerId);
+    return player === undefined ? [] : [player];
+  });
+  return {
+    team: state.players.length > 1,
+    locals,
+    others: state.players.filter((player) => !locals.includes(player)),
+  };
+}
 
 const SPEAKER_TOKENS: Readonly<Record<string, PaletteToken>> = {
   'dome-chill': 'healer',

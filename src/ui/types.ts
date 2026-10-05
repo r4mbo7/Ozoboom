@@ -33,6 +33,11 @@ export interface LobbyModel {
 
 export type Notice = 'desync' | 'hostLeft' | 'connectionLost';
 
+// Online, who ends the game: only the host restarts it. Absent, the game is local.
+export interface EndSession {
+  role: 'host' | 'guest';
+}
+
 export interface UiCallbacks {
   onStart(): void;
   onRestart(): void;
@@ -51,7 +56,8 @@ export interface UiCallbacks {
   onLeaveLobby(): void;
   onLeaveNotice(): void;
   // Only shows the « Ton avis » button when set. Route menu intents to the form until it closes.
-  onFeedback?(): void;
+  // `details` is what an interruption reports (the tick of a divergence): it prefills the form.
+  onFeedback?(details?: string): void;
 }
 
 export interface Ui {
@@ -65,7 +71,7 @@ export interface Ui {
   updateLobby(model: LobbyModel): void;
   showNotice(notice: Notice, details: string): void;
   showGame(): void;
-  showEnd(state: SimState): void;
+  showEnd(state: SimState, session?: EndSession): void;
   update(state: SimState, frame: UiFrame, content: GameContent): void;
   destroy(): void;
 }

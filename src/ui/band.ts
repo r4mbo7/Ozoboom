@@ -1,0 +1,164 @@
+import type { ClassDefinition, SkillDefinition } from '../data/types';
+import type { InputDevice } from '../input/intents';
+import type { PlayerState } from '../sim/state';
+import { el, icon, keycap, setFlag, setText, setVar } from './dom';
+import { formatNumber, ratio } from './format';
+import { skillCharge } from './hud-model';
+import { skillIcon } from './icons';
+import { promptsFor } from './prompts';
+import { createWho, fillWho, whoColor } from './who';
+
+export interface SkillView {
+  root: HTMLElement;
+  glyph: HTMLElement;
+  name: HTMLElement;
+  key: HTMLElement;
+  status: HTMLElement;
+}
+
+export function createSkillView(kind: 'skill' | 'ultimate'): SkillView {
+  const root = el('div', `ui-skill ui-skill--${kind}`);
+  const ring = el('div', 'ui-skill__ring');
+  const glyph = el('span', 'ui-skill__glyph');
+  ring.append(glyph);
+  const name = el('span', 'ui-skill__name');
+  const key = el('span', 'ui-skill__key');
+  const status = el('span', 'ui-skill__status');
+  const text = el('div', 'ui-skill__text');
+  text.append(name, status);
+  root.append(ring, key, text);
+  return { root, glyph, name, key, status };
+}
+
+export interface Band {
+  readonly element: HTMLElement;
+  update(player: PlayerState, definition: ClassDefinition | null, device: InputDevice): void;
+}
+
+const CRITICAL_RATIO = 0.25;
+
+function healthBar(label: string): { bar: HTMLElement; fill: HTMLElement } {
+  const bar = el('div', 'ui-bar ui-band__bar');
+  bar.setAttribute('role', 'meter');
+  bar.setAttribute('aria-label', label);
+  bar.setAttribute('aria-valuemin', '0');
+  const fill = el('span', 'ui-bar__fill');
+  bar.append(fill);
+  return { bar, fill };
+}
+
+function updateHealth(
+  band: HTMLElement,
+  bar: HTMLElement,
+  value: HTMLElement,
+  player: PlayerState,
+): void {
+  const fraction = ratio(player.hp, player.maxHp);
+  setVar(bar, '--fill', String(fraction));
+  bar.setAttribute('aria-valuemax', String(player.maxHp));
+  bar.setAttribute('aria-valuenow', String(Math.round(player.hp)));
+  setText(value, `${formatNumber(player.hp)} / ${formatNumber(player.maxHp)}`);
+  setFlag(band, 'critical', !player.downed && fraction <= CRITICAL_RATIO);
+  setFlag(band, 'downed', player.downed);
+}
+
+// The whole of a player of this screen: life, level, vibes, skill and ultimate.
+export function createFullBand(): Band {
+  const element = el('section', 'ui-panel ui-band');
+  const who = createWho();
+  const className = el('span', 'ui-band__class');
+  const status = el('span', 'ui-band__status');
+  const head = el('div', 'ui-band__head');
+  head.append(who, className, status);
+
+  const hpValue = el('span', 'ui-band__value');
+  const hp = healthBar('Vie');
+  const hpRow = el('div', 'ui-band__row');
+  hpRow.append(el('span', 'ui-band__label', 'Vie'), hp.bar, hpValue);
+
+  const levelValue = el('span', 'ui-band__value');
+  const vibes = el('div', 'ui-bar ui-band__bar');
+  vibes.append(el('span', 'ui-bar__fill'));
+  const levelLabel = el('span', 'ui-band__label');
+  const levelRow = el('div', 'ui-band__row ui-band__row--vibes');
+  levelRow.append(levelLabel, vibes, levelValue);
+
+  const main = el('div', 'ui-band__main');
+  main.append(head, hpRow, levelRow);
+  const skill = createSkillView('skill');
+  const ultimate = createSkillView('ultimate');
+  const skills = el('div', 'ui-band__skills');
+  skills.append(skill.root, ultimate.root);
+  element.append(main, skills);
+
+  let builtFor: ClassDefinition | null = null;
+  let builtDevice: InputDevice | null = null;
+
+  function build(definition: ClassDefinition, device: InputDevice): void {
+    builtFor = definition;
+    builtDevice = device;
+    const prompts = promptsFor(device);
+    const fill = (view: SkillView, def: SkillDefinition, key: string): void => {
+      view.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(def.effect)));
+      setText(view.name, def.name);
+      view.key.replaceChildren(keycap(key, prompts.style));
+    };
+    fill(skill, definition.skill, prompts.skill);
+    fill(ultimate, definition.ultimate, prompts.ultimate);
+    setText(className, definition.name);
+  }
+
+  return {
+    element,
+    update(player, definition, device) {
+      fillWho(who, player);
+      setVar(element, '--who', whoColor(player.classId));
+      element.setAttribute('aria-label', `${who.textContent}, ${className.textContent}`);
+      if (definition !== null && (definition !== builtFor || device !== builtDevice)) {
+        build(definition, device);
+      }
+      updateHealth(element, hp.bar, hpValue, player);
+      setText(status, player.downed ? 'À terre' : '');
+      setText(levelLabel, `Niv. ${String(player.level)}`);
+      setVar(vibes, '--fill', String(ratio(player.vibes, player.vibesToNextLevel)));
+      setText(
+        levelValue,
+        `${formatNumber(player.vibes)} / ${formatNumber(player.vibesToNextLevel)}`,
+      );
+      if (definition !== null) {
+        const skillReady = player.skillCooldown <= 0;
+        setVar(skill.root, '--charge', String(skillCharge(player, definition.skill)));
+        setFlag(skill.root, 'ready', skillReady);
+        setText(skill.status, skillReady ? 'Prête' : 'Recharge');
+        setVar(ultimate.root, '--charge', player.ultimateReady ? '1' : '0');
+        setFlag(ultimate.root, 'ready', player.ultimateReady);
+        setText(ultimate.status, player.ultimateReady ? 'Prêt' : 'Au drop');
+      }
+    },
+  };
+}
+
+// A player of another screen: who they are, and whether they still stand.
+export function createCompactBand(): Band {
+  const element = el('section', 'ui-panel ui-band ui-band--compact');
+  const who = createWho();
+  const status = el('span', 'ui-band__status');
+  const head = el('div', 'ui-band__head');
+  head.append(who, status);
+  const hpValue = el('span', 'ui-band__value');
+  const hp = healthBar('Vie');
+  const hpRow = el('div', 'ui-band__row');
+  hpRow.append(hp.bar, hpValue);
+  element.append(head, hpRow);
+
+  return {
+    element,
+    update(player) {
+      fillWho(who, player);
+      setVar(element, '--who', whoColor(player.classId));
+      element.setAttribute('aria-label', who.textContent);
+      updateHealth(element, hp.bar, hpValue, player);
+      setText(status, player.downed ? 'À terre' : '');
+    },
+  };
+}

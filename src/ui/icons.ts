@@ -144,3 +144,39 @@ export function weaponIcon(effect: WeaponEffect): string {
       return `<path d="M2.5 15c3-8 6-8 9.5 0s6.5 8 9.5 0" ${STROKE} stroke-width="2.6"/>`;
   }
 }
+
+// One shape per class, so that the colour never carries the class alone (see the art direction).
+export function classMark(classId: string): string {
+  switch (classId) {
+    case 'mage':
+      return (
+        '<circle cx="12" cy="12" r="2.6" fill="currentColor"/>' +
+        `<circle cx="12" cy="12" r="7.5" ${STROKE} stroke-width="1.5" stroke-dasharray="2 3"/>` +
+        '<circle cx="19.5" cy="12" r="2.4" fill="currentColor"/><circle cx="4.5" cy="12" r="2.4" fill="currentColor"/>'
+      );
+    case 'tank':
+      return (
+        `<rect x="3.5" y="6.5" width="17" height="11" rx="2" ${STROKE}/>` +
+        `<path d="M3.5 10.5h17M9 6.5v-2h6v2" ${STROKE}/>`
+      );
+    case 'healer':
+      return (
+        `<circle cx="12" cy="12" r="8.5" ${STROKE}/>` +
+        '<path d="M12 3.5v17M4.6 7.8l14.8 8.4M19.4 7.8 4.6 16.2" stroke="currentColor" stroke-width="1.6"/>'
+      );
+    default:
+      return '<circle cx="12" cy="12" r="7" fill="currentColor"/>';
+  }
+}
+
+export const TWO_VERSIONS =
+  `<circle cx="9.5" cy="12" r="6" ${STROKE}/>` +
+  `<circle cx="14.5" cy="12" r="6" ${STROKE} stroke-dasharray="3 2.5"/>`;
+
+export const DOOR =
+  `<path d="M6 21V4.5A1.5 1.5 0 0 1 7.5 3H17v18" ${STROKE}/>` +
+  '<path d="M3 21h18M13.5 12v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>';
+
+export const BROKEN_LINK =
+  `<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" ${STROKE}/>` +
+  '<path d="M9 3.5 10 6M3.5 9 6 10M15 21l-1-2.5M21 15l-2.5-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';

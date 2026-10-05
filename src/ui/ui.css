@@ -1578,6 +1578,394 @@
   width: min(100%, 320px);
 }
 
+/* Team: a band per player, offers side by side, the end of the team */
+
+.ui-who {
+  --who: var(--or);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ui-who__mark {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--who);
+}
+
+.ui-who__name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--texte);
+  font-size: 17px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-hud__roster,
+.ui-hud__team {
+  display: none;
+}
+
+.ui-hud[data-team] {
+  grid-template:
+    'core lineup threat' auto
+    'volume . .' auto
+    'roster . gear' 1fr
+    '. traps .' auto
+    'team team team' auto
+    / minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.ui-hud[data-team] :is(.ui-hud__level, .ui-hud__skills) {
+  display: none;
+}
+
+.ui-hud[data-multi] .ui-hud__gear {
+  display: none;
+}
+
+.ui-hud[data-team] .ui-hud__gear {
+  align-self: end;
+}
+
+.ui-hud[data-team] .ui-hud__roster {
+  display: flex;
+  flex-direction: column;
+  grid-area: roster;
+  align-self: start;
+  gap: 10px;
+  width: var(--ui-side-width);
+}
+
+.ui-hud[data-team] .ui-hud__team {
+  display: flex;
+  grid-area: team;
+  justify-content: center;
+  gap: var(--ui-gap);
+}
+
+.ui-band {
+  --who: var(--or);
+
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  max-width: 360px;
+  padding: 12px 16px 14px 18px;
+  border-left: 5px solid var(--who);
+}
+
+.ui-band__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ui-band__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 24px;
+}
+
+.ui-band__class {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-band__status {
+  margin-left: auto;
+  color: var(--texte);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ui-band__row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-band__label {
+  color: var(--ui-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ui-band__value {
+  min-width: 52px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ui-band__row:not(.ui-band__row--vibes) .ui-bar__fill {
+  background: var(--who);
+  box-shadow: none;
+}
+
+.ui-band[data-critical] .ui-band__row:not(.ui-band__row--vibes) .ui-band__value {
+  color: var(--tank);
+}
+
+.ui-band[data-downed] {
+  border-left-color: var(--bad-vibe);
+}
+
+.ui-band[data-downed] :is(.ui-who__mark, .ui-who__name, .ui-band__class) {
+  opacity: 0.7;
+}
+
+.ui-band[data-downed] .ui-band__row:not(.ui-band__row--vibes) .ui-bar__fill {
+  background: var(--bad-vibe);
+}
+
+.ui-band[data-downed] .ui-band__skills {
+  opacity: 0.5;
+}
+
+.ui-band__skills {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ui-band .ui-skill {
+  flex-direction: row;
+  width: 58px;
+}
+
+.ui-band .ui-skill__ring {
+  width: 44px;
+  height: 44px;
+}
+
+.ui-band .ui-skill__glyph {
+  width: 37px;
+  height: 37px;
+}
+
+.ui-band .ui-skill__icon {
+  width: 20px;
+  height: 20px;
+}
+
+.ui-band .ui-skill__key {
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  margin: 0;
+}
+
+.ui-band .ui-skill__text {
+  display: none;
+}
+
+.ui-band--compact {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  max-width: none;
+  padding: 10px 14px 12px 16px;
+}
+
+.ui-band--compact .ui-band__row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ui-offers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.ui-offers__panels {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.ui-offers__panels[data-multi] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 620px));
+  justify-content: center;
+  gap: 24px;
+}
+
+.ui-offer {
+  --who: var(--or);
+}
+
+.ui-offers__panels[data-multi] .ui-offer {
+  padding: 18px 20px 16px;
+  border: 1.5px solid color-mix(in srgb, var(--who) 55%, var(--ui-line));
+  border-radius: 40px;
+  background: color-mix(in srgb, var(--sol-clair) 55%, transparent);
+  box-shadow: var(--ui-lift);
+}
+
+.ui-offers__panels[data-multi] .ui-heading {
+  font-size: 22px;
+}
+
+.ui-offers__panels[data-multi] .ui-cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  margin: 12px 0 10px;
+}
+
+.ui-offers__panels[data-multi] .ui-cards[data-count='4'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ui-offers__panels[data-multi] .ui-card {
+  min-height: 0;
+  padding: 16px 14px 14px;
+  gap: 8px;
+  border-radius: 28px;
+}
+
+.ui-offers__panels[data-multi] .ui-card__family {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.ui-offers__panels[data-multi] .ui-card__name {
+  font-size: 18px;
+}
+
+.ui-offers__panels[data-multi] .ui-card__desc {
+  font-size: 14px;
+}
+
+.ui-offer[data-state='chosen'] .ui-card {
+  pointer-events: none;
+}
+
+.ui-offer[data-state='chosen'] .ui-card:not([data-chosen]) {
+  opacity: 0.45;
+  transform: none;
+}
+
+.ui-offer[data-state='chosen'] .ui-card[data-chosen] {
+  border-color: var(--or);
+  box-shadow: var(--ui-lift);
+  transform: none;
+}
+
+.ui-offer[data-state='chosen'] .ui-card[data-chosen] .ui-card__cta {
+  visibility: visible;
+}
+
+.ui-offers__remote {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ui-offers__chip {
+  padding: 6px 16px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: var(--ui-panel);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ui-offers__wait {
+  color: var(--ui-muted);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ui-team {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-team__member {
+  --who: var(--or);
+
+  display: grid;
+  flex: 1 1 180px;
+  gap: 4px;
+  max-width: 240px;
+  padding: 14px 18px 14px 16px;
+  border: 1px solid var(--ui-line);
+  border-left: 5px solid var(--who);
+  border-radius: var(--ui-radius);
+  background: var(--ui-panel);
+  box-shadow: var(--ui-lift);
+  text-align: left;
+}
+
+.ui-team__class {
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ui-team__state {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ui-team__member[data-downed='true'] {
+  border-left-color: var(--bad-vibe);
+}
+
+.ui-end__wait {
+  color: var(--ui-muted);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ui-notice__detail {
+  padding: 8px 18px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: var(--ui-panel);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 /* Beat and motion */
 
 .ui-title__logo {
@@ -1681,9 +2069,74 @@
   }
 }
 
+@media (max-width: 1100px) {
+  .ui-offers__panels[data-multi] {
+    grid-template-columns: minmax(0, 620px);
+  }
+}
+
 @media (max-width: 720px) {
   .ui {
     --ui-gap: 10px;
+  }
+
+  .ui-hud[data-team] {
+    grid-template:
+      'core threat' auto
+      'lineup lineup' auto
+      'aux aux' auto
+      'roster roster' auto
+      '. .' 1fr
+      'traps traps' auto
+      'team team' auto
+      / minmax(0, 1fr) auto;
+  }
+
+  .ui-hud[data-team] .ui-hud__roster {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: auto;
+  }
+
+  .ui-hud[data-team] .ui-hud__team {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ui-band {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: none;
+    padding: 10px 12px 12px 14px;
+  }
+
+  .ui-band__skills {
+    flex-direction: row;
+    gap: 14px;
+  }
+
+  .ui-band .ui-skill {
+    width: 58px;
+  }
+
+  .ui-band__class {
+    display: none;
+  }
+
+  .ui-offers__panels[data-multi] .ui-offer {
+    padding: 14px 12px 12px;
+    border-radius: 32px;
+  }
+
+  .ui-offers__panels[data-multi] .ui-cards,
+  .ui-offers__panels[data-multi] .ui-cards[data-count='4'] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .ui-team__member {
+    flex-basis: 140px;
+    max-width: none;
   }
 
   .ui-title__body {

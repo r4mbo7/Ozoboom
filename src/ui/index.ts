@@ -1,7 +1,6 @@
 import './ui.css';
 import type { InputDevice } from '../input/intents';
 import { setFraction, setOf } from '../sim/lineup';
-import type { UpgradeOffer } from '../sim/state';
 import { el } from './dom';
 import { createEnd } from './end';
 import { createHud } from './hud';
@@ -10,27 +9,41 @@ import { createNotice } from './notice';
 import { createSunFollower } from './sun';
 import { createTitle } from './title';
 import type { CreateUi, LobbyModel, Notice } from './types';
+import type { GameContent } from '../data/types';
+import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
 import { createUpgradeOverlay } from './upgrade';
 
-export type { LobbyModel, LobbySeat, LocalPlayer, Notice, Ui, UiCallbacks, UiFrame } from './types';
+export type {
+  EndSession,
+  LobbyModel,
+  LobbySeat,
+  LocalPlayer,
+  Notice,
+  Ui,
+  UiCallbacks,
+  UiFrame,
+} from './types';
 export { createFeedbackButton } from './feedback-button';
 export { createSoundToggle } from './toggle';
 export { selectTrap } from './navigation';
 
 type Screen = 'title' | 'lobby' | 'game' | 'end' | 'notice';
 
-const NOTICES: Readonly<Record<Notice, { title: string; text: string }>> = {
+const NOTICES: Readonly<Record<Notice, { title: string; text: string; glyph: string }>> = {
   desync: {
-    title: 'Les écrans ne sont plus d’accord',
-    text: 'La partie ne se déroule plus de la même façon chez tout le monde.',
+    title: 'Les deux versions de la partie ont divergé',
+    text: 'Le set s’arrête pour tout le monde plutôt que de continuer de travers. Le rapport est prêt pour « Ton avis ».',
+    glyph: TWO_VERSIONS,
   },
   hostLeft: {
-    title: 'L’hôte a quitté la partie',
+    title: 'L’hôte a quitté le set',
     text: 'Sans lui, le sound system s’éteint.',
+    glyph: DOOR,
   },
   connectionLost: {
     title: 'Connexion perdue',
     text: 'Le lien avec les autres joueurs est coupé.',
+    glyph: BROKEN_LINK,
   },
 };
 
@@ -56,7 +69,7 @@ export const createUi: CreateUi = (root, callbacks) => {
   let muted = false;
   let device: InputDevice = 'none';
   let acted = false;
-  let chosenOffer: UpgradeOffer | null = null;
+  let lastContent: GameContent | null = null;
   const menuInput = createMenuInput();
   let menuOpensAt = 0;
 
@@ -70,9 +83,9 @@ export const createUi: CreateUi = (root, callbacks) => {
   const feedback =
     callbacks.onFeedback === undefined
       ? undefined
-      : () => {
+      : (details?: string) => {
           menuInput.open();
-          callbacks.onFeedback?.();
+          callbacks.onFeedback?.(details);
         };
 
   const title = createTitle({
@@ -94,11 +107,8 @@ export const createUi: CreateUi = (root, callbacks) => {
     },
   });
   const hud = createHud();
-  const upgrade = createUpgradeOverlay((offer, upgradeId) => {
-    if (chosenOffer !== offer) {
-      chosenOffer = offer;
-      callbacks.onChooseUpgrade(offer.playerId, upgradeId);
-    }
+  const upgrade = createUpgradeOverlay((playerId, upgradeId) => {
+    callbacks.onChooseUpgrade(playerId, upgradeId);
   });
   const end = createEnd(() => {
     once(() => {
@@ -110,11 +120,15 @@ export const createUi: CreateUi = (root, callbacks) => {
       callbacks.onLeaveLobby();
     });
   });
-  const notice = createNotice('Interruption', () => {
-    once(() => {
-      callbacks.onLeaveNotice();
-    });
-  });
+  const notice = createNotice(
+    'Interruption',
+    () => {
+      once(() => {
+        callbacks.onLeaveNotice();
+      });
+    },
+    feedback,
+  );
   container.append(
     hud.element,
     upgrade.element,
@@ -132,7 +146,6 @@ export const createUi: CreateUi = (root, callbacks) => {
   function applyDevice(next: InputDevice): void {
     device = next;
     title.setDevice(next);
-    upgrade.setDevice(next);
     end.setDevice(next);
     lobby.setDevice(next);
     notice.setDevice(next);
@@ -150,7 +163,6 @@ export const createUi: CreateUi = (root, callbacks) => {
     hud.element.hidden = next !== 'game' && next !== 'notice';
     end.element.hidden = next !== 'end';
     upgrade.hide();
-    chosenOffer = null;
   }
 
   function updateLobby(model: LobbyModel): void {
@@ -180,7 +192,10 @@ export const createUi: CreateUi = (root, callbacks) => {
     updateLobby,
     showNotice(kind, details) {
       const content = NOTICES[kind];
-      notice.show('Partie interrompue', content.title, details === '' ? content.text : details);
+      notice.show('Partie interrompue', content.title, content.text, {
+        glyph: content.glyph,
+        detail: details,
+      });
       show('notice');
       menuOpensAt = performance.now() + MENU_GRACE_MS;
       menuInput.open();
@@ -190,14 +205,15 @@ export const createUi: CreateUi = (root, callbacks) => {
       sun.fix('nuit');
       show('game');
     },
-    showEnd(state) {
-      end.show(state);
+    showEnd(state, session) {
+      end.show(state, lastContent, session);
       sun.fix(state.status === 'won' ? 'jour' : 'nuit');
       show('end');
       menuOpensAt = performance.now() + MENU_GRACE_MS;
       menuInput.open();
     },
     update(state, frame, content) {
+      lastContent = content;
       const snapshot = frame.snapshot;
       if (snapshot.device !== device) {
         applyDevice(snapshot.device);
@@ -227,24 +243,7 @@ export const createUi: CreateUi = (root, callbacks) => {
 
       hud.update(state, frame, content);
       sun.follow(setFraction(setOf(content, state.setId), state));
-      const offer = state.status === 'choosingUpgrade' ? state.pendingUpgrades[0] : undefined;
-      if (offer === undefined) {
-        upgrade.hide();
-        chosenOffer = null;
-        return;
-      }
-      if (offer !== upgrade.offer) {
-        menuOpensAt = performance.now() + MENU_GRACE_MS;
-        menuInput.open();
-      }
-      upgrade.show(
-        offer,
-        state.players.find((player) => player.id === offer.playerId),
-        content,
-      );
-      if (offer !== chosenOffer && performance.now() >= menuOpensAt) {
-        upgrade.menu.handle(edges);
-      }
+      upgrade.update(state, frame, content, performance.now());
     },
     destroy() {
       container.remove();
