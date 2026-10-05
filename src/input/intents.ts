@@ -33,3 +33,11 @@ export interface InputSource {
   rumble(strength: number, durationMs: number): void;
   destroy(): void;
 }
+
+export type DeviceId = 'keyboardMouse' | `gamepad:${number}`;
+
+export interface InputHub {
+  poll(): ReadonlyMap<DeviceId, InputSnapshot>;
+  rumble(device: DeviceId, strength: number, durationMs: number): void;
+  destroy(): void;
+}

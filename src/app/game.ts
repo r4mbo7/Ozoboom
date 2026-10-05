@@ -30,6 +30,10 @@ const DEFAULT_BREAK_BARS = 4;
 // of jumping ahead, so a hitch never lands a burst of hits the player could not react to.
 const MAX_TICKS_PER_FRAME = 4;
 
+function noop(): void {
+  // Shared by the callbacks that the lobby and the title will use (#143, #144).
+}
+
 export async function startGame(root: HTMLElement, dev: DevOptions): Promise<void> {
   const { content } = dev;
   const set = content.sets.find((candidate) => candidate.id === SET_ID);
@@ -77,6 +81,17 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     },
     onToggleMute: setMuted,
     onFeedback: openForm,
+    onPlayTogether: noop,
+    onChooseClass: noop,
+    onJoinSeat: noop,
+    onLeaveSeat: noop,
+    onSeatClass: noop,
+    onSeatName: noop,
+    onCreateRoom: noop,
+    onJoinRoom: noop,
+    onLaunch: noop,
+    onLeaveLobby: noop,
+    onLeaveNotice: quit,
   });
   const soundToggle = createSoundToggle();
   soundToggle.set(!prefs.muted);
@@ -97,7 +112,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     { label: 'Ton avis', button: createFeedbackButton(), activate: openForm },
     { label: 'Quitter la partie', confirm: QUIT, activate: quit },
   ]);
-  ui.showTitle({ calmMode: prefs.calmMode, muted: prefs.muted, device: 'none' });
+  ui.showTitle({ calmMode: prefs.calmMode, muted: prefs.muted, device: 'none', classId: CLASS_ID });
   applySound();
 
   function applySound(): void {
@@ -179,6 +194,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       calmMode: prefs.calmMode,
       muted: prefs.muted,
       device: uiSnapshot?.device ?? 'none',
+      classId: CLASS_ID,
     });
   }
 
@@ -261,7 +277,11 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     renderer.render(session.frame, alpha);
     const rendered = performance.now();
     if (uiSnapshot !== null && feedback === null) {
-      ui.update(session.frame, uiSnapshot, content);
+      ui.update(
+        session.frame,
+        { snapshot: uiSnapshot, players: [{ playerId: 0, snapshot: uiSnapshot }] },
+        content,
+      );
     }
     session.endFrame();
     if (probe !== null) {
