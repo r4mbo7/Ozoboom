@@ -6,7 +6,7 @@ import type { WeaponModule } from './types';
 const PLANT_GAP = 40;
 
 export const totem: WeaponModule = {
-  fire({ state }, player, slot, { effect }) {
+  fire({ state }, player, slot, { effect }, { direction }) {
     if (effect.kind !== 'totem') {
       return;
     }
@@ -17,8 +17,8 @@ export const totem: WeaponModule = {
       player,
       slot.id,
       {
-        x: Math.min(Math.max(player.x + player.aim.x * reach, 0), width),
-        y: Math.min(Math.max(player.y + player.aim.y * reach, 0), height),
+        x: Math.min(Math.max(player.x + direction.x * reach, 0), width),
+        y: Math.min(Math.max(player.y + direction.y * reach, 0), height),
       },
       effect.radius,
       effect.durationBars * TICKS_PER_BAR,

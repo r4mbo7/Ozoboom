@@ -36,7 +36,7 @@ describe('seedRng', () => {
   it('rejects a seed that is not a 32-bit unsigned integer', () => {
     expect(() => seedRng(-1)).toThrow(RangeError);
     expect(() => seedRng(1.5)).toThrow(RangeError);
-    expect(() => seedRng(2 ** 32)).toThrow(RangeError);
+    expect(() => seedRng(0x1_0000_0000)).toThrow(RangeError);
     expect(() => seedRng(Number.NaN)).toThrow(RangeError);
   });
 });
@@ -52,7 +52,7 @@ describe('nextU32', () => {
     for (const word of [rng.a, rng.b, rng.c, rng.d]) {
       expect(Number.isInteger(word)).toBe(true);
       expect(word).toBeGreaterThanOrEqual(0);
-      expect(word).toBeLessThan(2 ** 32);
+      expect(word).toBeLessThan(0x1_0000_0000);
     }
   });
 });

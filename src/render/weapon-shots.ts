@@ -23,7 +23,12 @@ export function drawFiring(
   const { effect } = look.look;
   const peak = frame.calm ? 0.5 : 0.9;
   const player = byId(state.players, event.playerId);
-  const aim = player === undefined ? 0 : Math.atan2(player.aim.y, player.aim.x);
+  const aim =
+    event.dx !== undefined && event.dy !== undefined
+      ? Math.atan2(event.dy, event.dx)
+      : player === undefined
+        ? 0
+        : Math.atan2(player.aim.y, player.aim.x);
   const at = {
     now: state.tick,
     x: event.x,

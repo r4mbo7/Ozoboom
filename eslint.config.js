@@ -47,9 +47,20 @@ export default defineConfig(
         ...hostGlobals,
         { name: 'Date', message: simulationMessage },
       ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "BinaryExpression[operator='**'], AssignmentExpression[operator='**=']",
+          message:
+            'Le ** n’est pas reproductible d’un moteur à l’autre : multiplier (docs/architecture.md).',
+        },
+      ],
       'no-restricted-properties': [
         'error',
         { object: 'Math', property: 'random', message: simulationMessage },
+        ...['sin', 'cos', 'tan', 'atan', 'atan2', 'pow', 'exp', 'log', 'hypot', 'cbrt'].map(
+          (property) => ({ object: 'Math', property, message: simulationMessage }),
+        ),
       ],
       'no-restricted-imports': [
         'error',

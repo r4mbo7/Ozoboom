@@ -110,7 +110,7 @@ describe('circus weapons at level 1', () => {
       const dx = speaker.x - set.arena.width / 2;
       const dy = speaker.y - set.arena.height / 2;
 
-      expect(Math.hypot(dx, dy)).toBeGreaterThan(300);
+      expect(Math.sqrt(dx * dx + dy * dy)).toBeGreaterThan(300);
     },
   );
 });

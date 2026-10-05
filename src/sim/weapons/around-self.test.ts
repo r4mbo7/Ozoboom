@@ -79,18 +79,29 @@ describe('sweep', () => {
     expect(ahead.hp).toBe(992);
   });
 
-  it('spares an enemy behind the player', () => {
+  it('turns to the closest bad vibe, even behind the player', () => {
     const { simulation } = armed(SWEEP);
     const behind = stand(simulation, -60, 0);
 
     simulation.step([]);
 
-    expect(behind.hp).toBe(1000);
+    expect(behind.hp).toBe(992);
   });
 
-  it('spares an enemy beside the player, out of the sector', () => {
+  it('spares a bad vibe on the other side of the closest one', () => {
     const { simulation } = armed(SWEEP);
-    const beside = stand(simulation, 0, 60);
+    const closest = stand(simulation, -50, 0);
+    const opposite = stand(simulation, 70, 0);
+
+    simulation.step([]);
+
+    expect([closest.hp, opposite.hp]).toEqual([992, 1000]);
+  });
+
+  it('spares an enemy beside the closest one, out of the sector', () => {
+    const { simulation } = armed(SWEEP);
+    stand(simulation, 60, 0);
+    const beside = stand(simulation, 0, 62);
 
     simulation.step([]);
 
@@ -99,6 +110,7 @@ describe('sweep', () => {
 
   it('hits an enemy near the edge of the sector and spares one just past it', () => {
     const { simulation } = armed(SWEEP);
+    stand(simulation, 50, 0);
     const inside = stand(simulation, 40, 66);
     const outside = stand(simulation, 30, 66);
 
@@ -108,12 +120,12 @@ describe('sweep', () => {
     expect(outside.hp).toBe(1000);
   });
 
-  it('follows the aim', () => {
+  it('aims at the closest bad vibe, not where the player aims', () => {
     const { simulation } = armed(SWEEP);
     const above = stand(simulation, 0, -60);
-    const right = stand(simulation, 60, 0);
+    const right = stand(simulation, 70, 0);
 
-    simulation.step([commandFor(0, { aim: { x: 0, y: -1 } })]);
+    simulation.step([commandFor(0, { aim: { x: 1, y: 0 } })]);
 
     expect([above.hp, right.hp]).toEqual([992, 1000]);
   });
@@ -144,7 +156,9 @@ describe('orbit', () => {
     simulation.step([]);
 
     const distances = bodies(simulation).map((body) =>
-      Math.hypot(body.x - player.x, body.y - player.y),
+      Math.sqrt(
+        (body.x - player.x) * (body.x - player.x) + (body.y - player.y) * (body.y - player.y),
+      ),
     );
     expect(distances).toHaveLength(2);
     for (const distance of distances) {
@@ -330,10 +344,10 @@ describe('a game with the three weapons', () => {
   }
 
   it('keeps the fingerprint at level 1', () => {
-    expect(play(1)).toBe('8810d9b6');
+    expect(play(1)).toBe('2d8f38bf');
   });
 
   it('keeps the fingerprint at the maximum level', () => {
-    expect(play(5)).toBe('96ff6422');
+    expect(play(5)).toBe('b2e67195');
   });
 });

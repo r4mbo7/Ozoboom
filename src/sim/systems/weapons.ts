@@ -1,5 +1,6 @@
 import type { WeaponEffect, WeaponRhythm } from '../../data/types';
 import { TICKS_PER_BAR } from '../../shared/tempo';
+import { normalize } from '../../shared/vec';
 import { compound } from '../effects';
 import type { EnemyState, PlayerState } from '../state';
 import { boomerang } from '../weapons/boomerang';
@@ -11,6 +12,7 @@ import { ribbon } from '../weapons/ribbon';
 import { spark } from '../weapons/spark';
 import { sweep } from '../weapons/sweep';
 import { totem } from '../weapons/totem';
+import { directionTo } from '../weapons/shoot';
 import { trail } from '../weapons/trail';
 import type { WeaponModule } from '../weapons/types';
 import type { StepContext } from './types';
@@ -54,9 +56,12 @@ export function weapons(ctx: StepContext): void {
       if (definition === undefined || !firesOnTick(definition.rhythm, state.tick)) {
         continue;
       }
+      const target = closestEnemy(ctx, player);
+      const aim = normalize(player.aim);
       const shot = {
         power: compound(definition.levelMul, slot.level - 1),
-        target: closestEnemy(ctx, player),
+        target,
+        direction: target === null ? aim : directionTo(player, target, aim),
       };
       WEAPONS[definition.effect.kind].fire(ctx, player, slot, definition, shot);
       state.events.push({
@@ -65,6 +70,8 @@ export function weapons(ctx: StepContext): void {
         weaponId: slot.id,
         x: player.x,
         y: player.y,
+        dx: shot.direction.x,
+        dy: shot.direction.y,
       });
     }
   }
@@ -79,7 +86,9 @@ function closestEnemy(
     return null;
   }
   enemyGrid.rebuild(state.enemies);
-  const farthest = Math.hypot(set.arena.width, set.arena.height);
+  const farthest = Math.sqrt(
+    set.arena.width * set.arena.width + set.arena.height * set.arena.height,
+  );
   for (let reach = INITIAL_REACH; ; reach *= 2) {
     const found = enemyGrid.query(player.x, player.y, reach);
     let closest: EnemyState | null = null;
@@ -89,13 +98,15 @@ function closestEnemy(
       if (enemy === undefined) {
         continue;
       }
-      const distance = Math.hypot(enemy.x - player.x, enemy.y - player.y);
-      if (distance < closestDistance) {
+      const dx = enemy.x - player.x;
+      const dy = enemy.y - player.y;
+      const distanceSquared = dx * dx + dy * dy;
+      if (distanceSquared < closestDistance) {
         closest = enemy;
-        closestDistance = distance;
+        closestDistance = distanceSquared;
       }
     }
-    if (closest !== null && closestDistance <= reach) {
+    if (closest !== null && closestDistance <= reach * reach) {
       return closest;
     }
     if (reach > farthest) {

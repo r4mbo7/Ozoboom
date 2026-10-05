@@ -3,17 +3,17 @@ import type { WeaponModule } from './types';
 
 const RIBBON_HALF_WIDTH = 14;
 
-// A wave from the player along their aim marks every bad vibe it crosses.
+// A wave from the player towards the closest bad vibe marks every bad vibe it crosses.
 export const ribbon: WeaponModule = {
-  fire({ state, set }, player, _slot, { effect }) {
+  fire({ state, set }, player, _slot, { effect }, { direction }) {
     if (effect.kind !== 'ribbon') {
       return;
     }
     const length =
       effect.dropCrossesArena === true && state.set.segment === 'drop'
-        ? Math.hypot(set.arena.width, set.arena.height)
+        ? Math.sqrt(set.arena.width * set.arena.width + set.arena.height * set.arena.height)
         : effect.length;
-    const { x: dirX, y: dirY } = player.aim;
+    const { x: dirX, y: dirY } = direction;
     for (const enemy of state.enemies) {
       if (enemy.hp <= 0) {
         continue;

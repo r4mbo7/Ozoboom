@@ -105,6 +105,29 @@ describe('bystanders', () => {
     });
   });
 
+  it('starts its help over when the contact breaks', () => {
+    const simulation = createSimulation(BYSTANDER_QUIET_OPTIONS);
+    const { state } = simulation;
+    const player = state.players[0];
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    const bystander = placeBystander(state, player.x, player.y, player.x, player.y);
+    const { y } = player;
+
+    stepAndRecord(simulation, FIXTURE_BYSTANDER.helpTicks - 1);
+    player.y = y + 300;
+    player.prevY = player.y;
+    simulation.step([]);
+    player.y = y;
+    player.prevY = y;
+    stepAndRecord(simulation, FIXTURE_BYSTANDER.helpTicks - 1);
+
+    expect(state.bystanders).toContain(bystander);
+    simulation.step([]);
+    expect(state.bystanders).toEqual([]);
+  });
+
   it('does not count a downed player as helping', () => {
     const simulation = createSimulation(BYSTANDER_QUIET_OPTIONS);
     const { state } = simulation;

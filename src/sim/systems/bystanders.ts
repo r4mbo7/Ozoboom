@@ -81,6 +81,8 @@ function updateBystanders(ctx: StepContext): void {
         help(state, bystander, definition.vibesReward);
         continue;
       }
+    } else {
+      bystander.helpTicks = 0;
     }
 
     bystander.ticksLeft -= 1;
