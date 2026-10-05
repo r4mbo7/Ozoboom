@@ -1,4 +1,4 @@
-import { type Browser, type Page, expect, test } from '@playwright/test';
+import { type Browser, type BrowserContext, type Page, expect, test } from '@playwright/test';
 import { collectConsoleErrors } from './game';
 
 // Two pages play one set through the local PeerJS broker (playwright.config.ts): no Internet.
@@ -11,8 +11,18 @@ const FAST = './?dev=fast';
 const SMALL_SCREEN = { width: 480, height: 320 };
 test.use({ viewport: SMALL_SCREEN });
 
+// A context made by hand outlives its test: left open, its game would keep running and starve
+// the tests that follow in the same worker.
+const opened: BrowserContext[] = [];
+
+test.afterEach(async () => {
+  await Promise.all(opened.splice(0).map((context) => context.close()));
+});
+
 async function newPage(browser: Browser): Promise<Page> {
-  return (await browser.newContext({ viewport: SMALL_SCREEN })).newPage();
+  const context = await browser.newContext({ viewport: SMALL_SCREEN });
+  opened.push(context);
+  return context.newPage();
 }
 
 function lobbyOf(page: Page) {
