@@ -27,7 +27,7 @@ src/
   audio/    Web Audio, calé sur le tempo
   ui/       écrans et HUD (DOM)
   feedback/ bouton « Ton avis » : formulaire, contexte joint, envoi vers GitHub (DOM)
-  net/      plus tard : transport, lobby, synchronisation
+  net/      transport (WebRTC via PeerJS), salon, lockstep : du TypeScript pur hors de peerjs.ts
   app/      assemblage : boucle, écrans, chargement
 ```
 
@@ -38,6 +38,7 @@ Règles de dépendance, vérifiées par ESLint (`eslint.config.js`) :
 - `sim` ne dépend que de `shared` et `data`. Interdits dans `sim`, `data` et `shared` : les globales du navigateur, `Math.random`, `Date`, `pixi.js` et tout import des couches au-dessus.
 - `render`, `input`, `audio`, `ui` dépendent de `sim` en lecture et de `shared`.
 - `ui` et `feedback` ne dépendent ni de `render`, ni d'`audio`, ni de `net`, ni d'`app`. `feedback` réutilise les briques de `ui`.
+- `net` ne dépend que de `sim` (types, `hashState`) et de `shared` ; `peerjs` ne s'importe que dans `src/net/peerjs.ts`.
 - `app` assemble tout.
 
 ## Contrats partagés
@@ -53,9 +54,11 @@ Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick
 | `src/sim/lineup.ts`     | le line-up du set et l'heure : `lineupSlots`, `lineupCursor`, `ticksToDrop`, `setFraction` (position dans le set, dans [0, 1], jamais en arrière, 1 une fois gagné) |
 | `src/shared/palette.ts` | la palette du Cycle du soleil : `paletteAt(fraction)` (jetons en `#rrggbb`) et `lightAt(fraction)` (`additive`, `haloAlpha`)                                        |
 | `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`                                |
-| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource`                                                                                                      |
-| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme                                                                                    |
+| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource` (vue fusionnée), `DeviceId` et `InputHub` (un instantané par périphérique, pour la coop locale)      |
+| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme et le cadrage (`CameraFocus` : suivre un joueur, ou cadrer tout le monde)          |
 | `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setMood('set' \| 'menu')`                                                                                    |
+| `src/ui/types.ts`       | `Ui` et `UiCallbacks` : écrans (titre, salon, jeu, fin, avis), `UiFrame` (les joueurs de cet écran et leurs instantanés), `LobbyModel` rendu par le salon           |
+| `src/net/types.ts`      | `Transport` (envoyer, diffuser, écouter), `NetMessage` (salon, lancement, commande, trame, empreinte, divergence), `CommandSource` consommée par la boucle          |
 
 Conventions de la simulation :
 
@@ -95,16 +98,20 @@ périphériques -> InputSnapshot -> PlayerCommand(tick)
 
 L'accumulateur plafonne le nombre de ticks par image pour ne pas s'enfoncer après une pause d'onglet. Les entrées sont lues une fois par image, avant ses pas ; l'audio reçoit l'état après chaque pas, le rendu et l'interface une fois par image avec les événements de tous les pas de l'image (`src/app/session.ts`), sans toucher à `state.events` de la sim. Quand la sim est en `choosingUpgrade`, elle n'avance plus : l'interface affiche le choix, l'action `chooseUpgrade` la relance.
 
-## Chemin vers la coop en ligne
+À plusieurs, la boucle garde sa forme : une `CommandSource` (`src/net/types.ts`) donne les commandes du tick, locales ou trame du lockstep ; quand elle n'a rien, le pas attend et le rendu fige l'interpolation. En coop locale, un `Controls` par joueur produit sa commande à partir de son périphérique (`InputHub`), et la caméra cadre tout le monde.
 
-Décidé le 2026-10-04 : le navigateur d'un joueur fait l'hôte et fait foi, les autres s'y connectent en pair à pair (WebRTC, canaux de données), avec un service de mise en relation minimal. Le jeu reste hébergé en statique. Deux variantes compatibles avec la sim :
+## Coop en ligne
 
-- **Hôte autoritaire** : les clients envoient leurs commandes, l'hôte simule et diffuse des instantanés ou des différences d'état. Robuste aux divergences, plus de bande passante.
-- **Lockstep** : tout le monde simule les mêmes commandes au même tick. Très peu de bande passante, exige un déterminisme parfait.
+ADR 0007 : le navigateur d'un joueur est l'hôte et fait foi, les invités s'y connectent en pair à pair (WebRTC, canaux de données fiables et ordonnés) par le courtier public PeerJS, et tout le monde simule les mêmes commandes au même tick, en lockstep séquencé par l'hôte.
 
-Le choix se fera par ADR quand on y arrive. Dans les deux cas la sim ne consomme que des commandes par tick : c'est la contrainte à respecter dès maintenant, et `PlayerCommand` est déjà la forme qui circulera sur le réseau.
+- Le code de salon est l'identifiant PeerJS de l'hôte ; le lien `…/#rejoindre=CODE` le porte dans le fragment.
+- À l'entrée, un invité envoie sa version (`__APP_VERSION__`), son nom et sa classe ; l'hôte refuse une version différente, un salon plein ou une partie commencée, et diffuse le salon à chaque changement.
+- Au lancement, l'hôte envoie la graine, le set et les joueurs ; chaque pair crée la même sim.
+- À chaque tick, l'hôte assemble la trame (sa commande et la dernière reçue de chaque invité, ou l'entrée précédente sans action), la simule et la diffuse. Un invité envoie sa commande à chaque tick et ne simule que les trames reçues, dans l'ordre, derrière un tampon de deux ticks. Une action n'est jamais perdue : deux commandes pour un même tick donnent la dernière entrée et toutes les actions.
+- À chaque mesure, un invité envoie `hashState` ; une différence avec l'hôte arrête la partie pour tous, avec un écran explicite et un rapport prêt pour « Ton avis ».
+- L'hôte qui part finit la partie des invités ; un invité qui part laisse son personnage immobile.
 
-Une coop locale (plusieurs manettes sur un écran) ne demande aucun réseau : les commandes de chaque manette entrent dans la même sim. C'est l'étape intermédiaire naturelle.
+La coop locale (plusieurs périphériques sur un écran) ne demande aucun réseau : les commandes de chaque périphérique entrent dans la même sim, par la même `CommandSource` locale.
 
 ## Chemin vers le classement public
 
@@ -118,7 +125,8 @@ Un site statique ne peut pas tenir un classement fiable : il faut un petit servi
 ## Tests
 
 - `sim`, `data`, `shared` : tests unitaires Vitest, rapides, sans navigateur. Structure Given / When / Then. C'est là que vit l'essentiel de la couverture.
-- Déterminisme : tests de rejeu qui fixent l'empreinte de l'état final pour une graine et une suite de commandes données. Toute dérive casse le test.
+- Déterminisme : tests de rejeu qui fixent l'empreinte de l'état final pour une graine et une suite de commandes données. Toute dérive casse le test. La même partie scriptée donne la même empreinte dans Chromium, Firefox et WebKit (`dev/replay.html`, Playwright) que dans Node.
+- Réseau : le lockstep se teste en Vitest sur un transport en mémoire ; deux pages Playwright jouent une partie `?dev=fast` par un courtier PeerJS local (`peer`) et finissent sur la même empreinte.
 - Contenu : un test valide `GameContent` (identifiants uniques, références résolues, valeurs positives).
 - Rendu et interface : tests de fumée dans un vrai navigateur (Playwright) dès qu'il y a un écran à tester.
 - Équilibrage : des simulations en masse sans écran, lancées en ligne de commande, sortent des courbes de survie par classe.
