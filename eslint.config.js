@@ -21,6 +21,15 @@ const peerjsOnly = [
 const forbiddenOutsideLayers = (layers) =>
   layers.flatMap((layer) => [`**/${layer}`, `**/${layer}/**`]);
 
+const layersAbove = {
+  group: [
+    'pixi.js',
+    'pixi.js/*',
+    ...forbiddenOutsideLayers(['render', 'input', 'audio', 'ui', 'feedback', 'net', 'app']),
+  ],
+  message: 'Les couches sim, data et shared ne dépendent pas des couches au-dessus (ADR 0003).',
+};
+
 export default defineConfig(
   globalIgnores([
     'dist',
@@ -151,6 +160,7 @@ export default defineConfig(
         {
           paths: peerjsOnly,
           patterns: [
+            layersAbove,
             {
               group: forbiddenOutsideLayers(['sim', 'data']),
               message: 'shared ne dépend de rien dans src/ (docs/architecture.md).',
@@ -168,6 +178,7 @@ export default defineConfig(
         {
           paths: peerjsOnly,
           patterns: [
+            layersAbove,
             {
               group: forbiddenOutsideLayers(['sim']),
               message: 'data ne dépend que de shared (docs/architecture.md).',
