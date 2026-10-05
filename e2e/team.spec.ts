@@ -51,6 +51,24 @@ test.describe('the HUD of a team', () => {
     expect(errors).toEqual([]);
   });
 
+  test('shows the weapons of each player in their band, and the full panel for a single one', async ({
+    page,
+  }) => {
+    await page.goto('/dev/ui.html?screen=team&locals=2');
+
+    const bands = page.locator('.ui-band:not(.ui-band--compact)');
+    await expect(bands.nth(0).getByRole('img', { name: 'Bâton de feu, niveau 3' })).toBeVisible();
+    await expect(bands.nth(0).getByRole('img', { name: 'Diabolo, niveau 1' })).toBeVisible();
+    await expect(
+      bands.nth(1).getByRole('img', { name: 'Éventails de feu, niveau 2' }),
+    ).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Agrès' })).toBeHidden();
+
+    await page.goto('/dev/ui.html?screen=team&locals=1');
+    await expect(page.getByRole('region', { name: 'Agrès' })).toBeVisible();
+    await expect(page.locator('.ui-band__weapon:visible')).toHaveCount(0);
+  });
+
   test('shows four full bands when four players sit at the screen', async ({ page }) => {
     await page.goto('/dev/ui.html?screen=team&locals=4');
 

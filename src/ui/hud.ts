@@ -443,10 +443,10 @@ export function createHud(): Hud {
     locals.forEach((player, index) => {
       const definition = content.classes.find((entry) => entry.id === player.classId) ?? null;
       const device = frame.players.find((entry) => entry.playerId === player.id)?.snapshot.device;
-      teamBands[index]?.update(player, definition, device ?? frame.snapshot.device);
+      teamBands[index]?.update(player, definition, device ?? frame.snapshot.device, content);
     });
     others.forEach((player, index) => {
-      rosterBands[index]?.update(player, null, frame.snapshot.device);
+      rosterBands[index]?.update(player, null, frame.snapshot.device, content);
     });
   }
 

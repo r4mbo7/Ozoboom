@@ -462,6 +462,10 @@ function teamPlayers(): PlayerState[] {
       level: 6,
       vibes: 22,
       vibesToNextLevel: 70,
+      weapons: [
+        { id: 'baton-de-feu', level: 3, phase: 0 },
+        { id: 'diabolo', level: 1, phase: 0 },
+      ],
     }),
     fixturePlayer({
       id: 1,
@@ -476,6 +480,7 @@ function teamPlayers(): PlayerState[] {
       vibesToNextLevel: 65,
       skillCooldown: 0,
       ultimateReady: true,
+      weapons: [{ id: 'eventails-de-feu', level: 2, phase: 0 }],
     }),
     fixturePlayer({
       id: 2,

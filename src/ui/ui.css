@@ -1748,6 +1748,36 @@
   opacity: 0.5;
 }
 
+.ui-band__gear {
+  display: flex;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.ui-hud:not([data-multi]) .ui-band__gear {
+  display: none;
+}
+
+.ui-band__weapon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--or) 55%, transparent);
+  border-radius: 999px;
+}
+
+.ui-band__weapon-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--or);
+}
+
+.ui-band__weapon-level {
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .ui-band__skills {
   display: flex;
   flex: none;

@@ -1,10 +1,10 @@
-import type { ClassDefinition, SkillDefinition } from '../data/types';
+import type { ClassDefinition, GameContent, SkillDefinition } from '../data/types';
 import type { InputDevice } from '../input/intents';
 import type { PlayerState } from '../sim/state';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
-import { skillCharge } from './hud-model';
-import { skillIcon } from './icons';
+import { gearSlots, skillCharge } from './hud-model';
+import { skillIcon, weaponIcon } from './icons';
 import { promptsFor } from './prompts';
 import { createWho, fillWho, whoColor } from './who';
 
@@ -32,7 +32,12 @@ export function createSkillView(kind: 'skill' | 'ultimate'): SkillView {
 
 export interface Band {
   readonly element: HTMLElement;
-  update(player: PlayerState, definition: ClassDefinition | null, device: InputDevice): void;
+  update(
+    player: PlayerState,
+    definition: ClassDefinition | null,
+    device: InputDevice,
+    content: GameContent,
+  ): void;
 }
 
 const CRITICAL_RATIO = 0.25;
@@ -83,8 +88,10 @@ export function createFullBand(): Band {
   const levelRow = el('div', 'ui-band__row ui-band__row--vibes');
   levelRow.append(levelLabel, vibes, levelValue);
 
+  const gear = el('div', 'ui-band__gear');
+  let gearKey = '';
   const main = el('div', 'ui-band__main');
-  main.append(head, hpRow, levelRow);
+  main.append(head, hpRow, levelRow, gear);
   const skill = createSkillView('skill');
   const ultimate = createSkillView('ultimate');
   const skills = el('div', 'ui-band__skills');
@@ -110,9 +117,30 @@ export function createFullBand(): Band {
 
   return {
     element,
-    update(player, definition, device) {
+    update(player, definition, device, content) {
       fillWho(who, player);
       setVar(element, '--who', whoColor(player.classId));
+      const held = gearSlots(player, content).filter((slot) => slot.weapon !== null);
+      const key = held.map((slot) => `${slot.weapon?.id ?? ''}:${String(slot.level)}`).join(',');
+      if (key !== gearKey) {
+        gearKey = key;
+        gear.replaceChildren(
+          ...held.flatMap((slot) => {
+            if (slot.weapon === null) {
+              return [];
+            }
+            const chip = el('span', 'ui-band__weapon');
+            chip.title = `${slot.weapon.name}, niveau ${String(slot.level)}`;
+            chip.setAttribute('role', 'img');
+            chip.setAttribute('aria-label', chip.title);
+            chip.append(
+              icon('ui-band__weapon-icon', weaponIcon(slot.weapon.effect)),
+              el('span', 'ui-band__weapon-level', String(slot.level)),
+            );
+            return [chip];
+          }),
+        );
+      }
       element.setAttribute('aria-label', `${who.textContent}, ${className.textContent}`);
       if (definition !== null && (definition !== builtFor || device !== builtDevice)) {
         build(definition, device);
