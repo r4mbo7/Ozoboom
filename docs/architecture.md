@@ -111,7 +111,7 @@ ADR 0007 : le navigateur d'un joueur est l'hôte et fait foi, les invités s'y c
 - Le code de salon est l'identifiant PeerJS de l'hôte ; le lien `…/#rejoindre=CODE` le porte dans le fragment.
 - À l'entrée, un invité envoie sa version (`__APP_VERSION__`), son nom et sa classe ; l'hôte refuse une version différente, un salon plein ou une partie commencée, et diffuse le salon à chaque changement.
 - Au lancement, l'hôte envoie la graine, le set et les joueurs ; chaque pair crée la même sim.
-- À chaque tick, l'hôte assemble la trame (sa commande et la dernière reçue de chaque invité, ou l'entrée précédente sans action), la simule et la diffuse. Un invité envoie sa commande à chaque tick et ne simule que les trames reçues, dans l'ordre, derrière un tampon de deux ticks. Une action n'est jamais perdue : deux commandes pour un même tick donnent la dernière entrée et toutes les actions.
+- À chaque tick, l'hôte assemble la trame (sa commande et la dernière reçue de chaque invité, ou l'entrée précédente sans action), la simule et la diffuse. Un invité envoie sa commande à chaque tick et ne simule que les trames reçues, dans l'ordre, derrière un tampon de deux ticks. Une action n'est jamais perdue : deux commandes pour un même tick donnent la dernière entrée et toutes les actions ; un invité qui accumule plus de 8192 trames (onglet figé, moins de cinq minutes) prévient l'hôte par `bye` et affiche « Connexion perdue » : ce n'est pas une divergence.
 - À chaque mesure, un invité envoie `hashState` ; une différence avec l'hôte arrête la partie pour tous, avec un écran explicite et un rapport prêt pour « Ton avis ».
 - L'hôte qui part finit la partie des invités ; un invité qui part laisse son personnage immobile.
 
