@@ -8,6 +8,7 @@ export const PALETTE_TOKENS = [
   'tank',
   'healer',
   'badVibe',
+  'badVibeRim',
   'texte',
 ] as const;
 
@@ -33,6 +34,7 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     tank: '#ff9a3d',
     healer: '#7cf2b0',
     badVibe: '#5a4c64',
+    badVibeRim: '#f2c4a0',
     texte: '#fbeee0',
   },
   nuit: {
@@ -45,6 +47,7 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     tank: '#ff9a3d',
     healer: '#7cf2b0',
     badVibe: '#4b4762',
+    badVibeRim: '#b8c4ee',
     texte: '#f6ecd2',
   },
   aube: {
@@ -57,6 +60,7 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     tank: '#973a0d',
     healer: '#126346',
     badVibe: '#6c6276',
+    badVibeRim: '#fff0e4',
     texte: '#2c1e18',
   },
   jour: {
@@ -69,6 +73,7 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     tank: '#a64713',
     healer: '#14724d',
     badVibe: '#66606e',
+    badVibeRim: '#fffaf0',
     texte: '#2b2010',
   },
 };

@@ -23,9 +23,10 @@ describe('palette', () => {
     const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 
     const declared = cssColorTokens(css);
-    const { badVibe, ...night } = paletteAt(0.4);
+    const { badVibe, badVibeRim, ...night } = paletteAt(0.4);
 
     expect(badVibe).toBe('#4b4762');
+    expect(badVibeRim).toBe('#b8c4ee');
     expect(
       Object.fromEntries(Object.keys(night).map((name) => [name, declared[name] ?? 'missing'])),
     ).toEqual(night);
