@@ -6,7 +6,7 @@ Jouer : [r4mbo7.github.io/Ozoboom](https://r4mbo7.github.io/Ozoboom/)
 
 ## État
 
-Au 2026-10-05 : la V0.1 se joue de bout en bout, seul, au clavier et à la souris ou à la manette : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
+Au 2026-10-05 : la V0.1 se joue de bout en bout, seul, au clavier et à la souris ou à la manette : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. À plusieurs sur un même écran (V0.2, en cours), « Jouer à plusieurs » ouvre un salon où le clavier et chaque manette prennent une place, avec leur nom et leur classe. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
 
 ![La partie de nuit : le noyau, les pièges et le HUD](docs/captures/moment-2-nuit.png)
 

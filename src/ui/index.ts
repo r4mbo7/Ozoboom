@@ -29,6 +29,7 @@ export type {
 export { createFeedbackButton } from './feedback-button';
 export { createSoundToggle } from './toggle';
 export { selectTrap } from './navigation';
+export { SEAT_IDS, defaultName } from './lobby-model';
 
 type Screen = 'title' | 'lobby' | 'game' | 'end' | 'notice';
 

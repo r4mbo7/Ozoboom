@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadPrefs, savePref } from './prefs';
 
-const DEFAULTS = { calmMode: true, muted: false };
+const DEFAULTS = { calmMode: true, muted: false, classId: 'mage' };
 
 function memoryStorage(): Storage {
   const items = new Map<string, string>();
@@ -39,8 +39,13 @@ describe('prefs', () => {
 
     savePref(() => storage, 'calmMode', false);
     savePref(() => storage, 'muted', true);
+    savePref(() => storage, 'classId', 'tank');
 
-    expect(loadPrefs(() => storage, DEFAULTS)).toEqual({ calmMode: false, muted: true });
+    expect(loadPrefs(() => storage, DEFAULTS)).toEqual({
+      calmMode: false,
+      muted: true,
+      classId: 'tank',
+    });
   });
 
   it('ignores a value it did not write', () => {

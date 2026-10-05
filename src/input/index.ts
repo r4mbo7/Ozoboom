@@ -35,3 +35,5 @@ export function createInputSource(target: HTMLElement): InputSource {
     },
   };
 }
+
+export { createInputHub } from './hub';
