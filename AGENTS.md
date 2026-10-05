@@ -22,6 +22,15 @@ Documentation, interface du jeu et textes en français. Code, identifiants, mess
 - Les contrats partagés (voir `docs/architecture.md`) sont communs à toutes les tâches en cours. Un changement y est additif, minimal, dans sa propre branche, et annoncé dans l'issue concernée avant de fusionner.
 - Ce qui dépasse l'issue devient une nouvelle issue, jamais un `TODO` ni du périmètre ajouté au diff.
 
+## Aller vite
+
+Une session d'agent dure 5 à 15 minutes. Le temps va au changement, pas aux preuves.
+
+- Lire le strict nécessaire : l'issue, les fichiers à changer, la section de document qu'elle cite.
+- Pendant le travail, ne lancer que les tests des fichiers touchés (`pnpm exec vitest run <fichiers>`, une seule spec Playwright si le parcours change). La suite complète ne tourne qu'une fois, à la fusion.
+- Une preuve au plus : une capture si le changement se voit, un rendu si il s'entend. Pas de matrice d'écrans, de moments ou de tailles.
+- Une issue décrit un changement qui tient dans une session. Plus grosse, on la coupe.
+
 ## Écrire des documents
 
 Court. Un agent doit pouvoir charger un document entier et garder de la place pour travailler. Quand un document grossit, on coupe, on ne crée pas un second fichier pour garder la prose.
