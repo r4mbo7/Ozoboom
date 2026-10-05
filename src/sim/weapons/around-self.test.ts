@@ -4,7 +4,7 @@ import { TICKS_PER_BAR } from '../../shared/tempo';
 import { commandFor, FIXTURE_CONTENT, FIXTURE_OPTIONS } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import { hashState } from '../replay';
-import type { EnemyState, ProjectileState } from '../state';
+import type { EnemyState, ProjectileState, SimEvent } from '../state';
 import { spawnEnemy } from '../systems/spawning';
 
 const HALF_BAR = TICKS_PER_BAR / 2;
@@ -220,6 +220,40 @@ describe('orbit', () => {
         expect(Math.floor(tick / HALF_BAR)).not.toBe(Math.floor(previous / HALF_BAR));
       }
     }
+  });
+
+  it('announces each touch of a body with the weapon, the player and the bad vibe', () => {
+    const { simulation } = armed(ORBIT);
+    const enemy = stand(simulation, 70, 0);
+    const touches: SimEvent[] = [];
+
+    for (let i = 0; i < HALF_BAR; i++) {
+      simulation.step([]);
+      touches.push(...simulation.state.events.filter((event) => event.type === 'weaponHit'));
+    }
+
+    expect(touches.length).toBeGreaterThan(0);
+    expect(touches[0]).toEqual({
+      type: 'weaponHit',
+      playerId: 0,
+      weaponId: 'eventails',
+      id: enemy.id,
+      x: enemy.x,
+      y: enemy.y,
+    });
+  });
+
+  it('announces nothing while no body touches a bad vibe', () => {
+    const { simulation } = armed(ORBIT);
+    stand(simulation, 400, 0);
+    let touches = 0;
+
+    for (let i = 0; i < 2 * HALF_BAR; i++) {
+      simulation.step([]);
+      touches += simulation.state.events.filter((event) => event.type === 'weaponHit').length;
+    }
+
+    expect(touches).toBe(0);
   });
 
   it('deals its damage times the power', () => {

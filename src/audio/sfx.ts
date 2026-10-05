@@ -87,8 +87,14 @@ const WEAPON_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
     boomerang: 'weaponFrisbee',
     plate: 'weaponPlate',
     totem: 'weaponTotem',
-    orbit: 'weaponFans',
     ribbon: 'weaponRibbon',
+  }) as [string, SfxName][],
+);
+
+// A continuous weapon would sound every tick on `weaponFired`: it sounds when it touches a bad vibe.
+const WEAPON_HIT_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
+  Object.entries({
+    orbit: 'weaponFans',
   }) as [string, SfxName][],
 );
 
@@ -135,7 +141,7 @@ export const SFX_LIMITS: Readonly<Record<SfxName, SfxLimit>> = {
   weaponFrisbee: { perFrame: 1, concurrent: 2, seconds: 0.3 },
   weaponPlate: { perFrame: 1, concurrent: 2, seconds: 0.4 },
   weaponTotem: { perFrame: 1, concurrent: 1, seconds: 0.5 },
-  weaponFans: { perFrame: 1, concurrent: 1, seconds: 0.15 },
+  weaponFans: { perFrame: 1, concurrent: 1, seconds: BEAT_SECONDS / 2 },
   weaponRibbon: { perFrame: 1, concurrent: 2, seconds: 0.3 },
   weaponGained: { perFrame: 1, concurrent: 1, seconds: 0.5 },
   weaponEvolved: { perFrame: 1, concurrent: 1, seconds: 0.8 },
@@ -205,6 +211,10 @@ export function sfxOf(
       const kind = lookups.weaponKindOf?.(event.weaponId);
       return kind === undefined ? null : (WEAPON_SFX.get(kind) ?? null);
     }
+    case 'weaponHit': {
+      const kind = lookups.weaponKindOf?.(event.weaponId);
+      return kind === undefined ? null : (WEAPON_HIT_SFX.get(kind) ?? null);
+    }
     case 'enemyYawned':
       return 'enemyYawn';
     case 'enemyShot':
@@ -255,6 +265,7 @@ export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): S
 type Voice = (out: AudioNode, at: number, variant: number) => void;
 
 const DIED_DEGREES = [4, 3, 0, 5];
+const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
 
 const VOICES: Readonly<Record<SfxName, Voice>> = {
   playerFired: (out, at) => {
@@ -535,23 +546,22 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 350 },
     });
   },
-  weaponFans: (out, at) => {
+  weaponFans: (out, at, variant) => {
     playTone(out, at, {
-      wave: 'sawtooth',
-      hz: degreeToHz(0, 2),
-      gain: 0.09,
-      attack: 0.08,
-      hold: 0.1,
-      release: 0.12,
-      filter: { type: 'lowpass', hz: 420, q: 1 },
-      vibrato: { hz: 14, cents: 18, delay: 0 },
+      wave: 'triangle',
+      hz: degreeToHz(FANS_DEGREES[variant % FANS_DEGREES.length] ?? 0, 5),
+      gain: 0.1,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.11,
+      filter: { type: 'highpass', hz: 400 },
     });
     playNoise(out, at, {
-      gain: 0.07,
-      attack: 0.08,
-      hold: 0.1,
-      release: 0.12,
-      filter: { type: 'bandpass', hz: 500, q: 0.7 },
+      gain: 0.05,
+      attack: 0.004,
+      hold: 0.01,
+      release: 0.06,
+      filter: { type: 'bandpass', hz: 2600, q: 1.2 },
     });
   },
   weaponRibbon: (out, at) => {

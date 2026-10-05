@@ -59,6 +59,15 @@ const weaponFired = (weaponId: string): SimEvent => ({
   y: 0,
 });
 
+const weaponHit = (weaponId: string, id = 1): SimEvent => ({
+  type: 'weaponHit',
+  playerId: 0,
+  weaponId,
+  id,
+  x: 0,
+  y: 0,
+});
+
 const soundingEvents: readonly [SimEvent, SfxName][] = [
   [{ type: 'playerFired', playerId: 0, x: 0, y: 0, angle: 0 }, 'playerFired'],
   [{ type: 'enemyHit', id: 1, damage: 3, x: 0, y: 0 }, 'enemyHit'],
@@ -89,7 +98,7 @@ const soundingEvents: readonly [SimEvent, SfxName][] = [
   [weaponFired('frisbee'), 'weaponFrisbee'],
   [weaponFired('assiettes'), 'weaponPlate'],
   [weaponFired('totem'), 'weaponTotem'],
-  [weaponFired('eventails'), 'weaponFans'],
+  [weaponHit('eventails'), 'weaponFans'],
   [weaponFired('ruban'), 'weaponRibbon'],
   [{ type: 'weaponGained', playerId: 0, weaponId: 'ruban' }, 'weaponGained'],
   [{ type: 'weaponEvolved', playerId: 0, weaponId: 'ruban', resultId: 'x' }, 'weaponEvolved'],
@@ -142,6 +151,10 @@ describe('sfxOf', () => {
       { type: 'trapFired', id: 6, kind: 'brumisateur', x: 0, y: 0 },
       weaponFired('monocycle'),
       weaponFired('inconnu'),
+      weaponFired('eventails'),
+      weaponHit('monocycle'),
+      weaponHit('baton-de-feu'),
+      weaponHit('inconnu'),
       { type: 'enemyShot', id: 1, kind: 'filmeur', x: 0, y: 0 },
       { type: 'speakerPlugged', speakerId: 'sub' },
       { type: 'futureEvent' } as unknown as SimEvent,
@@ -262,7 +275,7 @@ const everyEvent: readonly SimEvent[] = [
   weaponFired('frisbee'),
   weaponFired('assiettes'),
   weaponFired('totem'),
-  weaponFired('eventails'),
+  weaponHit('eventails'),
   weaponFired('ruban'),
 ];
 
@@ -308,6 +321,64 @@ describe('createSfx under a crowd', () => {
     }
 
     expect(played).toBe(Math.min(limit.concurrent, limit.perFrame * 10));
+  });
+});
+
+describe('the fans', () => {
+  const TICK_SECONDS = 60 / 145 / 12;
+
+  it('stay silent on every tick of a game where they touch nothing', () => {
+    const { out, peaks } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups);
+
+    for (let tick = 0; tick < 600; tick += 1) {
+      sfx.beginFrame();
+      sfx.play([weaponFired('eventails')], 1 + tick * TICK_SECONDS, players);
+    }
+
+    expect(peaks).toEqual([]);
+  });
+
+  it('sound once for a touch, whatever the bad vibe', () => {
+    const { out, peaks } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups);
+
+    sfx.beginFrame();
+    sfx.play([weaponHit('eventails', 3)], 1, players);
+
+    expect(peaks.length).toBeGreaterThan(0);
+  });
+
+  it('sound once when 40 bad vibes are touched in the same tick', () => {
+    const one = recordingOutput();
+    createSfx(one.out, trapEffectOf, lookups).play([weaponHit('eventails')], 1, players);
+    const crowd = recordingOutput();
+    const sfx = createSfx(crowd.out, trapEffectOf, lookups);
+    const touches = Array.from({ length: 40 }, (_, id) => weaponHit('eventails', id));
+
+    sfx.beginFrame();
+    sfx.play(touches, 1, players);
+
+    expect(crowd.peaks.length).toBe(one.peaks.length);
+  });
+
+  it('keep a bounded rate over a second of touches on every tick', () => {
+    const { out, peaks } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups);
+    const one = recordingOutput();
+    createSfx(one.out, trapEffectOf, lookups).play([weaponHit('eventails')], 1, players);
+    const voices = one.peaks.length;
+    const ticks = Math.round(1 / TICK_SECONDS);
+
+    for (let tick = 0; tick < ticks; tick += 1) {
+      sfx.beginFrame();
+      sfx.play([weaponHit('eventails', tick)], 1 + tick * TICK_SECONDS, players);
+    }
+
+    const { seconds, concurrent } = SFX_LIMITS.weaponFans;
+    expect(peaks.length).toBeGreaterThan(voices);
+    expect(peaks.length).toBeLessThanOrEqual(Math.ceil(1 / seconds) * concurrent * voices);
+    expect(peaks.length / voices).toBeLessThanOrEqual(8);
   });
 });
 
