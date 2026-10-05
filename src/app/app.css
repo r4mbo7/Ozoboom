@@ -33,3 +33,16 @@ body {
   width: min(100%, 320px);
   margin-top: 12px;
 }
+
+.toast__line {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border: 1.5px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-panel);
+  box-shadow: var(--ui-lift);
+  font-size: 18px;
+}

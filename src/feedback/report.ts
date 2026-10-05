@@ -9,6 +9,16 @@ export interface FeedbackMeta {
   viewport: { width: number; height: number; pixelRatio: number };
   calmMode: boolean;
   averageFps: number | null;
+  online?: OnlineMeta;
+}
+
+export interface OnlineMeta {
+  role: 'host' | 'guest';
+  players: number;
+  // From RTCPeerConnection.getStats; null when the browser gave none.
+  roundTripMs: number | null;
+  // The tick at which the peers diverged, once they have.
+  desyncTick?: number;
 }
 
 const MAX_USER_AGENT = 250;
@@ -36,6 +46,15 @@ export function buildFeedbackReport(state: SimState | null, meta: FeedbackMeta):
   );
   if (meta.averageFps !== null) {
     lines.push(`fps: ${whole(meta.averageFps)}`);
+  }
+  if (meta.online !== undefined) {
+    const { role, players, roundTripMs, desyncTick } = meta.online;
+    lines.push(
+      `online: ${role}, ${String(players)} players, rtt ${roundTripMs === null ? 'unknown' : `${whole(roundTripMs)} ms`}`,
+    );
+    if (desyncTick !== undefined) {
+      lines.push(`desync: tick ${String(desyncTick)}, version ${meta.version}`);
+    }
   }
   return lines.join('\n');
 }

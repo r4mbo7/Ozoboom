@@ -1,5 +1,18 @@
-import { type Page, expect, test } from '@playwright/test';
+import { type Browser, type BrowserContext, type Page, expect, test } from '@playwright/test';
 import { collectConsoleErrors } from './game';
+
+// A context made by hand outlives its test: close it, with its PeerJS connection.
+const opened: BrowserContext[] = [];
+
+test.afterEach(async () => {
+  await Promise.all(opened.splice(0).map((context) => context.close()));
+});
+
+async function newPage(browser: Browser): Promise<Page> {
+  const context = await browser.newContext();
+  opened.push(context);
+  return context.newPage();
+}
 
 async function seatsOf(page: Page): Promise<string[]> {
   return page.locator('#seats li').allTextContents();
@@ -16,8 +29,8 @@ async function host(page: Page): Promise<string> {
 }
 
 test('two pages meet through the local broker and see two seats', async ({ browser }) => {
-  const hostPage = await (await browser.newContext()).newPage();
-  const guestPage = await (await browser.newContext()).newPage();
+  const hostPage = await newPage(browser);
+  const guestPage = await newPage(browser);
   const errors = [...collectConsoleErrors(hostPage), ...collectConsoleErrors(guestPage)];
 
   const code = await host(hostPage);
@@ -38,8 +51,8 @@ test('two pages meet through the local broker and see two seats', async ({ brows
 });
 
 test('a guest joins from the link fragment', async ({ browser }) => {
-  const hostPage = await (await browser.newContext()).newPage();
-  const guestPage = await (await browser.newContext()).newPage();
+  const hostPage = await newPage(browser);
+  const guestPage = await newPage(browser);
 
   const code = await host(hostPage);
   await guestPage.goto(`./dev/net.html#rejoindre=${code}`);
@@ -49,8 +62,8 @@ test('a guest joins from the link fragment', async ({ browser }) => {
 });
 
 test('a different version is refused with the reason and the host version', async ({ browser }) => {
-  const hostPage = await (await browser.newContext()).newPage();
-  const guestPage = await (await browser.newContext()).newPage();
+  const hostPage = await newPage(browser);
+  const guestPage = await newPage(browser);
 
   const code = await host(hostPage);
   await guestPage.goto(`./dev/net.html?version=autre#rejoindre=${code}`);

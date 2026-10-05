@@ -3,7 +3,7 @@ import type { FeedbackMeta } from './report';
 export const APP_VERSION: string = __APP_VERSION__;
 
 export function feedbackMeta(
-  game: Pick<FeedbackMeta, 'device' | 'calmMode' | 'averageFps'>,
+  game: Pick<FeedbackMeta, 'device' | 'calmMode' | 'averageFps' | 'online'>,
 ): FeedbackMeta {
   return {
     ...game,

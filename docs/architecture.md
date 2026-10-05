@@ -115,6 +115,7 @@ ADR 0007 : le navigateur d'un joueur est l'hôte et fait foi, les invités s'y c
 - À chaque tick, l'hôte assemble la trame (sa commande et la dernière reçue de chaque invité, ou l'entrée précédente sans action), la simule et la diffuse. Un invité envoie sa commande à chaque tick et ne simule que les trames reçues, dans l'ordre, derrière un tampon de deux ticks. Une action n'est jamais perdue : deux commandes pour un même tick donnent la dernière entrée et toutes les actions ; un invité qui accumule plus de 8192 trames (onglet figé, moins de cinq minutes) prévient l'hôte par `bye` et affiche « Connexion perdue » : ce n'est pas une divergence.
 - À chaque mesure, un invité envoie `hashState` ; une différence avec l'hôte arrête la partie pour tous, avec un écran explicite et un rapport prêt pour « Ton avis ».
 - L'hôte qui part finit la partie des invités ; un invité qui part laisse son personnage immobile.
+- Un invité qui n'entend plus l'hôte depuis 8 secondes ferme et affiche « Connexion perdue ». Un onglet caché ne reçoit plus d'images : la partie en ligne y avance par minuteur, sans rendu, au mieux (les navigateurs ralentissent les minuteurs en arrière-plan).
 
 La coop locale (plusieurs périphériques sur un écran) ne demande aucun réseau : les commandes de chaque périphérique entrent dans la même sim, par la même `CommandSource` locale.
 

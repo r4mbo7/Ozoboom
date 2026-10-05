@@ -7,7 +7,9 @@ export interface LoopOptions {
 }
 
 export interface LoopCallbacks {
-  step(): void;
+  // Returning false means the step has nothing to run yet (an online guest waiting for the host's
+  // frame): the loop stops stepping for this frame and holds the interpolation.
+  step(): false | undefined;
   render(alpha: number): void;
 }
 
@@ -15,6 +17,19 @@ export interface FixedStepLoop {
   start(): void;
   stop(): void;
   readonly running: boolean;
+}
+
+// The ticks a timer owes after `elapsedMs`, bounded like the loop: past the bound the time is
+// dropped, not owed.
+export function dueTicks(
+  elapsedMs: number,
+  tickMs: number,
+  maxTicks: number,
+): { ticks: number; spentMs: number } {
+  const owed = Math.floor(Math.max(0, elapsedMs) / tickMs);
+  return owed > maxTicks
+    ? { ticks: maxTicks, spentMs: elapsedMs }
+    : { ticks: owed, spentMs: owed * tickMs };
 }
 
 export function createFixedStepLoop(options: LoopOptions, callbacks: LoopCallbacks): FixedStepLoop {
@@ -75,19 +90,27 @@ export function createFixedStepLoop(options: LoopOptions, callbacks: LoopCallbac
     accumulatorMs += Math.max(0, timeMs - lastTimeMs);
     lastTimeMs = timeMs;
     let ticks = 0;
+    let waiting = false;
     while (accumulatorMs >= tickMs) {
       if (ticks === maxTicksPerFrame) {
         accumulatorMs = 0;
         break;
       }
-      accumulatorMs -= tickMs;
-      ticks += 1;
-      callbacks.step();
+      const stepped = callbacks.step();
       if (session !== frameSession) {
         return;
       }
+      if (stepped === false) {
+        // Keep one tick of credit: the step runs the frame the missing input arrives, and the
+        // time spent waiting is not owed.
+        accumulatorMs = tickMs;
+        waiting = true;
+        break;
+      }
+      accumulatorMs -= tickMs;
+      ticks += 1;
     }
-    callbacks.render(accumulatorMs / tickMs);
+    callbacks.render(waiting ? 1 : accumulatorMs / tickMs);
   }
 
   return {

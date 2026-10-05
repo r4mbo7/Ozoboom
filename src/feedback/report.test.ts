@@ -74,4 +74,28 @@ describe('buildFeedbackReport', () => {
 
     expect(state).toEqual(before);
   });
+
+  it('adds the role, the team, the round trip and, after a divergence, the tick', () => {
+    const state = fixtureForScreen('lost');
+
+    const report = buildFeedbackReport(state, {
+      ...meta,
+      online: { role: 'guest', players: 3, roundTripMs: 41.6, desyncTick: 4776 },
+    }).split('\n');
+
+    expect(report.slice(-3)).toEqual([
+      'fps: 59',
+      'online: guest, 3 players, rtt 42 ms',
+      `desync: tick 4776, version ${meta.version}`,
+    ]);
+  });
+
+  it('says so when the browser measured no round trip', () => {
+    const report = buildFeedbackReport(null, {
+      ...meta,
+      online: { role: 'host', players: 2, roundTripMs: null },
+    });
+
+    expect(report.split('\n').at(-1)).toBe('online: host, 2 players, rtt unknown');
+  });
 });

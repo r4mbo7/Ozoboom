@@ -1,5 +1,6 @@
 import type { GameContent } from '../data/types';
 import { layoutGround, shoreAt } from '../render/ground-layout';
+import { hashState } from '../sim/replay';
 import { spawnEnemy } from '../sim/systems/spawning';
 import type { SimState } from '../sim/state';
 
@@ -100,12 +101,27 @@ export interface FrameCost {
   ui: number;
 }
 
+// What `window.ozoboom.online` shows of an online game, read live.
+export interface OnlineProbe {
+  readonly role: 'host' | 'guest';
+  readonly pending: number;
+  readonly roundTripMs: number | null;
+  // How long the transport took to open, in milliseconds.
+  readonly connectMs: number | null;
+}
+
 export interface DevProbe {
   readonly cost: FrameCost;
+  // A game version the page pretends to have, set from `window.ozoboom.forceVersion`.
+  readonly forcedVersion: string | null;
   endFrame(time: number): void;
 }
 
-export function createDevProbe(state: () => SimState, seats: () => readonly unknown[]): DevProbe {
+export function createDevProbe(
+  state: () => SimState,
+  seats: () => readonly unknown[],
+  online: () => OnlineProbe | null = () => null,
+): DevProbe {
   const cost: FrameCost = { sim: 0, render: 0, ui: 0 };
   const total: FrameCost = { sim: 0, render: 0, ui: 0 };
   let frames = 0;
@@ -115,22 +131,31 @@ export function createDevProbe(state: () => SimState, seats: () => readonly unkn
     enemies: 0,
     perFrameMs: { sim: 0, render: 0, ui: 0 },
   };
-  Object.assign(window, {
-    ozoboom: {
-      get state() {
-        return state();
-      },
-      get report() {
-        return report;
-      },
-      get seats() {
-        return seats();
-      },
+  const exposed = {
+    forceVersion: null as string | null,
+    get state() {
+      return state();
     },
-  });
+    get report() {
+      return report;
+    },
+    get seats() {
+      return seats();
+    },
+    get hash() {
+      return hashState(state());
+    },
+    get online() {
+      return online();
+    },
+  };
+  Object.assign(window, { ozoboom: exposed });
 
   return {
     cost,
+    get forcedVersion() {
+      return exposed.forceVersion;
+    },
     endFrame(time) {
       total.sim += cost.sim;
       total.render += cost.render;
