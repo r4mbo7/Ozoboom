@@ -25,7 +25,7 @@ async function holdKeys(page: Page, held: Set<string>, wanted: ReadonlySet<strin
 test('plays a whole game with the keyboard only, from the title to a restart', async ({ page }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await expect(page.getByRole('button', { name: 'Jouer' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 
@@ -110,9 +110,21 @@ test('plays a whole game with the keyboard only, from the title to a restart', a
     }
   }
   await expect(end).toBeVisible();
-  // The scene or the player falls first depending on the seed: the end tells which one did.
-  const silent = await page.evaluate(() => (window.ozoboom?.state.core.hp ?? 0) <= 0);
-  await expect(end).toContainText(silent ? 'La musique s’arrête' : 'Plus personne debout');
+  // The seed and the timing decide the outcome: the sunrise comes if the scene holds, otherwise the
+  // scene or the player falls first. The end tells which one happened.
+  const result = await page.evaluate(() => ({
+    status: window.ozoboom?.state.status,
+    silent: (window.ozoboom?.state.core.hp ?? 0) <= 0,
+    classId: window.ozoboom?.state.players[0]?.classId,
+  }));
+  expect(result.classId).toBe('mage');
+  const title =
+    result.status === 'won'
+      ? 'Sunrise'
+      : result.silent
+        ? 'La musique s’arrête'
+        : 'Plus personne debout';
+  await expect(end).toContainText(title);
   await expect
     .poll(async () => {
       await page.keyboard.press('Enter');

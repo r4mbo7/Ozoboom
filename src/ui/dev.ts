@@ -8,7 +8,7 @@ import {
   openFeedback,
 } from '../feedback';
 import type { InputDevice, InputSnapshot, MenuIntents } from '../input/intents';
-import type { SimState } from '../sim/state';
+import type { PlayerId, SimState } from '../sim/state';
 import { TICK_MS } from '../shared/tempo';
 import {
   UI_FIXTURE_CONTENT,
@@ -18,6 +18,10 @@ import {
   idleSnapshot,
 } from './fixtures';
 import { createUi, prefersCalmMode } from './index';
+import { LOBBY_CLASSES, LOBBY_FIXTURES, ROOM_CODE, lobbyFixture } from './lobby-fixtures';
+import { SEAT_IDS, defaultName } from './lobby-model';
+import { createSunFollower } from './sun';
+import type { LobbyModel, LobbySeat, LocalPlayer, UiFrame } from './types';
 
 const found = document.querySelector<HTMLElement>('#app');
 if (found === null) {
@@ -52,73 +56,139 @@ const blockedTab: FeedbackTransport = {
 };
 const transport = params.get('transport') === 'blocked' ? blockedTab : githubFormLink();
 let feedback: FeedbackDialog | null = null;
+// The lobby the harness plays the app of: it keeps the model and answers every gesture.
+let lobby: LobbyModel | null = null;
+let driven: PlayerId = 0;
+const sky = params.get('sun') === 'jour' ? createSunFollower(root) : null;
 
-const ui = createUi(root, {
-  onStart() {
-    console.info('[ui] onStart');
-    open('game');
-  },
-  onRestart() {
-    console.info('[ui] onRestart');
-    open('title');
-  },
-  onChooseUpgrade(playerId, upgradeId) {
-    console.info('[ui] onChooseUpgrade', playerId, upgradeId);
-    const pendingUpgrades = state.pendingUpgrades.filter((offer) => offer.playerId !== playerId);
-    if (current === 'offers' && pendingUpgrades.length > 0) {
-      state = { ...state, pendingUpgrades };
-    } else {
+function origin(): string {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+function showLobby(model: LobbyModel): void {
+  const opening = lobby === null;
+  lobby = model;
+  if (opening) {
+    ui.showLobby(model);
+  } else {
+    ui.updateLobby(model);
+  }
+}
+
+function patchSeat(playerId: PlayerId, patch: Partial<LobbySeat>): void {
+  if (lobby !== null) {
+    showLobby({
+      ...lobby,
+      seats: lobby.seats.map((seat) => (seat.playerId === playerId ? { ...seat, ...patch } : seat)),
+    });
+  }
+}
+
+const ui = createUi(
+  root,
+  {
+    onStart() {
+      console.info('[ui] onStart');
       open('game');
-    }
+    },
+    onRestart() {
+      console.info('[ui] onRestart');
+      open('title');
+    },
+    onChooseUpgrade(playerId, upgradeId) {
+      console.info('[ui] onChooseUpgrade', playerId, upgradeId);
+      const pendingUpgrades = state.pendingUpgrades.filter((offer) => offer.playerId !== playerId);
+      if (current === 'offers' && pendingUpgrades.length > 0) {
+        state = { ...state, pendingUpgrades };
+      } else {
+        open('game');
+      }
+    },
+    onToggleCalmMode(enabled) {
+      console.info('[ui] onToggleCalmMode', enabled);
+      titleOptions.calmMode = enabled;
+    },
+    onToggleMute(muted) {
+      console.info('[ui] onToggleMute', muted);
+      titleOptions.muted = muted;
+    },
+    onFeedback(details) {
+      console.info('[ui] onFeedback', details ?? '');
+      openForm();
+    },
+    onPlayTogether: () => {
+      console.info('[ui] onPlayTogether');
+      showLobby(lobbyFixture('local-empty', origin()));
+    },
+    onChooseClass: (classId) => {
+      console.info('[ui] onChooseClass', classId);
+      titleOptions.classId = classId;
+    },
+    onJoinSeat: (deviceId) => {
+      console.info('[ui] onJoinSeat', deviceId);
+      const free = SEAT_IDS.find((id) => lobby?.seats.every((seat) => seat.playerId !== id));
+      if (lobby !== null && free !== undefined) {
+        const taken: LobbySeat = {
+          playerId: free,
+          name: defaultName(free),
+          classId: LOBBY_CLASSES[0]?.id ?? 'mage',
+          device: deviceId,
+          remote: false,
+          host: lobby.seats.length === 0,
+        };
+        showLobby({
+          ...lobby,
+          seats: [...lobby.seats, taken].sort((a, b) => a.playerId - b.playerId),
+          canLaunch: true,
+        });
+      }
+    },
+    onLeaveSeat: (playerId) => {
+      console.info('[ui] onLeaveSeat', playerId);
+      if (lobby !== null) {
+        const seats = lobby.seats
+          .filter((seat) => seat.playerId !== playerId)
+          .map((seat, index) => ({ ...seat, host: index === 0 }));
+        showLobby({ ...lobby, seats, canLaunch: seats.length > 0 });
+      }
+    },
+    onSeatClass: (playerId, classId) => {
+      console.info('[ui] onSeatClass', playerId, classId);
+      patchSeat(playerId, { classId });
+    },
+    onSeatName: (playerId, name) => {
+      console.info('[ui] onSeatName', playerId, name);
+      patchSeat(playerId, { name });
+    },
+    onGoOnline: () => {
+      console.info('[ui] onGoOnline');
+      showLobby(lobbyFixture('entry', origin()));
+    },
+    onCreateRoom: () => {
+      console.info('[ui] onCreateRoom');
+      showLobby(lobbyFixture('host', origin()));
+    },
+    onJoinRoom: (code) => {
+      console.info('[ui] onJoinRoom', code);
+      showLobby(
+        code === ROOM_CODE ? lobbyFixture('guest', origin()) : lobbyFixture('error-full', origin()),
+      );
+    },
+    onLaunch: () => {
+      console.info('[ui] onLaunch');
+      open('game');
+    },
+    onLeaveLobby() {
+      console.info('[ui] onLeaveLobby');
+      open('title');
+    },
+    onLeaveNotice() {
+      console.info('[ui] onLeaveNotice');
+      open('title');
+    },
   },
-  onToggleCalmMode(enabled) {
-    console.info('[ui] onToggleCalmMode', enabled);
-    titleOptions.calmMode = enabled;
-  },
-  onToggleMute(muted) {
-    console.info('[ui] onToggleMute', muted);
-    titleOptions.muted = muted;
-  },
-  onFeedback(details) {
-    console.info('[ui] onFeedback', details ?? '');
-    openForm();
-  },
-  onPlayTogether: () => {
-    console.info('[ui] onPlayTogether');
-  },
-  onChooseClass: (classId) => {
-    console.info('[ui] onChooseClass', classId);
-  },
-  onJoinSeat: (deviceId) => {
-    console.info('[ui] onJoinSeat', deviceId);
-  },
-  onLeaveSeat: (playerId) => {
-    console.info('[ui] onLeaveSeat', playerId);
-  },
-  onSeatClass: (playerId, classId) => {
-    console.info('[ui] onSeatClass', playerId, classId);
-  },
-  onSeatName: (playerId, name) => {
-    console.info('[ui] onSeatName', playerId, name);
-  },
-  onCreateRoom: () => {
-    console.info('[ui] onCreateRoom');
-  },
-  onJoinRoom: (code) => {
-    console.info('[ui] onJoinRoom', code);
-  },
-  onLaunch: () => {
-    console.info('[ui] onLaunch');
-  },
-  onLeaveLobby() {
-    console.info('[ui] onLeaveLobby');
-    open('title');
-  },
-  onLeaveNotice() {
-    console.info('[ui] onLeaveNotice');
-    open('title');
-  },
-});
+  LOBBY_CLASSES,
+);
 
 function openForm(): void {
   const report = buildFeedbackReport(
@@ -136,6 +206,7 @@ function openForm(): void {
 
 function open(screen: UiFixtureScreen): void {
   feedback?.close();
+  lobby = null;
   current = screen;
   state = fixtureForScreen(screen, params.has('late'));
   switch (screen) {
@@ -179,7 +250,7 @@ const SECOND_KEYS: Record<string, keyof MenuIntents> = {
 };
 
 window.addEventListener('keydown', (event) => {
-  if (event.target instanceof HTMLTextAreaElement) {
+  if (event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLInputElement) {
     return;
   }
   const menuKey = MENU_KEYS[event.code];
@@ -194,6 +265,12 @@ window.addEventListener('keydown', (event) => {
   } else if (/^Digit[1-5]$/.test(event.code)) {
     const selectTrap = Number(event.code.slice(-1)) - 1;
     pending = { ...pending, gameplay: { ...pending.gameplay, selectTrap } };
+  } else if (event.code === 'KeyJ') {
+    padPressed = true;
+  } else if (event.code === 'KeyP') {
+    const local = lobby?.seats.filter((seat) => !seat.remote) ?? [];
+    const next = local.find((seat) => seat.playerId > driven) ?? local[0];
+    driven = next?.playerId ?? 0;
   } else if (event.code === 'KeyG') {
     device = device === 'gamepad' ? 'keyboardMouse' : 'gamepad';
   } else if (event.code === 'F6') {
@@ -229,16 +306,42 @@ if (notice === 'desync' || notice === 'hostLeft' || notice === 'connectionLost')
   ui.update(state, { snapshot: pending, players: [] }, UI_FIXTURE_CONTENT);
   ui.showNotice(notice, params.get('details') ?? '');
 }
-if (params.has('lobby')) {
-  ui.showLobby({
-    mode: 'local',
-    role: 'host',
-    code: null,
-    link: null,
-    seats: [],
-    canLaunch: false,
-    error: null,
-  });
+const requestedLobby = params.get('lobby');
+if (requestedLobby !== null) {
+  const fixture = LOBBY_FIXTURES.find((name) => name === requestedLobby) ?? 'local-empty';
+  showLobby(lobbyFixture(fixture, origin()));
+}
+
+// One snapshot per seat played from this screen: the keyboard drives one of them, the rest are idle.
+function playersOf(snapshot: InputSnapshot): LocalPlayer[] {
+  const seats = lobby?.seats.filter((seat) => !seat.remote) ?? [];
+  if (seats.length === 0) {
+    return [{ playerId: 0, snapshot }];
+  }
+  return seats.map((seat) => ({
+    playerId: seat.playerId,
+    snapshot: seat.playerId === driven ? snapshot : idleSnapshot({ device: 'gamepad' }),
+  }));
+}
+
+// With `?devices`, the frame lists every device: the keyboard, a first pad, and a second one that
+// presses A when J is pressed.
+let padPressed = false;
+
+function devicesOf(snapshot: InputSnapshot): Pick<UiFrame, 'devices'> {
+  if (!params.has('devices')) {
+    return {};
+  }
+  const pad = idleSnapshot({ device: 'gamepad' });
+  const pressed = { ...pad, menu: { ...pad.menu, confirm: padPressed } };
+  padPressed = false;
+  return {
+    devices: [
+      { device: 'keyboardMouse', snapshot },
+      { device: 'gamepad:0', snapshot: pad },
+      { device: 'gamepad:1', snapshot: pressed },
+    ],
+  };
 }
 
 let ticks = 0;
@@ -261,16 +364,20 @@ window.setInterval(() => {
       ],
     };
   }
+  sky?.fix('jour');
   const snapshot: InputSnapshot = { ...pending, device };
   const second: InputSnapshot = { ...pendingSecond, device };
   pending = idleSnapshot({ device });
   pendingSecond = idleSnapshot({ device });
   if (feedback === null) {
-    const players = state.players.slice(0, localCount).map((player, index) => ({
-      playerId: player.id,
-      snapshot: index === 1 ? second : snapshot,
-    }));
-    ui.update(state, { snapshot, players }, UI_FIXTURE_CONTENT);
+    const players =
+      lobby === null
+        ? state.players.slice(0, localCount).map((player, index) => ({
+            playerId: player.id,
+            snapshot: index === 1 ? second : snapshot,
+          }))
+        : playersOf(snapshot);
+    ui.update(state, { snapshot, players, ...devicesOf(snapshot) }, UI_FIXTURE_CONTENT);
     state = { ...state, events: [] };
   } else {
     feedback.update(snapshot);

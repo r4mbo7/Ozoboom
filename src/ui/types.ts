@@ -10,6 +10,8 @@ export interface LocalPlayer {
 export interface UiFrame {
   snapshot: InputSnapshot;
   players: readonly LocalPlayer[];
+  // Every active device with its id: the lobby lets each one without a seat take one.
+  devices?: readonly { device: DeviceId; snapshot: InputSnapshot }[];
 }
 
 export interface LobbySeat {
@@ -50,6 +52,8 @@ export interface UiCallbacks {
   onLeaveSeat(playerId: PlayerId): void;
   onSeatClass(playerId: PlayerId, classId: string): void;
   onSeatName(playerId: PlayerId, name: string): void;
+  // Only shows « Jouer en ligne » in the local lobby when set.
+  onGoOnline?(): void;
   onCreateRoom(): void;
   onJoinRoom(code: string): void;
   onLaunch(): void;

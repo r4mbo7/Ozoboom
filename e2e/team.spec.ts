@@ -163,7 +163,9 @@ test.describe('the end of a team', () => {
     await page.goto('/dev/ui.html?screen=teamLost&role=guest');
 
     await expect(page.getByRole('button', { name: 'Rejouer' })).toBeHidden();
-    await expect(page.getByText('En attente de l’hôte')).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'Fin de partie' }).getByText('En attente de l’hôte'),
+    ).toBeVisible();
   });
 
   test('has no team list for a solo game', async ({ page }) => {

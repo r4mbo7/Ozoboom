@@ -42,7 +42,7 @@ async function startGame(page: Page, device: 'keyboard' | 'gamepad'): Promise<vo
     await tapButtonUntil(page, PAD.A, () => traps.isVisible());
   } else {
     await page.goto('./?dev=fast');
-    await page.getByRole('button', { name: 'Jouer' }).click();
+    await page.getByRole('button', { name: 'Jouer', exact: true }).click();
     await page.mouse.move(1, 1);
     await expect(traps).toBeVisible();
   }

@@ -1,12 +1,16 @@
 import type { InputDevice } from '../input/intents';
+import { type ClassInfo, createClassCards } from './class-picker';
 import { el, fillHint, keycap, setText } from './dom';
 import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
+import { stepClass } from './lobby-model';
 import { promptsFor } from './prompts';
 import { createSoundToggle, createToggle } from './toggle';
 
 export interface TitleActions {
   start(): void;
+  playTogether(): void;
+  chooseClass(classId: string): void;
   toggleCalmMode(): void;
   toggleMute(): void;
   feedback?(): void;
@@ -16,6 +20,7 @@ export interface TitleScreen {
   readonly element: HTMLElement;
   readonly menu: Menu;
   setOptions(calmMode: boolean, muted: boolean): void;
+  setClass(classId: string): void;
   setDevice(device: InputDevice): void;
 }
 
@@ -27,7 +32,7 @@ const MANDALA =
   }).join('') +
   '<circle r="96"/><circle r="60"/><circle r="30"/></svg>';
 
-export function createTitle(actions: TitleActions): TitleScreen {
+export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]): TitleScreen {
   const element = el('section', 'ui-screen ui-title');
   element.setAttribute('aria-label', 'Écran titre');
 
@@ -43,10 +48,16 @@ export function createTitle(actions: TitleActions): TitleScreen {
 
   const play = el('button', 'ui-button ui-button--primary', 'Jouer');
   play.type = 'button';
+  const together = el('button', 'ui-button', 'Jouer à plusieurs');
+  together.type = 'button';
+  let classId = classes[0]?.id ?? '';
+  const picker = createClassCards(classes, (next) => {
+    choose(next);
+  });
   const calm = createToggle('Mode calme', 'Sans strobos, secousses ni halos forts', 'Oui', 'Non');
   const sound = createSoundToggle();
 
-  const items = [play, calm.button, sound.button];
+  const items = [play, picker.element, together, calm.button, sound.button];
   if (actions.feedback !== undefined) {
     items.push(createFeedbackButton());
   }
@@ -68,18 +79,48 @@ export function createTitle(actions: TitleActions): TitleScreen {
   body.append(header, nav, controls, hint);
   element.append(body);
 
-  const menu = createMenu((index) => {
-    if (index === 0) {
-      actions.start();
-    } else if (index === 1) {
-      actions.toggleCalmMode();
-    } else if (index === 2) {
-      actions.toggleMute();
-    } else {
-      actions.feedback?.();
+  function choose(next: string): void {
+    if (next !== classId) {
+      classId = next;
+      picker.set(next);
+      actions.chooseClass(next);
     }
-  });
+  }
+
+  const activations = [
+    () => {
+      actions.start();
+    },
+    () => {
+      choose(stepClass(classes, classId, 1) ?? classId);
+    },
+    () => {
+      actions.playTogether();
+    },
+    () => {
+      actions.toggleCalmMode();
+    },
+    () => {
+      actions.toggleMute();
+    },
+    () => {
+      actions.feedback?.();
+    },
+  ];
+  const menu = createMenu(
+    (index) => {
+      activations[index]?.();
+    },
+    (index, side) => {
+      if (items[index] !== picker.element) {
+        return false;
+      }
+      choose(stepClass(classes, classId, side) ?? classId);
+      return true;
+    },
+  );
   menu.setItems(items);
+  picker.set(classId);
 
   let device: InputDevice | null = null;
 
@@ -89,6 +130,10 @@ export function createTitle(actions: TitleActions): TitleScreen {
     setOptions(calmMode, muted) {
       calm.set(calmMode);
       sound.set(!muted);
+    },
+    setClass(next) {
+      classId = next;
+      picker.set(next);
     },
     setDevice(next) {
       if (next === device) {
@@ -110,6 +155,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
         hint,
         [
           { keys: prompts.navigate, label: 'naviguer' },
+          { keys: prompts.navigateRow, label: 'classe' },
           { keys: [prompts.confirm], label: 'valider' },
         ],
         prompts.style,

@@ -27,7 +27,7 @@ function storedMute(page: Page): Promise<string | null> {
 test('cuts the sound from the pause and remembers it on the title', async ({ page }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   await press(page, 'Escape');
   const pause = page.getByRole('dialog', { name: 'Pause' });
@@ -57,7 +57,7 @@ test('cuts the sound from the pause and remembers it on the title', async ({ pag
   await page.reload();
 
   await expect(page.getByRole('switch', { name: /^Son/ })).toHaveAttribute('aria-checked', 'false');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   await press(page, 'Escape');
   await expect(pause.getByRole('switch', { name: /^Son/ })).toHaveAttribute(
@@ -83,7 +83,7 @@ test('quits the set from the pause after a confirmation, then plays a new one', 
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   const traps = page.getByRole('region', { name: 'Pièges' });
   await expect(traps).toBeVisible();
   await page.keyboard.press('KeyF');
@@ -127,7 +127,10 @@ test('quits the set from the pause after a confirmation, then plays a new one', 
   await expect(pause).toBeHidden();
   await expect(traps).toBeHidden();
   await expect(page.getByRole('region', { name: 'Fin de partie' })).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Jouer' })).toHaveAttribute('aria-current', 'true');
+  await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
   const quit = await game(page);
   expect(quit.seed).not.toBe(paused.seed);
   expect(quit.tick).toBe(0);

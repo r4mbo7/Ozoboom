@@ -16,8 +16,8 @@ test('loads the self-hosted fonts and never leaves the origin during a game', as
   });
 
   await page.goto('./');
-  await expect(page.getByRole('button', { name: 'Jouer' })).toBeVisible();
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.locator('canvas')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Pause' })).toBeVisible();

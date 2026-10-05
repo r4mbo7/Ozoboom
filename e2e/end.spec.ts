@@ -35,7 +35,7 @@ async function loseBy(page: Page, cause: 'silence' | 'downed'): Promise<void> {
 
 async function startGame(page: Page): Promise<void> {
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 }
 

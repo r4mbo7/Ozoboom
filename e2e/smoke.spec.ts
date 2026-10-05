@@ -16,7 +16,7 @@ test('plays ten seconds from the title without a console error', async ({ page }
   test.setTimeout(150_000);
   const errors = collectConsoleErrors(page);
   await page.goto('./');
-  await page.getByRole('button', { name: 'Jouer' }).click();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
 
   await expect(page.locator('canvas')).toBeVisible();
   for (const name of HUD_PANELS) {
@@ -43,7 +43,19 @@ test('toggles the calm mode and remembers it', async ({ page }) => {
   const calm = page.getByRole('switch', { name: /Mode calme/ });
   await expect(calm).toHaveAttribute('aria-checked', 'false');
 
-  await page.keyboard.press('ArrowDown');
+  for (let index = 0; index < 3; index++) {
+    await page.keyboard.press('ArrowDown');
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              resolve();
+            });
+          });
+        }),
+    );
+  }
   await page.keyboard.press('Enter');
 
   await expect(calm).toHaveAttribute('aria-checked', 'true');
