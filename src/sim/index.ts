@@ -16,6 +16,7 @@ import { playerAttack } from './systems/player-attack';
 import { playerMovement } from './systems/player-movement';
 import { progression } from './systems/progression';
 import { projectiles } from './systems/projectiles';
+import { revive } from './systems/revive';
 import { setProgress } from './systems/set-progress';
 import { skillEffects } from './systems/skill-effects';
 import { skills } from './systems/skills';
@@ -50,6 +51,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     setProgress,
     upgradeChoice,
     playerMovement,
+    revive,
     playerAttack,
     weapons,
     placedZones,

@@ -1,4 +1,4 @@
-import type { EnemyDefinition } from '../../data/types';
+import type { EnemyDefinition, SetDefinition } from '../../data/types';
 import { nextFloat } from '../../shared/prng';
 import { BARS_PER_PHRASE, TICKS_PER_BAR, isBarTick } from '../../shared/tempo';
 import { lookup } from '../content';
@@ -12,7 +12,7 @@ export function spawning({ state, content, set }: StepContext): void {
     if (event.type === 'segment' && event.segment === 'drop') {
       const tier = set.tiers[event.tier];
       if (tier !== undefined) {
-        spawnAtEdge(state, lookup(content.enemies, tier.bossId, 'enemy'), true);
+        spawnAtEdge(state, set, lookup(content.enemies, tier.bossId, 'enemy'), true);
       }
     }
   }
@@ -30,9 +30,9 @@ export function spawning({ state, content, set }: StepContext): void {
       continue;
     }
     const definition = lookup(content.enemies, rule.enemyId, 'enemy');
-    const count = Math.ceil(rule.count * volumeMul(state));
+    const count = Math.ceil(scaledCount(state, set, rule.count) * volumeMul(state));
     for (let i = 0; i < count; i++) {
-      spawnAtEdge(state, definition, false);
+      spawnAtEdge(state, set, definition, false);
     }
   }
 }
@@ -43,10 +43,11 @@ export function spawnEnemy(
   x: number,
   y: number,
   isBoss: boolean,
+  hpMul = 1,
 ): EnemyState {
   const phrase = state.set.phrase;
   const maxHp =
-    definition.maxHp * compound(definition.scalingPerPhrase.hp, phrase) * volumeMul(state);
+    definition.maxHp * compound(definition.scalingPerPhrase.hp, phrase) * volumeMul(state) * hpMul;
   const enemy: EnemyState = {
     id: state.nextEntityId,
     kind: definition.id,
@@ -72,9 +73,24 @@ export function spawnEnemy(
   return enemy;
 }
 
-function spawnAtEdge(state: SimState, definition: EnemyDefinition, isBoss: boolean): void {
+function spawnAtEdge(
+  state: SimState,
+  set: SetDefinition,
+  definition: EnemyDefinition,
+  isBoss: boolean,
+): void {
   const { x, y } = edgePosition(state.rng, state.arena, definition.radius);
-  spawnEnemy(state, definition, x, y, isBoss);
+  spawnEnemy(state, definition, x, y, isBoss, perPlayerMul(state, set.perPlayer?.enemyHpMul));
+}
+
+// 1 + mul per player beyond the first; 1 when the set does not scale.
+function perPlayerMul(state: SimState, mul: number | undefined): number {
+  return 1 + (mul ?? 0) * (state.players.length - 1);
+}
+
+function scaledCount(state: SimState, set: SetDefinition, count: number): number {
+  const scaled = Math.floor(count * perPlayerMul(state, set.perPlayer?.spawnMul) + 0.5);
+  return Math.max(count, scaled);
 }
 
 // A point on the edge of the arena, drawn uniformly along its perimeter, as bad vibes spawn.

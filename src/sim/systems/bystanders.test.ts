@@ -4,6 +4,8 @@ import { TICKS_PER_BAR } from '../../shared/tempo';
 import {
   BYSTANDER_CONTENT,
   BYSTANDER_OPTIONS,
+  BYSTANDER_QUIET_CONTENT,
+  FIXTURE_CARER,
   BYSTANDER_QUIET_OPTIONS,
   FIXTURE_BYSTANDER,
   FIXTURE_MIST,
@@ -286,5 +288,32 @@ describe('bystanders replay', () => {
     const state = runScript(SCRIPTED_OPTIONS, scriptedGame(600));
 
     expect(hashState(state)).toBe(REFERENCE_BYSTANDER_HASH);
+  });
+});
+
+describe('bystanders and reviveMul', () => {
+  it('is helped twice as fast by a class with a reviveMul of 2', () => {
+    const simulation = createSimulation({
+      ...BYSTANDER_QUIET_OPTIONS,
+      content: {
+        ...BYSTANDER_QUIET_CONTENT,
+        classes: BYSTANDER_QUIET_CONTENT.classes.map((definition) =>
+          definition.id === FIXTURE_CARER.id ? { ...definition, reviveMul: 2 } : definition,
+        ),
+      },
+      players: [{ id: 0, classId: 'carer' }],
+    });
+    const { state } = simulation;
+    const player = state.players[0];
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    const bystander = placeBystander(state, player.x, player.y, player.x, player.y);
+
+    stepAndRecord(simulation, FIXTURE_BYSTANDER.helpTicks / 2 - 1);
+    expect(state.bystanders).toContain(bystander);
+    simulation.step([]);
+
+    expect(state.bystanders).toEqual([]);
   });
 });

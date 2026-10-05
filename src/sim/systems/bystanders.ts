@@ -5,6 +5,7 @@ import { playerById } from '../damage';
 import { lookup, type ResolvedContent } from '../content';
 import { touches } from '../effects';
 import type { BystanderState, SimState } from '../state';
+import { reviveMulOf } from './revive';
 import { edgePosition } from './spawning';
 import type { StepContext } from './types';
 
@@ -75,8 +76,9 @@ function updateBystanders(ctx: StepContext): void {
       continue;
     }
 
-    if (isAided(ctx, bystander)) {
-      bystander.helpTicks += 1;
+    const aid = aidOf(ctx, bystander);
+    if (aid > 0) {
+      bystander.helpTicks += aid;
       if (bystander.helpTicks >= definition.helpTicks) {
         help(state, bystander, definition.vibesReward);
         continue;
@@ -119,19 +121,23 @@ function touchedByEnemy(state: SimState, bystander: BystanderState): boolean {
   return false;
 }
 
-// A standing, non-downed player, or a zone heal (a trap's mist, a plate, a healPulse cast this tick)
-// touching the bystander, counts as a contact.
-function isAided(ctx: StepContext, bystander: BystanderState): boolean {
+// Help ticks this tick brings, 0 without contact. A standing player counts the reviveMul of their
+// class; a zone heal (a trap's mist, a plate, a healPulse cast this tick) counts 1.
+function aidOf(ctx: StepContext, bystander: BystanderState): number {
   const { state, content } = ctx;
+  let aid = 0;
   for (const player of state.players) {
     if (!player.downed && touches(bystander, player, player.radius)) {
-      return true;
+      aid = Math.max(aid, reviveMulOf(content, player));
     }
+  }
+  if (aid > 0) {
+    return aid;
   }
   for (const trap of state.traps) {
     const definition = content.traps.get(trap.kind);
     if (definition?.effect.kind === 'mist' && touches(bystander, trap, definition.effect.radius)) {
-      return true;
+      return 1;
     }
   }
   for (const zone of state.placed ?? []) {
@@ -139,10 +145,10 @@ function isAided(ctx: StepContext, bystander: BystanderState): boolean {
       content.weapons.get(zone.weaponId)?.effect.kind === 'plate' &&
       touches(bystander, zone, zone.radius)
     ) {
-      return true;
+      return 1;
     }
   }
-  return healPulseTouches(state, content, bystander);
+  return healPulseTouches(state, content, bystander) ? 1 : 0;
 }
 
 function healPulseTouches(

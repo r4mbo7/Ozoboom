@@ -138,3 +138,58 @@ describe('pickups', () => {
     expect(simulation.state.pickups).toEqual([]);
   });
 });
+
+describe('pickups in a team', () => {
+  const TEAM: SimulationOptions = {
+    ...COMBAT_OPTIONS,
+    players: [
+      { id: 0, classId: 'raver' },
+      { id: 1, classId: 'raver' },
+      { id: 2, classId: 'raver' },
+    ],
+  };
+
+  function team(): { simulation: Simulation; players: PlayerState[] } {
+    const { simulation } = arena(TEAM);
+    const { players } = simulation.state;
+    for (const [index, player] of players.entries()) {
+      player.x = 400 + index * 400;
+      player.y = 400;
+      player.prevX = player.x;
+      player.prevY = player.y;
+    }
+    return { simulation, players };
+  }
+
+  it('give the same vibes to every standing player, not to one who is downed', () => {
+    const { simulation, players } = team();
+    const [collector, ally, downed] = players;
+    if (collector === undefined || ally === undefined || downed === undefined) {
+      throw new Error('expected three players');
+    }
+    downed.downed = true;
+    drop(simulation.state, 'vibes', collector.x + 50, collector.y);
+
+    stepAndRecord(simulation, 3);
+
+    expect(collector.vibes).toBe(3);
+    expect(ally.vibes).toBe(3);
+    expect(downed.vibes).toBe(0);
+  });
+
+  it('count the vibes collected once and leave the watts to the core alone', () => {
+    const { simulation, players } = team();
+    const [collector] = players;
+    if (collector === undefined) {
+      throw new Error('expected a player');
+    }
+    drop(simulation.state, 'vibes', collector.x + 50, collector.y);
+    drop(simulation.state, 'watts', collector.x, collector.y - 50);
+
+    stepAndRecord(simulation, 3);
+
+    expect(simulation.state.stats.vibesCollected).toBe(3);
+    expect(simulation.state.core.watts).toBe(50 + 3);
+    expect(players.map((player) => player.vibes)).toEqual([3, 3, 3]);
+  });
+});
