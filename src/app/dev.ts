@@ -2,19 +2,23 @@ import type { GameContent } from '../data/types';
 import { layoutGround, shoreAt } from '../render/ground-layout';
 import { hashState } from '../sim/replay';
 import { spawnEnemy } from '../sim/systems/spawning';
-import type { SimState } from '../sim/state';
+import type { PlayerSlot } from '../sim/initial-state';
+import type { PlayerId, SimState } from '../sim/state';
 
 // Development modes, only behind the `dev` URL parameter, never by default:
 // - `?dev=fast`: a short set (one phrase per tier, one-bar break, weaker bad vibes, sturdier
 //   scene) played four times faster, to reach the end of a game in an end-to-end test;
 // - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
-//   weapons and a plugged speaker, to measure a frame.
+//   weapons and a plugged speaker, to measure a frame. `&players=4` seats four players on one
+//   screen instead (one of each class, then the first again), three weapons each, camera on everyone.
 // Both expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
 export type DevMode = 'fast' | 'bench';
 
 export interface DevOptions {
   readonly mode: DevMode | null;
   readonly speed: number;
+  // Players of the bench, 1 unless `&players=` says up to 4.
+  readonly players: number;
   readonly content: GameContent;
 }
 
@@ -22,15 +26,33 @@ const FAST_SPEED = 4;
 const FAST_HP = { boss: 0.05, wave: 0.5, core: 4 };
 export const BENCH_ENEMIES = 300;
 
+const BENCH_PLAYER_IDS: readonly PlayerId[] = [0, 1, 2, 3];
+const MAX_BENCH_PLAYERS = BENCH_PLAYER_IDS.length;
+
 export function readDevOptions(search: string, content: GameContent): DevOptions {
-  const mode = new URLSearchParams(search).get('dev');
+  const params = new URLSearchParams(search);
+  const mode = params.get('dev');
   if (mode === 'fast') {
-    return { mode, speed: FAST_SPEED, content: fastContent(content) };
+    return { mode, speed: FAST_SPEED, players: 1, content: fastContent(content) };
   }
   if (mode === 'bench') {
-    return { mode, speed: 1, content };
+    const asked = Number(params.get('players') ?? 1);
+    const players = Number.isInteger(asked) ? Math.min(Math.max(asked, 1), MAX_BENCH_PLAYERS) : 1;
+    return { mode, speed: 1, players, content };
   }
-  return { mode: null, speed: 1, content };
+  return { mode: null, speed: 1, players: 1, content };
+}
+
+// One of each class in the order of the content, then the first again: four players on one screen.
+export function benchSlots(content: GameContent, players: number): PlayerSlot[] {
+  const classes = content.classes;
+  return BENCH_PLAYER_IDS.slice(0, players).map((id) => {
+    const definition = classes[id % classes.length];
+    if (definition === undefined) {
+      throw new Error('The bench needs at least one class');
+    }
+    return { id, classId: definition.id };
+  });
 }
 
 export function fastContent(content: GameContent): GameContent {
@@ -52,6 +74,7 @@ const BENCH_WEAPONS = ['baton-du-diable', 'monocycle', 'assiettes-chinoises'] as
 const BENCH_SPEAKER = 'foret';
 const SHORE_BAND = { from: 40, width: 360 } as const;
 const SHORE_MARGIN = 60;
+const PLAYER_GAP = 50;
 
 // The load of a crowded night: 300 bad vibes on the lake shore that neither die nor kill, the three
 // weapon slots full and one speaker plugged, so that every system and every layer draws.
@@ -82,9 +105,10 @@ export function benchScene(
     enemy.damage = 0;
   }
   state.core.hp = state.core.maxHp = Number.MAX_SAFE_INTEGER;
-  for (const player of state.players) {
+  for (const [index, player] of state.players.entries()) {
     player.x = player.prevX = shoreAt(layout, state.arena.height / 2) + SHORE_BAND.from + 40;
-    player.y = player.prevY = state.arena.height / 2;
+    player.y = player.prevY =
+      state.arena.height / 2 + (index - (state.players.length - 1) / 2) * PLAYER_GAP;
     player.weapons = BENCH_WEAPONS.map((id) => ({ id, level: 1, phase: 0 }));
   }
   const speaker = state.speakers?.find((candidate) => candidate.id === BENCH_SPEAKER);

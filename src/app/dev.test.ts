@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONTENT } from '../data/content';
 import { IDLE_INPUT } from '../sim/commands';
-import { BENCH_ENEMIES, benchScene } from './dev';
+import { BENCH_ENEMIES, benchScene, benchSlots, readDevOptions } from './dev';
 import { createSession } from './session';
 
 function benchSession() {
@@ -35,5 +35,30 @@ describe('benchScene', () => {
 
     expect(session.state.status).toBe('running');
     expect(session.state.enemies.length).toBeGreaterThanOrEqual(BENCH_ENEMIES);
+  });
+});
+
+describe('the bench at four players', () => {
+  it('reads the number of players from the URL, one by default and four at most', () => {
+    expect(readDevOptions('?dev=bench', CONTENT).players).toBe(1);
+    expect(readDevOptions('?dev=bench&players=4', CONTENT).players).toBe(4);
+    expect(readDevOptions('?dev=bench&players=9', CONTENT).players).toBe(4);
+    expect(readDevOptions('?dev=bench&players=x', CONTENT).players).toBe(1);
+    expect(readDevOptions('?dev=fast&players=4', CONTENT).players).toBe(1);
+  });
+
+  it('seats one of each class then the first again, three weapons each', () => {
+    const slots = benchSlots(CONTENT, 4);
+    const session = createSession({
+      seed: 7,
+      players: slots,
+      setId: 'soiree-v0',
+      content: CONTENT,
+    });
+    benchScene(session.state, CONTENT, 7, BENCH_ENEMIES);
+
+    expect(slots.map((slot) => slot.classId)).toEqual(['mage', 'tank', 'healer', 'mage']);
+    expect(session.state.players.map((player) => player.weapons?.length)).toEqual([3, 3, 3, 3]);
+    expect(new Set(session.state.players.map((player) => player.y)).size).toBe(4);
   });
 });

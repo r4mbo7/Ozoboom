@@ -6,22 +6,28 @@ Jouer : [r4mbo7.github.io/Ozoboom](https://r4mbo7.github.io/Ozoboom/)
 
 ## État
 
-Au 2026-10-05 : la V0.1 se joue de bout en bout, seul, au clavier et à la souris ou à la manette : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. À plusieurs sur un même écran (V0.2, en cours), « Jouer à plusieurs » ouvre un salon où le clavier et chaque manette prennent une place, avec leur nom et leur classe. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
+Au 2026-10-05 : la V0.2 est assemblée, il reste à la jouer à distance. Trois classes (la VJ, le roadie, le care), seul ou de 2 à 4 amis, sur un même écran ou en ligne : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
 
-![La partie de nuit : le noyau, les pièges et le HUD](docs/captures/moment-2-nuit.png)
+![Une partie à quatre, de nuit : la VJ, le roadie, le care et une seconde VJ](docs/captures/coop-quatre-joueurs-nuit.png)
 
 ![La partie à l'aube : la Batterie à plat au dernier drop](docs/captures/moment-3-aube.png)
 
-Les dix autres captures (crépuscule, sunrise, chaque écran, le banc à 300 masques) sont dans [docs/captures](docs/captures).
+### Jouer à plusieurs
 
-| Jalon      | Contenu                                                                                                                                                                                                                                    | État    |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| Fondations | Vision, direction artistique, game design, architecture, contrats, outillage, CI et déploiement                                                                                                                                            | fait    |
-| V0         | Prototype solo jouable : mage, vagues, deux pièges, clavier et manette, musique synthétisée, bouton « Ton avis » ([exigences](docs/brainstorms/2026-10-04-v0-requirements.md), [plan](docs/plans/v0.md))                                   | fait    |
-| V0.1       | Direction artistique « Cycle du soleil », bad vibes en masques, enceintes annexes et Volume, agrès de cirque, raretés, fusions, reliques ([exigences](docs/brainstorms/2026-10-04-v0.1-requirements.md), [plan](docs/plans/v0.1.md))       | fait    |
-| V0.2       | Trois classes, coop locale, coop en ligne par lien, pair à pair en lockstep ([exigences](docs/brainstorms/2026-10-05-v0.2-requirements.md), [plan](docs/plans/v0.2.md), [ADR 0007](docs/adr/0007-coop-en-ligne-lockstep-webrtc-peerjs.md)) | à venir |
-| V1         | Tous les pièges, équilibrage, tactile, mode radio, retours des joueurs ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))                                                                                                            | à venir |
-| V2         | Classement public : soirée du jour, scores vérifiés par rejeu                                                                                                                                                                              | à venir |
+- **Sur un écran** : « Jouer à plusieurs » ouvre le salon local. Le clavier et la souris prennent une place avec Entrée, chaque manette avec A ; chacun choisit son nom et sa classe, le premier joueur lance le set.
+- **En ligne** : dans le salon, « Jouer en ligne » puis « Créer un salon » donne un code de six caractères et un lien à copier. Les amis ouvrent le lien (ou tapent le code), donnent leur nom et leur classe, l'hôte lance le set. Pair à pair en WebRTC, sans compte ([ADR 0007](docs/adr/0007-coop-en-ligne-lockstep-webrtc-peerjs.md)) ; tout le monde doit avoir la même version du jeu.
+- Seul : « Jouer » reste un geste, la classe se choisit à côté.
+
+Les autres captures (crépuscule, sunrise, chaque écran, le banc à 300 masques, la partie à quatre) sont dans [docs/captures](docs/captures).
+
+| Jalon      | Contenu                                                                                                                                                                                                                                    | État                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| Fondations | Vision, direction artistique, game design, architecture, contrats, outillage, CI et déploiement                                                                                                                                            | fait                                        |
+| V0         | Prototype solo jouable : mage, vagues, deux pièges, clavier et manette, musique synthétisée, bouton « Ton avis » ([exigences](docs/brainstorms/2026-10-04-v0-requirements.md), [plan](docs/plans/v0.md))                                   | fait                                        |
+| V0.1       | Direction artistique « Cycle du soleil », bad vibes en masques, enceintes annexes et Volume, agrès de cirque, raretés, fusions, reliques ([exigences](docs/brainstorms/2026-10-04-v0.1-requirements.md), [plan](docs/plans/v0.1.md))       | fait                                        |
+| V0.2       | Trois classes, coop locale, coop en ligne par lien, pair à pair en lockstep ([exigences](docs/brainstorms/2026-10-05-v0.2-requirements.md), [plan](docs/plans/v0.2.md), [ADR 0007](docs/adr/0007-coop-en-ligne-lockstep-webrtc-peerjs.md)) | assemblée, vérifications à distance à faire |
+| V1         | Tous les pièges, équilibrage, tactile, mode radio, retours des joueurs ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))                                                                                                            | à venir                                     |
+| V2         | Classement public : soirée du jour, scores vérifiés par rejeu                                                                                                                                                                              | à venir                                     |
 
 ## Documentation
 
@@ -43,7 +49,7 @@ pnpm check     # types, lint, format, tests, build
 
 Node 24 et pnpm (version épinglée dans `package.json`). `pnpm exec playwright test` lance les tests navigateur (`pnpm exec playwright install chromium` la première fois).
 
-Pages de développement, une par couche : [rendu](https://r4mbo7.github.io/Ozoboom/dev/render.html), [entrées](https://r4mbo7.github.io/Ozoboom/dev/input.html), [audio](https://r4mbo7.github.io/Ozoboom/dev/audio.html), [interface](https://r4mbo7.github.io/Ozoboom/dev/ui.html) ; le jeu accepte aussi `?dev=fast` (set court et accéléré) et `?dev=bench` (300 masques sur la rive du lac, trois agrès et une enceinte branchée, coût par image dans la console et `window.ozoboom.report`).
+Pages de développement, une par couche : [rendu](https://r4mbo7.github.io/Ozoboom/dev/render.html), [entrées](https://r4mbo7.github.io/Ozoboom/dev/input.html), [audio](https://r4mbo7.github.io/Ozoboom/dev/audio.html), [interface](https://r4mbo7.github.io/Ozoboom/dev/ui.html) ; le jeu accepte aussi `?dev=fast` (set court et accéléré) et `?dev=bench` (300 masques sur la rive du lac, trois agrès et une enceinte branchée, coût par image dans la console et `window.ozoboom.report` ; `&players=4` pose quatre joueurs, un de chaque classe plus une VJ).
 
 ## Licence
 
