@@ -54,13 +54,13 @@ Des masques gris de mauvaises humeurs : les relous que l'on croise en festival. 
 
 La variété monte avec le set : chaque phrase amène une sorte nouvelle au moins, et un set plus long ajoute des paliers et des sortes. Les ennemis montent en puissance avec les joueurs : chaque phrase augmente leur vie, leur vitesse et leur nombre selon une courbe définie dans les données.
 
-**Le Festivalier en détresse** n'est pas une bad vibe. Il apparaît dans la foule à partir du palier 2 : un joueur qui reste une mesure à son contact, ou un soin de zone, l'aide, et toute l'équipe gagne des vibes. Si une bad vibe l'atteint avant, il s'en va et l'équipe en perd. Le care l'aide plus vite (V1).
+**Le Festivalier en détresse** n'est pas une bad vibe. Il apparaît dans la foule à partir du palier 2 : un joueur qui reste une mesure à son contact, ou un soin de zone, l'aide, et toute l'équipe gagne des vibes. Si une bad vibe l'atteint avant, il s'en va et l'équipe en perd. Le care l'aide plus vite.
 
 Les bad vibes visent le noyau. Elles se retournent contre un joueur seulement s'il entre dans leur rayon d'aggro, et le lâchent au-delà de deux rayons. Tirer de loin ne provoque pas de poursuite : attirer les ennemis est le rôle du tank. **Tranché le 2026-10-04.**
 
 ## Les classes
 
-Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fait une chose que les autres font mal. Habillage festival, proposé :
+Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fait une chose que les autres font mal. Habillage festival, **tranché le 2026-10-05** : la VJ, le roadie, le care.
 
 | Classe | Habillage          | Rôle                                   | Penche vers | Couleur      |
 | ------ | ------------------ | -------------------------------------- | ----------- | ------------ |
@@ -69,7 +69,7 @@ Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fai
 | Healer | le bénévole care   | soigne, répare la scène, ralentit      | piéger      | `uv-lime`    |
 
 - En solo chaque classe doit rester jouable, en coop elle brille. L'équilibrage se règle dans les données, jamais dans la logique.
-- Chaque classe a : une attaque de base, une compétence active, et un ultime déclenché sur le drop.
+- Chaque classe a : une attaque de base, une compétence active, et un ultime déclenché sur le drop. La VJ : nova et laser show. Le roadie : attaque courte qui repousse, charge qui attire les bad vibes traversées, flight case (barrière qui encaisse) en ultime. Le care : soin de zone qui répare la scène, rappel (relève et soigne tous les alliés) en ultime.
 - Les classes, ennemis, pièges et améliorations sont des données déclaratives (voir `architecture.md`), pour itérer vite.
 
 ## Les pièges
@@ -88,7 +88,7 @@ Nombre d'emplacements limité, un de plus par niveau de Volume. Un piège posé 
 
 ## Progression dans la partie
 
-- Expérience partagée entre les joueurs : tout le monde monte de niveau en même temps, chacun choisit son amélioration. Proposé, à valider en jouant.
+- Expérience partagée entre les joueurs : les vibes ramassées vont à toute l'équipe, tout le monde monte de niveau en même temps, chacun choisit son amélioration. **Tranché le 2026-10-05.**
 - Améliorations de quatre familles : classe (compétences), générique (vitesse, portée, vie), défense (pièges), relique (uniques, lâchées par les boss). Des synergies entre familles font les grosses parties.
 - Raretés : commun, rare, légendaire, la même amélioration avec de plus gros chiffres. Le Volume 2 ouvre les rares, le Volume 3 les légendaires.
 - Pas de méta-progression entre parties dans les premières versions. Un déblocage cosmétique est envisageable plus tard.
@@ -165,9 +165,10 @@ Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-0
 
 ## Coop
 
-- 2 à 4 joueurs. **Coop locale en V1** (plusieurs manettes sur un écran, décidé le 2026-10-04), puis **coop en ligne en V2**, par lien d'invitation, sans compte, pair à pair avec le navigateur d'un joueur qui fait l'hôte et fait foi (voir `architecture.md`).
-- Un allié à terre se relève par un coéquipier, plus vite par le healer. Tous à terre, la scène est seule : la partie finit vite.
-- Expérience et watts partagés. Le noyau est commun.
+- 2 à 4 joueurs. **Coop locale et coop en ligne en V0.2**, décidé le 2026-10-05 : en local, le clavier et la souris comptent pour un joueur et chaque manette pour un autre ; en ligne, un lien d'invitation, sans compte, pair à pair avec le navigateur d'un joueur qui fait l'hôte et fait foi (ADR 0007).
+- Un allié à terre se relève par un coéquipier qui reste une mesure à son contact, deux temps pour le care ; il revient avec la moitié de sa vie. Tous à terre, la scène est seule : la partie finit vite.
+- Vibes, watts et Volume sont d'équipe, le noyau est commun. La difficulté monte avec le nombre de joueurs (apparitions et vie des bad vibes, données du set).
+- Chaque joueur porte un nom libre, affiché au-dessus de lui et dans le HUD. En ligne, chacun suit son personnage à la caméra ; en local, la caméra cadre tout le monde.
 
 ## Classement public
 
@@ -187,4 +188,3 @@ Souhaité le 2026-10-04. Classe des parties, pas des joueurs.
 - Visée automatique ou manuelle par défaut au clavier ? Proposé : manuelle à la souris, assistée à la manette, automatique au tactile.
 - Un ou plusieurs noyaux par carte ? Proposé : un seul dans les premières versions.
 - Taille de la carte : écran fixe ou défilement ? Proposé : un peu plus grand que l'écran, caméra qui suit.
-- Expérience partagée ou individuelle en coop ? Proposé : partagée.
