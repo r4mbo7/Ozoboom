@@ -25,7 +25,7 @@ import {
   createUi,
   prefersCalmMode,
 } from '../ui';
-import { BENCH_ENEMIES, type DevOptions, benchScene, createDevProbe } from './dev';
+import { BENCH_ENEMIES, type DevOptions, benchScene, benchSlots, createDevProbe } from './dev';
 import { createFpsMeter } from './fps';
 import { createFixedStepLoop, dueTicks } from './loop';
 import { type Interruption, type OnlineMatch, createOnline } from './online';
@@ -290,6 +290,10 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
 
   // Alone, the one player reads the merged view: keyboard, mouse and gamepad as one.
   function soloMatch(): Match {
+    if (dev.mode === 'bench' && dev.players > 1) {
+      const slots = benchSlots(content, dev.players);
+      return newMatch(slots, new Map(slots.map((slot) => [slot.id, null])), TOGETHER_FOCUS);
+    }
     return newMatch([{ id: 0, classId: prefs.classId }], new Map([[0, null]]), SOLO_FOCUS);
   }
 
