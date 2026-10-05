@@ -26,6 +26,9 @@ export default defineConfig({
         launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
       },
     },
+    // The lockstep needs one fingerprint in every engine: only the determinism spec runs there.
+    { name: 'firefox', testMatch: 'determinism.spec.ts', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', testMatch: 'determinism.spec.ts', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
     command: `pnpm build && pnpm preview --port ${String(PORT)} --strictPort`,
