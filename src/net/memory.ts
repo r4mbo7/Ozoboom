@@ -1,3 +1,4 @@
+import { decodeMessage, encodeMessage } from './wire';
 import type { NetMessage, PeerId, Transport } from './types';
 
 export interface MemoryTransport extends Transport {
@@ -80,7 +81,11 @@ export function createMemoryTransports(count: number): MemoryTransport[] {
       ) {
         return;
       }
-      target.inbox.push({ kind: 'message', from: id, message: structuredClone(message) });
+      target.inbox.push({
+        kind: 'message',
+        from: id,
+        message: decodeMessage(encodeMessage(message)),
+      });
     };
 
     return {

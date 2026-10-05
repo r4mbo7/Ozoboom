@@ -1,5 +1,6 @@
 import type { DataConnection, Peer, PeerOptions } from 'peerjs';
 import { hostPeerId } from './code';
+import { decodeMessage, encodeMessage } from './wire';
 import type { NetMessage, PeerId, Transport } from './types';
 
 export type PeerTransportOptions = (
@@ -32,12 +33,6 @@ export function parsePeerServer(server: string | undefined): PeerOptions {
     // A local broker means no Internet is assumed: skip the public STUN servers.
     ...(local ? { config: { iceServers: [] } } : {}),
   };
-}
-
-function isNetMessage(data: unknown): data is NetMessage {
-  return (
-    typeof data === 'object' && data !== null && 'type' in data && typeof data.type === 'string'
-  );
 }
 
 function describeError(context: string, error: unknown): Error {
@@ -85,12 +80,15 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
   const attach = (connection: DataConnection): void => {
     const remote = connection.peer;
     connection.on('data', (data) => {
-      if (!isNetMessage(data)) {
-        fail(`malformed message from ${remote}`, new Error(JSON.stringify(data)));
+      let message: NetMessage;
+      try {
+        message = decodeMessage(data);
+      } catch (error) {
+        fail(`malformed message from ${remote}`, error);
         return;
       }
       for (const listener of [...messageListeners]) {
-        listener(remote, data);
+        listener(remote, message);
       }
     });
     connection.on('error', (error) => {
@@ -163,7 +161,7 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
       peer.on('open', () => {
         const connection = peer.connect(hostPeerId(options.code), {
           reliable: true,
-          serialization: 'json',
+          serialization: 'raw',
         });
         attach(connection);
         connection.on('open', () => {
@@ -187,7 +185,7 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
   ready = true;
 
   const push = (connection: DataConnection, message: NetMessage): void => {
-    Promise.resolve(connection.send(message)).catch((error: unknown) => {
+    Promise.resolve(connection.send(encodeMessage(message))).catch((error: unknown) => {
       fail(`sending ${message.type} to ${connection.peer}`, error);
     });
   };
