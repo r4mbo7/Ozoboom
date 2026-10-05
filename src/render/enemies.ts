@@ -7,7 +7,7 @@ import { Farewells, type FarewellHooks } from './enemy-deaths';
 import { Particles } from './effects';
 import { picker } from './faces';
 import { type Frame, createFrame } from './frame';
-import { lerp } from './motion';
+import { blinkLit, lerp } from './motion';
 import type { PixiPalette } from './palette';
 import { add, byId, hide, setTint } from './util';
 import { ViewPool } from './views';
@@ -22,6 +22,7 @@ const DOWN_GRAY = 0xd0d0d8;
 const DOWN_MIX = 0.55;
 const ZS = 3;
 const Z_LOOP_TICKS = TICKS_PER_BAR;
+const BLINK_MIX = { normal: 0.65, calm: 0.35 };
 const COLORS: readonly PaletteToken[] = ['mage', 'tank', 'healer', 'or', 'turquoise'];
 
 interface EnemyView {
@@ -30,6 +31,11 @@ interface EnemyView {
   heading: number;
   radius: number;
   boss: boolean;
+  blinkUntil: number;
+}
+
+export interface EnemiesFamily extends Family {
+  blink(id: number, untilTick: number): void;
 }
 
 function mixColor(from: number, to: number, amount: number): number {
@@ -44,7 +50,7 @@ const warnUnknown = (message: string): void => {
   }
 };
 
-export function createEnemies(ctx: RenderContext): Family {
+export function createEnemies(ctx: RenderContext): EnemiesFamily {
   const { textures, layers } = ctx;
   const { masks } = textures;
   const maskOf = picker(masks.masks, masks.neutral, warnUnknown);
@@ -61,8 +67,10 @@ export function createEnemies(ctx: RenderContext): Family {
       heading: Math.PI / 2,
       radius: 1,
       boss: false,
+      blinkUntil: Number.NEGATIVE_INFINITY,
     }),
     (view) => {
+      view.blinkUntil = Number.NEGATIVE_INFINITY;
       hide(view.sprite, ...(view.zs ?? []));
     },
   );
@@ -158,6 +166,12 @@ export function createEnemies(ctx: RenderContext): Family {
   };
 
   return {
+    blink(id: number, untilTick: number): void {
+      const view = views.peek(id);
+      if (view !== undefined) {
+        view.blinkUntil = Math.max(view.blinkUntil, untilTick);
+      }
+    },
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, calm } = frame;
       const downTint = mixColor(palette.badVibe, DOWN_GRAY, DOWN_MIX);
@@ -184,7 +198,13 @@ export function createEnemies(ctx: RenderContext): Family {
           : asleep
             ? mask.asleep
             : (mask.awake[index] ?? mask.asleep);
-        setTint(sprite, down ? downTint : tintOf(palette, mask.face.tone));
+        const tint = down ? downTint : tintOf(palette, mask.face.tone);
+        setTint(
+          sprite,
+          blinkLit(frame.now, view.blinkUntil, calm)
+            ? mixColor(tint, palette.or, calm ? BLINK_MIX.calm : BLINK_MIX.normal)
+            : tint,
+        );
         sprite.visible = true;
         const x = lerp(enemy.prevX, enemy.x, alpha);
         const y = lerp(enemy.prevY, enemy.y, alpha);

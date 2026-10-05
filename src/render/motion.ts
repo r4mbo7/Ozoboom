@@ -1,4 +1,4 @@
-import { TICK_RATE_HZ, TICKS_PER_BAR } from '../shared/tempo';
+import { TICK_RATE_HZ, TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 
 export const BEAT_DECAY_TICKS = TICKS_PER_BAR / 2;
 export const MAX_FLASHES_PER_SECOND = 3;
@@ -26,4 +26,15 @@ export class FlashLimiter {
     this.lastStart = tick;
     return true;
   }
+}
+
+export const BLINK_TICKS = 2 * TICKS_PER_BEAT;
+
+// A taunted bad vibe is lit half of each beat: 2.4 flashes per second, under the budget of three.
+// The calm mode never blinks, it holds the highlight.
+export function blinkLit(now: number, untilTick: number, calm: boolean): boolean {
+  if (now >= untilTick) {
+    return false;
+  }
+  return calm || Math.floor(now / (TICKS_PER_BEAT / 2)) % 2 === 0;
 }

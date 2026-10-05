@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { TICK_RATE_HZ, TICKS_PER_BAR } from '../shared/tempo';
-import { FlashLimiter, MAX_FLASHES_PER_SECOND, beatEnvelope, lerp } from './motion';
+import {
+  BLINK_TICKS,
+  FlashLimiter,
+  MAX_FLASHES_PER_SECOND,
+  beatEnvelope,
+  blinkLit,
+  lerp,
+} from './motion';
 
 describe('lerp', () => {
   it('draws an entity between its previous and current positions', () => {
@@ -48,5 +55,25 @@ describe('FlashLimiter', () => {
       expect(inWindow.length).toBeLessThanOrEqual(MAX_FLASHES_PER_SECOND);
     }
     expect(starts.length).toBeGreaterThanOrEqual(MAX_FLASHES_PER_SECOND * 9);
+  });
+});
+
+describe('blinkLit', () => {
+  it('lights a taunted bad vibe by half beats, within the flash budget, until it ends', () => {
+    const lit = Array.from({ length: BLINK_TICKS }, (_, tick) =>
+      blinkLit(tick, BLINK_TICKS, false),
+    );
+
+    const rises = lit.filter((on, tick) => on && !lit[tick - 1]).length;
+    expect(lit.some(Boolean)).toBe(true);
+    expect(lit.some((on) => !on)).toBe(true);
+    expect((rises * TICK_RATE_HZ) / BLINK_TICKS).toBeLessThanOrEqual(MAX_FLASHES_PER_SECOND);
+    expect(blinkLit(BLINK_TICKS, BLINK_TICKS, false)).toBe(false);
+  });
+
+  it('holds the highlight steady in the calm mode', () => {
+    const lit = Array.from({ length: BLINK_TICKS }, (_, tick) => blinkLit(tick, BLINK_TICKS, true));
+
+    expect(lit.every(Boolean)).toBe(true);
   });
 });

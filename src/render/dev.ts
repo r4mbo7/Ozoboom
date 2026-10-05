@@ -1,6 +1,7 @@
 import { TICK_MS } from '../shared/tempo';
 import { applyModifiers } from '../sim/stats';
-import { FIXTURE_CONTENT, type FixtureEvent, createFixtureState } from './fixture';
+import { FIXTURE_CONTENT, createFixtureState } from './fixture';
+import type { FixtureEvent } from './fixture-classes';
 import { type SheetPose, killMasks, layMasks } from './fixture-sheet';
 import { advanceSpecials, createSpecialsState } from './fixture-specials';
 import { advanceFixture } from './fixture-step';
