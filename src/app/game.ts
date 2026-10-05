@@ -44,6 +44,7 @@ import { soundOf, type Screen } from './sound';
 import { createToast } from './toast';
 import { playerLabel } from '../ui/hud-model';
 
+const GESTURES = ['pointerdown', 'keydown'] as const;
 const SET_ID = 'soiree-v0';
 const DEFAULT_CLASS_ID = 'mage';
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
@@ -457,6 +458,9 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   // The pause is the team's: any device pauses, navigates and resumes, through the merged view.
   function beginFrame(): void {
     view = { devices: hub.poll(), merged: hub.merged() };
+    if (!gestured && padPressed()) {
+      openAudio();
+    }
     const { merged } = view;
     if (feedback !== null) {
       feedback.update(merged);
@@ -530,6 +534,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         break;
       }
     }
+  }
+
+  function padPressed(): boolean {
+    return Array.from(navigator.getGamepads()).some(
+      (pad) => pad?.buttons.some((button) => button.pressed) === true,
+    );
   }
 
   function playing(): boolean {
@@ -654,6 +664,21 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     }
     applySound();
   });
+  // Browsers keep the audio shut until a gesture: the first click, key or pad button opens it, and the
+  // title's ambience starts there instead of waiting for the set.
+  let gestured = false;
+  function openAudio(): void {
+    if (!gestured) {
+      gestured = true;
+      void audio.start();
+      for (const type of GESTURES) {
+        window.removeEventListener(type, openAudio, true);
+      }
+    }
+  }
+  for (const type of GESTURES) {
+    window.addEventListener(type, openAudio, true);
+  }
   loop.start();
 
   // A link to a room opens the lobby on the guest's side.
