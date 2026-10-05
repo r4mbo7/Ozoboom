@@ -7,9 +7,6 @@ import { BALANCE_SEEDS, balanceTable, playTeam, teamsOf, type TeamResult } from 
 const CLASS_IDS = CONTENT.classes.map((definition) => definition.id);
 const REFERENCE = 'mage';
 const SEEDS = BALANCE_SEEDS.slice(0, Number(env.BALANCE_SEED_COUNT ?? BALANCE_SEEDS.length));
-// Known gap: several care add their stage repairs, which the roles keep high (playability.test.ts),
-// so a team of care holds about one phrase more than the care alone.
-const TEAM_GAP: Readonly<Record<string, number>> = { healer: 1.2 };
 const gap = (a: number, b: number) => Math.round(Math.abs(a - b) * 10) / 10;
 
 // The whole matrix takes minutes: `pnpm balance` runs it and writes the table to balance.md,
@@ -37,9 +34,7 @@ describe.skipIf(env.BALANCE === undefined)('team balance on the real set', () =>
     (id) => {
       for (const size of [2, 3, 4]) {
         const team = Array.from({ length: size }, () => id);
-        expect(gap(phrasesOf(team), phrasesOf([id])), team.join(' + ')).toBeLessThanOrEqual(
-          TEAM_GAP[id] ?? 1,
-        );
+        expect(gap(phrasesOf(team), phrasesOf([id])), team.join(' + ')).toBeLessThanOrEqual(1);
       }
     },
   );

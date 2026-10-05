@@ -7,7 +7,10 @@ import type { PlayerState, SimState } from '../state';
 import { skillCooldownTicks, statValue } from '../stats';
 import type { StepContext } from './types';
 
-export function skills({ state, content, commands }: StepContext): void {
+export function skills({ state, content, set, commands }: StepContext): void {
+  if (state.events.some((event) => event.type === 'bar')) {
+    delete state.core.repairedThisBar;
+  }
   const dropStarted = state.events.some(
     (event) => event.type === 'segment' && event.segment === 'drop',
   );
@@ -24,12 +27,12 @@ export function skills({ state, content, commands }: StepContext): void {
 
     if (input.skill && player.skillCooldown === 0) {
       const power = statValue(player, 'skillPowerMul', 1);
-      cast(state, player, input, skill.effect, power, markedMul);
+      cast(state, player, input, skill.effect, power, markedMul, set.coreRepairPerBar);
       player.skillCooldown = skillCooldownTicks(player, skill);
       state.events.push({ type: 'skillUsed', playerId: player.id });
     }
     if (input.ultimate && player.ultimateReady) {
-      cast(state, player, input, ultimate.effect, 1, markedMul);
+      cast(state, player, input, ultimate.effect, 1, markedMul, set.coreRepairPerBar);
       player.ultimateReady = false;
       state.events.push({ type: 'ultimateUsed', playerId: player.id });
     }
@@ -43,6 +46,7 @@ function cast(
   effect: SkillEffect,
   power: number,
   markedMul: number,
+  repairCap: number | undefined,
 ): void {
   switch (effect.kind) {
     case 'nova':
@@ -100,9 +104,13 @@ function cast(
         }
       }
       const { core } = state;
-      const repaired = Math.min(core.maxHp - core.hp, effect.coreRepair * power);
+      const room = repairCap === undefined ? Infinity : repairCap - (core.repairedThisBar ?? 0);
+      const repaired = Math.min(core.maxHp - core.hp, effect.coreRepair * power, room);
       if (touches(core, player, effect.radius) && repaired > 0) {
         core.hp += repaired;
+        if (repairCap !== undefined) {
+          core.repairedThisBar = (core.repairedThisBar ?? 0) + repaired;
+        }
         state.events.push({ type: 'coreRepaired', amount: repaired });
       }
       return;
