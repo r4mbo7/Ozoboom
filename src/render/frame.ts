@@ -2,6 +2,7 @@ import { type Light, lightAt, paletteAt } from '../shared/palette';
 import type { SetDefinition } from '../data/types';
 import { setFraction } from '../sim/lineup';
 import type { SimState } from '../sim/state';
+import { type Camera, frameCamera } from './camera';
 import { type PixiPalette, createPixiPalette, writePixiPalette } from './palette';
 
 // Shared by every family for one image: the hour is computed once, here.
@@ -13,6 +14,7 @@ export interface Frame {
   calm: boolean;
   pulse: number;
   flashTick: number;
+  camera: Camera;
 }
 
 export function createFrame(): Frame {
@@ -24,6 +26,7 @@ export function createFrame(): Frame {
     calm: false,
     pulse: 0,
     flashTick: Number.NEGATIVE_INFINITY,
+    camera: frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, 0, 0),
   };
 }
 

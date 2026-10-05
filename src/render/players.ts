@@ -1,10 +1,11 @@
 import { Container } from 'pixi.js';
-import type { PlayerState, SimState } from '../sim/state';
+import type { PlayerState, SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { shadowAt } from './ground-sun';
 import { lerp } from './motion';
+import { PlayerTag, ReviveLog } from './player-tags';
 import { PLAYER_LOOKS, type PlayerLook, REFERENCE } from './textures-players';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
@@ -43,9 +44,13 @@ export function createPlayers(ctx: RenderContext): Family {
   const t = textures.players;
   const ground = layers.players.addChild(new Container());
   const bodies = layers.players.addChild(new Container());
+  const rings = layers.players.addChild(new Container());
+  const tags = layers.players.addChild(new Container());
+  const revives = new ReviveLog();
   const views = new ViewPool(
     () => ({
       halo: add(layers.glow, textures.halo),
+      tag: new PlayerTag(ctx, rings, tags),
       shadow: add(ground, t.looks.poi.shadow),
       outline: add(bodies, t.shoulders),
       objectOutline: add(bodies, t.looks.poi.object),
@@ -57,11 +62,29 @@ export function createPlayers(ctx: RenderContext): Family {
       contour: add(bodies, t.contour),
     }),
     (view) => {
-      hide(...Object.values(view));
+      view.tag.hide();
+      hide(
+        view.halo,
+        view.shadow,
+        view.outline,
+        view.objectOutline,
+        view.shoulders,
+        view.head,
+        view.object,
+        view.lying,
+        view.aim,
+        view.contour,
+      );
     },
   );
 
   return {
+    onEvent(event: SimEvent, state: SimState): void {
+      revives.onEvent(event, state.tick);
+    },
+    reset(): void {
+      revives.clear();
+    },
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, light, pulse, now } = frame;
       const sun = shadowAt(frame.fraction);
@@ -79,6 +102,7 @@ export function createPlayers(ctx: RenderContext): Family {
         const angle = Math.atan2(player.aim.y, player.aim.x);
         const {
           halo,
+          tag,
           shadow,
           outline,
           objectOutline,
@@ -91,13 +115,29 @@ export function createPlayers(ctx: RenderContext): Family {
         } = view;
 
         const dazzled = (player.dazzledTicks ?? 0) > 0;
-        halo.visible = !player.downed && !((player.suppressedTicks ?? 0) > 0);
+        const share = revives.share(player.id, player.downed, now);
+        halo.visible = share > 0 || (!player.downed && !((player.suppressedTicks ?? 0) > 0));
         setTint(halo, dazzled ? palette.texte : color);
         halo.position.set(x, y);
         halo.scale.set(
           ((player.radius * (dazzled ? 4.6 : 3.2)) / textures.halo.radius) * (1 + 0.1 * pulse),
         );
         halo.alpha = dazzled ? Math.min(1, light.haloAlpha * 1.6) : light.haloAlpha;
+        if (player.downed) {
+          halo.scale.set(((player.radius * 2.6) / textures.halo.radius) * (1 + 0.1 * pulse));
+          halo.alpha = light.haloAlpha * 0.8 * share;
+        }
+
+        tag.place(
+          player,
+          x,
+          y,
+          look.extent * scale * (player.downed ? 1.3 : 1),
+          color,
+          share,
+          revives.burst(player.id, now),
+          frame,
+        );
 
         const downed = player.downed;
         const reach = sun.length * (downed ? 1 : look.height * 3);

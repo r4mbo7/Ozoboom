@@ -17,6 +17,7 @@ import { type MaskSet, createMasks } from './textures-enemies';
 import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
 import { type PlayerTextures, playerShapes, playerTextures } from './textures-players';
 import { type ClassFxTextures, createClassFxTextures } from './textures-class';
+import { type NameTextures, createNameTextures } from './textures-names';
 import { createSpeakerShapes } from './textures-speakers';
 import { trap } from './textures-traps';
 import {
@@ -37,6 +38,8 @@ export interface Textures {
   readonly vibes: Shape;
   readonly watts: Shape;
   readonly players: PlayerTextures;
+  readonly names: NameTextures;
+  readonly arrow: Shape;
   readonly core: Shape;
   readonly coreRay: Shape;
   readonly beam: Shape;
@@ -203,6 +206,19 @@ export function createTextures(): Textures {
       ctx.lineWidth = 3;
       ctx.stroke();
     }),
+    names: createNameTextures(),
+    arrow: paint(48, 48, 14, (ctx) => {
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.fillStyle = WHITE;
+      polygon(ctx, [
+        [14, 0],
+        [-9, -12],
+        [-3, 0],
+        [-9, 12],
+      ]);
+      ctx.fill();
+    }),
     ...createSpeakerShapes(),
     masks: createMasks(),
     traps: {
@@ -232,5 +248,6 @@ export function destroyTextures(textures: Textures): void {
     shape.texture.destroy(true);
   }
   textures.masks.destroy();
+  textures.names.destroy();
   destroyWeaponTextures(textures.weapons);
 }

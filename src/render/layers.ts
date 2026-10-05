@@ -3,6 +3,7 @@ import type { Frame } from './frame';
 
 export interface Layers {
   readonly world: Container;
+  readonly screen: Container;
   readonly ground: Container;
   readonly speakers: Container;
   readonly glow: Container;
@@ -44,6 +45,7 @@ export function createLayers(stage: Container): Layers {
     weapons: layer(world),
     players: layer(world),
     bubbles: layer(world),
+    screen: layer(stage),
   };
 }
 

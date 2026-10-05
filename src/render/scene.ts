@@ -3,7 +3,15 @@ import type { SetDefinition, SpecialEffect } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import type { SimEvent, SimState, Vec2 } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
-import { type Camera, frameCamera, screenToWorld } from './camera';
+import {
+  type Bounds,
+  type Camera,
+  easeCamera,
+  frameBounds,
+  frameCamera,
+  isSettled,
+  screenToWorld,
+} from './camera';
 import { createBystanders } from './bystanders';
 import type { ClassSkillEffects, Family, RenderContent, RenderContext } from './context';
 import { createCore } from './core';
@@ -16,13 +24,14 @@ import { type Layers, applyLight, createLayers } from './layers';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { isPaletteToken } from './palette';
 import { createPickups } from './pickups';
+import { createMarkers } from './markers';
 import { createPlayers } from './players';
 import { createProjectiles } from './projectiles';
 import { createSpecials } from './specials';
 import { createSpeakers } from './speakers';
 import { createTextures, destroyTextures } from './textures';
 import { createTraps } from './traps';
-import type { RenderOptions, Renderer } from './types';
+import type { CameraFocus, RenderOptions, Renderer } from './types';
 import { byId, lookup } from './util';
 import { createWeapons } from './weapons';
 
@@ -30,6 +39,8 @@ export type { RenderContent } from './context';
 
 const CALM = { glowAlpha: 0.4, pulse: 0.3 };
 const SHAKE = { pixels: 7, ticks: TICKS_PER_BEAT / 2 };
+const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
+const SNAP_TICKS = 4 * TICKS_PER_BEAT;
 
 function classTokens(content: RenderContent): RenderContext['classTokens'] {
   return new Map(
@@ -60,6 +71,10 @@ export class Scene implements Renderer {
   private beatTick = Number.NEGATIVE_INFINITY;
   private shakeTick = Number.NEGATIVE_INFINITY;
   private readonly focus = { x: 0, y: 0 };
+  private readonly bounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  private focusKey = '';
+  private settling = false;
+  private cameraNow = Number.NaN;
 
   constructor(
     pixi: PixiRenderer,
@@ -116,6 +131,7 @@ export class Scene implements Renderer {
       createProjectiles(ctx),
       createWeapons(ctx),
       createPlayers(ctx),
+      createMarkers(ctx),
       createEffects(ctx, (id) => traps.reachOf(id)),
       createClassEffects(ctx, (id, untilTick) => {
         enemies.blink(id, untilTick);
@@ -128,6 +144,7 @@ export class Scene implements Renderer {
       this.lastState = state;
       this.lastTick = -1;
       this.beatTick = this.shakeTick = this.frame.flashTick = Number.NEGATIVE_INFINITY;
+      this.cameraNow = Number.NaN;
       for (const family of this.families) {
         family.reset?.();
       }
@@ -147,18 +164,8 @@ export class Scene implements Renderer {
     }
     frame.pulse = beatEnvelope(frame.now - this.beatTick) * (frame.calm ? CALM.pulse : 1);
 
-    const focusPlayer = byId(state.players, 0);
-    const { focus } = this;
-    focus.x =
-      focusPlayer === undefined ? state.core.x : lerp(focusPlayer.prevX, focusPlayer.x, alpha);
-    focus.y =
-      focusPlayer === undefined ? state.core.y : lerp(focusPlayer.prevY, focusPlayer.y, alpha);
-    this.camera = frameCamera(
-      focus,
-      state.arena,
-      this.camera.screenWidth,
-      this.camera.screenHeight,
-    );
+    this.frameWorld(state, alpha);
+    frame.camera = this.camera;
     this.placeWorld(frame.now);
 
     for (const family of this.families) {
@@ -187,6 +194,52 @@ export class Scene implements Renderer {
     this.stage.destroy({ children: true });
     destroyTextures(this.textures);
     this.pixi.destroy({ removeView: true, releaseGlobalResources: true });
+  }
+
+  private frameWorld(state: SimState, alpha: number): void {
+    const { now } = this.frame;
+    const focus = this.options.focus ?? SOLO_FOCUS;
+    const key = focus.kind === 'everyone' ? 'everyone' : `player ${String(focus.playerId)}`;
+    const target = this.targetCamera(state, alpha, focus);
+    const elapsed = now - this.cameraNow;
+    this.cameraNow = now;
+    if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > SNAP_TICKS) {
+      this.settling = false;
+      this.camera = target;
+    } else {
+      if (key !== this.focusKey && this.focusKey !== '') {
+        this.settling = true;
+      }
+      if (focus.kind === 'everyone' || this.settling) {
+        this.camera = easeCamera(this.camera, target, elapsed);
+        this.settling = this.settling && !isSettled(this.camera, target);
+      } else {
+        this.camera = target;
+      }
+    }
+    this.focusKey = key;
+  }
+
+  private targetCamera(state: SimState, alpha: number, focus: CameraFocus): Camera {
+    const { focus: point, bounds } = this;
+    const { screenWidth, screenHeight } = this.camera;
+    if (focus.kind === 'everyone' && state.players.length > 0) {
+      bounds.minX = bounds.minY = Number.POSITIVE_INFINITY;
+      bounds.maxX = bounds.maxY = Number.NEGATIVE_INFINITY;
+      for (const player of state.players) {
+        const x = lerp(player.prevX, player.x, alpha);
+        const y = lerp(player.prevY, player.y, alpha);
+        bounds.minX = Math.min(bounds.minX, x);
+        bounds.maxX = Math.max(bounds.maxX, x);
+        bounds.minY = Math.min(bounds.minY, y);
+        bounds.maxY = Math.max(bounds.maxY, y);
+      }
+      return frameBounds(bounds, state.arena, screenWidth, screenHeight);
+    }
+    const followed = focus.kind === 'player' ? byId(state.players, focus.playerId) : undefined;
+    point.x = followed === undefined ? state.core.x : lerp(followed.prevX, followed.x, alpha);
+    point.y = followed === undefined ? state.core.y : lerp(followed.prevY, followed.y, alpha);
+    return frameCamera(point, state.arena, screenWidth, screenHeight);
   }
 
   private onEvent(event: SimEvent, state: SimState): void {
