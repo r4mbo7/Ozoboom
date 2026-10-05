@@ -18,7 +18,7 @@ export function createMenu(
   let items: readonly HTMLElement[] = [];
   let index = 0;
   // Items come and go between calls to `setItems`: each is wired once.
-  const bound = new WeakSet<HTMLButtonElement>();
+  const bound = new WeakSet<HTMLElement>();
 
   function select(next: number): void {
     index = Math.min(Math.max(next, 0), Math.max(items.length - 1, 0));
