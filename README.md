@@ -6,13 +6,19 @@ Jouer : [r4mbo7.github.io/Ozoboom](https://r4mbo7.github.io/Ozoboom/)
 
 ## État
 
-Au 2026-10-04 : la V0 se joue de bout en bout, seul, au clavier et à la souris ou à la manette. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
+Au 2026-10-05 : la V0.1 se joue de bout en bout, seul, au clavier et à la souris ou à la manette : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
+
+![La partie de nuit : le noyau, les pièges et le HUD](docs/captures/moment-2-nuit.png)
+
+![La partie à l'aube : la Batterie à plat au dernier drop](docs/captures/moment-3-aube.png)
+
+Les dix autres captures (crépuscule, sunrise, chaque écran, le banc à 300 masques) sont dans [docs/captures](docs/captures).
 
 | Jalon      | Contenu                                                                                                                                                                                                                              | État                                                                                                                       |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | Fondations | Vision, direction artistique, game design, architecture, contrats, outillage, CI et déploiement                                                                                                                                      | fait                                                                                                                       |
 | V0         | Prototype solo jouable : mage, vagues, deux pièges, clavier et manette, musique synthétisée, bouton « Ton avis » ([exigences](docs/brainstorms/2026-10-04-v0-requirements.md), [plan](docs/plans/v0.md))                             | en cours : jouable ; restent « Ton avis » (#26) et les vérifications à la main (manette Xbox, écoute, 60 images/s sur GPU) |
-| V0.1       | Direction artistique « Cycle du soleil », bad vibes en masques, enceintes annexes et Volume, agrès de cirque, raretés, fusions, reliques ([exigences](docs/brainstorms/2026-10-04-v0.1-requirements.md), [plan](docs/plans/v0.1.md)) | planifiée                                                                                                                  |
+| V0.1       | Direction artistique « Cycle du soleil », bad vibes en masques, enceintes annexes et Volume, agrès de cirque, raretés, fusions, reliques ([exigences](docs/brainstorms/2026-10-04-v0.1-requirements.md), [plan](docs/plans/v0.1.md)) | jouable de bout en bout ; restent la mesure des 60 images/s sur GPU et le jeu depuis GitHub Pages                          |
 | V1         | Trois classes, tous les pièges, équilibrage, coop locale, tactile, mode radio ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))                                                                                               | à venir                                                                                                                    |
 | V2         | Coop en ligne par lien, pair à pair                                                                                                                                                                                                  | à venir                                                                                                                    |
 | V3         | Classement public : soirée du jour, scores vérifiés par rejeu                                                                                                                                                                        | à venir                                                                                                                    |
@@ -37,7 +43,7 @@ pnpm check     # types, lint, format, tests, build
 
 Node 24 et pnpm (version épinglée dans `package.json`). `pnpm exec playwright test` lance les tests navigateur (`pnpm exec playwright install chromium` la première fois).
 
-Pages de développement, une par couche : [rendu](https://r4mbo7.github.io/Ozoboom/dev/render.html), [entrées](https://r4mbo7.github.io/Ozoboom/dev/input.html), [audio](https://r4mbo7.github.io/Ozoboom/dev/audio.html), [interface](https://r4mbo7.github.io/Ozoboom/dev/ui.html) ; le jeu accepte aussi `?dev=fast` (set court et accéléré) et `?dev=bench` (300 bad vibes et coût par image).
+Pages de développement, une par couche : [rendu](https://r4mbo7.github.io/Ozoboom/dev/render.html), [entrées](https://r4mbo7.github.io/Ozoboom/dev/input.html), [audio](https://r4mbo7.github.io/Ozoboom/dev/audio.html), [interface](https://r4mbo7.github.io/Ozoboom/dev/ui.html) ; le jeu accepte aussi `?dev=fast` (set court et accéléré) et `?dev=bench` (300 masques sur la rive du lac, trois agrès et une enceinte branchée, coût par image dans la console et `window.ozoboom.report`).
 
 ## Licence
 

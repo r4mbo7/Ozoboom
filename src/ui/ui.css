@@ -1079,6 +1079,8 @@
 }
 
 .ui-skill__key {
+  position: relative;
+  z-index: 1;
   margin-top: -14px;
 }
 

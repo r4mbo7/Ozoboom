@@ -14,7 +14,7 @@ import { length, normalize } from '../shared/vec';
 import { IDLE_INPUT } from '../sim/commands';
 import { createFeedbackButton, createSoundToggle, createUi, prefersCalmMode } from '../ui';
 import { Controls } from './controls';
-import { BENCH_ENEMIES, type DevOptions, crowd, createDevProbe } from './dev';
+import { BENCH_ENEMIES, type DevOptions, benchScene, createDevProbe } from './dev';
 import { createFpsMeter } from './fps';
 import { createFixedStepLoop } from './loop';
 import { createPauseScreen } from './pause';
@@ -158,7 +158,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     played = true;
     session = newSession();
     if (dev.mode === 'bench') {
-      crowd(session.state, content, BENCH_ENEMIES);
+      benchScene(session.state, content, session.state.seed, BENCH_ENEMIES);
     }
     controls = controlsFor(session);
     screen = 'game';
