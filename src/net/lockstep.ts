@@ -7,6 +7,7 @@ import {
 import { hashState } from '../sim/replay';
 import type { PlayerId, SimState } from '../sim/state';
 import { TICKS_PER_BAR } from '../shared/tempo';
+import { quantizeCommand } from './wire';
 import type { CommandSource, PeerId, Seat, Transport } from './types';
 
 export const GUEST_BUFFER_TICKS = 2;
@@ -159,7 +160,7 @@ export function createHostSource(
         return null;
       }
       const commands = [
-        ...local.filter((command) => localPlayers.includes(command.playerId)),
+        ...local.filter((command) => localPlayers.includes(command.playerId)).map(quantizeCommand),
         ...guests.map(guestCommand),
       ];
       transport.broadcast({ type: 'frame', tick, commands });

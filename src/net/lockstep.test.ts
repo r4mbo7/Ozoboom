@@ -15,6 +15,7 @@ import {
 } from './lockstep';
 import { createMemoryTransports, type MemoryTransport } from './memory';
 import type { Seat } from './types';
+import { quantizeCommand } from './wire';
 
 const PLAYER_IDS: readonly PlayerId[] = [0, 1, 2, 3];
 
@@ -73,6 +74,7 @@ describe('host and guests in lockstep', () => {
     const randomCommand = (playerId: PlayerId): PlayerCommand => ({
       ...commandFor(playerId, {
         move: { x: nextFloat(rng) - 0.5, y: nextFloat(rng) - 0.5 },
+        aim: { x: Math.cos(nextFloat(rng) * 6.28), y: Math.sin(nextFloat(rng) * 6.28) },
         fire: nextFloat(rng) < 0.5,
         skill: nextFloat(rng) < 0.1,
       }),
@@ -136,6 +138,21 @@ describe('createHostSource', () => {
 
     expect(frame).toEqual([commandFor(0), { playerId: 1, input: move, actions: [] }]);
     expect(source.pending).toBe(0);
+  });
+
+  it('simulates its own command as the guests decode it, quantized', () => {
+    const { host, guest, source } = hostWithGuest();
+    const aim = { x: Math.cos(1), y: Math.sin(1) };
+    const own = commandFor(0, { move: { x: 0.123456789, y: -0.7071 }, aim });
+    const received: unknown[] = [];
+    guest.onMessage((_, message) => received.push(message));
+
+    const frame = source.next([own]);
+    host.flush();
+
+    expect(frame?.[0]).toEqual(quantizeCommand(own));
+    expect(frame?.[0]).not.toEqual(own);
+    expect(received).toEqual([{ type: 'frame', tick: 0, commands: frame }]);
   });
 
   it('delivers an action sent late with the next frame, never lost', () => {

@@ -1,5 +1,7 @@
 import type { DataConnection, Peer, PeerOptions } from 'peerjs';
 import { hostPeerId } from './code';
+import { decodeMessage, encodeMessage } from './wire';
+import { roundTripFromStats, type StatEntry } from './stats';
 import type { NetMessage, PeerId, Transport } from './types';
 
 export type PeerTransportOptions = (
@@ -34,24 +36,12 @@ export function parsePeerServer(server: string | undefined): PeerOptions {
   };
 }
 
-function isNetMessage(data: unknown): data is NetMessage {
-  return (
-    typeof data === 'object' && data !== null && 'type' in data && typeof data.type === 'string'
-  );
-}
-
 function describeError(context: string, error: unknown): Error {
   if (error instanceof Error) {
     const type = 'type' in error ? ` (${String((error as { type: unknown }).type)})` : '';
     return new Error(`${context}${type}: ${error.message}`, { cause: error });
   }
   return new Error(`${context}: ${String(error)}`, { cause: error });
-}
-
-interface PairStats {
-  type: string;
-  nominated?: boolean;
-  currentRoundTripTime?: number;
 }
 
 export interface PeerTransport extends Transport {
@@ -85,12 +75,15 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
   const attach = (connection: DataConnection): void => {
     const remote = connection.peer;
     connection.on('data', (data) => {
-      if (!isNetMessage(data)) {
-        fail(`malformed message from ${remote}`, new Error(JSON.stringify(data)));
+      let message: NetMessage;
+      try {
+        message = decodeMessage(data);
+      } catch (error) {
+        fail(`malformed message from ${remote}`, error);
         return;
       }
       for (const listener of [...messageListeners]) {
-        listener(remote, data);
+        listener(remote, message);
       }
     });
     connection.on('error', (error) => {
@@ -163,7 +156,7 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
       peer.on('open', () => {
         const connection = peer.connect(hostPeerId(options.code), {
           reliable: true,
-          serialization: 'json',
+          serialization: 'raw',
         });
         attach(connection);
         connection.on('open', () => {
@@ -187,7 +180,7 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
   ready = true;
 
   const push = (connection: DataConnection, message: NetMessage): void => {
-    Promise.resolve(connection.send(message)).catch((error: unknown) => {
+    Promise.resolve(connection.send(encodeMessage(message))).catch((error: unknown) => {
       fail(`sending ${message.type} to ${connection.peer}`, error);
     });
   };
@@ -221,11 +214,9 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
       for (const connection of connections.values()) {
         const rtc = connection.peerConnection as RTCPeerConnection | undefined;
         const report = await rtc?.getStats();
-        for (const stat of (report?.values() ?? []) as Iterable<PairStats>) {
-          const rtt = stat.currentRoundTripTime;
-          if (stat.type === 'candidate-pair' && stat.nominated === true && (rtt ?? 0) > 0) {
-            measures.push((rtt ?? 0) * 1000);
-          }
+        const rtt = roundTripFromStats((report?.values() ?? []) as Iterable<StatEntry>);
+        if (rtt !== null) {
+          measures.push(rtt);
         }
       }
       return measures.length === 0 ? null : Math.min(...measures);

@@ -111,6 +111,23 @@ test('two pages play a set to the end and finish on the same fingerprint', async
   expect(errors).toEqual([]);
 });
 
+test('the host and the guest both measure their round trip', async ({ browser }) => {
+  const host = await newPage(browser);
+  const guest = await newPage(browser);
+
+  const code = await createRoom(host);
+  await joinByLink(guest, code);
+  await launch(host, guest);
+
+  for (const page of [host, guest]) {
+    await expect
+      .poll(() => page.evaluate(() => window.ozoboom?.online?.roundTripMs ?? null), {
+        timeout: 30_000,
+      })
+      .not.toBeNull();
+  }
+});
+
 test('a guest with another version of the game is refused', async ({ browser }) => {
   const host = await newPage(browser);
   const guest = await newPage(browser);
