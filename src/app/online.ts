@@ -25,6 +25,8 @@ export interface OnlineEnv {
   readonly ui: Pick<Ui, 'showLobby' | 'updateLobby'>;
   readonly setId: string;
   readonly classIds: readonly string[];
+  // Milliseconds, injectable for the watchdog tests.
+  now?(): number;
   // The class picked on the title.
   classId(): string;
   version(): string;
@@ -60,6 +62,26 @@ export interface Online {
 }
 
 const ROUND_TRIP_REFRESH_MS = 2000;
+// The host sends a frame every tick: a guest that hears nothing for this long has lost it.
+export const HOST_SILENCE_MS = 8000;
+const WATCH_MS = 1000;
+
+export interface SilenceWatchdog {
+  heard(): void;
+  expired(): boolean;
+}
+
+export function createSilenceWatchdog(now: () => number, timeoutMs: number): SilenceWatchdog {
+  let last = now();
+  return {
+    heard() {
+      last = now();
+    },
+    expired() {
+      return now() - last > timeoutMs;
+    },
+  };
+}
 const MIN_PLAYERS_TO_LAUNCH = 2;
 
 type Phase = 'idle' | 'lobby' | 'playing' | 'ended';
@@ -105,6 +127,8 @@ export function createOnline(env: OnlineEnv): Online {
   let roundTripMs: number | null = null;
   let connectMs: number | null = null;
   let refresh: ReturnType<typeof setInterval> | undefined;
+  let watch: ReturnType<typeof setInterval> | undefined;
+  const silence = createSilenceWatchdog(() => env.now?.() ?? performance.now(), HOST_SILENCE_MS);
   const departed = new Set<PeerId>();
 
   function link(): string | null {
@@ -147,6 +171,8 @@ export function createOnline(env: OnlineEnv): Online {
     busy = false;
     clearInterval(refresh);
     refresh = undefined;
+    clearInterval(watch);
+    watch = undefined;
     source?.close();
     source = null;
     room?.dispose();
@@ -255,6 +281,19 @@ export function createOnline(env: OnlineEnv): Online {
       launched(start, guestSource(localPlayer), localPlayer);
     }
     startRoundTripProbe();
+    if (role === 'guest') {
+      silence.heard();
+      clearInterval(watch);
+      watch = setInterval(() => {
+        if (phase === 'playing' && silence.expired()) {
+          source?.close();
+          interrupt({
+            notice: 'connectionLost',
+            details: `Plus aucun signe de l’hôte depuis ${String(HOST_SILENCE_MS / 1000)} secondes.`,
+          });
+        }
+      }, WATCH_MS);
+    }
   }
 
   async function connect(as: Role, roomCode: string): Promise<void> {
@@ -306,6 +345,9 @@ export function createOnline(env: OnlineEnv): Online {
       joined.onStart(handleStart);
       joined.onRefused((reason) => {
         failLobby(refusalText(reason));
+      });
+      opened.onMessage(() => {
+        silence.heard();
       });
       opened.onPeer((peer, change) => {
         if (change !== 'left') {
