@@ -147,11 +147,19 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       if (running === null || isRealtimeStalled(running.context)) {
         return;
       }
-      running.sfx.play(state.events, running.context.currentTime);
+      running.sfx.play(state.events, running.context.currentTime, state.players);
       if (latest === null) {
         queueMicrotask(flush);
       }
       latest = state;
+    },
+    cue(name) {
+      if (running === null || isRealtimeStalled(running.context)) {
+        return;
+      }
+      // Cues come from the lobby, where no update runs to open the frame.
+      running.sfx.beginFrame();
+      running.sfx.cue(name, running.context.currentTime);
     },
     setMuted(value) {
       muted = value;

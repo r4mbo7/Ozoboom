@@ -7,6 +7,7 @@ import {
   sfxOf,
   type SfxLookups,
   type SfxName,
+  type SkillSound,
 } from './sfx';
 
 const trapEffects: Record<string, string> = {
@@ -28,10 +29,27 @@ const weaponKinds: Record<string, string> = {
   monocycle: 'trail',
   ruban: 'ribbon',
 };
+const skills: Record<string, SkillSound> = {
+  'classe-nova:skill': { kind: 'nova' },
+  'classe-nova:ultimate': { kind: 'laserShow' },
+  'classe-charge:skill': { kind: 'dash' },
+  'classe-malle:skill': { kind: 'barrier' },
+  'classe-soin:skill': { kind: 'healPulse' },
+  'classe-soin:ultimate': { kind: 'healPulse', revive: true },
+  'classe-inconnue:skill': { kind: 'teleport' },
+};
 const lookups: SfxLookups = {
   weaponKindOf: (id) => weaponKinds[id],
   specialKindOf: (kind) => (kind === 'meprisant' ? 'sigh' : undefined),
+  skillSoundOf: (classId, slot) => skills[`${classId}:${slot}`],
 };
+const players = [
+  { id: 0, classId: 'classe-nova' },
+  { id: 1, classId: 'classe-charge' },
+  { id: 2, classId: 'classe-malle' },
+  { id: 3, classId: 'classe-soin' },
+];
+const resolve = (event: SimEvent) => sfxOf(event, trapEffectOf, lookups, players);
 
 const weaponFired = (weaponId: string): SimEvent => ({
   type: 'weaponFired',
@@ -52,6 +70,16 @@ const soundingEvents: readonly [SimEvent, SfxName][] = [
   [{ type: 'upgradeChosen', playerId: 0, upgradeId: 'x' }, 'upgradeChosen'],
   [{ type: 'skillUsed', playerId: 0 }, 'skillUsed'],
   [{ type: 'ultimateUsed', playerId: 0 }, 'ultimateUsed'],
+  [{ type: 'skillUsed', playerId: 1 }, 'skillCharge'],
+  [{ type: 'skillUsed', playerId: 2 }, 'skillCase'],
+  [{ type: 'skillUsed', playerId: 3 }, 'skillHeal'],
+  [{ type: 'ultimateUsed', playerId: 3 }, 'skillRecall'],
+  [{ type: 'taunted', playerId: 1, x: 0, y: 0, radius: 120, count: 4 }, 'taunted'],
+  [{ type: 'barrierBroken', id: 7, x: 0, y: 0 }, 'barrierBroken'],
+  [{ type: 'playerHealed', playerId: 0, amount: 12 }, 'playerHealed'],
+  [{ type: 'playerDowned', playerId: 0 }, 'playerDowned'],
+  [{ type: 'playerRevived', playerId: 0 }, 'playerRevived'],
+  [{ type: 'playerReviving', playerId: 0, byPlayer: 1, progress: 0.4 }, 'playerReviving'],
   [{ type: 'gameWon' }, 'gameWon'],
   [{ type: 'gameLost' }, 'gameLost'],
   [weaponFired('baton-de-feu'), 'weaponSweep'],
@@ -78,7 +106,32 @@ const soundingEvents: readonly [SimEvent, SfxName][] = [
 
 describe('sfxOf', () => {
   it.each(soundingEvents)('gives %j a sound', (event, name) => {
-    expect(sfxOf(event, trapEffectOf, lookups)).toBe(name);
+    expect(resolve(event)).toBe(name);
+  });
+
+  it('finds the kind of a skill from the content of the class of the player', () => {
+    expect(resolve({ type: 'skillUsed', playerId: 3 })).not.toBe(
+      resolve({ type: 'ultimateUsed', playerId: 3 }),
+    );
+  });
+
+  it('stays silent on a skill of an unknown kind, an unknown class or an unknown player', () => {
+    const strangers = [
+      { id: 0, classId: 'classe-inconnue' },
+      { id: 1, classId: 'classe-sans-son' },
+    ];
+    const unknown: SimEvent[] = [
+      { type: 'skillUsed', playerId: 0 },
+      { type: 'ultimateUsed', playerId: 0 },
+      { type: 'skillUsed', playerId: 1 },
+      { type: 'skillUsed', playerId: 3 },
+    ];
+
+    expect(unknown.map((event) => sfxOf(event, trapEffectOf, lookups, strangers))).toEqual(
+      unknown.map(() => null),
+    );
+    expect(sfxOf({ type: 'skillUsed', playerId: 0 }, trapEffectOf, {}, players)).toBeNull();
+    expect(sfxOf({ type: 'skillUsed', playerId: 0 }, trapEffectOf, lookups)).toBeNull();
   });
 
   it('stays silent on rhythm and bookkeeping events', () => {
@@ -94,9 +147,7 @@ describe('sfxOf', () => {
       { type: 'futureEvent' } as unknown as SimEvent,
     ];
 
-    expect(silent.map((event) => sfxOf(event, trapEffectOf, lookups))).toEqual(
-      silent.map(() => null),
-    );
+    expect(silent.map(resolve)).toEqual(silent.map(() => null));
   });
 
   it('stays silent on weapons when no lookup is given', () => {
@@ -226,7 +277,7 @@ describe('createSfx under a crowd', () => {
     const allowed = Object.values(SFX_LIMITS).reduce((sum, limit) => sum + limit.perFrame, 0);
 
     sfx.beginFrame();
-    sfx.play(storm, 1);
+    sfx.play(storm, 1, players);
 
     expect(peaks.length).toBeGreaterThan(0);
     expect(peaks.length).toBeLessThanOrEqual(allowed * 4);
@@ -238,7 +289,7 @@ describe('createSfx under a crowd', () => {
       const { out, peaks } = recordingOutput();
       const sfx = createSfx(out, trapEffectOf, lookups);
 
-      sfx.play([event], 1);
+      sfx.play([event], 1, players);
       const loudest = peaks.reduce((sum, peak) => sum + peak, 0) * SFX_BUS_GAIN;
 
       expect(loudest).toBeLessThan(LIMITER_THRESHOLD);
@@ -257,5 +308,92 @@ describe('createSfx under a crowd', () => {
     }
 
     expect(played).toBe(Math.min(limit.concurrent, limit.perFrame * 10));
+  });
+});
+
+describe('the sounds of the team and of a revive', () => {
+  const teamSounds: readonly SfxName[] = [
+    'skillCharge',
+    'skillCase',
+    'skillHeal',
+    'skillRecall',
+    'taunted',
+    'barrierBroken',
+    'playerHealed',
+    'playerDowned',
+    'playerRevived',
+    'playerReviving',
+  ];
+  const teamEvents = soundingEvents.filter(([, name]) => teamSounds.includes(name));
+
+  it.each(teamEvents)('sounds %j once and not twice in the same frame', (event) => {
+    const { out, peaks } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups);
+    sfx.play([event], 1, players);
+    const once = peaks.length;
+    peaks.length = 0;
+
+    sfx.play([event, event, event], 1.001, players);
+
+    expect(once).toBeGreaterThan(0);
+    expect(peaks).toEqual([]);
+  });
+
+  it('ticks a revive once per beat, however many ticks it lasts', () => {
+    const { out, peaks } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups);
+    const reviving: SimEvent = { type: 'playerReviving', playerId: 0, byPlayer: 1, progress: 0.5 };
+    const beat = 60 / 145;
+    let ticks = 0;
+
+    for (let tick = 0; tick < 24; tick += 1) {
+      sfx.beginFrame();
+      const before = peaks.length;
+      sfx.play([reviving], 1 + (tick * beat) / 12, players);
+      ticks += peaks.length > before ? 1 : 0;
+    }
+
+    expect(ticks).toBe(2);
+  });
+
+  it('lets an unexpected error from a lookup through', () => {
+    const { out } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, {
+      skillSoundOf: () => {
+        throw new Error('broken content');
+      },
+    });
+
+    expect(() => {
+      sfx.play([{ type: 'skillUsed', playerId: 0 }], 1, players);
+    }).toThrow('broken content');
+  });
+});
+
+describe('the lobby cues', () => {
+  const cues = ['seatTaken', 'seatFreed', 'launch'] as const;
+
+  it.each(cues)('sounds %s once, within its limit', (cue) => {
+    const { out, peaks } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf);
+    sfx.cue(cue, 1);
+    const once = peaks.length;
+    peaks.length = 0;
+
+    for (let call = 0; call < 50; call += 1) {
+      sfx.cue(cue, 1.001);
+    }
+
+    expect(once).toBeGreaterThan(0);
+    expect(peaks).toEqual([]);
+  });
+
+  it.each(cues)('keeps %s under the limiter threshold', (cue) => {
+    const { out, peaks } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf);
+
+    sfx.cue(cue, 1);
+
+    expect(peaks.reduce((sum, peak) => sum + peak, 0) * 0.45).toBeLessThan(0.5);
   });
 });

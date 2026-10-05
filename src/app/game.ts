@@ -54,6 +54,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     trapEffectOf: (id) => content.traps.find((trap) => trap.id === id)?.effect.kind ?? id,
     sfxLookups: {
       weaponKindOf: (id) => content.weapons?.find((weapon) => weapon.id === id)?.effect.kind,
+      skillSoundOf: (classId, slot) => {
+        const effect = content.classes.find((candidate) => candidate.id === classId)?.[slot].effect;
+        return effect === undefined
+          ? undefined
+          : { kind: effect.kind, revive: effect.kind === 'healPulse' && effect.revive === true };
+      },
       specialKindOf: (id) => content.enemies.find((enemy) => enemy.id === id)?.special?.kind,
     },
   });

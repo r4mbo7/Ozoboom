@@ -18,6 +18,17 @@ describe('createAudioEngine', () => {
     expect(createContext).not.toHaveBeenCalled();
   });
 
+  it('plays no cue and creates no audio context before start', () => {
+    const createContext = vi.fn<() => BaseAudioContext>();
+    const engine = createAudioEngine({ createContext });
+
+    engine.cue('seatTaken');
+    engine.cue('launch');
+    engine.destroy();
+
+    expect(createContext).not.toHaveBeenCalled();
+  });
+
   it('starts no menu ambience and no timer before start', () => {
     const createContext = vi.fn<() => BaseAudioContext>();
     const repeat = vi.fn<(callback: () => void) => () => void>();
