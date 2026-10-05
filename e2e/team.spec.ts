@@ -182,6 +182,7 @@ test.describe('the end of a team', () => {
     await page.goto('/dev/ui.html?screen=teamLost&role=guest');
 
     await expect(page.getByRole('button', { name: 'Rejouer' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Retour au titre' })).toBeVisible();
     await expect(
       page.getByRole('region', { name: 'Fin de partie' }).getByText('En attente de l’hôte'),
     ).toBeVisible();

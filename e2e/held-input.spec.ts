@@ -146,7 +146,7 @@ test('a key held when the game is lost leaves « Rejouer » selected until it is
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   const end = page.getByRole('region', { name: 'Fin de partie' });
   const restart = end.getByRole('button', { name: 'Rejouer' });
-  const feedback = end.getByRole('button', { name: /^Ton avis/ });
+  const back = end.getByRole('button', { name: 'Retour au titre' });
   await page.keyboard.down('KeyS');
   await frames(page);
 
@@ -176,6 +176,6 @@ test('a key held when the game is lost leaves « Rejouer » selected until it is
   await page.keyboard.up('KeyS');
   await frames(page);
   await page.keyboard.press('KeyS');
-  await expect(feedback).toHaveAttribute('aria-current', 'true');
+  await expect(back).toHaveAttribute('aria-current', 'true');
   expect(errors).toEqual([]);
 });

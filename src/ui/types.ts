@@ -43,6 +43,7 @@ export interface EndSession {
 export interface UiCallbacks {
   onStart(): void;
   onRestart(): void;
+  onQuit(): void;
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
   onToggleCalmMode(enabled: boolean): void;
   onToggleMute(muted: boolean): void;

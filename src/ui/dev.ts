@@ -95,6 +95,10 @@ const ui = createUi(
       console.info('[ui] onRestart');
       open('title');
     },
+    onQuit() {
+      console.info('[ui] onQuit');
+      open('title');
+    },
     onChooseUpgrade(playerId, upgradeId) {
       console.info('[ui] onChooseUpgrade', playerId, upgradeId);
       const pendingUpgrades = state.pendingUpgrades.filter((offer) => offer.playerId !== playerId);

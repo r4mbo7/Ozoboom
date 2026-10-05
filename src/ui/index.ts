@@ -122,11 +122,19 @@ export function createUi(
   const upgrade = createUpgradeOverlay((playerId, upgradeId) => {
     callbacks.onChooseUpgrade(playerId, upgradeId);
   });
-  const end = createEnd(() => {
-    once(() => {
-      callbacks.onRestart();
-    });
-  }, feedback);
+  const end = createEnd(
+    () => {
+      once(() => {
+        callbacks.onRestart();
+      });
+    },
+    () => {
+      once(() => {
+        callbacks.onQuit();
+      });
+    },
+    feedback,
+  );
   const lobby = createLobby(
     {
       joinSeat(device) {

@@ -144,6 +144,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         launch(launched);
       }
     },
+    onQuit: quit,
     onChooseUpgrade(playerId, upgradeId) {
       match.chooseUpgrade(playerId, upgradeId);
     },

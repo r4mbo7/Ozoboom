@@ -65,3 +65,32 @@ test('tells of an empty dancefloor when the player is down and the scene still p
   await expect(end).not.toContainText('ont eu raison du sound system');
   expect(errors).toEqual([]);
 });
+
+test('goes back to the title from the end of a lost game, then plays a new one', async ({
+  page,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await startGame(page);
+  const lostSeed = await page.evaluate(() => window.ozoboom?.state.seed);
+  await loseBy(page, 'silence');
+  const end = page.getByRole('region', { name: 'Fin de partie' });
+  const back = end.getByRole('button', { name: 'Retour au titre' });
+  await expect(back).toBeVisible();
+
+  await page.keyboard.press('ArrowDown');
+  await expect(back).toHaveAttribute('aria-current', 'true');
+  await page.keyboard.press('Enter');
+
+  await expect(page.getByRole('region', { name: 'Écran titre' })).toBeVisible();
+  await expect(end).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Pièges' })).toBeHidden();
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
+  const fresh = await page.evaluate(() => ({
+    seed: window.ozoboom?.state.seed,
+    status: window.ozoboom?.state.status,
+  }));
+  expect(fresh.status).toBe('running');
+  expect(fresh.seed).not.toBe(lostSeed);
+  expect(errors).toEqual([]);
+});

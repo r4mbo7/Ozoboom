@@ -45,7 +45,11 @@ export function endingOf(state: SimState): Ending {
   return state.core.hp <= 0 ? SILENCE : EMPTY_FLOOR;
 }
 
-export function createEnd(onRestart: () => void, onFeedback?: () => void): EndScreen {
+export function createEnd(
+  onRestart: () => void,
+  onQuit: () => void,
+  onFeedback?: () => void,
+): EndScreen {
   const element = el('section', 'ui-screen ui-overlay ui-end');
   element.setAttribute('aria-label', 'Fin de partie');
   const emblem = el('div', 'ui-end__emblem');
@@ -56,24 +60,28 @@ export function createEnd(onRestart: () => void, onFeedback?: () => void): EndSc
   const stats = el('dl', 'ui-stats');
   const restart = el('button', 'ui-button ui-button--primary', 'Rejouer');
   restart.type = 'button';
+  const quit = el('button', 'ui-button', 'Retour au titre');
+  quit.type = 'button';
   const feedback = onFeedback === undefined ? null : createFeedbackButton();
   const wait = el('p', 'ui-end__wait', 'En attente de l’hôte');
   wait.setAttribute('role', 'status');
   wait.hidden = true;
   const actions = el('div', 'ui-end__actions');
-  actions.append(...(feedback === null ? [restart] : [restart, feedback]), wait);
+  actions.append(restart, wait, quit, ...(feedback === null ? [] : [feedback]));
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-end__body');
   body.append(emblem, title, text, team, stats, actions, hint);
   element.append(body);
 
-  // A guest cannot restart: only the host does.
-  let guest = false;
+  let items: HTMLElement[] = [];
   const menu = createMenu((index) => {
-    if (feedback !== null && (guest || index === 1)) {
-      onFeedback?.();
-    } else {
+    const item = items[index];
+    if (item === restart) {
       onRestart();
+    } else if (item === quit) {
+      onQuit();
+    } else {
+      onFeedback?.();
     }
   });
 
@@ -81,21 +89,12 @@ export function createEnd(onRestart: () => void, onFeedback?: () => void): EndSc
 
   function fillHints(): void {
     const prompts = promptsFor(device ?? 'none');
-    const press = { keys: [prompts.confirm], label: guest ? 'valider' : 'rejouer' };
-    if (feedback === null) {
-      fillHint(hint, guest ? [] : [press], prompts.style);
-    } else if (guest) {
-      fillHint(hint, [{ keys: [prompts.confirm], label: 'valider' }], prompts.style);
-    } else {
-      fillHint(
-        hint,
-        [
-          { keys: prompts.navigate, label: 'naviguer' },
-          { keys: [prompts.confirm], label: 'valider' },
-        ],
-        prompts.style,
-      );
-    }
+    const confirm = { keys: [prompts.confirm], label: 'valider' };
+    fillHint(
+      hint,
+      items.length > 1 ? [{ keys: prompts.navigate, label: 'naviguer' }, confirm] : [confirm],
+      prompts.style,
+    );
   }
 
   function fillTeam(state: SimState, content: GameContent | null): void {
@@ -141,11 +140,12 @@ export function createEnd(onRestart: () => void, onFeedback?: () => void): EndSc
           return item;
         }),
       );
-      guest = session?.role === 'guest';
+      // A guest cannot restart: only the host does.
+      const guest = session?.role === 'guest';
       restart.hidden = guest;
       wait.hidden = !guest;
-      const open = feedback === null ? [] : [feedback];
-      menu.setItems(guest ? open : [restart, ...open]);
+      items = [...(guest ? [] : [restart]), quit, ...(feedback === null ? [] : [feedback])];
+      menu.setItems(items);
       fillHints();
     },
     setDevice(next) {
