@@ -90,7 +90,7 @@ export function createHud(): Hud {
   core.head.append(coreLabel, coreValue);
   const vu = el('div', 'ui-vu');
   vu.setAttribute('role', 'meter');
-  vu.setAttribute('aria-label', 'Volume de la scène');
+  vu.setAttribute('aria-label', 'Vie de la scène');
   vu.setAttribute('aria-valuemin', '0');
   vu.setAttribute('aria-valuemax', '100');
   const vuSegments = Array.from({ length: VU_SEGMENTS }, (_, index) => {

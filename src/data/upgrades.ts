@@ -14,7 +14,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'double-faisceau-rare',
     name: 'Double faisceau rare',
-    description: 'Rare : tu tires deux projectiles de plus.',
+    description: 'Tu tires deux projectiles de plus.',
     family: 'class',
     classId: 'mage',
     rarity: 'rare',
@@ -24,7 +24,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'double-faisceau-legendaire',
     name: 'Double faisceau légendaire',
-    description: 'Légendaire : tu tires trois projectiles de plus.',
+    description: 'Tu tires trois projectiles de plus.',
     family: 'class',
     classId: 'mage',
     rarity: 'legendary',
@@ -44,7 +44,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'lumiere-traversante-rare',
     name: 'Lumière traversante rare',
-    description: 'Rare : tes tirs traversent deux bad vibes de plus.',
+    description: 'Tes tirs traversent deux bad vibes de plus.',
     family: 'class',
     classId: 'mage',
     rarity: 'rare',
@@ -54,7 +54,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'lumiere-traversante-legendaire',
     name: 'Lumière traversante légendaire',
-    description: 'Légendaire : tes tirs traversent trois bad vibes de plus.',
+    description: 'Tes tirs traversent trois bad vibes de plus.',
     family: 'class',
     classId: 'mage',
     rarity: 'legendary',
@@ -74,7 +74,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'nova-xxl-rare',
     name: 'Nova XXL rare',
-    description: 'Rare : ta nova frappe bien plus fort.',
+    description: 'Ta nova frappe bien plus fort.',
     family: 'class',
     classId: 'mage',
     rarity: 'rare',
@@ -84,7 +84,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'nova-xxl-legendaire',
     name: 'Nova XXL légendaire',
-    description: 'Légendaire : ta nova frappe deux fois plus fort.',
+    description: 'Ta nova frappe deux fois plus fort.',
     family: 'class',
     classId: 'mage',
     rarity: 'legendary',
@@ -104,7 +104,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'boucle-vj-rare',
     name: 'Boucle VJ rare',
-    description: 'Rare : ta nova revient bien plus vite.',
+    description: 'Ta nova revient bien plus vite.',
     family: 'class',
     classId: 'mage',
     rarity: 'rare',
@@ -114,7 +114,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'boucle-vj-legendaire',
     name: 'Boucle VJ légendaire',
-    description: 'Légendaire : ta nova revient presque en continu.',
+    description: 'Ta nova revient presque en continu.',
     family: 'class',
     classId: 'mage',
     rarity: 'legendary',
@@ -133,7 +133,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'jambes-de-danseur-rare',
     name: 'Jambes de danseur rare',
-    description: 'Rare : tu te déplaces nettement plus vite.',
+    description: 'Tu te déplaces nettement plus vite.',
     family: 'generic',
     rarity: 'rare',
     modifiers: [{ stat: 'speedMul', mul: 1.2 }],
@@ -142,7 +142,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'jambes-de-danseur-legendaire',
     name: 'Jambes de danseur légendaire',
-    description: 'Légendaire : tu te déplaces bien plus vite.',
+    description: 'Tu te déplaces bien plus vite.',
     family: 'generic',
     rarity: 'legendary',
     modifiers: [{ stat: 'speedMul', mul: 1.3 }],
@@ -160,7 +160,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'deuxieme-souffle-rare',
     name: 'Deuxième souffle rare',
-    description: 'Rare : tu gagnes 40 points de vie maximum.',
+    description: 'Tu gagnes 40 points de vie maximum.',
     family: 'generic',
     rarity: 'rare',
     modifiers: [{ stat: 'maxHpAdd', add: 40 }],
@@ -169,7 +169,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'deuxieme-souffle-legendaire',
     name: 'Deuxième souffle légendaire',
-    description: 'Légendaire : tu gagnes 60 points de vie maximum.',
+    description: 'Tu gagnes 60 points de vie maximum.',
     family: 'generic',
     rarity: 'legendary',
     modifiers: [{ stat: 'maxHpAdd', add: 60 }],
@@ -187,7 +187,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'bonnes-ondes-rare',
     name: 'Bonnes ondes rare',
-    description: 'Rare : tu attires les vibes de bien plus loin.',
+    description: 'Tu attires les vibes de bien plus loin.',
     family: 'generic',
     rarity: 'rare',
     modifiers: [{ stat: 'pickupRadiusMul', mul: 1.6 }],
@@ -196,7 +196,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'bonnes-ondes-legendaire',
     name: 'Bonnes ondes légendaire',
-    description: 'Légendaire : tu attires les vibes de très loin.',
+    description: 'Tu attires les vibes de très loin.',
     family: 'generic',
     rarity: 'legendary',
     modifiers: [{ stat: 'pickupRadiusMul', mul: 1.9 }],
@@ -214,7 +214,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'volume-a-fond-rare',
     name: 'Volume à fond rare',
-    description: 'Rare : tes tirs font nettement plus de dégâts.',
+    description: 'Tes tirs font nettement plus de dégâts.',
     family: 'generic',
     rarity: 'rare',
     modifiers: [{ stat: 'damageMul', mul: 1.3 }],
@@ -223,7 +223,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'volume-a-fond-legendaire',
     name: 'Volume à fond légendaire',
-    description: 'Légendaire : tes tirs font bien plus de dégâts.',
+    description: 'Tes tirs font bien plus de dégâts.',
     family: 'generic',
     rarity: 'legendary',
     modifiers: [{ stat: 'damageMul', mul: 1.45 }],
@@ -241,7 +241,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'double-tempo-rare',
     name: 'Double tempo rare',
-    description: 'Rare : tu tires nettement plus souvent.',
+    description: 'Tu tires nettement plus souvent.',
     family: 'generic',
     rarity: 'rare',
     modifiers: [{ stat: 'attackCooldownMul', mul: 0.76 }],
@@ -250,7 +250,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'double-tempo-legendaire',
     name: 'Double tempo légendaire',
-    description: 'Légendaire : tu tires bien plus souvent.',
+    description: 'Tu tires bien plus souvent.',
     family: 'generic',
     rarity: 'legendary',
     modifiers: [{ stat: 'attackCooldownMul', mul: 0.64 }],
@@ -268,7 +268,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'sub-renforce-rare',
     name: 'Sub renforcé rare',
-    description: 'Rare : tes pièges font bien plus de dégâts.',
+    description: 'Tes pièges font bien plus de dégâts.',
     family: 'defense',
     rarity: 'rare',
     modifiers: [{ stat: 'trapDamageMul', mul: 1.4 }],
@@ -277,7 +277,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'sub-renforce-legendaire',
     name: 'Sub renforcé légendaire',
-    description: 'Légendaire : tes pièges font deux fois plus de dégâts.',
+    description: 'Tes pièges font deux fois plus de dégâts.',
     family: 'defense',
     rarity: 'legendary',
     modifiers: [{ stat: 'trapDamageMul', mul: 1.6 }],
@@ -295,7 +295,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'plan-de-scene-rare',
     name: 'Plan de scène rare',
-    description: 'Rare : tes pièges te coûtent bien moins de watts.',
+    description: 'Tes pièges te coûtent bien moins de watts.',
     family: 'defense',
     rarity: 'rare',
     modifiers: [{ stat: 'trapCostMul', mul: 0.7 }],
@@ -304,7 +304,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'plan-de-scene-legendaire',
     name: 'Plan de scène légendaire',
-    description: 'Légendaire : tes pièges te coûtent presque rien.',
+    description: 'Tes pièges te coûtent presque rien.',
     family: 'defense',
     rarity: 'legendary',
     modifiers: [{ stat: 'trapCostMul', mul: 0.55 }],
@@ -322,7 +322,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'groupe-electrogene-rare',
     name: 'Groupe électrogène rare',
-    description: 'Rare : ta scène produit 4 watts de plus par mesure.',
+    description: 'Ta scène produit 4 watts de plus par mesure.',
     family: 'defense',
     rarity: 'rare',
     modifiers: [{ stat: 'wattsPerBarAdd', add: 4 }],
@@ -331,7 +331,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'groupe-electrogene-legendaire',
     name: 'Groupe électrogène légendaire',
-    description: 'Légendaire : ta scène produit 6 watts de plus par mesure.',
+    description: 'Ta scène produit 6 watts de plus par mesure.',
     family: 'defense',
     rarity: 'legendary',
     modifiers: [{ stat: 'wattsPerBarAdd', add: 6 }],

@@ -36,7 +36,7 @@ export function endStats(state: SimState): EndStat[] {
     { label: 'Phrases tenues', value: formatNumber(state.stats.phrasesHeld) },
     { label: 'Temps', value: formatDuration(state.tick) },
     { label: 'Bad vibes dissipées', value: formatNumber(state.stats.kills) },
-    { label: 'Volume de la scène', value: formatPercent(ratio(state.core.hp, state.core.maxHp)) },
+    { label: 'Vie de la scène', value: formatPercent(ratio(state.core.hp, state.core.maxHp)) },
     { label: 'Score', value: formatNumber(scoreOf(state)) },
   ];
 }

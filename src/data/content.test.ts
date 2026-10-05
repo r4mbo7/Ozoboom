@@ -239,14 +239,14 @@ describe('CONTENT circus weapons, rarities and relics', () => {
     }
   });
 
-  it('names the rarity in rare and legendary upgrades', () => {
+  it('names the rarity in the name of rare and legendary upgrades, never again in the description', () => {
     for (const upgrade of withRarity('rare')) {
       expect(upgrade.name).toMatch(/rare$/);
-      expect(upgrade.description).toMatch(/^Rare : /);
+      expect(upgrade.description).not.toMatch(/rare/i);
     }
     for (const upgrade of withRarity('legendary')) {
       expect(upgrade.name).toMatch(/légendaire$/);
-      expect(upgrade.description).toMatch(/^Légendaire : /);
+      expect(upgrade.description).not.toMatch(/légendaire/i);
     }
   });
 
