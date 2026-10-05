@@ -1,3 +1,4 @@
+import { CLASSES } from '../data/classes';
 import type { GameContent, SpeakerDefinition } from '../data/types';
 import type { InputSnapshot } from '../input/intents';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
@@ -49,6 +50,7 @@ export const UI_FIXTURE_CONTENT: GameContent = {
         effect: { kind: 'laserShow', damagePerTick: 4, radius: 400, durationTicks: 96 },
       },
     },
+    ...CLASSES.filter((definition) => definition.id !== 'mage'),
   ],
   enemies: [
     {
@@ -375,7 +377,18 @@ export function fixtureState(overrides: Partial<SimState> = {}): SimState {
 }
 
 export type UiFixtureScreen =
-  'title' | 'game' | 'upgrade' | 'won' | 'lost' | 'volume' | 'relics' | 'fusion';
+  | 'title'
+  | 'game'
+  | 'upgrade'
+  | 'won'
+  | 'lost'
+  | 'volume'
+  | 'relics'
+  | 'fusion'
+  | 'team'
+  | 'offers'
+  | 'teamWon'
+  | 'teamLost';
 
 export const UI_FIXTURE_SCREENS: readonly UiFixtureScreen[] = [
   'title',
@@ -386,6 +399,10 @@ export const UI_FIXTURE_SCREENS: readonly UiFixtureScreen[] = [
   'volume',
   'relics',
   'fusion',
+  'team',
+  'offers',
+  'teamWon',
+  'teamLost',
 ];
 
 function fixtureSpeakerState(
@@ -431,8 +448,109 @@ function volumeState(late: boolean): SimState {
   });
 }
 
+// Four players around the same stage, in the night of the second tier (or at the end of its drop,
+// in daylight): two mages and two others, one of them down.
+export const TEAM_NAMES: readonly string[] = ['Léa', 'Tom', 'Inès', 'Sam'];
+
+function teamPlayers(): PlayerState[] {
+  return [
+    fixturePlayer({
+      id: 0,
+      name: 'Léa',
+      x: 700,
+      y: 480,
+      level: 6,
+      vibes: 22,
+      vibesToNextLevel: 70,
+      weapons: [
+        { id: 'baton-de-feu', level: 3, phase: 0 },
+        { id: 'diabolo', level: 1, phase: 0 },
+      ],
+    }),
+    fixturePlayer({
+      id: 1,
+      name: 'Tom',
+      classId: 'tank',
+      x: 860,
+      y: 520,
+      hp: 140,
+      maxHp: 200,
+      level: 5,
+      vibes: 51,
+      vibesToNextLevel: 65,
+      skillCooldown: 0,
+      ultimateReady: true,
+      weapons: [{ id: 'eventails-de-feu', level: 2, phase: 0 }],
+    }),
+    fixturePlayer({
+      id: 2,
+      name: 'Inès',
+      classId: 'healer',
+      x: 780,
+      y: 600,
+      hp: 18,
+      maxHp: 100,
+      level: 5,
+      vibes: 10,
+      vibesToNextLevel: 65,
+      skillCooldown: 200,
+    }),
+    fixturePlayer({
+      id: 3,
+      name: 'Sam',
+      x: 640,
+      y: 560,
+      hp: 0,
+      downed: true,
+      level: 4,
+    }),
+  ];
+}
+
+function teamState(late: boolean, overrides: Partial<SimState> = {}): SimState {
+  const segmentStartTick = 20_000;
+  return fixtureState({
+    tick: segmentStartTick + (late ? 4 * TICKS_PER_BAR : 1.5 * TICKS_PER_PHRASE),
+    set: {
+      tier: 1,
+      segment: late ? 'drop' : 'buildup',
+      phrase: 1,
+      bar: 70,
+      beat: 280,
+      segmentStartTick,
+    },
+    players: teamPlayers(),
+    ...overrides,
+  });
+}
+
 export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimState {
   switch (screen) {
+    case 'team':
+      return teamState(late);
+    case 'offers': {
+      const players = teamPlayers();
+      players[0] = { ...(players[0] ?? fixturePlayer()), vibes: 0 };
+      return teamState(late, {
+        status: 'choosingUpgrade',
+        players,
+        pendingUpgrades: [
+          { playerId: 0, options: ['nova-elargie', 'baskets-de-feu-rare', 'baton-de-feu'] },
+          { playerId: 1, options: ['caissons-gonfles', 'baskets-de-feu', 'eventails-de-feu'] },
+          { playerId: 2, options: ['baskets-de-feu', 'caissons-gonfles', 'diabolo'] },
+        ],
+      });
+    }
+    case 'teamWon':
+      return {
+        ...fixtureForScreen('won'),
+        players: teamPlayers().map((player) => ({ ...player, downed: player.id === 3 })),
+      };
+    case 'teamLost':
+      return {
+        ...fixtureForScreen('lost'),
+        players: teamPlayers().map((player) => ({ ...player, downed: player.id !== 1 })),
+      };
     case 'title':
     case 'game':
       return fixtureState();

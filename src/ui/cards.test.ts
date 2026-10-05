@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { UpgradeOffer } from '../sim/state';
-import { cardFor, offerHeading, offerKicker } from './cards';
+import { cardFor, offerHeading, offerKicker, waitingFor } from './cards';
 import { UI_FIXTURE_CONTENT, fixturePlayer } from './fixtures';
 
 const LEVEL_UP: UpgradeOffer = { playerId: 0, options: [] };
@@ -70,5 +70,23 @@ describe('the title of an offer', () => {
   it('asks for the upgrade of a level', () => {
     expect(offerHeading(LEVEL_UP)).toBe('Choisis ton amélioration');
     expect(offerKicker(LEVEL_UP, fixturePlayer({ level: 5 }))).toBe('Niveau 5');
+  });
+});
+
+describe('waitingFor', () => {
+  it('says nothing when nobody else is choosing', () => {
+    expect(waitingFor([], true)).toEqual({ choosing: [], waiting: null });
+  });
+
+  it('tells who is choosing while this screen still chooses', () => {
+    expect(waitingFor(['Inès', 'Sam'], false)).toEqual({
+      choosing: ['Inès choisit…', 'Sam choisit…'],
+      waiting: null,
+    });
+  });
+
+  it('tells who the set waits for once this screen has chosen', () => {
+    expect(waitingFor(['Inès'], true).waiting).toBe('En attente de Inès');
+    expect(waitingFor(['Inès', 'Sam', 'Tom'], true).waiting).toBe('En attente de Inès, Sam et Tom');
   });
 });

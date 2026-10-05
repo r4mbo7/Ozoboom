@@ -3,7 +3,14 @@ import { setFraction } from '../sim/lineup';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
 import type { PlayerState, SimState } from '../sim/state';
-import { skillCooldownTicks, statValue } from '../sim/stats';
+import { statValue } from '../sim/stats';
+import {
+  type Band,
+  createCompactBand,
+  createFullBand,
+  createSkillView,
+  type SkillView,
+} from './band';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
 import {
@@ -13,6 +20,8 @@ import {
   gearSlots,
   isNight,
   plugHelp,
+  rosterOf,
+  skillCharge,
   sunPosition,
   trapCapacity,
   volumeCrans,
@@ -29,23 +38,10 @@ export interface Hud {
   reset(): void;
 }
 
-export function skillCharge(
-  player: Pick<PlayerState, 'modifiers' | 'skillCooldown'>,
-  skill: Pick<SkillDefinition, 'cooldownTicks'>,
-): number {
-  return 1 - ratio(player.skillCooldown, skillCooldownTicks(player, skill));
-}
+export { skillCharge };
 
 const VU_SEGMENTS = 20;
 const CRITICAL_RATIO = 0.25;
-
-interface SkillView {
-  root: HTMLElement;
-  glyph: HTMLElement;
-  name: HTMLElement;
-  key: HTMLElement;
-  status: HTMLElement;
-}
 
 function panel(area: string, label: string): { root: HTMLElement; head: HTMLElement } {
   const root = el('section', `ui-panel ui-hud__${area}`);
@@ -53,20 +49,6 @@ function panel(area: string, label: string): { root: HTMLElement; head: HTMLElem
   const head = el('div', 'ui-panel__head');
   root.append(head);
   return { root, head };
-}
-
-function createSkillView(kind: 'skill' | 'ultimate'): SkillView {
-  const root = el('div', `ui-skill ui-skill--${kind}`);
-  const ring = el('div', 'ui-skill__ring');
-  const glyph = el('span', 'ui-skill__glyph');
-  ring.append(glyph);
-  const name = el('span', 'ui-skill__name');
-  const key = el('span', 'ui-skill__key');
-  const status = el('span', 'ui-skill__status');
-  const text = el('div', 'ui-skill__text');
-  text.append(name, status);
-  root.append(ring, key, text);
-  return { root, glyph, name, key, status };
 }
 
 function slotLabel(slot: LineupSlot): string {
@@ -174,7 +156,23 @@ export function createHud(): Hud {
   const aux = el('div', 'ui-hud__aux');
   aux.append(volume.root, gear.root);
 
-  element.append(core.root, lineup.root, threat.root, aux, level.root, traps.root, skills.root);
+  const roster = el('div', 'ui-hud__roster');
+  roster.setAttribute('aria-label', 'Les autres joueurs');
+  const team = el('div', 'ui-hud__team');
+  const rosterBands: Band[] = [];
+  const teamBands: Band[] = [];
+
+  element.append(
+    core.root,
+    lineup.root,
+    threat.root,
+    aux,
+    level.root,
+    traps.root,
+    skills.root,
+    roster,
+    team,
+  );
 
   let builtFor: GameContent | null = null;
   let set: SetDefinition | null = null;
@@ -423,6 +421,35 @@ export function createHud(): Hud {
     updateSun(setFraction(set, state));
   }
 
+  function fitBands(bands: Band[], container: HTMLElement, count: number, make: () => Band): void {
+    while (bands.length < count) {
+      const band = make();
+      bands.push(band);
+      container.append(band.element);
+    }
+    while (bands.length > count) {
+      bands.pop()?.element.remove();
+    }
+  }
+
+  function updateBands(
+    frame: UiFrame,
+    content: GameContent,
+    locals: readonly PlayerState[],
+    others: readonly PlayerState[],
+  ): void {
+    fitBands(teamBands, team, locals.length, createFullBand);
+    fitBands(rosterBands, roster, others.length, createCompactBand);
+    locals.forEach((player, index) => {
+      const definition = content.classes.find((entry) => entry.id === player.classId) ?? null;
+      const device = frame.players.find((entry) => entry.playerId === player.id)?.snapshot.device;
+      teamBands[index]?.update(player, definition, device ?? frame.snapshot.device, content);
+    });
+    others.forEach((player, index) => {
+      rosterBands[index]?.update(player, null, frame.snapshot.device, content);
+    });
+  }
+
   function update(state: SimState, frame: UiFrame, content: GameContent): void {
     if (builtFor !== content || set?.id !== state.setId) {
       build(content, state.setId);
@@ -431,6 +458,13 @@ export function createHud(): Hud {
     updateLineup(state, content);
     setText(threatCount, formatNumber(state.enemies.length));
     updateVolume(state);
+
+    const people = rosterOf(state, frame);
+    setFlag(element, 'team', people.team);
+    setFlag(element, 'multi', people.team && people.locals.length > 1);
+    if (people.team) {
+      updateBands(frame, content, people.locals, people.others);
+    }
 
     const local = frame.players[0];
     const snapshot = local?.snapshot ?? frame.snapshot;

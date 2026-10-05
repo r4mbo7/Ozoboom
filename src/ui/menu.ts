@@ -12,6 +12,8 @@ export interface Menu {
 export function createMenu(onActivate: (index: number) => void): Menu {
   let items: readonly HTMLButtonElement[] = [];
   let index = 0;
+  // Items come and go between calls to `setItems`: each is wired once.
+  const bound = new WeakSet<HTMLButtonElement>();
 
   function select(next: number): void {
     index = Math.min(Math.max(next, 0), Math.max(items.length - 1, 0));
@@ -30,21 +32,27 @@ export function createMenu(onActivate: (index: number) => void): Menu {
     },
     setItems(next) {
       items = next;
-      items.forEach((item, position) => {
+      for (const item of items) {
         item.tabIndex = -1;
+        if (bound.has(item)) {
+          continue;
+        }
+        bound.add(item);
         onMouseMove(item, () => {
-          if (index !== position) {
+          const position = items.indexOf(item);
+          if (position >= 0 && index !== position) {
             select(position);
           }
         });
         item.addEventListener('click', (event) => {
-          if (event.detail === 0) {
+          const position = items.indexOf(item);
+          if (event.detail === 0 || position < 0) {
             return;
           }
           select(position);
           onActivate(position);
         });
-      });
+      }
       select(0);
     },
     select,

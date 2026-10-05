@@ -35,6 +35,13 @@ let current = initial;
 let device: InputDevice = params.get('device') === 'gamepad' ? 'gamepad' : 'keyboardMouse';
 let state: SimState = fixtureForScreen(initial, params.has('late'));
 let pending: InputSnapshot = idleSnapshot({ device });
+// The second player of the screen: WASD to move through a menu, Space to confirm.
+let pendingSecond: InputSnapshot = idleSnapshot({ device });
+// How many of the players of the fixture sit at this screen: the others are remote ones.
+const localCount = Number(
+  params.get('locals') ?? (initial === 'offers' || initial === 'team' ? 2 : 1),
+);
+const session = params.get('role') === 'guest' ? ({ role: 'guest' } as const) : undefined;
 const titleOptions = {
   calmMode: params.has('calm') || prefersCalmMode(),
   muted: params.has('muted'),
@@ -57,7 +64,12 @@ const ui = createUi(root, {
   },
   onChooseUpgrade(playerId, upgradeId) {
     console.info('[ui] onChooseUpgrade', playerId, upgradeId);
-    open('game');
+    const pendingUpgrades = state.pendingUpgrades.filter((offer) => offer.playerId !== playerId);
+    if (current === 'offers' && pendingUpgrades.length > 0) {
+      state = { ...state, pendingUpgrades };
+    } else {
+      open('game');
+    }
   },
   onToggleCalmMode(enabled) {
     console.info('[ui] onToggleCalmMode', enabled);
@@ -67,8 +79,8 @@ const ui = createUi(root, {
     console.info('[ui] onToggleMute', muted);
     titleOptions.muted = muted;
   },
-  onFeedback() {
-    console.info('[ui] onFeedback');
+  onFeedback(details) {
+    console.info('[ui] onFeedback', details ?? '');
     openForm();
   },
   onPlayTogether: () => {
@@ -131,6 +143,8 @@ function open(screen: UiFixtureScreen): void {
       ui.showTitle({ ...titleOptions, device });
       break;
     case 'game':
+    case 'team':
+    case 'offers':
     case 'upgrade':
     case 'fusion':
     case 'relics':
@@ -139,7 +153,10 @@ function open(screen: UiFixtureScreen): void {
       break;
     case 'won':
     case 'lost':
-      ui.showEnd(state);
+    case 'teamWon':
+    case 'teamLost':
+      ui.update(state, { snapshot: pending, players: [] }, UI_FIXTURE_CONTENT);
+      ui.showEnd(state, session);
       break;
   }
 }
@@ -153,12 +170,23 @@ const MENU_KEYS: Record<string, keyof MenuIntents> = {
   Escape: 'back',
 };
 
+const SECOND_KEYS: Record<string, keyof MenuIntents> = {
+  KeyW: 'up',
+  KeyS: 'down',
+  KeyA: 'left',
+  KeyD: 'right',
+  Space: 'confirm',
+};
+
 window.addEventListener('keydown', (event) => {
   if (event.target instanceof HTMLTextAreaElement) {
     return;
   }
   const menuKey = MENU_KEYS[event.code];
-  if (menuKey !== undefined) {
+  const secondKey = SECOND_KEYS[event.code];
+  if (secondKey !== undefined) {
+    pendingSecond = { ...pendingSecond, menu: { ...pendingSecond.menu, [secondKey]: true } };
+  } else if (menuKey !== undefined) {
     pending = { ...pending, menu: { ...pending.menu, [menuKey]: true } };
   } else if (event.code === 'Tab') {
     const key = event.shiftKey ? 'previousTrap' : 'nextTrap';
@@ -198,7 +226,8 @@ if (requested === 'feedback') {
 }
 const notice = params.get('notice');
 if (notice === 'desync' || notice === 'hostLeft' || notice === 'connectionLost') {
-  ui.showNotice(notice, '');
+  ui.update(state, { snapshot: pending, players: [] }, UI_FIXTURE_CONTENT);
+  ui.showNotice(notice, params.get('details') ?? '');
 }
 if (params.has('lobby')) {
   ui.showLobby({
@@ -233,9 +262,15 @@ window.setInterval(() => {
     };
   }
   const snapshot: InputSnapshot = { ...pending, device };
+  const second: InputSnapshot = { ...pendingSecond, device };
   pending = idleSnapshot({ device });
+  pendingSecond = idleSnapshot({ device });
   if (feedback === null) {
-    ui.update(state, { snapshot, players: [{ playerId: 0, snapshot }] }, UI_FIXTURE_CONTENT);
+    const players = state.players.slice(0, localCount).map((player, index) => ({
+      playerId: player.id,
+      snapshot: index === 1 ? second : snapshot,
+    }));
+    ui.update(state, { snapshot, players }, UI_FIXTURE_CONTENT);
     state = { ...state, events: [] };
   } else {
     feedback.update(snapshot);

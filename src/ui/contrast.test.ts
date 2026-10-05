@@ -20,4 +20,11 @@ describe.each(MOMENTS)('contrast at %s', (moment) => {
   it.each(['mage', 'tank', 'healer'] as const)('%s on sol reaches 4.5:1', (classColor) => {
     expect(contrast(palette[classColor], palette.sol)).toBeGreaterThanOrEqual(4.5);
   });
+
+  it.each(['mage', 'tank', 'healer'] as const)(
+    'the %s mark and bar on solClair reach 3:1',
+    (classColor) => {
+      expect(contrast(palette[classColor], palette.solClair)).toBeGreaterThanOrEqual(3);
+    },
+  );
 });

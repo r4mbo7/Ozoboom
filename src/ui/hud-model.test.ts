@@ -3,12 +3,15 @@ import type { GameContent, SetDefinition } from '../data/types';
 import { TICKS_PER_BAR } from '../shared/tempo';
 import { setFraction } from '../sim/lineup';
 import type { SimState } from '../sim/state';
-import { UI_FIXTURE_CONTENT, fixtureState } from './fixtures';
+import { UI_FIXTURE_CONTENT, fixtureForScreen, fixtureState, idleSnapshot } from './fixtures';
 import {
+  classToken,
   enteredSpeaker,
   gearSlots,
   isNight,
+  playerLabel,
   plugHelp,
+  rosterOf,
   sunPosition,
   trapCapacity,
   volumeCrans,
@@ -164,5 +167,72 @@ describe('plugHelp', () => {
   it('tells how many bars to stay', () => {
     expect(plugHelp(2)).toBe('Reste deux mesures pour brancher');
     expect(plugHelp(1)).toBe('Reste une mesure pour brancher');
+  });
+});
+
+describe('rosterOf', () => {
+  const snapshot = idleSnapshot();
+
+  it('is the solo HUD when the sim holds one player', () => {
+    const state = fixtureState();
+
+    const roster = rosterOf(state, { players: [{ playerId: 0, snapshot }] });
+
+    expect(roster.team).toBe(false);
+    expect(roster.locals.map((player) => player.id)).toEqual([0]);
+    expect(roster.others).toEqual([]);
+  });
+
+  it('splits the players of this screen from the others of the sim', () => {
+    const state = fixtureForScreen('team');
+
+    const roster = rosterOf(state, {
+      players: [
+        { playerId: 0, snapshot },
+        { playerId: 1, snapshot },
+      ],
+    });
+
+    expect(roster.team).toBe(true);
+    expect(roster.locals.map((player) => player.name)).toEqual(['Léa', 'Tom']);
+    expect(roster.others.map((player) => player.name)).toEqual(['Inès', 'Sam']);
+  });
+
+  it('keeps the order of the frame for the players of this screen', () => {
+    const state = fixtureForScreen('team');
+
+    const roster = rosterOf(state, {
+      players: [
+        { playerId: 2, snapshot },
+        { playerId: 0, snapshot },
+      ],
+    });
+
+    expect(roster.locals.map((player) => player.name)).toEqual(['Inès', 'Léa']);
+    expect(roster.others.map((player) => player.name)).toEqual(['Tom', 'Sam']);
+  });
+
+  it('ignores a local player the sim does not hold', () => {
+    const state = fixtureState();
+
+    const roster = rosterOf(state, { players: [{ playerId: 3, snapshot }] });
+
+    expect(roster.locals).toEqual([]);
+  });
+});
+
+describe('who a player is', () => {
+  it('colours the three classes and falls back to gold', () => {
+    expect(['mage', 'tank', 'healer', 'inconnue'].map(classToken)).toEqual([
+      'mage',
+      'tank',
+      'healer',
+      'or',
+    ]);
+  });
+
+  it('names a player by name, or by place when the name is absent', () => {
+    expect(playerLabel({ id: 1, name: 'Tom' })).toBe('Tom');
+    expect(playerLabel({ id: 2 })).toBe('Joueur 3');
   });
 });
