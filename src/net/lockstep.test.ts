@@ -62,7 +62,11 @@ describe('host and guests in lockstep', () => {
         onPeerLeft: vi.fn(),
       }),
       ...guests.map((guest, index) =>
-        createGuestSource(guest, [playerOf(index + 1)], { onDesync: desyncs, onHostLeft: vi.fn() }),
+        createGuestSource(guest, host.id, [playerOf(index + 1)], {
+          onDesync: desyncs,
+          onHostLeft: vi.fn(),
+          onFellBehind: vi.fn(),
+        }),
       ),
     ];
     const rng = seedRng(99);
@@ -245,6 +249,7 @@ describe('createGuestSource', () => {
     source: LockstepSource;
     onDesync: ReturnType<typeof vi.fn>;
     onHostLeft: ReturnType<typeof vi.fn>;
+    onFellBehind: ReturnType<typeof vi.fn>;
     sent: { tick: number; command: PlayerCommand }[];
   } {
     const { host, guests } = network(2);
@@ -252,12 +257,13 @@ describe('createGuestSource', () => {
     if (guest === undefined) throw new Error('missing guest');
     const onDesync = vi.fn();
     const onHostLeft = vi.fn();
+    const onFellBehind = vi.fn();
     const sent: { tick: number; command: PlayerCommand }[] = [];
     host.onMessage((_, message) => {
       if (message.type === 'command') sent.push(message);
     });
-    const source = createGuestSource(guest, [1], { onDesync, onHostLeft });
-    return { host, source, onDesync, onHostLeft, sent };
+    const source = createGuestSource(guest, host.id, [1], { onDesync, onHostLeft, onFellBehind });
+    return { host, source, onDesync, onHostLeft, onFellBehind, sent };
   }
 
   it('waits when no frame is there and plays frames in order', () => {
@@ -334,15 +340,28 @@ describe('createGuestSource', () => {
     expect(said.onHostLeft).toHaveBeenCalledOnce();
   });
 
-  it('stops with a desync when it falls too far behind', () => {
-    const { host, source, onDesync } = guestWithHost();
+  it('reports the host leaving before any frame', () => {
+    const { host, onHostLeft } = guestWithHost();
+
+    host.close();
+    host.flush();
+
+    expect(onHostLeft).toHaveBeenCalledOnce();
+  });
+
+  it('says bye and reports falling behind, not a desync, when its queue is full', () => {
+    const { host, source, onDesync, onFellBehind } = guestWithHost();
+    const heard: string[] = [];
+    host.onMessage((_, message) => heard.push(message.type));
 
     for (let tick = 0; tick <= GUEST_QUEUE_CAPACITY; tick++) {
       host.broadcast({ type: 'frame', tick, commands: [] });
     }
     host.flush();
 
-    expect(onDesync).toHaveBeenCalledExactlyOnceWith(GUEST_QUEUE_CAPACITY);
+    expect(onFellBehind).toHaveBeenCalledOnce();
+    expect(onDesync).not.toHaveBeenCalled();
+    expect(heard).toEqual(['bye']);
     expect(source.pending).toBe(0);
   });
 });
@@ -356,9 +375,9 @@ describe('memory', () => {
       onDesync: vi.fn(),
       onPeerLeft: vi.fn(),
     });
-    const hooks = { onDesync: vi.fn(), onHostLeft: vi.fn() };
-    const first = createGuestSource(a, [1], hooks);
-    const second = createGuestSource(b, [2], hooks);
+    const hooks = { onDesync: vi.fn(), onHostLeft: vi.fn(), onFellBehind: vi.fn() };
+    const first = createGuestSource(a, host.id, [1], hooks);
+    const second = createGuestSource(b, host.id, [2], hooks);
     let peak = 0;
 
     for (let tick = 0; tick < 10_000; tick++) {

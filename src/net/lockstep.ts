@@ -11,14 +11,15 @@ import type { CommandSource, PeerId, Seat, Transport } from './types';
 
 export const GUEST_BUFFER_TICKS = 2;
 export const GUEST_CATCH_UP_TICKS = 6;
-// A tab paused for longer than this loses its place: the guest stops with a desync.
-export const GUEST_QUEUE_CAPACITY = 1024;
+// A tab paused for longer than this (under five minutes) loses its place: onFellBehind.
+export const GUEST_QUEUE_CAPACITY = 8192;
 const HOST_COMMAND_WINDOW = 64;
 const HASH_RING_SIZE = 4;
 
 export interface LockstepHooks {
   onDesync(tick: number): void;
   onHostLeft(): void;
+  onFellBehind(): void;
   onPeerLeft(playerId: PlayerId): void;
 }
 
@@ -194,8 +195,9 @@ export function createHostSource(
 
 export function createGuestSource(
   transport: Transport,
+  hostId: PeerId,
   localPlayers: readonly PlayerId[],
-  hooks: Pick<LockstepHooks, 'onDesync' | 'onHostLeft'>,
+  hooks: Pick<LockstepHooks, 'onDesync' | 'onHostLeft' | 'onFellBehind'>,
 ): LockstepSource {
   const queue = new Array<readonly PlayerCommand[] | undefined>(GUEST_QUEUE_CAPACITY).fill(
     undefined,
@@ -203,7 +205,6 @@ export function createGuestSource(
   let head = 0;
   let size = 0;
   let received = 0;
-  let hostId: PeerId | null = null;
   let stopped = false;
   let closed = false;
 
@@ -238,12 +239,17 @@ export function createGuestSource(
     }
     switch (message.type) {
       case 'frame':
-        hostId ??= from;
         if (from !== hostId || message.tick < received) {
           return;
         }
-        if (message.tick > received || size === GUEST_QUEUE_CAPACITY) {
+        if (message.tick > received) {
           desync(message.tick, true);
+          return;
+        }
+        if (size === GUEST_QUEUE_CAPACITY) {
+          halt();
+          transport.broadcast({ type: 'bye' });
+          hooks.onFellBehind();
           return;
         }
         queue[(head + size) % GUEST_QUEUE_CAPACITY] = message.commands;
