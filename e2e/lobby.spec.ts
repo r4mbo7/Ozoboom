@@ -37,7 +37,7 @@ test.describe('title', () => {
     await expect(picker.getByRole('radio', { name: 'La VJ' })).toBeChecked();
     await picker.getByRole('radio', { name: 'Le roadie' }).click();
     await expect(picker.getByRole('radio', { name: 'Le roadie' })).toBeChecked();
-    await expect(picker).toContainText('Tank : tient la ligne');
+    await expect(picker).toContainText('Tient la ligne');
     expect(lines).toContain('[ui] onChooseClass tank');
 
     await expect(picker).toHaveAttribute('aria-current', 'true');
@@ -148,6 +148,26 @@ test.describe('local lobby', () => {
     await tap(page, 'ArrowLeft');
     expect(lines).toContain('[ui] onSeatClass 1 mage');
     expect(lines.filter((line) => line.startsWith('[ui] onSeatClass'))).toHaveLength(2);
+  });
+
+  test('keeps a cursor per seat and rings only the seat in play', async ({ page }) => {
+    await page.goto(`${LOBBY}local-full`);
+
+    const seats = lobbyOf(page).getByRole('listitem');
+    const lit = (index: number) => seats.nth(index).locator('[aria-current]:not([data-quiet])');
+    const quiet = (index: number) => seats.nth(index).locator('[aria-current][data-quiet]');
+    await expect(seats.locator('[aria-current]')).toHaveCount(4);
+    await expect(lit(0)).toHaveCount(1);
+    for (const index of [1, 2, 3]) {
+      await expect(lit(index)).toHaveCount(0);
+      await expect(quiet(index)).toHaveCount(1);
+    }
+
+    await tap(page, 'KeyP');
+    await tap(page, 'ArrowDown');
+    await expect(lit(1)).toHaveCount(1);
+    await expect(lit(0)).toHaveCount(0);
+    await expect(quiet(0)).toHaveCount(1);
   });
 
   test('lets the first player launch from their own seat', async ({ page }) => {

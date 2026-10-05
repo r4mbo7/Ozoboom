@@ -6,19 +6,19 @@ export const LOBBY_CLASSES: readonly ClassInfo[] = [
   {
     id: 'mage',
     name: 'La VJ',
-    role: 'Mage : dégâts de zone à distance, fragile.',
+    role: 'Balaie la foule de loin avec ses lasers. Fragile.',
     color: '#ff2bd6',
   },
   {
     id: 'tank',
     name: 'Le roadie',
-    role: 'Tank : tient la ligne, attire les bad vibes, lent.',
+    role: 'Tient la ligne et attire les bad vibes. Lent.',
     color: '#ff9a3d',
   },
   {
     id: 'healer',
     name: 'Le care',
-    role: 'Healer : soigne, répare la scène, ralentit.',
+    role: 'Soigne, répare la scène et relève ses amis.',
     color: '#7cf2b0',
   },
 ];

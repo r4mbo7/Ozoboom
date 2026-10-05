@@ -324,6 +324,13 @@ function playersOf(snapshot: InputSnapshot): LocalPlayer[] {
   }));
 }
 
+// With `?pads=N`, the last N players of the screen play with a gamepad.
+const pads = Number(params.get('pads') ?? 0);
+
+function padSnapshot(index: number, count: number, snapshot: InputSnapshot): InputSnapshot {
+  return index >= count - pads ? { ...snapshot, device: 'gamepad' } : snapshot;
+}
+
 // With `?devices`, the frame lists every device: the keyboard, a first pad, and a second one that
 // presses A when J is pressed.
 let padPressed = false;
@@ -374,7 +381,7 @@ window.setInterval(() => {
       lobby === null
         ? state.players.slice(0, localCount).map((player, index) => ({
             playerId: player.id,
-            snapshot: index === 1 ? second : snapshot,
+            snapshot: padSnapshot(index, localCount, index === 1 ? second : snapshot),
           }))
         : playersOf(snapshot);
     ui.update(state, { snapshot, players, ...devicesOf(snapshot) }, UI_FIXTURE_CONTENT);
