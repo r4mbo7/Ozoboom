@@ -38,6 +38,7 @@ let pending: InputSnapshot = idleSnapshot({ device });
 const titleOptions = {
   calmMode: params.has('calm') || prefersCalmMode(),
   muted: params.has('muted'),
+  classId: 'mage',
 };
 const blockedTab: FeedbackTransport = {
   send: () => Promise.resolve({ status: 'failed' }),
@@ -69,6 +70,41 @@ const ui = createUi(root, {
   onFeedback() {
     console.info('[ui] onFeedback');
     openForm();
+  },
+  onPlayTogether: () => {
+    console.info('[ui] onPlayTogether');
+  },
+  onChooseClass: (classId) => {
+    console.info('[ui] onChooseClass', classId);
+  },
+  onJoinSeat: (deviceId) => {
+    console.info('[ui] onJoinSeat', deviceId);
+  },
+  onLeaveSeat: (playerId) => {
+    console.info('[ui] onLeaveSeat', playerId);
+  },
+  onSeatClass: (playerId, classId) => {
+    console.info('[ui] onSeatClass', playerId, classId);
+  },
+  onSeatName: (playerId, name) => {
+    console.info('[ui] onSeatName', playerId, name);
+  },
+  onCreateRoom: () => {
+    console.info('[ui] onCreateRoom');
+  },
+  onJoinRoom: (code) => {
+    console.info('[ui] onJoinRoom', code);
+  },
+  onLaunch: () => {
+    console.info('[ui] onLaunch');
+  },
+  onLeaveLobby() {
+    console.info('[ui] onLeaveLobby');
+    open('title');
+  },
+  onLeaveNotice() {
+    console.info('[ui] onLeaveNotice');
+    open('title');
   },
 });
 
@@ -160,6 +196,21 @@ open(initial);
 if (requested === 'feedback') {
   openForm();
 }
+const notice = params.get('notice');
+if (notice === 'desync' || notice === 'hostLeft' || notice === 'connectionLost') {
+  ui.showNotice(notice, '');
+}
+if (params.has('lobby')) {
+  ui.showLobby({
+    mode: 'local',
+    role: 'host',
+    code: null,
+    link: null,
+    seats: [],
+    canLaunch: false,
+    error: null,
+  });
+}
 
 let ticks = 0;
 const FIRE_EVERY_TICKS = 12;
@@ -184,7 +235,7 @@ window.setInterval(() => {
   const snapshot: InputSnapshot = { ...pending, device };
   pending = idleSnapshot({ device });
   if (feedback === null) {
-    ui.update(state, snapshot, UI_FIXTURE_CONTENT);
+    ui.update(state, { snapshot, players: [{ playerId: 0, snapshot }] }, UI_FIXTURE_CONTENT);
     state = { ...state, events: [] };
   } else {
     feedback.update(snapshot);

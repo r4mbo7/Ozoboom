@@ -1,6 +1,7 @@
 import type { ClassDefinition, GameContent, SetDefinition, SkillDefinition } from '../data/types';
 import { setFraction } from '../sim/lineup';
 import type { InputDevice, InputSnapshot } from '../input/intents';
+import type { UiFrame } from './types';
 import type { PlayerState, SimState } from '../sim/state';
 import { skillCooldownTicks, statValue } from '../sim/stats';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
@@ -24,7 +25,7 @@ import { cssName } from './sun';
 
 export interface Hud {
   readonly element: HTMLElement;
-  update(state: SimState, snapshot: InputSnapshot, content: GameContent): void;
+  update(state: SimState, frame: UiFrame, content: GameContent): void;
   reset(): void;
 }
 
@@ -422,7 +423,7 @@ export function createHud(): Hud {
     updateSun(setFraction(set, state));
   }
 
-  function update(state: SimState, snapshot: InputSnapshot, content: GameContent): void {
+  function update(state: SimState, frame: UiFrame, content: GameContent): void {
     if (builtFor !== content || set?.id !== state.setId) {
       build(content, state.setId);
     }
@@ -431,7 +432,9 @@ export function createHud(): Hud {
     setText(threatCount, formatNumber(state.enemies.length));
     updateVolume(state);
 
-    const player = state.players[0];
+    const local = frame.players[0];
+    const snapshot = local?.snapshot ?? frame.snapshot;
+    const player = state.players.find((candidate) => candidate.id === local?.playerId);
     setFlag(element, 'no-player', player === undefined);
     if (player === undefined) {
       return;
