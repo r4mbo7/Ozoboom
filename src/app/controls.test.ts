@@ -3,7 +3,7 @@ import { CONTENT } from '../data/content';
 import type { TrapDefinition } from '../data/types';
 import type { GameplayIntents, InputSnapshot } from '../input/intents';
 import type { Vec2 } from '../sim/state';
-import { Controls, TRAP_GAP, buildCommand } from './controls';
+import { Controls, buildCommand } from './controls';
 
 const PLAYER = { id: 0, x: 400, y: 300, radius: 14, aim: { x: 1, y: 0 } } as const;
 const OUTWARD = { x: -1, y: 0 };
@@ -44,7 +44,7 @@ function expectVec(actual: Vec2, expected: Vec2): void {
 }
 
 describe('buildCommand', () => {
-  it('aims from the player to the pointer and places the trap under it', () => {
+  it('aims from the player to the pointer and places the trap under the player', () => {
     const pointer = snapshot(
       { move: { x: 0.6, y: 0 }, fire: true },
       { pointerScreen: { x: 300, y: 650 }, aimFromPointer: true },
@@ -67,8 +67,8 @@ describe('buildCommand', () => {
     expect(command.actions[0]).toMatchObject({
       type: 'placeTrap',
       trapId: 'laser',
-      x: 400,
-      y: 700,
+      x: PLAYER.x,
+      y: PLAYER.y,
       dx: 0,
       dy: 1,
     });
@@ -90,7 +90,7 @@ describe('buildCommand', () => {
     expectVec(command.input.aim, { x: 0, y: -1 });
   });
 
-  it('aims with the held aim and places the trap in front of the player without a pointer', () => {
+  it('aims with the held aim and places the trap under the player without a pointer', () => {
     const stick = snapshot({ aim: { x: 0, y: -1 } }, { device: 'gamepad' });
 
     const command = buildCommand({
@@ -103,10 +103,9 @@ describe('buildCommand', () => {
       upgradeId: 'double-tempo',
     });
 
-    const distance = PLAYER.radius + TRAP_GAP + CAISSON.radius;
     expectVec(command.input.aim, { x: 0, y: -1 });
     expect(command.actions).toEqual([
-      { type: 'placeTrap', trapId: CAISSON.id, x: 400, y: 300 - distance, dx: 0, dy: -1 },
+      { type: 'placeTrap', trapId: CAISSON.id, x: PLAYER.x, y: PLAYER.y, dx: 0, dy: -1 },
       { type: 'chooseUpgrade', upgradeId: 'double-tempo' },
     ]);
   });

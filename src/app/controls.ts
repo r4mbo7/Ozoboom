@@ -5,9 +5,6 @@ import { length, normalize } from '../shared/vec';
 import { IDLE_INPUT, type PlayerAction, type PlayerCommand } from '../sim/commands';
 import type { PlayerState, Vec2 } from '../sim/state';
 
-// Gap between the edge of the player and the edge of a trap placed in front of them.
-export const TRAP_GAP = 16;
-
 export type ScreenToWorld = (point: Vec2) => Vec2;
 type Body = Pick<PlayerState, 'id' | 'x' | 'y' | 'radius' | 'aim'>;
 
@@ -35,32 +32,17 @@ export function aimOf(
   return heldAim;
 }
 
-export function trapSpot(
-  snapshot: InputSnapshot,
-  player: Body,
-  toWorld: ScreenToWorld,
-  aim: Vec2,
-  trap: TrapDefinition,
-): Vec2 {
-  if (snapshot.aimFromPointer && snapshot.pointerScreen !== null) {
-    return toWorld(snapshot.pointerScreen);
-  }
-  const distance = player.radius + TRAP_GAP + trap.radius;
-  return { x: player.x + aim.x * distance, y: player.y + aim.y * distance };
-}
-
 export function buildCommand(request: CommandRequest): PlayerCommand {
   const { snapshot, player, toWorld, heldAim, trap } = request;
   const { gameplay } = snapshot;
   const aim = aimOf(snapshot, player, toWorld, heldAim);
   const actions: PlayerAction[] = [];
   if (request.placeTrap && trap !== undefined) {
-    const spot = trapSpot(snapshot, player, toWorld, aim, trap);
     actions.push({
       type: 'placeTrap',
       trapId: trap.id,
-      x: spot.x,
-      y: spot.y,
+      x: player.x,
+      y: player.y,
       dx: aim.x,
       dy: aim.y,
     });
