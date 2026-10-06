@@ -170,15 +170,15 @@ describe('flight case', () => {
 });
 
 describe('charge', () => {
-  it('draws a trail behind the one who dashes, and nothing for a nova', () => {
+  it('draws a trail behind the one who dashes, and a wave around a nova', () => {
     const { ctx, family, state } = setup();
 
     play(family, state, frameAt(0.4, 1), [{ type: 'skillUsed', playerId: 0 }]);
     const nova = shown(ctx);
     play(family, state, frameAt(0.4, 2), [{ type: 'skillUsed', playerId: ROADIE }]);
 
-    expect(nova).toBe(0);
-    expect(shown(ctx)).toBe(3);
+    expect(nova).toBe(2);
+    expect(shown(ctx)).toBe(5);
   });
 
   it('stretches the trail over the dash, whatever the footsteps of the tick before', () => {

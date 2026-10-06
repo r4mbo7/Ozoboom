@@ -151,5 +151,33 @@ export function createChargeBursts(
     }
   }
 
-  return { dashTrail, pull, shatter };
+  function nova(state: SimState, player: PlayerState, radius: number, frame: Frame): void {
+    const color = frame.palette[tokenOf(player)];
+    const base = {
+      now: state.tick,
+      duration: TICKS_PER_BEAT,
+      x: 0,
+      y: 0,
+      anchor: 'player',
+      anchorId: player.id,
+      tint: color,
+    } as const;
+    spawn(frame, {
+      ...base,
+      shape: t.ring,
+      fromRadius: player.radius,
+      toRadius: radius,
+      peak: 0.95,
+      outline: true,
+    });
+    spawn(frame, {
+      ...base,
+      shape: t.halo,
+      fromRadius: player.radius * 1.5,
+      toRadius: radius * 0.9,
+      peak: 0.4,
+    });
+  }
+
+  return { dashTrail, nova, pull, shatter };
 }
