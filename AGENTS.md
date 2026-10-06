@@ -76,9 +76,10 @@ Un lint, un test ou une instabilité qui casse se répare, même sans lien avec 
 
 ## Git
 
-- Tronc unique : `main` déploie sur GitHub Pages et doit rester jouable. Pas de pull request jusqu'à nouvel ordre : les branches se fusionnent en local, testées par l'agent.
-- Fusionner une branche : la réduire en un commit au-dessus de `origin/main`, faire passer `pnpm check` et `pnpm exec playwright test`, puis `git push origin HEAD:main` et supprimer la branche. Si `main` a bougé entre-temps, recommencer.
-- La CI tourne encore sur chaque push de `main` et ne déploie que si elle passe : un échec s'y répare aussitôt.
+- `dev` reçoit le travail, `main` les sorties et déploie sur GitHub Pages ([ADR 0008](docs/adr/0008-branche-dev-et-sorties-sur-main.md)). Pas de pull request jusqu'à nouvel ordre : les branches se fusionnent en local, testées par l'agent.
+- Fusionner une branche : la réduire en un commit au-dessus de `origin/dev`, faire passer `pnpm check` et `pnpm exec playwright test`, puis `git push origin HEAD:dev` et supprimer la branche. Si `dev` a bougé entre-temps, recommencer.
+- Sortir une version, seulement à la demande de Constantin : `git push origin origin/dev:main`, en avance rapide. Jamais d'autre push sur `main`.
+- La CI tourne sur chaque push de `dev` et de `main`, et ne déploie que `main` si elle passe : un échec s'y répare aussitôt.
 - Messages de commit en anglais, format conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `refactor:`, `test:`), le sujet dit ce que le joueur ou le contributeur peut faire de nouveau.
 - Pas de ligne d'attribution ni de co-auteur agent dans les commits.
 - Jamais de secret dans le dépôt. Le jeu n'en a pas besoin ; le futur service de classement les tiendra hors du code.

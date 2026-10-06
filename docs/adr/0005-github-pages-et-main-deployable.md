@@ -1,6 +1,6 @@
 # 0005 - GitHub Pages et une seule branche déployable
 
-- **Statut :** accepté
+- **Statut :** remplacé par [0008](0008-branche-dev-et-sorties-sur-main.md)
 - **Date :** 2026-10-04
 
 ## Contexte
