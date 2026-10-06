@@ -131,6 +131,17 @@ function hitEnemies(
       continue;
     }
     hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer);
+    if (projectile.owner.kind === 'weapon' && projectile.damage > 0) {
+      const { playerId, weaponId } = projectile.owner;
+      state.events.push({
+        type: 'weaponHit',
+        playerId,
+        weaponId,
+        id: enemy.id,
+        x: enemy.x,
+        y: enemy.y,
+      });
+    }
     if (projectile.knockback !== undefined) {
       pushAway(enemy, projectile, projectile.knockback);
     }

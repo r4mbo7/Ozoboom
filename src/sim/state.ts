@@ -299,6 +299,8 @@ export type SimEvent =
       dx?: number;
       dy?: number;
     }
+  // A body of a weapon touched a bad vibe. A continuous weapon (the fans) fires every tick, so this is its only meaningful moment.
+  | { type: 'weaponHit'; playerId: PlayerId; weaponId: string; id: EntityId; x: number; y: number }
   | { type: 'weaponEvolved'; playerId: PlayerId; weaponId: string; resultId: string }
   | { type: 'placedSpawned'; id: EntityId; weaponId: string; x: number; y: number }
   | { type: 'placedRemoved'; id: EntityId; weaponId: string; x: number; y: number }
