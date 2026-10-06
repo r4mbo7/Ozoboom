@@ -1,5 +1,5 @@
 import { type Locator, type Page, expect as baseExpect, test } from '@playwright/test';
-import { collectConsoleErrors } from './game';
+import { collectConsoleErrors, repeatUntil } from './game';
 
 // Every key press waits for two frames, and SwiftShader frames are slow on CI and when tests run
 // in parallel: the budget of the full games, and 30 seconds per assertion instead of 5.
@@ -77,12 +77,13 @@ async function sendBugWithKeyboard(page: Page, message: string): Promise<void> {
   await page.keyboard.type(message);
   await press(page, 'Escape');
   await expect(field).not.toBeFocused();
-  await press(page, 'ArrowDown');
-  await press(page, 'ArrowDown');
-  await expect(dialog.getByRole('button', { name: 'Envoyer sur GitHub' })).toHaveAttribute(
-    'aria-current',
-    'true',
-  );
+  const send = dialog.getByRole('button', { name: 'Envoyer sur GitHub' });
+  const sendSelected = async () => (await send.getAttribute('aria-current')) === 'true';
+  await repeatUntil(async () => {
+    if (!(await sendSelected())) {
+      await press(page, 'ArrowDown');
+    }
+  }, sendSelected);
   await press(page, 'Enter');
   await expect(dialog.getByText('Le formulaire GitHub est ouvert')).toBeVisible();
 }

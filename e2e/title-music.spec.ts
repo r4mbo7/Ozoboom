@@ -1,5 +1,8 @@
-import { type Page, expect, test } from '@playwright/test';
+import { type Page, expect as baseExpect, test } from '@playwright/test';
 import { collectConsoleErrors } from './game';
+
+// SwiftShader frames are slow on CI and when tests run in parallel: 30 seconds per assertion.
+const expect = baseExpect.configure({ timeout: 30_000 });
 
 declare global {
   interface Window {
