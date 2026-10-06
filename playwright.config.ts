@@ -1,10 +1,15 @@
+import { createHash } from 'node:crypto';
 import { defineConfig, devices } from '@playwright/test';
 
-// Parallel checkouts each pick their own port: E2E_PORT=4201 pnpm exec playwright test
-const PORT = Number(process.env.E2E_PORT ?? 4173);
+// Each checkout derives its own pair of ports from its path, so parallel checkouts never share a
+// server. E2E_PORT and E2E_PEER_PORT force them.
+const PATH_HASH = createHash('sha1')
+  .update(import.meta.dirname)
+  .digest();
+const PORT = Number(process.env.E2E_PORT ?? 20_000 + 2 * (PATH_HASH.readUInt16BE(0) % 5000));
 const URL = `http://localhost:${String(PORT)}/`;
 // Local PeerJS broker for the online tests, so no test needs the Internet.
-const PEER_PORT = Number(process.env.E2E_PEER_PORT ?? 9000);
+const PEER_PORT = Number(process.env.E2E_PEER_PORT ?? PORT + 1);
 // The CI builds once with the broker address and shares dist/ between its shards.
 const SERVE_ONLY = Boolean(process.env.E2E_PREBUILT);
 // VS Code's snap leaks its GIO modules, built for an older glibc, and they crash WebKit's network process.

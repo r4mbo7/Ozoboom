@@ -67,7 +67,7 @@ pnpm install          # dépendances (Node 24, pnpm épinglé dans package.json)
 pnpm dev              # serveur de développement
 pnpm check            # types, lint, format, tests, build : doit passer avant tout commit
 pnpm test:watch       # tests en continu
-pnpm exec playwright test   # tests navigateur ; E2E_PORT=<port> si un autre checkout les lance aussi
+pnpm exec playwright test   # tests navigateur, sur des ports propres à chaque checkout
 pnpm contrast         # contraste de chaque écran à chaque moment (6 min), après un changement de couleur
 pnpm format           # formate tout
 ```
