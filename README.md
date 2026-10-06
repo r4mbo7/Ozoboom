@@ -18,6 +18,10 @@ Au 2026-10-05 : la V0.2 est assemblée, il reste à la jouer à distance. Trois 
 - **En ligne** : dans le salon, « Jouer en ligne » puis « Créer un salon » donne un code de six caractères et un lien à copier. Les amis ouvrent le lien (ou tapent le code), donnent leur nom et leur classe, l'hôte lance le set. Pair à pair en WebRTC, sans compte ([ADR 0007](docs/adr/0007-coop-en-ligne-lockstep-webrtc-peerjs.md)) ; tout le monde doit avoir la même version du jeu.
 - Seul : « Jouer » reste un geste, la classe se choisit à côté.
 
+### Jouer sur téléphone
+
+Au doigt, seul ou en ligne, de préférence tenu à l'horizontale. Un pouce sur l'arène fait naître un joystick sous lui ; la visée et le tir sont automatiques, sur la bad vibe la plus proche à portée. Toucher la tuile d'un piège le pose à tes pieds, la glisser sur l'arène le pose sous le doigt. La compétence se touche sur sa tuile, la pause sur le bouton ❚❚ du bandeau. Les menus se touchent. Le tactile ne prend pas de place en coop sur un même écran.
+
 Les autres captures (crépuscule, sunrise, chaque écran, le banc à 300 masques, la partie à quatre) sont dans [docs/captures](docs/captures).
 
 | Jalon      | Contenu                                                                                                                                                                                                                                    | État                                        |
@@ -26,7 +30,7 @@ Les autres captures (crépuscule, sunrise, chaque écran, le banc à 300 masques
 | V0         | Prototype solo jouable : mage, vagues, deux pièges, clavier et manette, musique synthétisée, bouton « Ton avis » ([exigences](docs/brainstorms/2026-10-04-v0-requirements.md), [plan](docs/plans/v0.md))                                   | fait                                        |
 | V0.1       | Direction artistique « Cycle du soleil », bad vibes en masques, enceintes annexes et Volume, agrès de cirque, raretés, fusions, reliques ([exigences](docs/brainstorms/2026-10-04-v0.1-requirements.md), [plan](docs/plans/v0.1.md))       | fait                                        |
 | V0.2       | Trois classes, coop locale, coop en ligne par lien, pair à pair en lockstep ([exigences](docs/brainstorms/2026-10-05-v0.2-requirements.md), [plan](docs/plans/v0.2.md), [ADR 0007](docs/adr/0007-coop-en-ligne-lockstep-webrtc-peerjs.md)) | assemblée, vérifications à distance à faire |
-| V1         | Tous les pièges, équilibrage, tactile, mode radio, retours des joueurs ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))                                                                                                            | à venir                                     |
+| V1         | Tous les pièges, équilibrage, tactile, mode radio, retours des joueurs ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))                                                                                                            | en cours : tactile fait                     |
 | V2         | Classement public : soirée du jour, scores vérifiés par rejeu                                                                                                                                                                              | à venir                                     |
 
 ## Documentation

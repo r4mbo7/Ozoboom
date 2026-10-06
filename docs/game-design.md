@@ -154,14 +154,15 @@ Les nombres sont des points de départ, à régler dans `src/data/` en jouant.
 
 Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-04** :
 
-| Support                                                              | Déplacement                                                       | Visée                                           | Tir                   | Pièges                                                            |
-| -------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------- | --------------------- | ----------------------------------------------------------------- |
-| Clavier et souris                                                    | ZQSD en AZERTY, WASD en QWERTY (mêmes touches physiques), flèches | souris                                          | clic gauche ou touche | molette ou touches numériques pour choisir, clic droit pour poser |
-| Manette (Xbox et toute manette au mapping standard de l'API Gamepad) | stick gauche                                                      | stick droit (twin-stick), assistance à la visée | gâchette droite       | LB et RB pour choisir, bouton A pour poser sous soi               |
-| Tactile (V1)                                                         | joystick virtuel gauche                                           | automatique                                     | automatique           | bouton et glisser-déposer                                         |
+| Support                                                              | Déplacement                                                       | Visée                                            | Tir                                           | Pièges                                                                        |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| Clavier et souris                                                    | ZQSD en AZERTY, WASD en QWERTY (mêmes touches physiques), flèches | souris                                           | clic gauche ou touche                         | molette ou touches numériques pour choisir, clic droit pour poser             |
+| Manette (Xbox et toute manette au mapping standard de l'API Gamepad) | stick gauche                                                      | stick droit (twin-stick), assistance à la visée  | gâchette droite                               | LB et RB pour choisir, bouton A pour poser sous soi                           |
+| Tactile (V1)                                                         | joystick virtuel, né sous le pouce n'importe où sur l'arène       | automatique, la bad vibe la plus proche à portée | automatique, dès qu'une bad vibe est à portée | toucher une tuile pour poser à ses pieds, la glisser pour poser sous le doigt |
 
 - Les menus et l'écran de fin se parcourent entièrement à la manette, à la croix comme au stick gauche : une poussée franche au-delà de 0,6 sur l'axe dominant vaut un appui, le stick revient sous 0,3 avant le suivant, et le maintien répète comme la croix (400 ms, puis toutes les 120 ms).
 - La compétence de classe se lance à la touche E au clavier, à la gâchette gauche à la manette.
+- Au tactile, les menus se touchent, la compétence se touche sur sa tuile et la pause sur un bouton du bandeau ; aucune touche n'est affichée. Le tactile joue seul ou en ligne, pas en coop sur un même écran.
 - Au clavier, les menus se parcourent aux flèches ou ZQSD et se valident avec Entrée. Espace ne sert qu'au tir : sans effet dans les menus, hors zone de texte.
 - Les commandes se remappent (V1).
 - La vibration de la manette suit le kick et les impacts, désactivable.

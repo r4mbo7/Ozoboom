@@ -57,6 +57,32 @@ const GAMEPAD: DevicePrompts = {
   ],
 };
 
+// Menus are touched, not walked: a touch screen shows no key hints and no skill key.
+const TOUCH: DevicePrompts = {
+  name: 'Tactile',
+  style: 'key',
+  navigate: [],
+  navigateRow: [],
+  confirm: 'Toucher',
+  back: 'Retour',
+  skill: '',
+  controls: [
+    { action: 'Se déplacer', keys: ['Glisser sur l’arène'] },
+    { action: 'Viser et tirer', keys: ['Automatique'] },
+    { action: 'Poser un piège à ses pieds', keys: ['Toucher sa tuile'] },
+    { action: 'Le poser ailleurs', keys: ['Glisser sa tuile'] },
+    { action: 'Compétence', keys: ['Toucher sa tuile'] },
+    { action: 'Pause', keys: ['❚❚'] },
+  ],
+};
+
 export function promptsFor(device: InputDevice): DevicePrompts {
-  return device === 'gamepad' ? GAMEPAD : KEYBOARD;
+  switch (device) {
+    case 'gamepad':
+      return GAMEPAD;
+    case 'touch':
+      return TOUCH;
+    default:
+      return KEYBOARD;
+  }
 }

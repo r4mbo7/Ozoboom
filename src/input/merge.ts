@@ -27,6 +27,20 @@ export interface GamepadFrame extends DeviceFrame {
   readonly disconnected: boolean;
 }
 
+// `drop`: where on the screen a trap dragged from the HUD left the finger this frame.
+export interface TouchFrame extends DeviceFrame {
+  readonly drop: Vec2 | null;
+}
+
+export const IDLE_TOUCH_FRAME: TouchFrame = {
+  held: new Set(),
+  presses: [],
+  move: IDLE_INPUT.move,
+  aim: null,
+  active: false,
+  drop: null,
+};
+
 export interface MergeState {
   readonly device: InputDevice;
   readonly aim: Vec2;
@@ -46,15 +60,17 @@ export function mergeFrames(
   keyboardMouse: KeyboardMouseFrame,
   gamepad: GamepadFrame,
   now: number,
+  touch: TouchFrame = IDLE_TOUCH_FRAME,
 ): { snapshot: InputSnapshot; state: MergeState } {
-  const held = (control: Control) => keyboardMouse.held.has(control) || gamepad.held.has(control);
-  const pressed = (control: Control) =>
-    keyboardMouse.presses.includes(control) || gamepad.presses.includes(control);
+  const frames = [keyboardMouse, gamepad, touch];
+  const held = (control: Control) => frames.some((frame) => frame.held.has(control));
+  const pressed = (control: Control) => frames.some((frame) => frame.presses.includes(control));
 
-  const device = nextDevice(state.device, keyboardMouse, gamepad);
+  const device = nextDevice(state.device, keyboardMouse, gamepad, touch);
   const aim = gamepad.aim ?? state.aim;
   const stickAimed = gamepad.aim !== null && gamepad.active;
-  const aimFromPointer = keyboardMouse.pointerMoved || (state.aimFromPointer && !stickAimed);
+  const aimFromPointer =
+    keyboardMouse.pointerMoved || (state.aimFromPointer && !stickAimed && !touch.active);
 
   const nextRepeatAt = { ...state.nextRepeatAt };
   const repeat = (direction: MenuDirection) => {
@@ -77,8 +93,8 @@ export function mergeFrames(
       device,
       gameplay: {
         move: clampLength(
-          keyboardMouse.move.x + gamepad.move.x,
-          keyboardMouse.move.y + gamepad.move.y,
+          keyboardMouse.move.x + gamepad.move.x + touch.move.x,
+          keyboardMouse.move.y + gamepad.move.y + touch.move.y,
         ),
         aim,
         fire: held('fire'),
@@ -86,11 +102,12 @@ export function mergeFrames(
         placeTrap: pressed('placeTrap'),
         nextTrap: pressed('nextTrap'),
         previousTrap: pressed('previousTrap'),
-        selectTrap: selectedTrap(keyboardMouse.presses, gamepad.presses),
+        selectTrap: selectedTrap(keyboardMouse.presses, gamepad.presses, touch.presses),
         pause: pressed('pause'),
       },
       menu,
-      pointerScreen: keyboardMouse.pointer,
+      // A finger has no pointer to aim with: it only points where it drops a trap.
+      pointerScreen: touch.active ? touch.drop : keyboardMouse.pointer,
       aimFromPointer,
     },
     state: { device, aim, aimFromPointer, nextRepeatAt },
@@ -101,9 +118,11 @@ function nextDevice(
   current: InputDevice,
   keyboardMouse: KeyboardMouseFrame,
   gamepad: GamepadFrame,
+  touch: TouchFrame,
 ): InputDevice {
   if (gamepad.active) return 'gamepad';
   if (keyboardMouse.active) return 'keyboardMouse';
+  if (touch.active) return 'touch';
   if (gamepad.disconnected && current === 'gamepad') return 'none';
   return current;
 }

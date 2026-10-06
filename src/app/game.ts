@@ -44,7 +44,7 @@ import { soundOf, type Screen } from './sound';
 import { createToast } from './toast';
 import { playerLabel } from '../ui/hud-model';
 
-const GESTURES = ['pointerdown', 'keydown'] as const;
+const GESTURES = ['pointerdown', 'pointerup', 'keydown'] as const;
 const SET_ID = 'soiree-v0';
 const DEFAULT_CLASS_ID = 'mage';
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
@@ -667,19 +667,29 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     applySound();
   });
   // Browsers keep the audio shut until a gesture: the first click, key or pad button opens it, and the
-  // title's ambience starts there instead of waiting for the set.
+  // title's ambience starts there instead of waiting for the set. A finger counts as a gesture only
+  // when it lifts.
   let gestured = false;
   function openAudio(): void {
     if (!gestured) {
       gestured = true;
       void audio.start();
       for (const type of GESTURES) {
-        window.removeEventListener(type, openAudio, true);
+        window.removeEventListener(type, onGesture, true);
       }
     }
   }
+  function onGesture(event: Event): void {
+    const touchDown =
+      event instanceof PointerEvent &&
+      event.type === 'pointerdown' &&
+      event.pointerType !== 'mouse';
+    if (!touchDown) {
+      openAudio();
+    }
+  }
   for (const type of GESTURES) {
-    window.addEventListener(type, openAudio, true);
+    window.addEventListener(type, onGesture, true);
   }
   loop.start();
 

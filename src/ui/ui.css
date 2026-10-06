@@ -2815,3 +2815,38 @@
     font-size: 28px;
   }
 }
+
+/* Touch screens: menus are touched, no key is shown, and the HUD gets a pause button. */
+
+.ui-hud__pause {
+  display: none;
+}
+
+[data-touch] .ui-hud__pause {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1.5px solid var(--ui-line);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--sol) 60%, transparent);
+  color: var(--texte);
+}
+
+.ui-hud__pause-icon {
+  width: 18px;
+  height: 18px;
+}
+
+[data-touch] :is(.ui-hint, .ui-trap__key, .ui-skill__key) {
+  display: none;
+}
+
+[data-touch] .ui-hud [data-touch-control] {
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: none;
+  pointer-events: auto;
+}

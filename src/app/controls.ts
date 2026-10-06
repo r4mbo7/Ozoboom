@@ -1,12 +1,13 @@
 import type { TrapDefinition } from '../data/types';
 import type { GameplayIntents, InputSnapshot } from '../input/intents';
 import { selectTrap } from '../ui';
-import { length, normalize } from '../shared/vec';
+import { distanceSquared, length, normalize } from '../shared/vec';
 import { IDLE_INPUT, type PlayerAction, type PlayerCommand } from '../sim/commands';
-import type { PlayerState, Vec2 } from '../sim/state';
+import type { EnemyState, PlayerState, Vec2 } from '../sim/state';
 
 export type ScreenToWorld = (point: Vec2) => Vec2;
 type Body = Pick<PlayerState, 'id' | 'x' | 'y' | 'radius' | 'aim'>;
+export type Target = Pick<EnemyState, 'x' | 'y' | 'radius' | 'hp'>;
 
 export interface CommandRequest {
   readonly snapshot: InputSnapshot;
@@ -16,6 +17,25 @@ export interface CommandRequest {
   readonly trap: TrapDefinition | undefined;
   readonly placeTrap: boolean;
   readonly upgradeId: string | null;
+  // On a touch screen, the bad vibe the player aims and fires at by themselves.
+  readonly target: Vec2 | null;
+  // Where on the screen a finger dropped the trap; null places it under the player.
+  readonly trapScreen: Vec2 | null;
+}
+
+// The bad vibe nearest to the player among those their attack reaches.
+export function autoTarget(player: Vec2, enemies: readonly Target[], reach: number): Target | null {
+  let best: Target | null = null;
+  let bestDistance = Infinity;
+  for (const enemy of enemies) {
+    const distance = distanceSquared(enemy, player);
+    const inReach = (reach + enemy.radius) ** 2;
+    if (enemy.hp > 0 && distance <= inReach && distance < bestDistance) {
+      best = enemy;
+      bestDistance = distance;
+    }
+  }
+  return best;
 }
 
 export function aimOf(
@@ -33,16 +53,21 @@ export function aimOf(
 }
 
 export function buildCommand(request: CommandRequest): PlayerCommand {
-  const { snapshot, player, toWorld, heldAim, trap } = request;
+  const { snapshot, player, toWorld, heldAim, trap, target } = request;
   const { gameplay } = snapshot;
-  const aim = aimOf(snapshot, player, toWorld, heldAim);
+  const toTarget = target === null ? null : { x: target.x - player.x, y: target.y - player.y };
+  const aim =
+    toTarget !== null && length(toTarget) > 0
+      ? normalize(toTarget)
+      : aimOf(snapshot, player, toWorld, heldAim);
   const actions: PlayerAction[] = [];
   if (request.placeTrap && trap !== undefined) {
+    const spot = request.trapScreen === null ? player : toWorld(request.trapScreen);
     actions.push({
       type: 'placeTrap',
       trapId: trap.id,
-      x: player.x,
-      y: player.y,
+      x: spot.x,
+      y: spot.y,
       dx: aim.x,
       dy: aim.y,
     });
@@ -55,7 +80,7 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
     input: {
       move: gameplay.move,
       aim,
-      fire: gameplay.fire,
+      fire: gameplay.fire || target !== null,
       skill: gameplay.skill,
     },
     actions,
@@ -90,6 +115,7 @@ export class Controls {
   private previousGameplay: GameplayIntents | null = null;
   private heldAim: Vec2;
   private placeTrap = false;
+  private trapScreen: Vec2 | null = null;
   private upgradeId: string | null = null;
   private trapIndex = 0;
   private readonly traps: readonly TrapDefinition[];
@@ -106,7 +132,10 @@ export class Controls {
     this.trapIndex = selectTrap(this.trapIndex, this.traps.length, gameplay, this.previousGameplay);
     this.heldAim = nextHeldAim(this.heldAim, snapshot, this.previousGameplay);
     this.previousGameplay = gameplay;
-    this.placeTrap ||= gameplay.placeTrap;
+    if (gameplay.placeTrap && !this.placeTrap) {
+      this.placeTrap = true;
+      this.trapScreen = snapshot.device === 'touch' ? snapshot.pointerScreen : null;
+    }
     this.snapshot = snapshot;
   }
 
@@ -114,7 +143,13 @@ export class Controls {
     this.upgradeId = upgradeId;
   }
 
-  command(player: Body, toWorld: ScreenToWorld): PlayerCommand {
+  // `reach`: how far the player's attack flies now, for the automatic aim of a touch screen.
+  command(
+    player: Body,
+    toWorld: ScreenToWorld,
+    enemies: readonly Target[],
+    reach: number,
+  ): PlayerCommand {
     if (this.snapshot === null) {
       return { playerId: player.id, input: IDLE_INPUT, actions: [] };
     }
@@ -126,8 +161,11 @@ export class Controls {
       trap: this.traps[this.trapIndex],
       placeTrap: this.placeTrap,
       upgradeId: this.upgradeId,
+      target: this.snapshot.device === 'touch' ? autoTarget(player, enemies, reach) : null,
+      trapScreen: this.trapScreen,
     });
     this.placeTrap = false;
+    this.trapScreen = null;
     this.upgradeId = null;
     return command;
   }

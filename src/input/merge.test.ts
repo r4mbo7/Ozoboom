@@ -12,13 +12,18 @@ import {
   type PointerEventLike,
 } from './keyboard-mouse';
 import { INITIAL_MERGE_STATE, mergeFrames } from './merge';
+import { INITIAL_TOUCH_STATE, reduceTouch, takeTouchFrame, type TouchEventLike } from './touch';
 
 function createHarness() {
   let keyboardMouse = INITIAL_KEYBOARD_MOUSE_STATE;
   let gamepad = INITIAL_GAMEPAD_STATE;
   let merge = INITIAL_MERGE_STATE;
   let pads: (GamepadLike | null)[] = [];
+  let touch = INITIAL_TOUCH_STATE;
   return {
+    touch(event: TouchEventLike) {
+      touch = reduceTouch(touch, event);
+    },
     key(type: KeyEventLike['type'], code: string) {
       keyboardMouse = reduceKeyboard(keyboardMouse, { type, code });
     },
@@ -33,7 +38,9 @@ function createHarness() {
       keyboardMouse = taken.state;
       const reduced = reduceGamepad(gamepad, pads);
       gamepad = reduced.state;
-      const merged = mergeFrames(merge, taken.frame, reduced.frame, now);
+      const touched = takeTouchFrame(touch);
+      touch = touched.state;
+      const merged = mergeFrames(merge, taken.frame, reduced.frame, now, touched.frame);
       merge = merged.state;
       return merged.snapshot;
     },
@@ -340,5 +347,42 @@ describe('aim', () => {
     input.poll();
 
     expect(input.poll().aimFromPointer).toBe(true);
+  });
+});
+
+describe('a touch screen', () => {
+  it('becomes the device and steers the player with its stick', () => {
+    const input = createHarness();
+    input.touch({ type: 'down', id: 1, control: 'stick', x: 100, y: 100 });
+    input.touch({ type: 'move', id: 1, x: 100, y: 300, onArena: true });
+
+    const snapshot = input.poll();
+
+    expect(snapshot.device).toBe('touch');
+    expect(snapshot.gameplay.move).toEqual({ x: 0, y: 1 });
+  });
+
+  it('points at the spot of a dropped trap, and not with the mouse', () => {
+    const input = createHarness();
+    input.pointer({ type: 'move', x: 5, y: 5 });
+    input.poll();
+    input.touch({ type: 'down', id: 1, control: 'trap:1', x: 10, y: 400 });
+    input.touch({ type: 'up', id: 1, x: 200, y: 150, onArena: true });
+
+    const snapshot = input.poll();
+
+    expect(snapshot.gameplay).toMatchObject({ selectTrap: 1, placeTrap: true });
+    expect(snapshot).toMatchObject({ pointerScreen: { x: 200, y: 150 }, aimFromPointer: false });
+  });
+
+  it('gives the device back to the mouse that moves after it', () => {
+    const input = createHarness();
+    input.touch({ type: 'down', id: 1, control: null, x: 0, y: 0 });
+    input.poll();
+    input.pointer({ type: 'move', x: 5, y: 5 });
+
+    const snapshot = input.poll();
+
+    expect(snapshot).toMatchObject({ device: 'keyboardMouse', pointerScreen: { x: 5, y: 5 } });
   });
 });

@@ -3,7 +3,7 @@ import type { InputDevice } from '../input/intents';
 import { CLASSES } from '../data/classes';
 import { setFraction, setOf } from '../sim/lineup';
 import type { ClassInfo } from './class-picker';
-import { el } from './dom';
+import { el, setFlag } from './dom';
 import { createEnd } from './end';
 import { createHud } from './hud';
 import { createLobby } from './lobby';
@@ -200,6 +200,7 @@ export function createUi(
 
   function applyDevice(next: InputDevice): void {
     device = next;
+    setFlag(root, 'touch', next === 'touch');
     title.setDevice(next);
     end.setDevice(next);
     lobby.setDevice(next);

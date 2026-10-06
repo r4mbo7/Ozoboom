@@ -21,7 +21,7 @@ import {
   trapCapacity,
   volumeCrans,
 } from './hud-model';
-import { BOLT, HEART, MOON, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
+import { BOLT, HEART, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
 import { type LineupSlot, lineupCursor, lineupSlots, setOf } from '../sim/lineup';
 import { selectTrap } from './navigation';
 import { promptsFor } from './prompts';
@@ -76,7 +76,13 @@ export function createHud(): Hud {
   plugRow.setAttribute('role', 'meter');
   plugRow.setAttribute('aria-label', 'Enceintes branchées');
   plugRow.setAttribute('aria-valuemin', '0');
-  ribbon.append(drop, lineupTrack, plugRow);
+  const pause = el('button', 'ui-hud__pause');
+  pause.type = 'button';
+  pause.tabIndex = -1;
+  pause.setAttribute('aria-label', 'Pause');
+  pause.dataset.touchControl = 'pause';
+  pause.append(icon('ui-hud__pause-icon', PAUSE));
+  ribbon.append(drop, lineupTrack, plugRow, pause);
 
   const help = el('p', 'ui-hud__help');
   help.setAttribute('role', 'status');
@@ -121,6 +127,7 @@ export function createHud(): Hud {
 
   const skills = section('ui-hud__skills', 'Compétence');
   const skill = createSkillView();
+  skill.root.dataset.touchControl = 'skill';
   skills.append(skill.root);
 
   bar.append(level, life, gear, traps, skills);
@@ -193,6 +200,7 @@ export function createHud(): Hud {
     tiles = content.traps.map((trap, index) => {
       const tile = el('div', 'ui-trap');
       tile.title = `${trap.name} : ${trap.description}`;
+      tile.dataset.touchControl = `trap:${String(index)}`;
       const cost = el('span', 'ui-trap__cost');
       cost.append(icon('ui-trap__bolt', BOLT), el('span', '', formatNumber(trap.cost)));
       tile.append(

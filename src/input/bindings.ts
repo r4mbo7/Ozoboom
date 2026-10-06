@@ -135,3 +135,8 @@ export const MENU_STICK_PRESS = 0.6;
 export const MENU_STICK_RELEASE = 0.3;
 export const MENU_REPEAT_DELAY_MS = 400;
 export const MENU_REPEAT_INTERVAL_MS = 120;
+
+// The virtual stick is born under the thumb and follows it past its rim, in CSS pixels. A trap
+// tile dragged further than TOUCH_DRAG_THRESHOLD is dropped where the finger leaves it.
+export const TOUCH_STICK_RADIUS = 56;
+export const TOUCH_DRAG_THRESHOLD = 16;

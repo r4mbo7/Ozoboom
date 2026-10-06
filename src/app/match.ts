@@ -5,7 +5,8 @@ import type { CameraFocus } from '../render/types';
 import { length, normalize } from '../shared/vec';
 import { IDLE_INPUT } from '../sim/commands';
 import type { PlayerSlot } from '../sim/initial-state';
-import type { PlayerId } from '../sim/state';
+import type { PlayerId, PlayerState } from '../sim/state';
+import { statValue } from '../sim/stats';
 import type { LocalPlayer } from '../ui';
 import { Controls, type ScreenToWorld } from './controls';
 import { createSession, type Session } from './session';
@@ -156,7 +157,7 @@ export function createMatch(options: MatchOptions): Match {
           if (player === undefined) {
             throw new Error(`The game has no player ${String(playerId)}`);
           }
-          return own.command(player, toWorld);
+          return own.command(player, toWorld, session.state.enemies, reachOf(content, player));
         }),
       );
       if (commands === null) {
@@ -181,4 +182,12 @@ function outwardAim({ state }: Session, playerId: PlayerId) {
       ? null
       : normalize({ x: player.x - state.core.x, y: player.y - state.core.y });
   return outward !== null && length(outward) > 0 ? outward : IDLE_INPUT.aim;
+}
+
+// How far the attack of the player flies, with their upgrades, as the sim fires it.
+function reachOf(content: GameContent, player: PlayerState): number {
+  const attack = content.classes.find((definition) => definition.id === player.classId)?.attack;
+  return attack === undefined
+    ? 0
+    : statValue(player, 'projectileSpeedMul', attack.projectileSpeed) * attack.rangeTicks;
 }

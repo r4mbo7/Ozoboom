@@ -10,12 +10,15 @@ import {
 import type { DeviceId, InputHub, InputSnapshot } from './intents';
 import { attachKeyboardMouse } from './keyboard-mouse';
 import {
+  IDLE_TOUCH_FRAME,
   INITIAL_MERGE_STATE,
   mergeFrames,
   type GamepadFrame,
   type KeyboardMouseFrame,
   type MergeState,
+  type TouchFrame,
 } from './merge';
+import { attachTouch } from './touch';
 
 interface PadState {
   readonly gamepad: GamepadState;
@@ -66,6 +69,8 @@ export function stepHub(
   keyboardMouse: KeyboardMouseFrame,
   pads: readonly (GamepadLike | null)[],
   now: number,
+  // The touch screen plays the merged view only: it is not a seat of the local coop.
+  touch: TouchFrame = IDLE_TOUCH_FRAME,
 ): {
   snapshots: ReadonlyMap<DeviceId, InputSnapshot>;
   merged: InputSnapshot;
@@ -92,7 +97,7 @@ export function stepHub(
   }
 
   const mergedGamepad = reduceGamepad(state.merged.gamepad, pads);
-  const merged = mergeFrames(state.merged.merge, keyboardMouse, mergedGamepad.frame, now);
+  const merged = mergeFrames(state.merged.merge, keyboardMouse, mergedGamepad.frame, now, touch);
 
   return {
     snapshots,
@@ -107,6 +112,7 @@ export function stepHub(
 
 export function createInputHub(target: HTMLElement): InputHub {
   const keyboardMouse = attachKeyboardMouse(target);
+  const touch = attachTouch(target);
   let state = INITIAL_HUB_STATE;
   let merged = mergeFrames(
     INITIAL_MERGE_STATE,
@@ -117,7 +123,13 @@ export function createInputHub(target: HTMLElement): InputHub {
 
   return {
     poll() {
-      const stepped = stepHub(state, keyboardMouse.take(), navigatorGamepads(), performance.now());
+      const stepped = stepHub(
+        state,
+        keyboardMouse.take(),
+        navigatorGamepads(),
+        performance.now(),
+        touch.take(),
+      );
       state = stepped.state;
       merged = stepped.merged;
       return stepped.snapshots;
@@ -133,6 +145,7 @@ export function createInputHub(target: HTMLElement): InputHub {
     },
     destroy() {
       keyboardMouse.destroy();
+      touch.destroy();
     },
   };
 }

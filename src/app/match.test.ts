@@ -5,6 +5,7 @@ import { createLocalSource } from '../net/local';
 import type { CommandSource } from '../net/types';
 import type { PlayerCommand } from '../sim/commands';
 import type { PlayerId } from '../sim/state';
+import { spawnEnemy } from '../sim/systems/spawning';
 import { IDLE_SNAPSHOT, createMatch, withoutPressesView, type InputView } from './match';
 
 const toWorld = (point: { x: number; y: number }) => point;
@@ -161,5 +162,38 @@ describe('withoutPressesView', () => {
 
     expect(quiet.merged.gameplay).toMatchObject({ move: { x: 1, y: 0 }, fire: false });
     expect(quiet.devices.get('gamepad:0')?.menu.confirm).toBe(false);
+  });
+});
+
+describe('a touch screen', () => {
+  it('fires as far as the attack of the player flies with their upgrades', () => {
+    const { source, seen } = recording();
+    const match = createMatch({
+      seed: 3,
+      setId: 'soiree-v0',
+      content: CONTENT,
+      slots: [{ id: 0, classId: 'mage', name: 'Ana' }],
+      locals: new Map<PlayerId, DeviceId | null>([[0, null]]),
+      source,
+      focus: { kind: 'player', playerId: 0 },
+    });
+    const { state } = match.session;
+    const [player] = state.players;
+    const [vibe] = CONTENT.enemies;
+    const attack = CONTENT.classes.find((definition) => definition.id === 'mage')?.attack;
+    if (player === undefined || vibe === undefined || attack === undefined) {
+      throw new Error('Missing content');
+    }
+    const baseReach = attack.projectileSpeed * attack.rangeTicks;
+    spawnEnemy(state, vibe, player.x + baseReach * 1.15 + vibe.radius, player.y, false);
+    const touch: InputView = { devices: new Map(), merged: { ...IDLE_SNAPSHOT, device: 'touch' } };
+
+    match.frame(touch);
+    match.step(toWorld);
+    player.modifiers.projectileSpeedMul = 1.3;
+    match.frame(touch);
+    match.step(toWorld);
+
+    expect(seen.map(([command]) => command?.input.fire)).toEqual([false, true]);
   });
 });

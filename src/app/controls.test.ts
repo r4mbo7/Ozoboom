@@ -7,6 +7,7 @@ import { Controls, buildCommand } from './controls';
 
 const PLAYER = { id: 0, x: 400, y: 300, radius: 14, aim: { x: 1, y: 0 } } as const;
 const OUTWARD = { x: -1, y: 0 };
+const REACH = 300;
 const [CAISSON, LASER] = CONTENT.traps as [TrapDefinition, TrapDefinition];
 
 // A camera whose screen origin is the world point (100, 50), at zoom 1.
@@ -57,6 +58,8 @@ describe('buildCommand', () => {
       trap: LASER,
       placeTrap: true,
       upgradeId: null,
+      target: null,
+      trapScreen: null,
     });
 
     expect(command.playerId).toBe(0);
@@ -84,6 +87,8 @@ describe('buildCommand', () => {
       trap: CAISSON,
       placeTrap: false,
       upgradeId: null,
+      target: null,
+      trapScreen: null,
     });
 
     expectVec(command.input.aim, { x: 0, y: -1 });
@@ -100,6 +105,8 @@ describe('buildCommand', () => {
       trap: CAISSON,
       placeTrap: true,
       upgradeId: 'double-tempo',
+      target: null,
+      trapScreen: null,
     });
 
     expectVec(command.input.aim, { x: 0, y: -1 });
@@ -118,6 +125,8 @@ describe('buildCommand', () => {
       trap: undefined,
       placeTrap: true,
       upgradeId: null,
+      target: null,
+      trapScreen: null,
     });
 
     expect(command.actions).toEqual([]);
@@ -129,7 +138,7 @@ describe('Controls', () => {
     const controls = new Controls(CONTENT.traps, OUTWARD);
     controls.frame(snapshot());
 
-    const command = controls.command(PLAYER, toWorld);
+    const command = controls.command(PLAYER, toWorld, [], REACH);
 
     expectVec(command.input.aim, OUTWARD);
   });
@@ -139,7 +148,7 @@ describe('Controls', () => {
     controls.frame(snapshot({ move: { x: 0.7071, y: 0.7071 } }));
     controls.frame(snapshot({ move: { x: 0, y: 0 } }));
 
-    const command = controls.command(PLAYER, toWorld);
+    const command = controls.command(PLAYER, toWorld, [], REACH);
 
     expectVec(command.input.aim, { x: Math.SQRT1_2, y: Math.SQRT1_2 });
   });
@@ -148,10 +157,10 @@ describe('Controls', () => {
     const controls = new Controls(CONTENT.traps, OUTWARD);
     controls.frame(snapshot({}, { device: 'gamepad' }));
     controls.frame(snapshot({ move: { x: 0, y: 1 } }, { device: 'gamepad' }));
-    const beforeStick = controls.command(PLAYER, toWorld);
+    const beforeStick = controls.command(PLAYER, toWorld, [], REACH);
     controls.frame(snapshot({ aim: { x: 0, y: -1 } }, { device: 'gamepad' }));
 
-    const afterStick = controls.command(PLAYER, toWorld);
+    const afterStick = controls.command(PLAYER, toWorld, [], REACH);
 
     expectVec(beforeStick.input.aim, OUTWARD);
     expectVec(afterStick.input.aim, { x: 0, y: -1 });
@@ -162,8 +171,8 @@ describe('Controls', () => {
     controls.frame(snapshot({ placeTrap: true }));
     controls.frame(snapshot());
 
-    const first = controls.command(PLAYER, toWorld);
-    const second = controls.command(PLAYER, toWorld);
+    const first = controls.command(PLAYER, toWorld, [], REACH);
+    const second = controls.command(PLAYER, toWorld, [], REACH);
 
     expect(first.actions).toEqual([
       expect.objectContaining({ type: 'placeTrap', trapId: CAISSON.id }),
@@ -174,10 +183,10 @@ describe('Controls', () => {
   it('selects the trap like the interface does, from a 0-based slot or a cycle', () => {
     const controls = new Controls(CONTENT.traps, OUTWARD);
     controls.frame(snapshot({ selectTrap: 1, placeTrap: true }));
-    const bySlot = controls.command(PLAYER, toWorld);
+    const bySlot = controls.command(PLAYER, toWorld, [], REACH);
     controls.frame(snapshot({ nextTrap: true, placeTrap: true }));
 
-    const byCycle = controls.command(PLAYER, toWorld);
+    const byCycle = controls.command(PLAYER, toWorld, [], REACH);
 
     expect(bySlot.actions[0]).toMatchObject({ trapId: LASER.id });
     expect(byCycle.actions[0]).toMatchObject({ trapId: CAISSON.id });
@@ -188,17 +197,86 @@ describe('Controls', () => {
     controls.frame(snapshot());
     controls.chooseUpgrade('double-tempo');
 
-    const first = controls.command(PLAYER, toWorld);
-    const second = controls.command(PLAYER, toWorld);
+    const first = controls.command(PLAYER, toWorld, [], REACH);
+    const second = controls.command(PLAYER, toWorld, [], REACH);
 
     expect(first.actions).toEqual([{ type: 'chooseUpgrade', upgradeId: 'double-tempo' }]);
     expect(second.actions).toEqual([]);
   });
 
+  it('aims and fires a touch screen at the nearest bad vibe in reach', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    const near = { x: 400, y: 500, radius: 10, hp: 5 };
+    const nearer = { x: 400, y: 100, radius: 10, hp: 0 };
+    const far = { x: 400 + REACH + 20, y: 300, radius: 10, hp: 5 };
+    controls.frame(snapshot({}, { device: 'touch' }));
+
+    const command = controls.command(PLAYER, toWorld, [nearer, far, near], REACH);
+
+    expectVec(command.input.aim, { x: 0, y: 1 });
+    expect(command.input.fire).toBe(true);
+  });
+
+  it('holds fire on a touch screen with no bad vibe in reach, and aims where it moved', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    const far = { x: 400, y: 300 + REACH + 20, radius: 10, hp: 5 };
+    controls.frame(snapshot({ move: { x: 0, y: -1 } }, { device: 'touch' }));
+
+    const command = controls.command(PLAYER, toWorld, [far], REACH);
+
+    expectVec(command.input.aim, { x: 0, y: -1 });
+    expect(command.input.fire).toBe(false);
+  });
+
+  it('never aims a keyboard by itself', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    controls.frame(snapshot());
+
+    const command = controls.command(
+      PLAYER,
+      toWorld,
+      [{ x: 400, y: 320, radius: 10, hp: 5 }],
+      REACH,
+    );
+
+    expectVec(command.input.aim, OUTWARD);
+    expect(command.input.fire).toBe(false);
+  });
+
+  it('places a trap where a finger dropped it, even after a frame without steps', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    controls.frame(
+      snapshot({ placeTrap: true }, { device: 'touch', pointerScreen: { x: 20, y: 30 } }),
+    );
+    controls.frame(snapshot({}, { device: 'touch' }));
+
+    const command = controls.command(PLAYER, toWorld, [], REACH);
+
+    expect(command.actions[0]).toMatchObject({ type: 'placeTrap', x: 120, y: 80 });
+  });
+
+  it('places a tapped trap under the player', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    controls.frame(snapshot({ placeTrap: true }, { device: 'touch' }));
+
+    const command = controls.command(PLAYER, toWorld, [], REACH);
+
+    expect(command.actions[0]).toMatchObject({ type: 'placeTrap', x: PLAYER.x, y: PLAYER.y });
+  });
+
+  it('keeps placing a keyboard trap under the player wherever the mouse is', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    controls.frame(snapshot({ placeTrap: true }, { pointerScreen: { x: 20, y: 30 } }));
+
+    const command = controls.command(PLAYER, toWorld, [], REACH);
+
+    expect(command.actions[0]).toMatchObject({ type: 'placeTrap', x: PLAYER.x, y: PLAYER.y });
+  });
+
   it('idles before its first frame', () => {
     const controls = new Controls(CONTENT.traps, OUTWARD);
 
-    const command = controls.command(PLAYER, toWorld);
+    const command = controls.command(PLAYER, toWorld, [], REACH);
 
     expect(command).toEqual({
       playerId: 0,
