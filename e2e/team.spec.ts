@@ -26,77 +26,58 @@ async function moveTo(page: Page, key: string, cards: Locator, index: number): P
 }
 
 test.describe('the HUD of a team', () => {
-  test('shows a band per player of the screen and a compact one for the others', async ({
-    page,
-  }) => {
+  test('gives every player a bracelet when several share the screen', async ({ page }) => {
     const errors = collectConsoleErrors(page);
-    await page.goto('/dev/ui.html?screen=team');
+    await page.goto('/dev/ui.html?screen=team&locals=2');
 
-    const bands = page.locator('.ui-band:not(.ui-band--compact)');
-    await expect(bands).toHaveCount(2);
-    await expect(bands.nth(0)).toContainText('Léa');
-    await expect(bands.nth(0)).toContainText('La VJ');
-    await expect(bands.nth(0)).toContainText('82 / 100');
-    await expect(bands.nth(0)).toContainText('Niv. 6');
-    await expect(bands.nth(1)).toContainText('Tom');
-    await expect(bands.nth(1)).toContainText('Le roadie');
-    const others = page.locator('.ui-band--compact');
-    await expect(others).toHaveCount(2);
-    await expect(others.nth(0)).toContainText('Inès');
-    await expect(others.nth(1)).toContainText('Sam');
-    await expect(others.nth(1)).toContainText('À terre');
-    await expect(others.nth(0)).not.toContainText('À terre');
+    const bracelets = page.locator('.ui-bracelet');
+    await expect(bracelets).toHaveCount(4);
+    await expect(bracelets.nth(0)).toContainText('Léa');
+    await expect(bracelets.nth(0)).toContainText('Niv. 6');
+    await expect(bracelets.nth(1)).toContainText('Tom');
+    await expect(bracelets.nth(2)).toContainText('Inès');
+    await expect(bracelets.nth(2)).not.toContainText('À terre');
+    await expect(bracelets.nth(3)).toContainText('Sam');
+    await expect(bracelets.nth(3)).toContainText('À terre');
     await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Niveau' })).toBeHidden();
+    await expect(page.getByRole('region', { name: 'Niveau', exact: true })).toBeHidden();
+    await expect(page.getByRole('region', { name: 'Agrès', exact: true })).toBeHidden();
     expect(errors).toEqual([]);
   });
 
-  test('shows the weapons of each player in their band, and the full panel for a single one', async ({
+  test('keeps the whole bar for the only player of the screen, the others in bracelets', async ({
     page,
   }) => {
-    await page.goto('/dev/ui.html?screen=team&locals=2');
-
-    const bands = page.locator('.ui-band:not(.ui-band--compact)');
-    await expect(bands.nth(0).getByRole('img', { name: 'Bâton de feu, niveau 3' })).toBeVisible();
-    await expect(bands.nth(0).getByRole('img', { name: 'Diabolo, niveau 1' })).toBeVisible();
-    await expect(
-      bands.nth(1).getByRole('img', { name: 'Éventails de feu, niveau 2' }),
-    ).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Agrès' })).toBeHidden();
-
     await page.goto('/dev/ui.html?screen=team&locals=1');
-    await expect(page.getByRole('region', { name: 'Agrès' })).toBeVisible();
-    await expect(page.locator('.ui-band__weapon:visible')).toHaveCount(0);
+
+    await expect(page.locator('.ui-bracelet')).toHaveCount(3);
+    await expect(page.locator('.ui-bracelet').first()).toContainText('Tom');
+    for (const name of ['Niveau', 'Vie', 'Agrès', 'Pièges', 'Compétence']) {
+      await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
+    }
+    await expect(page.locator('.ui-bracelet__key:visible')).toHaveCount(0);
   });
 
-  test('shows each band the prompts of the device of its player', async ({ page }) => {
+  test('shows each bracelet of the screen the skill key of its device', async ({ page }) => {
     await page.goto('/dev/ui.html?screen=team&locals=3&pads=2');
 
-    const keys = page.locator('.ui-band:not(.ui-band--compact)').locator('.ui-skill__key');
-    await expect(keys).toHaveText(['E', 'LT', 'LT']);
+    await expect(page.locator('.ui-bracelet__key:visible')).toHaveText(['E', 'LT', 'LT']);
   });
 
-  test('keeps the traps on the bottom edge, below the bands, when several players share the screen', async ({
+  test('keeps the traps on the bottom edge and the bracelets slim when four share the screen', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/dev/ui.html?screen=team&locals=4');
 
+    await expect(page.locator('.ui-bracelet')).toHaveCount(4);
     const traps = await page.getByRole('region', { name: 'Pièges' }).boundingBox();
-    const band = await page.locator('.ui-band').first().boundingBox();
-    if (traps === null || band === null) {
-      throw new Error('expected the traps and a band on screen');
+    const bracelet = await page.locator('.ui-bracelet').first().boundingBox();
+    if (traps === null || bracelet === null) {
+      throw new Error('expected the traps and a bracelet on screen');
     }
-    expect(traps.y).toBeGreaterThan(band.y + band.height);
     expect(traps.y + traps.height).toBeGreaterThan(800 - 40);
-    expect(band.height).toBeLessThan(125);
-  });
-
-  test('shows four full bands when four players sit at the screen', async ({ page }) => {
-    await page.goto('/dev/ui.html?screen=team&locals=4');
-
-    await expect(page.locator('.ui-band:not(.ui-band--compact)')).toHaveCount(4);
-    await expect(page.locator('.ui-band--compact')).toHaveCount(0);
+    expect(bracelet.height).toBeLessThan(60);
   });
 
   test('keeps the solo HUD when the sim holds one player', async ({ page }) => {
@@ -104,7 +85,7 @@ test.describe('the HUD of a team', () => {
 
     await expect(page.getByRole('region', { name: 'Niveau' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Compétence' })).toBeVisible();
-    await expect(page.locator('.ui-band')).toHaveCount(0);
+    await expect(page.locator('.ui-bracelet')).toHaveCount(0);
     await expect(page.locator('.ui-hud')).not.toHaveAttribute('data-team', '');
   });
 });

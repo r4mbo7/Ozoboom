@@ -4,7 +4,7 @@ import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
 import type { PlayerState, SimState } from '../sim/state';
 import { statValue } from '../sim/stats';
-import { type Band, createCompactBand, createFullBand, createSkillView } from './band';
+import { type Bracelet, createBracelet, createSkillView } from './bracelet';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
 import {
@@ -122,15 +122,13 @@ export function createHud(): Hud {
 
   bar.append(level, life, gear, traps, skills);
 
-  const roster = el('div', 'ui-hud__roster');
-  roster.setAttribute('aria-label', 'Les autres joueurs');
-  const team = el('div', 'ui-hud__team');
-  const rosterBands: Band[] = [];
-  const teamBands: Band[] = [];
+  const bracelets = el('div', 'ui-hud__bracelets');
+  bracelets.setAttribute('aria-label', 'Les joueurs');
+  const braceletViews: Bracelet[] = [];
 
   const top = el('div', 'ui-hud__top');
   top.append(ribbon, help);
-  element.append(top, roster, team, bar);
+  element.append(top, bracelets, bar);
 
   let builtFor: GameContent | null = null;
   let set: SetDefinition | null = null;
@@ -355,32 +353,29 @@ export function createHud(): Hud {
     setFlag(life, 'critical', fraction <= CRITICAL_RATIO);
   }
 
-  function fitBands(bands: Band[], container: HTMLElement, count: number, make: () => Band): void {
-    while (bands.length < count) {
-      const band = make();
-      bands.push(band);
-      container.append(band.element);
-    }
-    while (bands.length > count) {
-      bands.pop()?.element.remove();
-    }
-  }
-
-  function updateBands(
+  // On a shared screen every player wears a bracelet; online, the players of other screens do.
+  function updateBracelets(
     frame: UiFrame,
     content: GameContent,
     locals: readonly PlayerState[],
     others: readonly PlayerState[],
   ): void {
-    fitBands(teamBands, team, locals.length, createFullBand);
-    fitBands(rosterBands, roster, others.length, createCompactBand);
-    locals.forEach((player, index) => {
+    const shown = locals.length > 1 ? [...locals, ...others] : others;
+    while (braceletViews.length < shown.length) {
+      const view = createBracelet();
+      braceletViews.push(view);
+      bracelets.append(view.element);
+    }
+    while (braceletViews.length > shown.length) {
+      braceletViews.pop()?.element.remove();
+    }
+    shown.forEach((player, index) => {
       const definition = content.classes.find((entry) => entry.id === player.classId) ?? null;
-      const device = frame.players.find((entry) => entry.playerId === player.id)?.snapshot.device;
-      teamBands[index]?.update(player, definition, device ?? frame.snapshot.device, content);
-    });
-    others.forEach((player, index) => {
-      rosterBands[index]?.update(player, null, frame.snapshot.device, content);
+      const local = frame.players.find((entry) => entry.playerId === player.id);
+      const device = locals.includes(player)
+        ? (local?.snapshot.device ?? frame.snapshot.device)
+        : null;
+      braceletViews[index]?.update(player, definition, device);
     });
   }
 
@@ -394,9 +389,7 @@ export function createHud(): Hud {
     const people = rosterOf(state, frame);
     setFlag(element, 'team', people.team);
     setFlag(element, 'multi', people.team && people.locals.length > 1);
-    if (people.team) {
-      updateBands(frame, content, people.locals, people.others);
-    }
+    updateBracelets(frame, content, people.team ? people.locals : [], people.others);
 
     const local = frame.players[0];
     const snapshot = local?.snapshot ?? frame.snapshot;

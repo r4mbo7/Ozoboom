@@ -2169,7 +2169,7 @@
   width: min(100%, 320px);
 }
 
-/* Team: a band per player, offers side by side, the end of the team */
+/* Team: a bracelet per player, offers side by side, the end of the team */
 
 .ui-who {
   --who: var(--or);
@@ -2197,276 +2197,148 @@
   white-space: nowrap;
 }
 
-.ui-hud__roster,
-.ui-hud__team {
+.ui-hud__bracelets {
   display: none;
 }
 
 .ui-hud[data-team] {
   grid-template:
-    'top top top' auto
-    'roster . .' 1fr
-    'team team team' auto
+    'bracelets top .' auto
+    'bracelets . .' 1fr
     'bar bar bar' auto
     / minmax(0, 1fr) auto minmax(0, 1fr);
 }
 
-.ui-hud[data-team] :is(.ui-hud__level, .ui-hud__life, .ui-hud__skills) {
+.ui-hud[data-team] .ui-hud__bracelets {
+  display: flex;
+  flex-direction: column;
+  grid-area: bracelets;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ui-hud[data-multi] :is(.ui-hud__level, .ui-hud__life, .ui-hud__gear, .ui-hud__skills) {
   display: none;
 }
 
-.ui-hud[data-multi] .ui-hud__gear,
-.ui-hud[data-team] .ui-traps__name {
-  display: none;
-}
-
-.ui-hud[data-team] .ui-hud__gear,
 .ui-hud[data-multi] .ui-hud__traps {
   padding-left: 0;
   border-left: 0;
 }
 
-.ui-hud[data-team] .ui-hud__roster {
-  display: flex;
-  flex-direction: column;
-  grid-area: roster;
-  align-self: start;
-  gap: 10px;
-  width: var(--ui-side-width);
-}
-
-.ui-hud[data-team] .ui-hud__team {
-  display: flex;
-  grid-area: team;
-  justify-content: center;
-  gap: var(--ui-gap);
-}
-
-@media (min-width: 721px) {
-  .ui-hud[data-multi] .ui-band {
-    align-items: flex-start;
-    gap: 12px;
-    padding: 8px 12px 10px 14px;
-  }
-
-  .ui-hud[data-multi] .ui-band__main {
-    gap: 5px;
-  }
-
-  .ui-hud[data-multi] .ui-band__head {
-    min-height: 20px;
-  }
-
-  .ui-hud[data-multi] .ui-band__gear {
-    min-height: 20px;
-  }
-
-  .ui-hud[data-multi] .ui-band__weapon {
-    padding: 1px 7px 1px 5px;
-  }
-
-  .ui-hud[data-multi] .ui-band__skills {
-    gap: 6px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill {
-    width: 46px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill__ring {
-    width: 38px;
-    height: 38px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill__glyph {
-    width: 31px;
-    height: 31px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill__icon {
-    width: 17px;
-    height: 17px;
-  }
-}
-
-.ui-band {
+.ui-bracelet {
   --who: var(--or);
 
-  position: relative;
   display: flex;
-  flex: 1 1 0;
   align-items: center;
-  gap: 14px;
-  min-width: 0;
-  max-width: 360px;
-  padding: 12px 16px 14px 18px;
-  border-left: 5px solid var(--who);
+  gap: 12px;
+  width: 264px;
+  max-width: 100%;
+  padding: 7px 14px 8px 12px;
+  border-color: color-mix(in srgb, var(--who) 50%, var(--ui-line));
+  border-radius: 999px;
 }
 
-.ui-band__main {
+.ui-bracelet__body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
-.ui-band__head {
+.ui-bracelet__head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
-  min-height: 24px;
-}
-
-.ui-band__class {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--ui-muted);
-  font-size: 13px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ui-band__status {
-  margin-left: auto;
-  color: var(--texte);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.ui-band__row {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
-  align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
-.ui-band__label {
-  color: var(--ui-muted);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
+.ui-bracelet .ui-who__mark {
+  width: 18px;
+  height: 18px;
 }
 
-.ui-band__value {
-  min-width: 52px;
-  font-size: 14px;
+.ui-bracelet .ui-who__name {
+  font-size: 15px;
+}
+
+.ui-bracelet__level,
+.ui-bracelet__status {
+  flex: none;
+  font-size: 13px;
   font-weight: 700;
-  text-align: right;
   white-space: nowrap;
 }
 
-.ui-band__row:not(.ui-band__row--vibes) .ui-bar__fill {
+.ui-bracelet__level {
+  margin-left: auto;
+  color: var(--ui-muted);
+}
+
+.ui-bracelet__status {
+  color: var(--texte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ui-bracelet__status:empty {
+  display: none;
+}
+
+.ui-bracelet__life {
+  height: 6px;
+}
+
+.ui-bracelet__life .ui-bar__fill {
   background: var(--who);
   box-shadow: none;
 }
 
-.ui-band[data-critical] .ui-band__row:not(.ui-band__row--vibes) .ui-band__value {
-  color: var(--ui-tank);
+.ui-bracelet[data-critical] .ui-bracelet__life .ui-bar__fill {
+  background: var(--tank);
 }
 
-.ui-band[data-downed] {
-  border-left-color: var(--bad-vibe);
-}
+.ui-bracelet__skill {
+  --charge: 0;
 
-.ui-band[data-downed] :is(.ui-who__mark, .ui-who__name, .ui-band__class) {
-  opacity: 0.7;
-}
-
-.ui-band[data-downed] .ui-band__row:not(.ui-band__row--vibes) .ui-bar__fill {
-  background: var(--bad-vibe);
-}
-
-.ui-band[data-downed] .ui-band__skills {
-  opacity: 0.5;
-}
-
-.ui-band__gear {
-  display: flex;
-  gap: 8px;
-  min-height: 22px;
-}
-
-.ui-hud:not([data-multi]) .ui-band__gear,
-.ui-band__gear:empty {
-  display: none;
-}
-
-.ui-band__weapon {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px 2px 6px;
-  border: 1px solid color-mix(in srgb, var(--or) 55%, transparent);
-  border-radius: 999px;
-}
-
-.ui-band__weapon-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--ui-or);
-}
-
-.ui-band__weapon-level {
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.ui-band__skills {
-  display: flex;
   flex: none;
-  flex-direction: column;
-  gap: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--who) calc(var(--charge) * 360deg),
+    color-mix(in srgb, var(--texte) 18%, transparent) calc(var(--charge) * 360deg)
+  );
 }
 
-.ui-band .ui-skill {
-  flex-direction: row;
-  width: 58px;
+.ui-bracelet__skill[data-ready] {
+  box-shadow:
+    0 0 0 2px var(--sol-clair),
+    0 0 0 3.5px var(--who),
+    0 0 calc(8px * var(--ui-halo)) var(--who);
 }
 
-.ui-band .ui-skill__ring {
-  width: 44px;
-  height: 44px;
+.ui-bracelet__key {
+  flex: none;
+  margin-left: -4px;
 }
 
-.ui-band .ui-skill__glyph {
-  width: 37px;
-  height: 37px;
+.ui-bracelet[data-downed] {
+  border-color: var(--ui-line);
 }
 
-.ui-band .ui-skill__icon {
-  width: 20px;
-  height: 20px;
+.ui-bracelet[data-downed] :is(.ui-who__mark, .ui-bracelet__skill) {
+  opacity: 0.6;
 }
 
-.ui-band .ui-skill__key {
-  position: absolute;
-  right: 0;
-  bottom: -5px;
-  margin: 0;
+.ui-bracelet[data-downed] .ui-who__name {
+  color: var(--ui-muted);
 }
 
-.ui-band .ui-skill__text {
-  display: none;
-}
-
-.ui-band--compact {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  max-width: none;
-  padding: 10px 14px 12px 16px;
-}
-
-.ui-band--compact .ui-band__row {
-  grid-template-columns: minmax(0, 1fr) auto;
+.ui-bracelet[data-downed] .ui-bracelet__life .ui-bar__fill {
+  background: var(--bad-vibe);
 }
 
 .ui-offers {
@@ -2749,125 +2621,26 @@
   .ui-hud[data-team] {
     grid-template:
       'top' auto
-      'roster' auto
+      'bracelets' auto
       '.' 1fr
-      'team' auto
       'bar' auto
       / minmax(0, 1fr);
   }
 
-  .ui-hud[data-team] .ui-hud__roster {
+  .ui-hud[data-team] .ui-hud__bracelets {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: auto;
-  }
-
-  .ui-hud[data-team] .ui-hud__team {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .ui-band {
-    flex-direction: column;
     align-items: stretch;
-    max-width: none;
-    padding: 10px 12px 12px 14px;
   }
 
-  .ui-hud[data-multi] .ui-band {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 5px 8px;
-    padding: 8px 10px 10px 12px;
+  .ui-bracelet {
+    gap: 8px;
+    width: auto;
+    padding: 6px 10px 7px;
   }
 
-  .ui-hud[data-multi] .ui-band__main {
-    display: contents;
-  }
-
-  .ui-hud[data-multi] .ui-band__head {
-    grid-column: 1;
-    min-height: 20px;
-  }
-
-  .ui-hud[data-multi] .ui-band__head .ui-who {
-    gap: 6px;
-  }
-
-  .ui-hud[data-multi] .ui-band__head .ui-who__mark {
-    width: 18px;
-    height: 18px;
-  }
-
-  .ui-hud[data-multi] .ui-band__head .ui-who__name {
-    font-size: 15px;
-  }
-
-  .ui-hud[data-multi] .ui-band__status {
-    display: none;
-  }
-
-  .ui-hud[data-multi] .ui-band__row {
-    grid-column: 1;
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .ui-hud[data-multi] .ui-band__row:not(.ui-band__row--vibes) > .ui-band__label,
-  .ui-hud[data-multi] .ui-band__row--vibes > .ui-band__value {
-    display: none;
-  }
-
-  .ui-hud[data-multi] .ui-band__row--vibes {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .ui-hud[data-multi] .ui-band__gear {
-    grid-column: 1 / -1;
-    min-height: 20px;
-  }
-
-  .ui-hud[data-multi] .ui-band__skills {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill {
-    width: 52px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill__ring {
-    width: 30px;
-    height: 30px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill__glyph {
-    width: 28px;
-    height: 28px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill__icon {
-    width: 16px;
-    height: 16px;
-  }
-
-  .ui-hud[data-multi] .ui-band .ui-skill__key {
-    right: 0;
-    bottom: -4px;
-  }
-
-  .ui-band__skills {
-    flex-direction: row;
-    gap: 14px;
-  }
-
-  .ui-band .ui-skill {
-    width: 58px;
-  }
-
-  .ui-band__class {
+  .ui-bracelet__level,
+  .ui-bracelet__key {
     display: none;
   }
 
