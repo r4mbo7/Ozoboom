@@ -268,9 +268,6 @@ async function measure(
   );
 }
 
-// Every screen at every moment takes minutes: run it with CONTRAST=1 when touching colours.
-test.skip(process.env.CONTRAST === undefined, 'set CONTRAST=1 to measure every screen');
-
 for (const query of SCREENS) {
   for (const sky of SKIES) {
     test(`${query} keeps its text readable at ${sky.label}`, async ({ page }) => {

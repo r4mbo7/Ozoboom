@@ -31,6 +31,9 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      // Every screen at every moment takes minutes: only `pnpm contrast`, with CONTRAST=1, runs it.
+      // Left out rather than skipped, so that the CI shards split the tests that do run.
+      testIgnore: process.env.CONTRAST === undefined ? 'contrast.spec.ts' : [],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
