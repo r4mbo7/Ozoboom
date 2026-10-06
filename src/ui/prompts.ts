@@ -16,7 +16,6 @@ export interface DevicePrompts {
   confirm: string;
   back: string;
   skill: string;
-  ultimate: string;
   controls: readonly Control[];
 }
 
@@ -28,7 +27,6 @@ const KEYBOARD: DevicePrompts = {
   confirm: 'Entrée',
   back: 'Échap',
   skill: 'E',
-  ultimate: 'R',
   controls: [
     { action: 'Se déplacer', keys: ['ZQSD', 'WASD'] },
     { action: 'Viser', keys: ['Souris'] },
@@ -36,7 +34,6 @@ const KEYBOARD: DevicePrompts = {
     { action: 'Choisir un piège', keys: ['Molette', '1 à 5'] },
     { action: 'Poser le piège', keys: ['Clic droit', 'F'] },
     { action: 'Compétence', keys: ['E'] },
-    { action: 'Ultime, au drop', keys: ['R'] },
     { action: 'Pause', keys: ['Échap'] },
   ],
 };
@@ -49,7 +46,6 @@ const GAMEPAD: DevicePrompts = {
   confirm: 'A',
   back: 'B',
   skill: 'LT',
-  ultimate: 'Y',
   controls: [
     { action: 'Se déplacer', keys: ['Stick gauche'] },
     { action: 'Viser', keys: ['Stick droit'] },
@@ -57,7 +53,6 @@ const GAMEPAD: DevicePrompts = {
     { action: 'Choisir un piège', keys: ['LB', 'RB'] },
     { action: 'Poser le piège', keys: ['A'] },
     { action: 'Compétence', keys: ['LT'] },
-    { action: 'Ultime, au drop', keys: ['Y'] },
     { action: 'Pause', keys: ['Start'] },
   ],
 };

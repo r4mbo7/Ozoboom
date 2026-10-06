@@ -32,7 +32,7 @@ describe('the automatic player', () => {
     const state = playDuo(3);
 
     expect(state.stats.kills).toBeGreaterThan(0);
-    expect(hashState(state)).toBe('8bace01b');
+    expect(hashState(state)).toBe('03d95192');
   });
 
   it('reaches another state from another seed', () => {

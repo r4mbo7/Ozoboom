@@ -1,4 +1,4 @@
-import type { ClassDefinition, GameContent, SkillDefinition } from '../data/types';
+import type { ClassDefinition, GameContent } from '../data/types';
 import type { InputDevice } from '../input/intents';
 import type { PlayerState } from '../sim/state';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
@@ -16,8 +16,8 @@ export interface SkillView {
   status: HTMLElement;
 }
 
-export function createSkillView(kind: 'skill' | 'ultimate'): SkillView {
-  const root = el('div', `ui-skill ui-skill--${kind}`);
+export function createSkillView(): SkillView {
+  const root = el('div', 'ui-skill');
   const ring = el('div', 'ui-skill__ring');
   const glyph = el('span', 'ui-skill__glyph');
   ring.append(glyph);
@@ -67,7 +67,7 @@ function updateHealth(
   setFlag(band, 'downed', player.downed);
 }
 
-// The whole of a player of this screen: life, level, vibes, skill and ultimate.
+// The whole of a player of this screen: life, level, vibes and skill.
 export function createFullBand(): Band {
   const element = el('section', 'ui-panel ui-band');
   const who = createWho();
@@ -92,10 +92,9 @@ export function createFullBand(): Band {
   let gearKey = '';
   const main = el('div', 'ui-band__main');
   main.append(head, hpRow, levelRow, gear);
-  const skill = createSkillView('skill');
-  const ultimate = createSkillView('ultimate');
+  const skill = createSkillView();
   const skills = el('div', 'ui-band__skills');
-  skills.append(skill.root, ultimate.root);
+  skills.append(skill.root);
   element.append(main, skills);
 
   let builtFor: ClassDefinition | null = null;
@@ -105,13 +104,9 @@ export function createFullBand(): Band {
     builtFor = definition;
     builtDevice = device;
     const prompts = promptsFor(device);
-    const fill = (view: SkillView, def: SkillDefinition, key: string): void => {
-      view.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(def.effect)));
-      setText(view.name, def.name);
-      view.key.replaceChildren(keycap(key, prompts.style));
-    };
-    fill(skill, definition.skill, prompts.skill);
-    fill(ultimate, definition.ultimate, prompts.ultimate);
+    skill.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(definition.skill.effect)));
+    setText(skill.name, definition.skill.name);
+    skill.key.replaceChildren(keycap(prompts.skill, prompts.style));
     setText(className, definition.name);
   }
 
@@ -158,9 +153,6 @@ export function createFullBand(): Band {
         setVar(skill.root, '--charge', String(skillCharge(player, definition.skill)));
         setFlag(skill.root, 'ready', skillReady);
         setText(skill.status, skillReady ? 'Prête' : 'Recharge');
-        setVar(ultimate.root, '--charge', player.ultimateReady ? '1' : '0');
-        setFlag(ultimate.root, 'ready', player.ultimateReady);
-        setText(ultimate.status, player.ultimateReady ? 'Prêt' : 'Au drop');
       }
     },
   };

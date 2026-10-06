@@ -88,7 +88,6 @@ export function withoutPresses(snapshot: InputSnapshot): InputSnapshot {
       ...snapshot.gameplay,
       fire: false,
       skill: false,
-      ultimate: false,
       placeTrap: false,
       nextTrap: false,
       previousTrap: false,

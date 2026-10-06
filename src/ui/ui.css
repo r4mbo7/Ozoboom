@@ -1582,10 +1582,6 @@
   width: 108px;
 }
 
-.ui-skill--ultimate {
-  --skill: var(--tank);
-}
-
 .ui-skill__ring {
   display: grid;
   place-items: center;
@@ -2636,8 +2632,7 @@
   animation: ui-glow var(--beat) ease-out infinite;
 }
 
-.ui-slot--drop[data-open],
-.ui-skill--ultimate[data-ready] .ui-skill__ring {
+.ui-slot--drop[data-open] {
   animation: ui-glow var(--beat) ease-out infinite;
 }
 

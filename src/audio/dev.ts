@@ -21,7 +21,7 @@ import { TICK_SECONDS } from './clock';
 import { CROSSFADE_SECONDS, createFader } from './fade';
 import { createAudioEngine, heardNow } from './index';
 import { createMasterChain } from './master';
-import { createSfx, type SfxLookups, type SkillSound } from './sfx';
+import { createSfx, type SfxLookups } from './sfx';
 import { SPEAKER_LAYER_IDS, type SpeakerLayerId } from './speaker-layers';
 import type { AudioEngine, Cue, Mood } from './types';
 
@@ -40,13 +40,9 @@ type EventName =
   | 'levelUp'
   | 'upgradeChosen'
   | 'skillUsed'
-  | 'ultimateUsed'
   | 'skillCharge'
-  | 'skillCase'
   | 'skillHeal'
-  | 'skillRecall'
   | 'taunted'
-  | 'barrierBroken'
   | 'playerHealed'
   | 'playerDowned'
   | 'playerRevived'
@@ -61,18 +57,15 @@ const CUE_LABELS: Readonly<Record<Cue, string>> = {
   launch: 'lancement',
 };
 
-const DEV_SKILLS: Readonly<Record<string, SkillSound>> = {
-  'dev-nova:skill': { kind: 'nova' },
-  'dev-nova:ultimate': { kind: 'laserShow' },
-  'dev-charge:skill': { kind: 'dash' },
-  'dev-malle:skill': { kind: 'barrier' },
-  'dev-soin:skill': { kind: 'healPulse' },
-  'dev-soin:ultimate': { kind: 'healPulse', revive: true },
+const DEV_SKILLS: Readonly<Record<string, string>> = {
+  'dev-nova': 'nova',
+  'dev-charge': 'dash',
+  'dev-soin': 'healPulse',
 };
 const DEV_LOOKUPS: SfxLookups = {
-  skillSoundOf: (classId, slot) => DEV_SKILLS[`${classId}:${slot}`],
+  skillKindOf: (classId) => DEV_SKILLS[classId],
 };
-const DEV_CLASS_IDS = ['dev-nova', 'dev-charge', 'dev-malle', 'dev-soin'] as const;
+const DEV_CLASS_IDS = ['dev-nova', 'dev-charge', 'dev-soin'] as const;
 
 function devPlayer(id: 0 | 1 | 2 | 3, classId: string): PlayerState {
   return {
@@ -92,7 +85,6 @@ function devPlayer(id: 0 | 1 | 2 | 3, classId: string): PlayerState {
     vibesToNextLevel: 10,
     attackCooldown: 0,
     skillCooldown: 0,
-    ultimateReady: false,
     upgrades: [],
     modifiers: {},
     downed: false,
@@ -109,13 +101,9 @@ const EVENT_LABELS: Readonly<Record<EventName, string>> = {
   levelUp: 'levelUp',
   upgradeChosen: 'upgradeChosen',
   skillUsed: 'skillUsed',
-  ultimateUsed: 'ultimateUsed',
   skillCharge: 'skillUsed charge',
-  skillCase: 'skillUsed flight case',
   skillHeal: 'skillUsed soin',
-  skillRecall: 'ultimateUsed rappel',
   taunted: 'taunted',
-  barrierBroken: 'barrierBroken',
   playerHealed: 'playerHealed',
   playerDowned: 'playerDowned',
   playerRevived: 'playerRevived',
@@ -146,20 +134,12 @@ function eventOf(name: EventName, id: number): SimEvent {
       return { type: 'upgradeChosen', playerId: 0, upgradeId: 'dev' };
     case 'skillUsed':
       return { type: 'skillUsed', playerId: 0 };
-    case 'ultimateUsed':
-      return { type: 'ultimateUsed', playerId: 0 };
     case 'skillCharge':
       return { type: 'skillUsed', playerId: 1 };
-    case 'skillCase':
-      return { type: 'skillUsed', playerId: 2 };
     case 'skillHeal':
-      return { type: 'skillUsed', playerId: 3 };
-    case 'skillRecall':
-      return { type: 'ultimateUsed', playerId: 3 };
+      return { type: 'skillUsed', playerId: 2 };
     case 'taunted':
       return { type: 'taunted', playerId: 1, x: 0, y: 0, radius: 120, count: 4 };
-    case 'barrierBroken':
-      return { type: 'barrierBroken', id, x: 0, y: 0 };
     case 'playerHealed':
       return { type: 'playerHealed', playerId: 0, amount: 10 };
     case 'playerDowned':
@@ -510,13 +490,9 @@ async function renderOffline(ending: 'won' | 'lost'): Promise<OfflineReport> {
 const SOUNDS_SECONDS = 20;
 const SOUNDS_ORDER: readonly EventName[] = [
   'skillUsed',
-  'ultimateUsed',
   'skillCharge',
-  'skillCase',
   'skillHeal',
-  'skillRecall',
   'taunted',
-  'barrierBroken',
   'playerHealed',
   'playerDowned',
   'playerReviving',
@@ -1098,7 +1074,7 @@ root.innerHTML = `
     <section>
       <h2>Sons de l'équipe, 20 secondes</h2>
       <p style="color: var(--texte); margin-bottom: 0.75rem">
-        Effets seuls, par la chaîne maître : compétences par sorte, appel, malle qui cède, soin, chute, relève, cues du salon, puis une foule de 300 événements de chaque par image.
+        Effets seuls, par la chaîne maître : compétences par sorte, appel, soin, chute, relève, cues du salon, puis une foule de 300 événements de chaque par image.
       </p>
       <div class="row">
         <button type="button" data-sounds>Rendre 20 s</button>

@@ -23,7 +23,6 @@ function snapshot(
       aim: { x: 1, y: 0 },
       fire: false,
       skill: false,
-      ultimate: false,
       placeTrap: false,
       nextTrap: false,
       previousTrap: false,
@@ -208,7 +207,6 @@ describe('Controls', () => {
         aim: { x: 1, y: 0 },
         fire: false,
         skill: false,
-        ultimate: false,
       },
       actions: [],
     });

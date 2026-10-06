@@ -10,44 +10,34 @@ const GERBE = { shards: 12, calmShards: 6, reach: 54, lift: 16 };
 export function createCareBursts(ctx: RenderContext, { spawn, tokenOf }: Burster) {
   const { textures: t } = ctx;
 
-  function heal(
-    state: SimState,
-    player: PlayerState,
-    radius: number,
-    big: boolean,
-    frame: Frame,
-  ): void {
+  function heal(state: SimState, player: PlayerState, radius: number, frame: Frame): void {
     const color = frame.palette[tokenOf(player)];
-    const rings = big && !frame.calm ? 3 : 1;
-    for (let index = 0; index < rings; index += 1) {
-      spawn(frame, {
-        shape: t.ring,
-        now: state.tick,
-        delay: index * 5,
-        duration: TICKS_PER_BEAT * (big ? 2.2 : 1.5),
-        x: 0,
-        y: 0,
-        anchor: 'player',
-        anchorId: player.id,
-        fromRadius: radius * 0.1,
-        toRadius: radius,
-        tint: color,
-        peak: 0.9,
-        outline: true,
-      });
-    }
+    spawn(frame, {
+      shape: t.ring,
+      now: state.tick,
+      duration: TICKS_PER_BEAT * 1.5,
+      x: 0,
+      y: 0,
+      anchor: 'player',
+      anchorId: player.id,
+      fromRadius: radius * 0.1,
+      toRadius: radius,
+      tint: color,
+      peak: 0.9,
+      outline: true,
+    });
     spawn(frame, {
       shape: t.halo,
       now: state.tick,
-      duration: TICKS_PER_BEAT * (big ? 2 : 1),
+      duration: TICKS_PER_BEAT,
       x: 0,
       y: 0,
       anchor: 'player',
       anchorId: player.id,
       fromRadius: radius * 0.2,
-      toRadius: radius * (big ? 1.1 : 0.8),
+      toRadius: radius * 0.8,
       tint: color,
-      peak: big ? 0.55 : 0.4,
+      peak: 0.4,
     });
   }
 

@@ -88,13 +88,6 @@ export const FIXTURE_CONTENT: GameContent = {
         cooldownTicks: 240,
         effect: { kind: 'nova', damage: 30, radius: 120, knockback: 20 },
       },
-      ultimate: {
-        id: 'raver-laser-show',
-        name: 'Laser show',
-        description: 'Des lasers balaient la piste.',
-        cooldownTicks: 0,
-        effect: { kind: 'laserShow', damagePerTick: 2, radius: 300, durationTicks: 96 },
-      },
     },
   ],
   enemies: [
@@ -210,13 +203,6 @@ export const FIXTURE_CARER: ClassDefinition = {
     cooldownTicks: 192,
     effect: { kind: 'healPulse', amount: 30, radius: 150, coreRepair: 50 },
   },
-  ultimate: {
-    id: 'carer-dash',
-    name: 'Ruée',
-    description: 'Une ruée en avant.',
-    cooldownTicks: 0,
-    effect: { kind: 'dash', distance: 80, invulnerableTicks: 6 },
-  },
 };
 
 export const FIXTURE_MIST: TrapDefinition = trap('mister', 'continuous', {
@@ -256,17 +242,10 @@ export const EFFECTS_CONTENT: GameContent = {
       ...raver,
       id: 'roadie',
       skill: {
-        id: 'roadie-barrier',
-        name: 'Barrière',
-        description: 'Une barrière autour de soi.',
-        cooldownTicks: 192,
-        effect: { kind: 'barrier', hp: 60, radius: 100, durationTicks: 96 },
-      },
-      ultimate: {
         id: 'roadie-dash',
         name: 'Ruée',
         description: 'Une ruée en avant.',
-        cooldownTicks: 0,
+        cooldownTicks: 192,
         effect: { kind: 'dash', distance: 120, invulnerableTicks: 12 },
       },
     },

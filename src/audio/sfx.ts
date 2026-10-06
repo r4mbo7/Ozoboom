@@ -14,7 +14,6 @@ export type SfxName =
   | 'levelUp'
   | 'upgradeChosen'
   | 'skillUsed'
-  | 'ultimateUsed'
   | 'gameWon'
   | 'gameLost'
   | 'weaponSweep'
@@ -38,11 +37,8 @@ export type SfxName =
   | 'bystanderLost'
   | 'volumeUp'
   | 'skillCharge'
-  | 'skillCase'
   | 'skillHeal'
-  | 'skillRecall'
   | 'taunted'
-  | 'barrierBroken'
   | 'playerHealed'
   | 'playerDowned'
   | 'playerRevived'
@@ -64,15 +60,8 @@ export interface SfxLimiter {
 
 export type TrapEffectOf = (kind: string) => string;
 
-export type SkillSlot = 'skill' | 'ultimate';
-
-export interface SkillSound {
-  readonly kind: string;
-  readonly revive?: boolean;
-}
-
 export interface SfxLookups {
-  readonly skillSoundOf?: (classId: string, slot: SkillSlot) => SkillSound | undefined;
+  readonly skillKindOf?: (classId: string) => string | undefined;
   readonly weaponKindOf?: (weaponId: string) => string | undefined;
   readonly specialKindOf?: (enemyKind: string) => string | undefined;
 }
@@ -101,9 +90,7 @@ const WEAPON_HIT_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
 const SKILL_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
   Object.entries({
     nova: 'skillUsed',
-    laserShow: 'ultimateUsed',
     dash: 'skillCharge',
-    barrier: 'skillCase',
     healPulse: 'skillHeal',
   }) as [string, SfxName][],
 );
@@ -131,7 +118,6 @@ export const SFX_LIMITS: Readonly<Record<SfxName, SfxLimit>> = {
   levelUp: { perFrame: 1, concurrent: 1, seconds: 0.45 },
   upgradeChosen: { perFrame: 1, concurrent: 1, seconds: 0.3 },
   skillUsed: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  ultimateUsed: { perFrame: 1, concurrent: 1, seconds: 1 },
   gameWon: { perFrame: 1, concurrent: 1, seconds: 2 },
   gameLost: { perFrame: 1, concurrent: 1, seconds: 2 },
   weaponSweep: { perFrame: 1, concurrent: 2, seconds: 0.2 },
@@ -155,11 +141,8 @@ export const SFX_LIMITS: Readonly<Record<SfxName, SfxLimit>> = {
   bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
   volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
   skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  skillCase: { perFrame: 1, concurrent: 2, seconds: 0.4 },
   skillHeal: { perFrame: 1, concurrent: 2, seconds: 0.7 },
-  skillRecall: { perFrame: 1, concurrent: 1, seconds: 2 * BEAT_SECONDS },
   taunted: { perFrame: 1, concurrent: 2, seconds: 0.5 },
-  barrierBroken: { perFrame: 1, concurrent: 2, seconds: 0.5 },
   playerHealed: { perFrame: 1, concurrent: 2, seconds: 0.15 },
   playerDowned: { perFrame: 1, concurrent: 2, seconds: 0.6 },
   playerRevived: { perFrame: 1, concurrent: 2, seconds: 0.8 },
@@ -191,21 +174,15 @@ export function sfxOf(
     case 'bystanderHelped':
     case 'bystanderLost':
     case 'taunted':
-    case 'barrierBroken':
     case 'playerHealed':
     case 'playerDowned':
     case 'playerRevived':
     case 'playerReviving':
       return event.type;
-    case 'skillUsed':
-    case 'ultimateUsed': {
+    case 'skillUsed': {
       const classId = players.find((player) => player.id === event.playerId)?.classId;
-      const slot = event.type === 'skillUsed' ? 'skill' : 'ultimate';
-      const sound = classId === undefined ? undefined : lookups.skillSoundOf?.(classId, slot);
-      if (sound === undefined) {
-        return null;
-      }
-      return sound.revive === true ? 'skillRecall' : (SKILL_SFX.get(sound.kind) ?? null);
+      const kind = classId === undefined ? undefined : lookups.skillKindOf?.(classId);
+      return kind === undefined ? null : (SKILL_SFX.get(kind) ?? null);
     }
     case 'weaponFired': {
       const kind = lookups.weaponKindOf?.(event.weaponId);
@@ -391,28 +368,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       hold: 0.05,
       release: 0.15,
       filter: { type: 'bandpass', hz: 1000, toHz: 6000, glide: 0.25, q: 1.2 },
-    });
-  },
-  ultimateUsed: (out, at) => {
-    for (const degree of [0, 4, 7]) {
-      playTone(out, at, {
-        wave: 'sawtooth',
-        hz: degreeToHz(degree, 2),
-        toHz: degreeToHz(degree, 4),
-        glide: 0.6,
-        gain: 0.08,
-        attack: 0.05,
-        hold: 0.5,
-        release: 0.4,
-        filter: { type: 'lowpass', hz: 400, toHz: 6000, glide: 0.6, q: 6 },
-      });
-    }
-    playNoise(out, at, {
-      gain: 0.15,
-      attack: 0.5,
-      hold: 0.1,
-      release: 0.4,
-      filter: { type: 'highpass', hz: 300, toHz: 4000, glide: 0.6 },
     });
   },
   gameWon: (out, at) => {
@@ -781,34 +736,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.08,
     });
   },
-  skillCase: (out, at) => {
-    playTone(out, at, {
-      wave: 'sine',
-      hz: degreeToHz(0, 1),
-      toHz: degreeToHz(0, 0),
-      glide: 0.12,
-      gain: 0.45,
-      attack: 0.002,
-      hold: 0.03,
-      release: 0.16,
-    });
-    playNoise(out, at, {
-      gain: 0.2,
-      attack: 0.001,
-      hold: 0.008,
-      release: 0.07,
-      filter: { type: 'lowpass', hz: 450 },
-    });
-    playTone(out, at + 0.09, {
-      wave: 'square',
-      hz: degreeToHz(4, 3),
-      gain: 0.08,
-      attack: 0.001,
-      hold: 0.008,
-      release: 0.03,
-      filter: { type: 'lowpass', hz: 1000 },
-    });
-  },
   skillHeal: (out, at) => {
     [0, 2, 4].forEach((degree, index) => {
       playTone(out, at + index * 0.03, {
@@ -818,26 +745,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
         attack: 0.03,
         hold: 0.1,
         release: 0.45,
-      });
-    });
-  },
-  skillRecall: (out, at) => {
-    [0, 2, 4, 7, 9].forEach((degree, index) => {
-      playTone(out, at + index * 0.2, {
-        wave: 'triangle',
-        hz: degreeToHz(degree, 4),
-        gain: 0.12,
-        attack: 0.004,
-        hold: 0.05,
-        release: 0.3,
-      });
-      playTone(out, at + index * 0.2, {
-        wave: 'sine',
-        hz: degreeToHz(degree, 5),
-        gain: 0.04,
-        attack: 0.004,
-        hold: 0.02,
-        release: 0.2,
       });
     });
   },
@@ -853,26 +760,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.2,
       filter: { type: 'lowpass', hz: 360, q: 2 },
       vibrato: { hz: 6, cents: 25, delay: 0.1 },
-    });
-  },
-  barrierBroken: (out, at) => {
-    playTone(out, at, {
-      wave: 'sawtooth',
-      hz: degreeToHz(3, 2),
-      toHz: degreeToHz(0, 1),
-      glide: 0.3,
-      gain: 0.12,
-      attack: 0.005,
-      hold: 0.08,
-      release: 0.18,
-      filter: { type: 'lowpass', hz: 700, toHz: 200, glide: 0.3, q: 3 },
-    });
-    playNoise(out, at + 0.02, {
-      gain: 0.3,
-      attack: 0.002,
-      hold: 0.03,
-      release: 0.25,
-      filter: { type: 'lowpass', hz: 900, toHz: 250, glide: 0.3 },
     });
   },
   playerHealed: (out, at) => {

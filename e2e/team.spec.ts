@@ -73,7 +73,7 @@ test.describe('the HUD of a team', () => {
     await page.goto('/dev/ui.html?screen=team&locals=3&pads=2');
 
     const keys = page.locator('.ui-band:not(.ui-band--compact)').locator('.ui-skill__key');
-    await expect(keys).toHaveText(['E', 'R', 'LT', 'Y', 'LT', 'Y']);
+    await expect(keys).toHaveText(['E', 'LT', 'LT']);
   });
 
   test('keeps the traps out of the play area when several players share the screen', async ({
@@ -99,7 +99,7 @@ test.describe('the HUD of a team', () => {
     await page.goto('/dev/ui.html?screen=game');
 
     await expect(page.getByRole('region', { name: 'Niveau' })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Compétences' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Compétence' })).toBeVisible();
     await expect(page.locator('.ui-band')).toHaveCount(0);
     await expect(page.locator('.ui-hud')).not.toHaveAttribute('data-team', '');
   });

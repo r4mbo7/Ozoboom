@@ -238,8 +238,6 @@ export function destroyTextures(textures: Textures): void {
   const shapes = [
     ...Object.values(textures).filter((value): value is Shape => 'texture' in value),
     ...Object.values(textures.traps),
-    textures.classFx.barrier,
-    textures.classFx.disc,
     textures.classFx.trail,
     ...specialShapes(textures.specials),
     ...playerShapes(textures.players),

@@ -68,7 +68,6 @@ export function referenceCommands(ticks: number): PlayerCommand[][] {
           move,
           aim: { x: aim.x * 3, y: aim.y * 3 },
           skill: tick % 7 === 0,
-          ultimate: tick % 5 === 0,
           fire: true,
         }),
         actions: TRAP_TICKS.includes(tick) ? [PLACE_SUBWOOFER, choose(tick)] : [choose(tick)],
@@ -259,27 +258,27 @@ export function playTeam(): { state: SimState; downs: number; revives: number } 
 export const REPLAY_SCRIPTS: readonly ReplayScript[] = [
   {
     id: 'reference',
-    hash: 'a979d6ec',
+    hash: 'af2ac9e9',
     run: () => runScript(DUO, referenceCommands(2000)),
   },
   {
     id: 'speaker',
-    hash: '4b896531',
+    hash: '734492fb',
     run: () => runScript(SPEAKER_GAME, speakerCommands()),
   },
   {
     id: 'relic',
-    hash: '10ae53f5',
+    hash: '07a377b4',
     run: () => runScript(RELIC_GAME, relicCommands()),
   },
   {
     id: 'thrown',
-    hash: 'bd478e05',
+    hash: '87a3e4c4',
     run: () => playThrown().simulation.state,
   },
   {
     id: 'team',
-    hash: '06d58fdd',
+    hash: '31ac7a60',
     run: () => playTeam().state,
   },
 ];

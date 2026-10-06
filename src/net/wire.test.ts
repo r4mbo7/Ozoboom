@@ -35,7 +35,6 @@ function randomCommand(rng: RngState, playerId: PlayerId): PlayerCommand {
       aim: unit(rng),
       fire: nextFloat(rng) < 0.5,
       skill: nextFloat(rng) < 0.2,
-      ultimate: nextFloat(rng) < 0.05,
     },
     actions,
   };
@@ -58,7 +57,6 @@ describe('quantizeCommand', () => {
       expect(decoded.playerId).toBe(command.playerId);
       expect(decoded.input.fire).toBe(command.input.fire);
       expect(decoded.input.skill).toBe(command.input.skill);
-      expect(decoded.input.ultimate).toBe(command.input.ultimate);
       expect(decoded.actions).toHaveLength(command.actions.length);
       expect(Math.abs(decoded.input.move.x - command.input.move.x)).toBeLessThan(1e-4);
       expect(Math.abs(decoded.input.move.y - command.input.move.y)).toBeLessThan(1e-4);
@@ -86,7 +84,6 @@ describe('quantizeCommand', () => {
         aim: { x: 1, y: 0 },
         fire: false,
         skill: false,
-        ultimate: false,
       },
       actions: [],
     };

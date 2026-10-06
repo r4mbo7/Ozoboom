@@ -157,15 +157,14 @@ function healPulseTouches(
   bystander: BystanderState,
 ): boolean {
   for (const event of state.events) {
-    if (event.type !== 'skillUsed' && event.type !== 'ultimateUsed') {
+    if (event.type !== 'skillUsed') {
       continue;
     }
     const caster = playerById(state, event.playerId);
     if (caster === undefined) {
       continue;
     }
-    const { skill, ultimate } = lookup(content.classes, caster.classId, 'class');
-    const effect = event.type === 'skillUsed' ? skill.effect : ultimate.effect;
+    const { effect } = lookup(content.classes, caster.classId, 'class').skill;
     if (effect.kind === 'healPulse' && touches(bystander, caster, effect.radius)) {
       return true;
     }

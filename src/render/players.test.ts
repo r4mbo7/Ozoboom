@@ -68,7 +68,6 @@ function player(overrides: Partial<PlayerState> = {}): PlayerState {
     vibesToNextLevel: 10,
     attackCooldown: 0,
     skillCooldown: 0,
-    ultimateReady: false,
     upgrades: [],
     modifiers: {},
     downed: false,

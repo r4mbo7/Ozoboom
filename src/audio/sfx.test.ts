@@ -7,7 +7,6 @@ import {
   sfxOf,
   type SfxLookups,
   type SfxName,
-  type SkillSound,
 } from './sfx';
 
 const trapEffects: Record<string, string> = {
@@ -29,25 +28,21 @@ const weaponKinds: Record<string, string> = {
   monocycle: 'trail',
   ruban: 'ribbon',
 };
-const skills: Record<string, SkillSound> = {
-  'classe-nova:skill': { kind: 'nova' },
-  'classe-nova:ultimate': { kind: 'laserShow' },
-  'classe-charge:skill': { kind: 'dash' },
-  'classe-malle:skill': { kind: 'barrier' },
-  'classe-soin:skill': { kind: 'healPulse' },
-  'classe-soin:ultimate': { kind: 'healPulse', revive: true },
-  'classe-inconnue:skill': { kind: 'teleport' },
+const skills: Record<string, string> = {
+  'classe-nova': 'nova',
+  'classe-charge': 'dash',
+  'classe-soin': 'healPulse',
+  'classe-inconnue': 'teleport',
 };
 const lookups: SfxLookups = {
   weaponKindOf: (id) => weaponKinds[id],
   specialKindOf: (kind) => (kind === 'meprisant' ? 'sigh' : undefined),
-  skillSoundOf: (classId, slot) => skills[`${classId}:${slot}`],
+  skillKindOf: (classId) => skills[classId],
 };
 const players = [
   { id: 0, classId: 'classe-nova' },
   { id: 1, classId: 'classe-charge' },
-  { id: 2, classId: 'classe-malle' },
-  { id: 3, classId: 'classe-soin' },
+  { id: 2, classId: 'classe-soin' },
 ];
 const resolve = (event: SimEvent) => sfxOf(event, trapEffectOf, lookups, players);
 
@@ -78,13 +73,9 @@ const soundingEvents: readonly [SimEvent, SfxName][] = [
   [{ type: 'levelUp', playerId: 0, level: 2 }, 'levelUp'],
   [{ type: 'upgradeChosen', playerId: 0, upgradeId: 'x' }, 'upgradeChosen'],
   [{ type: 'skillUsed', playerId: 0 }, 'skillUsed'],
-  [{ type: 'ultimateUsed', playerId: 0 }, 'ultimateUsed'],
   [{ type: 'skillUsed', playerId: 1 }, 'skillCharge'],
-  [{ type: 'skillUsed', playerId: 2 }, 'skillCase'],
-  [{ type: 'skillUsed', playerId: 3 }, 'skillHeal'],
-  [{ type: 'ultimateUsed', playerId: 3 }, 'skillRecall'],
+  [{ type: 'skillUsed', playerId: 2 }, 'skillHeal'],
   [{ type: 'taunted', playerId: 1, x: 0, y: 0, radius: 120, count: 4 }, 'taunted'],
-  [{ type: 'barrierBroken', id: 7, x: 0, y: 0 }, 'barrierBroken'],
   [{ type: 'playerHealed', playerId: 0, amount: 12 }, 'playerHealed'],
   [{ type: 'playerDowned', playerId: 0 }, 'playerDowned'],
   [{ type: 'playerRevived', playerId: 0 }, 'playerRevived'],
@@ -118,12 +109,6 @@ describe('sfxOf', () => {
     expect(resolve(event)).toBe(name);
   });
 
-  it('finds the kind of a skill from the content of the class of the player', () => {
-    expect(resolve({ type: 'skillUsed', playerId: 3 })).not.toBe(
-      resolve({ type: 'ultimateUsed', playerId: 3 }),
-    );
-  });
-
   it('stays silent on a skill of an unknown kind, an unknown class or an unknown player', () => {
     const strangers = [
       { id: 0, classId: 'classe-inconnue' },
@@ -131,7 +116,6 @@ describe('sfxOf', () => {
     ];
     const unknown: SimEvent[] = [
       { type: 'skillUsed', playerId: 0 },
-      { type: 'ultimateUsed', playerId: 0 },
       { type: 'skillUsed', playerId: 1 },
       { type: 'skillUsed', playerId: 3 },
     ];
@@ -385,11 +369,8 @@ describe('the fans', () => {
 describe('the sounds of the team and of a revive', () => {
   const teamSounds: readonly SfxName[] = [
     'skillCharge',
-    'skillCase',
     'skillHeal',
-    'skillRecall',
     'taunted',
-    'barrierBroken',
     'playerHealed',
     'playerDowned',
     'playerRevived',
@@ -430,7 +411,7 @@ describe('the sounds of the team and of a revive', () => {
   it('lets an unexpected error from a lookup through', () => {
     const { out } = recordingOutput();
     const sfx = createSfx(out, trapEffectOf, {
-      skillSoundOf: () => {
+      skillKindOf: () => {
         throw new Error('broken content');
       },
     });

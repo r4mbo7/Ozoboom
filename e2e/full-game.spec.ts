@@ -148,8 +148,7 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
   await tapButtonUntil(page, PAD.Start, () => pause.isHidden());
 
   // A player in the page: aims the right stick at the nearest bad vibe and fires, picks up the
-  // vibes, stays by the scene, places traps, novas the close ones and drops the laser show on the
-  // boss.
+  // vibes, stays by the scene, places traps and novas the close ones.
   await page.evaluate(() => {
     let lastTrap = 0;
     const play = () => {
@@ -173,14 +172,9 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
         nearest === undefined ? 0 : (nearest.x - player.x) / distance(nearest.x, nearest.y),
         nearest === undefined ? 0 : (nearest.y - player.y) / distance(nearest.x, nearest.y),
       ];
-      const boss = state.enemies.find((enemy) => enemy.isBoss);
       pad.buttons[7] = running && nearest !== undefined ? 1 : 0;
       pad.buttons[6] =
         running && state.enemies.some((enemy) => distance(enemy.x, enemy.y) < 140) ? 1 : 0;
-      pad.buttons[3] =
-        running && player.ultimateReady && boss !== undefined && distance(boss.x, boss.y) < 280
-          ? 1
-          : 0;
       const now = performance.now();
       if (!running) {
         // The test taps A itself in the menus.

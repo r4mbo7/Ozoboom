@@ -21,18 +21,14 @@ import type { RenderOptions } from './types';
 export type WeaponLook = Pick<WeaponDefinition, 'classAffinity' | 'effect' | 'evolvedFrom'>;
 
 export interface RenderContent {
-  readonly classes: readonly (Pick<ClassDefinition, 'id'> &
-    Readonly<Record<'skill' | 'ultimate', Pick<SkillDefinition, 'effect'>>>)[];
+  readonly classes: readonly (Pick<ClassDefinition, 'id'> & {
+    readonly skill: Pick<SkillDefinition, 'effect'>;
+  })[];
   readonly enemies: readonly Pick<EnemyDefinition, 'id' | 'behaviour' | 'special'>[];
   readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect'>[];
   readonly sets: readonly SetDefinition[];
   readonly bystanders?: readonly Pick<BystanderDefinition, 'id' | 'helpTicks'>[];
   readonly weapons?: readonly (WeaponLook & Pick<WeaponDefinition, 'id'>)[];
-}
-
-export interface ClassSkillEffects {
-  readonly skill: SkillEffect;
-  readonly ultimate: SkillEffect;
 }
 
 export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect'>;
@@ -50,7 +46,7 @@ export interface RenderContext {
   readonly helpTicks: ReadonlyMap<string, number>;
   readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
   readonly weaponLooks: ReadonlyMap<string, WeaponLook>;
-  readonly skillEffects: ReadonlyMap<string, ClassSkillEffects>;
+  readonly skillEffects: ReadonlyMap<string, SkillEffect>;
 }
 
 export interface Family {

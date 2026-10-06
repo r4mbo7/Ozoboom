@@ -211,9 +211,7 @@ class DeviceColumn {
     const { gameplay, menu } = snapshot;
     for (const row of this.heldRows) {
       const name = row.dataset.held;
-      const on =
-        name === 'fire' ? gameplay.fire : name === 'skill' ? gameplay.skill : gameplay.ultimate;
-      row.toggleAttribute('data-on', on);
+      row.toggleAttribute('data-on', name === 'fire' ? gameplay.fire : gameplay.skill);
     }
     const pulses = {
       placeTrap: gameplay.placeTrap,

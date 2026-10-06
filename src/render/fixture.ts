@@ -256,7 +256,6 @@ export function createFixtureState(options: FixtureOptions): SimState {
           vibesToNextLevel: 10,
           attackCooldown: 0,
           skillCooldown: 0,
-          ultimateReady: false,
           upgrades: [],
           modifiers: {},
           downed: false,

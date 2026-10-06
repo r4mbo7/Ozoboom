@@ -9,7 +9,7 @@ import type { NetMessage } from './types';
 //   frame    0x02 | tick (varint) | count (u8) | command...
 //   command  playerId (u8) | flags (u8) | move.x, move.y, aim.x, aim.y (i16 each, units of 1/32767)
 //            | actions, only when the flag is set: count (u8) | action...
-//   flags    bit 0 fire, bit 1 skill, bit 2 ultimate, bit 3 has actions
+//   flags    bit 0 fire, bit 1 skill, bit 2 has actions
 //   action   0x00 placeTrap: id | x, y, dx, dy (f32)   0x01 chooseUpgrade: id
 //   id       length (u8) | UTF-8
 
@@ -17,8 +17,7 @@ const COMMAND = 1;
 const FRAME = 2;
 const FIRE = 1;
 const SKILL = 2;
-const ULTIMATE = 4;
-const ACTIONS = 8;
+const ACTIONS = 4;
 const PLACE_TRAP = 0;
 const CHOOSE_UPGRADE = 1;
 const AXIS_SCALE = 32767;
@@ -191,10 +190,7 @@ function writeCommand(writer: Writer, command: PlayerCommand): void {
   }
   writer.u8(command.playerId);
   writer.u8(
-    (input.fire ? FIRE : 0) |
-      (input.skill ? SKILL : 0) |
-      (input.ultimate ? ULTIMATE : 0) |
-      (actions.length > 0 ? ACTIONS : 0),
+    (input.fire ? FIRE : 0) | (input.skill ? SKILL : 0) | (actions.length > 0 ? ACTIONS : 0),
   );
   writer.i16(axis(input.move.x));
   writer.i16(axis(input.move.y));
@@ -229,7 +225,6 @@ function readCommand(reader: Reader): PlayerCommand {
       aim,
       fire: (flags & FIRE) !== 0,
       skill: (flags & SKILL) !== 0,
-      ultimate: (flags & ULTIMATE) !== 0,
     },
     actions,
   };

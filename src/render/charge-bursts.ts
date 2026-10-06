@@ -1,21 +1,13 @@
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { PlayerState, SimEvent, SimState } from '../sim/state';
 import type { Burster } from './class-bursts';
-import type { PaletteToken } from '../shared/palette';
 import type { RenderContext } from './context';
 import type { Frame } from './frame';
 import { BLINK_TICKS } from './motion';
-import { BARRIER_RADIUS, TRAIL_HALF_LENGTH } from './textures-class';
+import { TRAIL_HALF_LENGTH } from './textures-class';
 import { byId } from './util';
 
-const TAU = Math.PI * 2;
 const TRAIL_BODY = 3;
-const BREAK_SHARDS = { shards: 10, calmShards: 5, reach: 64 };
-
-export interface BrokenBarrier {
-  readonly radius: number;
-  readonly token: PaletteToken;
-}
 
 export function createChargeBursts(
   ctx: RenderContext,
@@ -98,59 +90,6 @@ export function createChargeBursts(
     }
   }
 
-  function shatter(
-    state: SimState,
-    event: SimEvent & { type: 'barrierBroken' },
-    barrier: BrokenBarrier | undefined,
-    frame: Frame,
-  ): void {
-    const radius = barrier?.radius ?? BARRIER_RADIUS;
-    const color = frame.palette[barrier?.token ?? 'or'];
-    spawn(frame, {
-      shape: classFx.disc,
-      now: state.tick,
-      duration: TICKS_PER_BEAT / 2,
-      x: event.x,
-      y: event.y,
-      fromRadius: radius,
-      toRadius: radius * 1.25,
-      tint: color,
-      peak: 0.8,
-    });
-    spawn(frame, {
-      shape: classFx.barrier,
-      now: state.tick,
-      duration: TICKS_PER_BEAT,
-      x: event.x,
-      y: event.y,
-      fromRadius: radius,
-      toRadius: radius * 1.6,
-      tint: color,
-      peak: 0.9,
-      outline: true,
-    });
-    const at = { x: event.x, y: event.y };
-    const shards = frame.calm ? BREAK_SHARDS.calmShards : BREAK_SHARDS.shards;
-    for (let index = 0; index < shards; index += 1) {
-      const angle = (index / shards) * TAU;
-      spawn(frame, {
-        shape: t.shard,
-        now: state.tick,
-        duration: TICKS_PER_BEAT,
-        x: at.x + Math.cos(angle) * radius,
-        y: at.y + Math.sin(angle) * radius,
-        dx: Math.cos(angle) * BREAK_SHARDS.reach,
-        dy: Math.sin(angle) * BREAK_SHARDS.reach,
-        angle: angle + Math.PI / 2,
-        fromRadius: 6,
-        toRadius: 3,
-        tint: color,
-        peak: 1,
-        outline: true,
-      });
-    }
-  }
-
   function nova(state: SimState, player: PlayerState, radius: number, frame: Frame): void {
     const color = frame.palette[tokenOf(player)];
     const base = {
@@ -179,5 +118,5 @@ export function createChargeBursts(
     });
   }
 
-  return { dashTrail, nova, pull, shatter };
+  return { dashTrail, nova, pull };
 }

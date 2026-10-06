@@ -57,7 +57,6 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
       aim,
       fire: gameplay.fire,
       skill: gameplay.skill,
-      ultimate: gameplay.ultimate,
     },
     actions,
   };

@@ -62,15 +62,8 @@ export function skillIcon(effect: SkillEffect): string {
         '<circle cx="12" cy="12" r="3.5" fill="currentColor"/>' +
         '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2.4"/>'
       );
-    case 'laserShow':
-      return (
-        '<path d="M12 21 4 4M12 21l8-17M12 21V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
-        '<circle cx="12" cy="21" r="1.6" fill="currentColor"/>'
-      );
     case 'dash':
       return '<path d="M4 7h9M2 12h12M4 17h9M14 5l7 7-7 7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>';
-    case 'barrier':
-      return '<path d="M12 2.5 20 6v6c0 4.6-3.4 8.2-8 9.5-4.6-1.3-8-4.9-8-9.5V6z" fill="none" stroke="currentColor" stroke-width="2"/>';
     case 'healPulse':
       return '<path d="M9.5 3h5v6.5H21v5h-6.5V21h-5v-6.5H3v-5h6.5z" fill="currentColor"/>';
   }

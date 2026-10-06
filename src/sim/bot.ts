@@ -97,7 +97,6 @@ export function botCommand(
           : normalize({ x: target.x - player.x, y: target.y - player.y }),
       fire: standing && target !== undefined,
       skill: standing && target !== undefined && player.skillCooldown === 0,
-      ultimate: standing && player.ultimateReady,
     },
     actions,
   };

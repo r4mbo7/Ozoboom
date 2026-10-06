@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { lightAt, paletteAt } from '../shared/palette';
 import type { SimEvent, SimState } from '../sim/state';
 import { createClassEffects } from './class-effects';
-import type { ClassSkillEffects, RenderContext } from './context';
+import type { RenderContext } from './context';
 import { FIXTURE_CONTENT, createFixtureState } from './fixture';
 import { type Frame, createFrame } from './frame';
 import { createLayers } from './layers';
@@ -32,7 +32,7 @@ function context() {
       ring: shape,
       shard: shape,
       vibes: shape,
-      classFx: { barrier: shape, disc: shape, trail: shape },
+      classFx: { trail: shape },
     },
     layers: createLayers(new Container()),
     options: { calmMode: false },
@@ -41,12 +41,7 @@ function context() {
       ['tank', 'tank'],
       ['healer', 'healer'],
     ]),
-    skillEffects: new Map(
-      FIXTURE_CONTENT.classes.map((def): [string, ClassSkillEffects] => [
-        def.id,
-        { skill: def.skill.effect, ultimate: def.ultimate.effect },
-      ]),
-    ),
+    skillEffects: new Map(FIXTURE_CONTENT.classes.map((def) => [def.id, def.skill.effect])),
   } as unknown as RenderContext;
   return ctx;
 }
@@ -76,98 +71,6 @@ function shown(ctx: RenderContext): number {
   const visible = (container: Container) => container.children.filter((child) => child.visible);
   return visible(ctx.layers.fx).length;
 }
-
-function barrier(state: SimState, id: number, hp = 60, ticksLeft = 200) {
-  const roadie = state.players[ROADIE];
-  (state.barriers ??= []).push({
-    id,
-    playerId: ROADIE,
-    x: roadie?.x ?? 0,
-    y: roadie?.y ?? 0,
-    radius: 80,
-    hp,
-    ticksLeft,
-  });
-}
-
-function bodies(ctx: RenderContext) {
-  return ctx.layers.traps.children.filter((child) => child.visible);
-}
-
-describe('flight case', () => {
-  it('draws a barrier as long as its state lives, and no longer', () => {
-    const { ctx, family, state } = setup();
-    barrier(state, 900);
-
-    family.update(state, 0, frameAt(0.4));
-    const living = bodies(ctx).length;
-    state.barriers = [];
-    family.update(state, 0, frameAt(0.4));
-
-    expect(living).toBe(2);
-    expect(bodies(ctx)).toHaveLength(0);
-  });
-
-  it('recycles its views: after warm-up, barriers coming and going create no sprite', () => {
-    const { ctx, family, state } = setup();
-    for (let round = 0; round < 3; round += 1) {
-      state.barriers = [];
-      barrier(state, 1000 + round);
-      barrier(state, 2000 + round);
-      family.update(state, 0, frameAt(0.4));
-    }
-    const warm = ctx.layers.traps.children.length;
-
-    for (let round = 3; round < 40; round += 1) {
-      state.barriers = [];
-      barrier(state, 1000 + round);
-      barrier(state, 2000 + round);
-      family.update(state, 0, frameAt(0.4));
-    }
-
-    expect(ctx.layers.traps.children).toHaveLength(warm);
-  });
-
-  it('lights its fill with its remaining life', () => {
-    const { ctx, family, state } = setup();
-    barrier(state, 900, 60);
-    family.update(state, 0, frameAt(0.4));
-    const [fill] = ctx.layers.traps.children;
-    const whole = fill?.alpha ?? 0;
-
-    const [first] = state.barriers ?? [];
-    if (first !== undefined) {
-      first.hp = 15;
-    }
-    family.update(state, 0, frameAt(0.4));
-
-    expect(fill?.alpha).toBeLessThan(whole);
-    expect(fill?.alpha).toBeGreaterThan(0);
-  });
-
-  it('wears the dark outline only by day', () => {
-    const { ctx, family, state } = setup();
-    barrier(state, 900);
-
-    family.update(state, 0, frameAt(0.4));
-    const atNight = bodies(ctx).length;
-    family.update(state, 0, frameAt(1));
-    const byDay = bodies(ctx).length;
-
-    expect(byDay).toBe(atNight + 1);
-  });
-
-  it('bursts into a flash and shards when it breaks', () => {
-    const { ctx, family, state } = setup();
-    barrier(state, 900);
-    family.update(state, 0, frameAt(0.4));
-
-    state.barriers = [];
-    play(family, state, frameAt(0.4, 1), [{ type: 'barrierBroken', id: 900, x: 10, y: 10 }]);
-
-    expect(shown(ctx)).toBe(12);
-  });
-});
 
 describe('charge', () => {
   it('draws a trail behind the one who dashes, and a wave around a nova', () => {
@@ -219,18 +122,13 @@ describe('charge', () => {
   });
 });
 
-describe('heal and rally', () => {
-  it('widens a ring on the pulse and a bigger one on the ultimate', () => {
+describe('heal', () => {
+  it('widens a ring on the pulse', () => {
     const { ctx, family, state } = setup();
 
     play(family, state, frameAt(0.4, 1), [{ type: 'skillUsed', playerId: CARE }]);
-    const pulse = shown(ctx);
-    family.reset?.();
-    play(family, state, frameAt(0.4, 2), [{ type: 'ultimateUsed', playerId: CARE }]);
-    play(family, state, frameAt(0.4, 14), []);
 
-    expect(pulse).toBe(2);
-    expect(shown(ctx)).toBe(4);
+    expect(shown(ctx)).toBe(2);
   });
 
   it('reflects on each ally healed, haloes the core, and sprays on a revival', () => {
@@ -260,16 +158,12 @@ describe('heal and rally', () => {
     expect(shown(ctx)).toBe(0);
   });
 
-  it('shows less in the calm mode: lower alpha, fewer shards, no extra rings', () => {
+  it('shows less in the calm mode: lower alpha, fewer shards', () => {
     const night = setup();
     const calm = setup();
 
     play(night.family, night.state, frameAt(0.4, 1), [{ type: 'playerRevived', playerId: 0 }]);
     play(calm.family, calm.state, frameAt(0.4, 1, true), [{ type: 'playerRevived', playerId: 0 }]);
-    play(night.family, night.state, frameAt(0.4, 1), [{ type: 'ultimateUsed', playerId: CARE }]);
-    play(calm.family, calm.state, frameAt(0.4, 1, true), [
-      { type: 'ultimateUsed', playerId: CARE },
-    ]);
 
     const alphas = (ctx: RenderContext) =>
       ctx.layers.fx.children.filter((child) => child.visible).map((child) => child.alpha);
@@ -283,7 +177,7 @@ describe('heal and rally', () => {
       { type: 'playerRevived', playerId: 0 },
       { type: 'playerHealed', playerId: 1, amount: 4 },
       { type: 'skillUsed', playerId: ROADIE },
-      { type: 'ultimateUsed', playerId: CARE },
+      { type: 'skillUsed', playerId: CARE },
     ];
     for (let tick = 0; tick < 40; tick += 1) {
       play(family, state, frameAt(0.4, tick), events);

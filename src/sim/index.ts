@@ -18,7 +18,6 @@ import { progression } from './systems/progression';
 import { projectiles } from './systems/projectiles';
 import { revive } from './systems/revive';
 import { setProgress } from './systems/set-progress';
-import { skillEffects } from './systems/skill-effects';
 import { skills } from './systems/skills';
 import { speakers } from './systems/speakers';
 import { spawning } from './systems/spawning';
@@ -64,7 +63,6 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     projectiles,
     traps,
     speakers,
-    skillEffects,
     enemyAttacks,
     deaths,
     pickups,

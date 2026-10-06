@@ -8,7 +8,7 @@ import { spawnEnemy } from './systems/spawning';
 import type { SimEvent, SimState } from './state';
 
 // The short set of `?dev=fast` (src/app/dev.ts), played by a bot that walks at the nearest bad vibe,
-// fires, uses its skill and its ultimate whenever it can, and takes the first card of every offer.
+// fires, uses its skill whenever it can, and takes the first card of every offer.
 const FAST_CONTENT: GameContent = {
   ...CONTENT,
   enemies: CONTENT.enemies.map((enemy) => ({
@@ -81,7 +81,6 @@ function play(classId: string): Game {
       aim,
       fire: target !== undefined,
       skill: target !== undefined,
-      ultimate: true,
     });
     const upgradeId = offer?.options[0];
     simulation.step([
@@ -104,9 +103,8 @@ describe.each(['mage', 'tank', 'healer'])('a short set played to the end with %s
     expect(['won', 'lost']).toContain(state.status);
   });
 
-  it('uses its skill and its ultimate', () => {
+  it('uses its skill', () => {
     expect(count('skillUsed')).toBeGreaterThan(0);
-    expect(count('ultimateUsed')).toBeGreaterThan(0);
   });
 
   it('kills bad vibes', () => {
@@ -115,11 +113,10 @@ describe.each(['mage', 'tank', 'healer'])('a short set played to the end with %s
 });
 
 describe('the roadie and the care in a short set', () => {
-  it('draw bad vibes with the charge and put up a flight case', () => {
+  it('draw bad vibes with the charge', () => {
     const { events } = play('tank');
 
     expect(events.some((event) => event.type === 'taunted' && event.count > 0)).toBe(true);
-    expect(events.some((event) => event.type === 'ultimateUsed')).toBe(true);
   });
 
   it('heal with the pulse', () => {

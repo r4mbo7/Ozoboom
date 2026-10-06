@@ -13,7 +13,7 @@ import {
   screenToWorld,
 } from './camera';
 import { createBystanders } from './bystanders';
-import type { ClassSkillEffects, Family, RenderContent, RenderContext } from './context';
+import type { Family, RenderContent, RenderContext } from './context';
 import { createCore } from './core';
 import { createClassEffects } from './class-effects';
 import { createEffects } from './effects';
@@ -110,12 +110,7 @@ export class Scene implements Renderer {
         ]),
       ),
       weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
-      skillEffects: new Map(
-        content.classes.map((def): [string, ClassSkillEffects] => [
-          def.id,
-          { skill: def.skill.effect, ultimate: def.ultimate.effect },
-        ]),
-      ),
+      skillEffects: new Map(content.classes.map((def) => [def.id, def.skill.effect])),
     };
     const traps = createTraps(ctx);
     const enemies = createEnemies(ctx);

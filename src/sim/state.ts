@@ -72,7 +72,6 @@ export interface PlayerState extends Positioned {
   vibesToNextLevel: number;
   attackCooldown: number;
   skillCooldown: number;
-  ultimateReady: boolean;
   upgrades: string[];
   modifiers: Partial<Record<StatKey, number>>;
   downed: boolean;
@@ -211,24 +210,6 @@ export interface BystanderState extends Positioned {
   ticksLeft: number;
 }
 
-export interface LaserShowState {
-  id: EntityId;
-  playerId: PlayerId;
-  damagePerTick: number;
-  radius: number;
-  ticksLeft: number;
-}
-
-export interface BarrierState {
-  id: EntityId;
-  playerId: PlayerId;
-  x: number;
-  y: number;
-  radius: number;
-  hp: number;
-  ticksLeft: number;
-}
-
 export interface UpgradeOffer {
   playerId: PlayerId;
   options: readonly string[];
@@ -266,9 +247,7 @@ export type SimEvent =
   | { type: 'playerReviving'; playerId: PlayerId; byPlayer: PlayerId; progress: number }
   | { type: 'playerHealed'; playerId: PlayerId; amount: number }
   | { type: 'taunted'; playerId: PlayerId; x: number; y: number; radius: number; count: number }
-  | { type: 'barrierBroken'; id: EntityId; x: number; y: number }
   | { type: 'skillUsed'; playerId: PlayerId }
-  | { type: 'ultimateUsed'; playerId: PlayerId }
   | { type: 'coreHit'; damage: number }
   | { type: 'coreRepaired'; amount: number }
   | { type: 'trapPlaced'; id: EntityId; kind: string; x: number; y: number }
@@ -325,9 +304,6 @@ export interface SimState {
   projectiles: ProjectileState[];
   traps: TrapState[];
   pickups: PickupState[];
-  // Optional so that states built by hand before these effects existed stay valid.
-  laserShows?: LaserShowState[];
-  barriers?: BarrierState[];
   // Optional: created only once a Festivalier en détresse spawns, so the replay fingerprint of a
   // game without one stays unchanged.
   bystanders?: BystanderState[];

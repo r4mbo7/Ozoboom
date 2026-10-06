@@ -5,7 +5,7 @@ import { FIXTURE_OPTIONS, stepAndRecord } from '../fixtures';
 import { createSimulation, type SimulationOptions } from '../index';
 import { hashState } from '../replay';
 
-const REFERENCE_HASH = 'ede87189';
+const REFERENCE_HASH = 'b32b19e7';
 const SCRIPT_TICKS = 500;
 
 const BOUNCER_SHOVE: EnemyDefinition = {

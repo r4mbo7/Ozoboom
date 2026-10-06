@@ -28,7 +28,10 @@ describe('replay', () => {
     expect(state.set.segment).toBe('drop');
     expect(state.stats.kills).toBe(30);
     expect(state.stats.phrasesHeld).toBe(2);
-    expect(state.players.map((player) => player.upgrades)).toEqual([['big-bass'], ['big-bass']]);
+    expect(state.players.map((player) => player.upgrades)).toEqual([
+      ['big-bass', 'quick-feet'],
+      ['big-bass'],
+    ]);
     expect(hashState(state)).toBe(replayScript('reference').hash);
   });
 });

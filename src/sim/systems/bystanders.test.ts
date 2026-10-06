@@ -281,7 +281,7 @@ function scriptedGame(ticks: number): PlayerCommand[][] {
   ]);
 }
 
-const REFERENCE_BYSTANDER_HASH = 'b675ec09';
+const REFERENCE_BYSTANDER_HASH = '8e2e9935';
 
 describe('bystanders replay', () => {
   it('keeps the fingerprint of a scripted game with the Festivalier', () => {

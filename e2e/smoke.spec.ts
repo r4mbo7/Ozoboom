@@ -1,7 +1,7 @@
 import { type Page, expect, test } from '@playwright/test';
 import { collectConsoleErrors } from './game';
 
-const HUD_PANELS = ['Scène', 'Line-up', 'Bad vibes', 'Niveau', 'Pièges', 'Compétences'];
+const HUD_PANELS = ['Scène', 'Line-up', 'Bad vibes', 'Niveau', 'Pièges', 'Compétence'];
 
 async function secondsToDrop(page: Page): Promise<number> {
   const text = await page.getByText(/^Drop dans \d+:\d{2}$/).textContent();

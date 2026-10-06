@@ -5,7 +5,6 @@ export interface PlayerInput {
   aim: Vec2;
   fire: boolean;
   skill: boolean;
-  ultimate: boolean;
 }
 
 export type PlayerAction =
@@ -24,5 +23,4 @@ export const IDLE_INPUT: Readonly<PlayerInput> = {
   aim: { x: 1, y: 0 },
   fire: false,
   skill: false,
-  ultimate: false,
 };

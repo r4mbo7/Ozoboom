@@ -7,7 +7,7 @@ import {
   TICK_RATE_HZ,
 } from '../shared/tempo';
 import { CONTENT } from './content';
-import type { SkillDefinition, TierDefinition } from './types';
+import type { TierDefinition } from './types';
 
 const { classes, enemies, traps, upgrades, sets, bystanders = [] } = CONTENT;
 const weapons = CONTENT.weapons ?? [];
@@ -85,10 +85,6 @@ describe('CONTENT identifiers', () => {
     ['traps', traps.map((item) => item.id)],
     ['upgrades', upgrades.map((item) => item.id)],
     ['sets', sets.map((item) => item.id)],
-    ...classes.map((item): [string, string[]] => [
-      `${item.id} skills`,
-      [item.skill.id, item.ultimate.id],
-    ]),
   ];
 
   it.each(collections)('are unique among %s', (_, ids) => {
@@ -299,8 +295,6 @@ describe('CONTENT numbers', () => {
 
   it.each(classes)('are positive where needed for class $id', (definition) => {
     const { attack } = definition;
-    const skillFields = (skill: SkillDefinition) => effectFields(skill.effect);
-
     expect(
       invalid({
         maxHp: [definition.maxHp, positive],
@@ -314,8 +308,7 @@ describe('CONTENT numbers', () => {
         rangeTicks: [attack.rangeTicks, wholePositive],
         count: [attack.count, wholePositive],
         skillCooldownTicks: [definition.skill.cooldownTicks, wholePositive],
-        ...skillFields(definition.skill),
-        ...skillFields(definition.ultimate),
+        ...effectFields(definition.skill.effect),
       }),
     ).toEqual([]);
     expect(definition.color).toMatch(/^#[0-9a-f]{6}$/);
@@ -557,7 +550,6 @@ describe('V0.1 scope', () => {
     expect(classes.map((definition) => definition.id)).toEqual(['mage', 'tank', 'healer']);
     expect(mage?.color).toBe('#ff2bd6');
     expect(mage?.skill.effect.kind).toBe('nova');
-    expect(mage?.ultimate.effect.kind).toBe('laserShow');
   });
 
   it('has the eleven bad vibes and two bosses of the V0.1 bestiary', () => {

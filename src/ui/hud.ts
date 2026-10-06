@@ -1,16 +1,10 @@
-import type { ClassDefinition, GameContent, SetDefinition, SkillDefinition } from '../data/types';
+import type { ClassDefinition, GameContent, SetDefinition } from '../data/types';
 import { setFraction } from '../sim/lineup';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
 import type { PlayerState, SimState } from '../sim/state';
 import { statValue } from '../sim/stats';
-import {
-  type Band,
-  createCompactBand,
-  createFullBand,
-  createSkillView,
-  type SkillView,
-} from './band';
+import { type Band, createCompactBand, createFullBand, createSkillView } from './band';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
 import {
@@ -130,11 +124,10 @@ export function createHud(): Hud {
   const trapName = el('div', 'ui-traps__name');
   traps.root.append(trapRow, trapName);
 
-  const skills = panel('skills', 'Compétences');
+  const skills = panel('skills', 'Compétence');
   skills.head.remove();
-  const skill = createSkillView('skill');
-  const ultimate = createSkillView('ultimate');
-  skills.root.append(skill.root, ultimate.root);
+  const skill = createSkillView();
+  skills.root.append(skill.root);
 
   const volume = panel('volume', 'Volume');
   const volumeValue = el('span', 'ui-panel__value ui-panel__value--small');
@@ -358,13 +351,9 @@ export function createHud(): Hud {
     classDef = definition;
     builtDevice = device;
     const prompts = promptsFor(device);
-    const fill = (view: SkillView, def: SkillDefinition, key: string): void => {
-      view.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(def.effect)));
-      setText(view.name, def.name);
-      view.key.replaceChildren(keycap(key, prompts.style));
-    };
-    fill(skill, definition.skill, prompts.skill);
-    fill(ultimate, definition.ultimate, prompts.ultimate);
+    skill.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(definition.skill.effect)));
+    setText(skill.name, definition.skill.name);
+    skill.key.replaceChildren(keycap(prompts.skill, prompts.style));
     setFlag(traps.root, 'gamepad', device === 'gamepad');
   }
 
@@ -508,9 +497,6 @@ export function createHud(): Hud {
       setVar(skill.root, '--charge', String(skillCharge(player, definition.skill)));
       setFlag(skill.root, 'ready', skillReady);
       setText(skill.status, skillReady ? 'Prête' : 'Recharge');
-      setVar(ultimate.root, '--charge', player.ultimateReady ? '1' : '0');
-      setFlag(ultimate.root, 'ready', player.ultimateReady);
-      setText(ultimate.status, player.ultimateReady ? 'Prêt' : 'Au drop');
     }
   }
 

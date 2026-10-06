@@ -88,7 +88,7 @@ describe('continuous intents', () => {
   it('stay true while held on either device', () => {
     const input = createHarness();
     input.key('keydown', 'Space');
-    input.plug(fakeGamepad({ pressed: [StandardButton.LT, StandardButton.Y] }));
+    input.plug(fakeGamepad({ pressed: [StandardButton.LT] }));
 
     const first = input.poll();
     const second = input.poll();
@@ -96,9 +96,9 @@ describe('continuous intents', () => {
     input.plug(fakeGamepad());
     const released = input.poll();
 
-    expect(first.gameplay).toMatchObject({ fire: true, skill: true, ultimate: true });
-    expect(second.gameplay).toMatchObject({ fire: true, skill: true, ultimate: true });
-    expect(released.gameplay).toMatchObject({ fire: false, skill: false, ultimate: false });
+    expect(first.gameplay).toMatchObject({ fire: true, skill: true });
+    expect(second.gameplay).toMatchObject({ fire: true, skill: true });
+    expect(released.gameplay).toMatchObject({ fire: false, skill: false });
   });
 
   it('add keyboard and stick movement, capped to a unit length', () => {

@@ -83,7 +83,6 @@ export function mergeFrames(
         aim,
         fire: held('fire'),
         skill: held('skill'),
-        ultimate: held('ultimate'),
         placeTrap: pressed('placeTrap'),
         nextTrap: pressed('nextTrap'),
         previousTrap: pressed('previousTrap'),

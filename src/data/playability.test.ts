@@ -156,12 +156,8 @@ describe('the roles of the three classes', () => {
   });
 
   it('let the care really repair the stage', () => {
-    const effect = (kind: 'skill' | 'ultimate') => {
-      const found = care?.[kind].effect;
-      return found?.kind === 'healPulse' ? found.coreRepair : 0;
-    };
+    const effect = care?.skill.effect;
 
-    expect(effect('skill')).toBeGreaterThanOrEqual(25);
-    expect(effect('ultimate')).toBeGreaterThanOrEqual(60);
+    expect(effect?.kind === 'healPulse' ? effect.coreRepair : 0).toBeGreaterThanOrEqual(25);
   });
 });

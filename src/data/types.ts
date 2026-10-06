@@ -34,10 +34,8 @@ export interface AttackDefinition {
 
 export type SkillEffect =
   | { kind: 'nova'; damage: number; radius: number; knockback: number }
-  | { kind: 'laserShow'; damagePerTick: number; radius: number; durationTicks: number }
   | { kind: 'dash'; distance: number; invulnerableTicks: number; tauntRadius?: number }
-  | { kind: 'barrier'; hp: number; radius: number; durationTicks: number }
-  | { kind: 'healPulse'; amount: number; radius: number; coreRepair: number; revive?: boolean };
+  | { kind: 'healPulse'; amount: number; radius: number; coreRepair: number };
 
 export interface SkillDefinition {
   id: string;
@@ -59,7 +57,6 @@ export interface ClassDefinition {
   reviveMul?: number;
   attack: AttackDefinition;
   skill: SkillDefinition;
-  ultimate: SkillDefinition;
 }
 
 export type EnemyBehaviour = 'rusher' | 'horde' | 'heavy' | 'shooter' | 'boss';

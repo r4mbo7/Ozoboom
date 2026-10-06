@@ -4,13 +4,9 @@ import { EFFECTS_OPTIONS, commandFor, placeEnemy, stepAndRecord } from '../fixtu
 import { createSimulation, type Simulation } from '../index';
 import type { EnemyState, PlayerState, SimState } from '../state';
 
-function game(
-  classId = 'raver',
-  setId = 'fixture-set',
-): { simulation: Simulation; state: SimState; player: PlayerState } {
+function game(classId = 'raver'): { simulation: Simulation; state: SimState; player: PlayerState } {
   const simulation = createSimulation({
     ...EFFECTS_OPTIONS,
-    setId,
     players: [{ id: 0, classId }],
   });
   const player = simulation.state.players[0];
@@ -36,10 +32,6 @@ function press(simulation: Simulation, input: Partial<PlayerInput>, ticks = 1): 
     }
   }
   return used;
-}
-
-function reachDrop(simulation: Simulation): void {
-  stepAndRecord(simulation, 96 - simulation.state.tick);
 }
 
 describe('skill', () => {
@@ -92,11 +84,10 @@ describe('skill', () => {
   });
 
   it('dash: moves the caster along the move input and makes them invulnerable', () => {
-    const { simulation, player } = game('roadie', 'fast-drop');
-    reachDrop(simulation);
+    const { simulation, player } = game('roadie');
     const startY = player.y;
 
-    simulation.step([commandFor(0, { ultimate: true, move: { x: 0, y: -1 } })]);
+    simulation.step([commandFor(0, { skill: true, move: { x: 0, y: -1 } })]);
     const afterDash = { y: player.y, invulnerableTicks: player.invulnerableTicks };
     stepAndRecord(simulation, 5);
 
@@ -105,23 +96,12 @@ describe('skill', () => {
   });
 
   it('dash: follows the aim without move input and stays inside the arena', () => {
-    const { simulation, player } = game('roadie', 'fast-drop');
-    reachDrop(simulation);
+    const { simulation, player } = game('roadie');
     player.x = 50;
 
-    simulation.step([commandFor(0, { ultimate: true, aim: { x: -1, y: 0 } })]);
+    simulation.step([commandFor(0, { skill: true, aim: { x: -1, y: 0 } })]);
 
     expect(player.x).toBe(player.radius);
-  });
-
-  it('barrier: raises a barrier around the caster for its duration', () => {
-    const { simulation, state, player } = game('roadie');
-
-    press(simulation, { skill: true });
-
-    expect(state.barriers).toMatchObject([
-      { playerId: 0, x: player.x, y: player.y, radius: 100, hp: 60, ticksLeft: 95 },
-    ]);
   });
 
   it('healPulse: heals the players and repairs the core around the caster', () => {
@@ -168,55 +148,5 @@ describe('skill', () => {
     expect(close.state.events).toContainEqual({ type: 'coreRepaired', amount: 10 });
     expect(afar.state.core.hp).toBe(900);
     expect(afar.state.events.filter((event) => event.type === 'coreRepaired')).toEqual([]);
-  });
-});
-
-describe('ultimate', () => {
-  it('is ready only from the drop, once per drop, and expires when the drop ends', () => {
-    const { simulation, state, player } = game('raver', 'fast-drop');
-    const used: number[] = [];
-    const ready = new Map<number, boolean>();
-
-    for (let tick = 1; tick < 240; tick++) {
-      state.enemies.length = 0;
-      simulation.step([commandFor(0, { ultimate: tick >= 191 })]);
-      if (state.events.some((event) => event.type === 'ultimateUsed')) {
-        used.push(state.tick);
-      }
-      ready.set(state.tick, player.ultimateReady);
-    }
-
-    expect([95, 96, 143, 144, 191, 192].map((tick) => ready.get(tick))).toEqual([
-      false,
-      true,
-      true,
-      false,
-      false,
-      false,
-    ]);
-    expect(used).toEqual([192]);
-  });
-
-  it('is ignored before the drop', () => {
-    const { simulation, state } = game('raver', 'fast-drop');
-
-    simulation.step([commandFor(0, { ultimate: true })]);
-
-    expect(state.events.filter((event) => event.type === 'ultimateUsed')).toEqual([]);
-    expect(state.laserShows).toEqual([]);
-  });
-
-  it('laserShow: starts a laser show on the caster and is used up', () => {
-    const { simulation, state, player } = game('raver', 'fast-drop');
-    reachDrop(simulation);
-
-    simulation.step([commandFor(0, { ultimate: true })]);
-    simulation.step([commandFor(0, { ultimate: true })]);
-
-    expect(state.laserShows).toMatchObject([
-      { playerId: 0, damagePerTick: 2, radius: 300, ticksLeft: 94 },
-    ]);
-    expect(player.ultimateReady).toBe(false);
-    expect(player.skillCooldown).toBe(0);
   });
 });

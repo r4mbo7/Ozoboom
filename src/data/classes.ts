@@ -28,18 +28,6 @@ export const CLASSES: readonly ClassDefinition[] = [
       cooldownTicks: 4 * TICKS_PER_BAR,
       effect: { kind: 'nova', damage: 40, radius: 150, knockback: 60 },
     },
-    ultimate: {
-      id: 'laser-show',
-      name: 'Laser show',
-      description: 'Sur le drop, tu balaies la piste de lasers pendant deux mesures.',
-      cooldownTicks: 0,
-      effect: {
-        kind: 'laserShow',
-        damagePerTick: 3,
-        radius: 300,
-        durationTicks: 2 * TICKS_PER_BAR,
-      },
-    },
   },
   {
     id: 'tank',
@@ -69,14 +57,6 @@ export const CLASSES: readonly ClassDefinition[] = [
       cooldownTicks: 2 * TICKS_PER_BAR,
       effect: { kind: 'dash', distance: 160, invulnerableTicks: 10, tauntRadius: 190 },
     },
-    ultimate: {
-      id: 'flight-case',
-      name: 'Flight case',
-      description:
-        'Sur le drop, tu poses un flight case autour de toi : les bad vibes cognent dessus.',
-      cooldownTicks: 0,
-      effect: { kind: 'barrier', hp: 150, radius: 130, durationTicks: 3 * TICKS_PER_BAR },
-    },
   },
   {
     id: 'healer',
@@ -104,14 +84,6 @@ export const CLASSES: readonly ClassDefinition[] = [
       description: 'Tu soignes ceux qui sont près de toi et tu répares un peu la scène.',
       cooldownTicks: 6 * TICKS_PER_BAR,
       effect: { kind: 'healPulse', amount: 30, radius: 160, coreRepair: 25 },
-    },
-    ultimate: {
-      id: 'rappel',
-      name: 'Rappel',
-      description:
-        'Sur le drop, tu relèves tes amis à terre et tu soignes tout le monde autour de toi.',
-      cooldownTicks: 0,
-      effect: { kind: 'healPulse', amount: 60, radius: 400, coreRepair: 60, revive: true },
     },
   },
 ];

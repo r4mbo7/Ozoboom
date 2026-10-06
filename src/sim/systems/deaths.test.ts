@@ -174,18 +174,6 @@ describe('kill credit', () => {
     expect(creditFor(simulation.state.events, enemy)).toBe(1);
   });
 
-  it('goes to the player whose laser show kills the enemy', () => {
-    const { simulation, second } = duo();
-    const enemy = dying(simulation, second.x, second.y - 50);
-    simulation.state.laserShows = [
-      { id: 99, playerId: 1, damagePerTick: 2, radius: 300, ticksLeft: 10 },
-    ];
-
-    simulation.step([]);
-
-    expect(creditFor(simulation.state.events, enemy)).toBe(1);
-  });
-
   it('goes to the last player who hit the enemy, whatever hit it', () => {
     const { simulation, second } = duo();
     const enemy = dying(simulation, second.x, second.y - 50);
