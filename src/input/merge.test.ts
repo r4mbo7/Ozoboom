@@ -88,7 +88,7 @@ describe('continuous intents', () => {
   it('stay true while held on either device', () => {
     const input = createHarness();
     input.key('keydown', 'Space');
-    input.plug(fakeGamepad({ pressed: [StandardButton.X, StandardButton.Y] }));
+    input.plug(fakeGamepad({ pressed: [StandardButton.LT, StandardButton.Y] }));
 
     const first = input.poll();
     const second = input.poll();

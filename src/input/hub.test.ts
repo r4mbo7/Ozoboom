@@ -180,7 +180,7 @@ describe('merged view', () => {
     input.pointer({ type: 'move', x: 40, y: 20 });
     input.plug(
       fakeGamepad({ index: 1, axes: [0, 1, 0, 0.5], pressed: [StandardButton.A] }),
-      fakeGamepad({ index: 2, pressed: [StandardButton.X] }),
+      fakeGamepad({ index: 2, pressed: [StandardButton.LT] }),
     );
 
     const polls = [0, 16, 32].map((now) => {

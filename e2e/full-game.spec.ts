@@ -175,7 +175,7 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
       ];
       const boss = state.enemies.find((enemy) => enemy.isBoss);
       pad.buttons[7] = running && nearest !== undefined ? 1 : 0;
-      pad.buttons[2] =
+      pad.buttons[6] =
         running && state.enemies.some((enemy) => distance(enemy.x, enemy.y) < 140) ? 1 : 0;
       pad.buttons[3] =
         running && player.ultimateReady && boss !== undefined && distance(boss.x, boss.y) < 280

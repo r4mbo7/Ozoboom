@@ -71,7 +71,7 @@ describe('reduceGamepad', () => {
   });
 
   it('counts an unbound button as activity', () => {
-    const pad = fakeGamepad({ pressed: [StandardButton.LT] });
+    const pad = fakeGamepad({ pressed: [StandardButton.X] });
 
     const { frame } = reduceGamepad(INITIAL_GAMEPAD_STATE, [pad]);
 
@@ -80,7 +80,7 @@ describe('reduceGamepad', () => {
   });
 
   it('uses the first connected gamepad', () => {
-    const first = fakeGamepad({ index: 1, pressed: [StandardButton.X] });
+    const first = fakeGamepad({ index: 1, pressed: [StandardButton.LT] });
     const second = fakeGamepad({ index: 2, pressed: [StandardButton.Y] });
     const unplugged = fakeGamepad({ index: 0, connected: false, pressed: [StandardButton.B] });
 

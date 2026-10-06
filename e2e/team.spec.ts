@@ -73,7 +73,7 @@ test.describe('the HUD of a team', () => {
     await page.goto('/dev/ui.html?screen=team&locals=3&pads=2');
 
     const keys = page.locator('.ui-band:not(.ui-band--compact)').locator('.ui-skill__key');
-    await expect(keys).toHaveText(['E', 'R', 'X', 'Y', 'X', 'Y']);
+    await expect(keys).toHaveText(['E', 'R', 'LT', 'Y', 'LT', 'Y']);
   });
 
   test('keeps the traps out of the play area when several players share the screen', async ({

@@ -48,7 +48,7 @@ const GAMEPAD: DevicePrompts = {
   navigateRow: ['Stick gauche', 'Croix'],
   confirm: 'A',
   back: 'B',
-  skill: 'X',
+  skill: 'LT',
   ultimate: 'Y',
   controls: [
     { action: 'Se déplacer', keys: ['Stick gauche'] },
@@ -56,7 +56,7 @@ const GAMEPAD: DevicePrompts = {
     { action: 'Tirer', keys: ['RT'] },
     { action: 'Choisir un piège', keys: ['LB', 'RB'] },
     { action: 'Poser le piège', keys: ['A'] },
-    { action: 'Compétence', keys: ['X'] },
+    { action: 'Compétence', keys: ['LT'] },
     { action: 'Ultime, au drop', keys: ['Y'] },
     { action: 'Pause', keys: ['Start'] },
   ],

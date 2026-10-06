@@ -104,7 +104,7 @@ export const GAMEPAD_BUTTON_BINDINGS: Bindings<number> = {
   [StandardButton.RT]: ['fire'],
   [StandardButton.A]: ['placeTrap', 'confirm'],
   [StandardButton.B]: ['back'],
-  [StandardButton.X]: ['skill'],
+  [StandardButton.LT]: ['skill'],
   [StandardButton.Y]: ['ultimate'],
   [StandardButton.LB]: ['previousTrap'],
   [StandardButton.RB]: ['nextTrap'],

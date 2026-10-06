@@ -119,7 +119,7 @@ const gamepadCases: readonly (readonly [keyof typeof StandardButton, Expected])[
   ['RT', { gameplay: { fire: true } }],
   ['A', { gameplay: { placeTrap: true }, menu: { confirm: true } }],
   ['B', { menu: { back: true } }],
-  ['X', { gameplay: { skill: true } }],
+  ['LT', { gameplay: { skill: true } }],
   ['Y', { gameplay: { ultimate: true } }],
   ['LB', { gameplay: { previousTrap: true } }],
   ['RB', { gameplay: { nextTrap: true } }],
@@ -173,6 +173,14 @@ describe('gamepad bindings', () => {
     const snapshot = snapshotFromGamepad(pad);
 
     expect(snapshot).toEqual(expectedSnapshot('gamepad', expected));
+  });
+
+  it('leaves X without effect', () => {
+    const pad = fakeGamepad({ pressed: [StandardButton.X] });
+
+    const snapshot = snapshotFromGamepad(pad);
+
+    expect(snapshot).toEqual(expectedSnapshot('gamepad', {}));
   });
 
   it('covers every button of the binding table', () => {
