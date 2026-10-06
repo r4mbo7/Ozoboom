@@ -27,7 +27,8 @@ Documentation, interface du jeu et textes en français. Code, identifiants, mess
 Une session d'agent dure 5 à 15 minutes. Le temps va au changement, pas aux preuves.
 
 - Lire le strict nécessaire : l'issue, les fichiers à changer, la section de document qu'elle cite.
-- Pendant le travail, ne lancer que les tests des fichiers touchés (`pnpm exec vitest run <fichiers>`, une seule spec Playwright si le parcours change). La suite complète ne tourne qu'une fois, à la fusion.
+- Pendant le travail, ne lancer que les tests des fichiers touchés (`pnpm exec vitest run <fichiers>`, une seule spec Playwright si le parcours change). La suite complète ne tourne qu'une fois, à la fusion, et `pnpm check` aussi.
+- La machine est partagée avec d'autres sessions : ne tuer que ses propres processus (jamais `pkill -f playwright`), et arrêter ses serveurs (`pnpm dev`, `pnpm preview`) avant de finir.
 - Une preuve au plus : une capture si le changement se voit, un rendu si il s'entend. Pas de matrice d'écrans, de moments ou de tailles.
 - Une issue décrit un changement qui tient dans une session. Plus grosse, on la coupe.
 
