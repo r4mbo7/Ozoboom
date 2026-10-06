@@ -12,7 +12,7 @@ Le code est écrit par des agents de sessions différentes, parfois en parallèl
 - **ESLint** avec les règles typées de typescript-eslint (`strictTypeChecked`, `stylisticTypeChecked`). Les frontières de l'ADR 0003 y sont codées en règles `no-restricted-*` par dossier.
 - **Prettier** pour le format, sans discussion.
 - **Vitest** pour les tests, en environnement Node par défaut.
-- **`pnpm check`** enchaîne types, lint, format, tests et build. La **CI GitHub Actions** rejoue la même suite sur chaque push et pull request. **Dependabot** propose les mises à jour chaque semaine.
+- **`pnpm check`** enchaîne types, lint, format, tests et build. La **CI GitHub Actions** rejoue la même suite avant chaque sortie (voir [ADR 0008](0008-branche-dev-et-sorties-sur-main.md)). **Dependabot** propose les mises à jour chaque semaine.
 
 ## Alternatives écartées
 

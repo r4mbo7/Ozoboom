@@ -140,6 +140,6 @@ Un site statique ne peut pas tenir un classement fiable : il faut un petit servi
 ## Qualité et livraison
 
 - TypeScript strict, ESLint avec règles typées, Prettier, Vitest. `pnpm check` enchaîne tout et doit passer avant chaque commit.
-- CI GitHub Actions sur chaque push de `dev` et `main`. Un push sur `main`, une sortie, construit et déploie sur GitHub Pages.
+- CI GitHub Actions sur la pull request de `dev` vers `main` et sur le push de `main`, une sortie, qui construit et déploie sur GitHub Pages. Rien sur `dev`.
 - Dependabot met à jour dépendances et actions chaque semaine.
 - Base d'URL relative dans le build : le même `dist/` se sert depuis GitHub Pages, GitLab Pages ou une archive itch.io.

@@ -11,7 +11,8 @@ L'[ADR 0005](0005-github-pages-et-main-deployable.md) faisait de chaque fusion u
 
 - Le jeu reste hébergé sur GitHub Pages ; un push sur `main` le construit et le déploie.
 - `dev` est la branche par défaut du dépôt. Les branches d'issue partent de `origin/dev` et y sont fusionnées en un commit, testées en local par l'agent.
-- `main` ne reçoit que des sorties : `main` avance en avance rapide jusqu'à un `dev` testé, à la demande de Constantin. Personne ne pousse d'autre commit sur `main`.
+- `main` ne reçoit que des sorties : à la demande de Constantin, une pull request de `dev` vers `main` fait tourner la CI, puis `main` avance en avance rapide jusqu'à `dev`. Personne ne pousse d'autre commit sur `main`.
+- La CI ne tourne que sur cette pull request et sur le push de `main`. Rien sur `dev`, Dependabot compris.
 - Les versions sont des tags sur `main`, posés quand un jalon du README est atteint.
 
 ## Alternatives écartées
