@@ -25,6 +25,7 @@ import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { isPaletteToken } from './palette';
 import { createPickups } from './pickups';
 import { createMarkers } from './markers';
+import { createStageMarker } from './stage-marker';
 import { createPlayers } from './players';
 import { createProjectiles } from './projectiles';
 import { createSpecials } from './specials';
@@ -127,6 +128,7 @@ export class Scene implements Renderer {
       createWeapons(ctx),
       createPlayers(ctx),
       createMarkers(ctx),
+      createStageMarker(ctx),
       createEffects(ctx, (id) => traps.reachOf(id)),
       createClassEffects(ctx, (id, untilTick) => {
         enemies.blink(id, untilTick);

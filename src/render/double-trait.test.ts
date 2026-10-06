@@ -3,15 +3,7 @@ import { TICKS_PER_BEAT } from '../shared/tempo';
 import { describe, expect, it } from 'vitest';
 import { lightAt, paletteAt } from '../shared/palette';
 import type { RenderContext } from './context';
-import {
-  LOW_SHARE,
-  SEGMENTS,
-  createCore,
-  litSegments,
-  litShare,
-  lostSegmentShown,
-  percentOf,
-} from './core';
+import { createCore, lostSegmentShown } from './core';
 import { createFixtureState, FIXTURE_CONTENT } from './fixture';
 import { contrast } from './ground-sun';
 import { type Frame, createFrame } from './frame';
@@ -21,6 +13,7 @@ import { createPickups } from './pickups';
 import type { Shape } from './textures';
 import { TRAP_TOKENS } from './textures';
 import { createTraps } from './traps';
+import { LOW_SHARE, SEGMENTS, litSegments, litShare, percentOf } from './vu-meter';
 
 const MOMENTS = [0, 0.4, 0.85, 1] as const;
 

@@ -1,19 +1,25 @@
-import { Graphics, type Sprite } from 'pixi.js';
-import type { CoreState, SimState } from '../sim/state';
+import { Graphics } from 'pixi.js';
+import type { SimState } from '../sim/state';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { NAME_TEXTURE_SCALE } from './textures-names';
 import { add, placeOutline, setTint } from './util';
+import {
+  LOW_SHARE,
+  SEGMENTS,
+  drawSegments,
+  litSegments,
+  litShare,
+  percentText,
+  placeLabel,
+} from './vu-meter';
 
 const TAU = Math.PI * 2;
 const FLASH_TICKS = TICKS_PER_BEAT / 2;
 const FADE_TICKS = TICKS_PER_BEAT;
 const RAY_TURN_TICKS = TICKS_PER_BAR * 4;
-const RING_START = -Math.PI / 2;
 const RING_REACH = 1.12;
 const SEGMENT_WIDTH = 6;
-const SEGMENT_GAP = 0.28;
 const RIM_GROW = 2;
 const LABEL_GAP = 4;
 const MAX_SWELL = 1.05;
@@ -21,32 +27,10 @@ const PERCENT_SIZE = 1.3;
 const BLINK_TICKS = 2 * TICKS_PER_BEAT;
 const BLINK_PERIOD = TICKS_PER_BEAT / 2;
 
-export const SEGMENTS = 24;
-export const LOW_SHARE = 0.25;
 export const LOW_WARNING = 'La scène faiblit';
-
-interface Label {
-  readonly edge: Sprite;
-  readonly fill: Sprite;
-}
 
 export interface CoreFamily extends Family {
   readonly lit: number;
-}
-
-export function litShare(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
-  return core.maxHp > 0 ? Math.min(1, Math.max(0, core.hp / core.maxHp)) : 0;
-}
-
-// A segment stays lit until its last hit point is gone: the ring is empty only once the scene is.
-export function litSegments(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
-  return core.maxHp > 0
-    ? Math.min(SEGMENTS, Math.max(0, Math.ceil((core.hp * SEGMENTS) / core.maxHp)))
-    : 0;
-}
-
-export function percentOf(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
-  return Math.ceil(litShare(core) * 100);
 }
 
 // Two blinks per beat at most, under the three flashes a second of WCAG 2.3.1.
@@ -57,18 +41,6 @@ export function lostSegmentShown(sinceLoss: number, calm: boolean): boolean {
     sinceLoss < BLINK_TICKS &&
     Math.floor(sinceLoss / BLINK_PERIOD) % 2 === 0
   );
-}
-
-function drawSegments(ring: Graphics, radius: number, from: number, to: number, width: number) {
-  ring.clear();
-  const step = TAU / SEGMENTS;
-  const gap = (step * SEGMENT_GAP) / 2;
-  for (let index = from; index < to; index += 1) {
-    const start = RING_START + index * step + gap;
-    ring.moveTo(Math.cos(start) * radius, Math.sin(start) * radius);
-    ring.arc(0, 0, radius, start, start + step - 2 * gap);
-    ring.stroke({ width, color: 0xffffff, cap: 'butt' });
-  }
 }
 
 export function createCore(ctx: RenderContext): CoreFamily {
@@ -89,41 +61,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
   flash.visible = false;
   outline.visible = false;
 
-  // Below the ring, at a constant screen size like the names of the players; returns where the next line starts.
-  function placeLabel(
-    label: Label,
-    text: string | null,
-    color: number,
-    x: number,
-    y: number,
-    frame: Frame,
-    grow = 1,
-  ) {
-    const { edge, fill } = label;
-    fill.visible = edge.visible = text !== null;
-    if (text === null) {
-      return y;
-    }
-    const { palette, light, camera } = frame;
-    const texts = t.names.get(text);
-    if (fill.texture !== texts.fill) {
-      fill.texture = texts.fill;
-      edge.texture = texts.edge;
-    }
-    const size = grow / (NAME_TEXTURE_SCALE * camera.scale);
-    const half = (texts.fill.height * size) / 2;
-    fill.position.set(x, y + half);
-    edge.position.set(x, y + half);
-    fill.scale.set(size);
-    edge.scale.set(size);
-    setTint(fill, color);
-    setTint(edge, palette.sol);
-    edge.alpha = light.additive ? 0.7 : 0.9;
-    return y + 2 * half;
-  }
-
   let segments = 0;
-  let shown = { percent: Number.NaN, text: '' };
   let drawn = { radius: Number.NaN, segments: Number.NaN };
   let loss = { from: 0, to: 0, tick: Number.NEGATIVE_INFINITY };
 
@@ -176,21 +114,19 @@ export function createCore(ctx: RenderContext): CoreFamily {
       rim.visible = !light.additive && segments > 0;
       lost.visible = lostSegmentShown(frame.now - loss.tick, frame.calm);
 
-      const value = percentOf(core);
-      if (shown.percent !== value) {
-        shown = { percent: value, text: `${String(value)}\u202f%` };
-      }
       const below = core.y + ringRadius * MAX_SWELL + (SEGMENT_WIDTH + RIM_GROW) / 2;
+      const size = 1 / frame.camera.scale;
       const next = placeLabel(
+        t,
         percent,
-        shown.text,
+        percentText(core),
         palette.texte,
         core.x,
-        below + LABEL_GAP / frame.camera.scale,
+        below + LABEL_GAP * size,
+        PERCENT_SIZE * size,
         frame,
-        PERCENT_SIZE,
       );
-      placeLabel(warning, low ? LOW_WARNING : null, palette.mage, core.x, next, frame);
+      placeLabel(t, warning, low ? LOW_WARNING : null, palette.mage, core.x, next, size, frame);
 
       body.position.set(core.x, core.y);
       body.scale.set((core.radius / t.core.radius) * swell);
