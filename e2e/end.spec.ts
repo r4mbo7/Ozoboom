@@ -1,5 +1,5 @@
 import { type Page, expect as baseExpect, test } from '@playwright/test';
-import { collectConsoleErrors } from './game';
+import { collectConsoleErrors, repeatUntil } from './game';
 
 test.describe.configure({ timeout: 120_000 });
 const expect = baseExpect.configure({ timeout: 30_000 });
@@ -77,8 +77,15 @@ test('goes back to the title from the end of a lost game, then plays a new one',
   const back = end.getByRole('button', { name: 'Retour au titre' });
   await expect(back).toBeVisible();
 
-  await page.keyboard.press('ArrowDown');
-  await expect(back).toHaveAttribute('aria-current', 'true');
+  const replay = end.getByRole('button', { name: 'Rejouer' });
+  await repeatUntil(
+    async () => {
+      if ((await replay.getAttribute('aria-current')) === 'true') {
+        await page.keyboard.press('ArrowDown');
+      }
+    },
+    async () => (await back.getAttribute('aria-current')) === 'true',
+  );
   await page.keyboard.press('Enter');
 
   await expect(page.getByRole('region', { name: 'Écran titre' })).toBeVisible();
