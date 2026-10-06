@@ -17,6 +17,12 @@ export const GUEST_QUEUE_CAPACITY = 8192;
 const HOST_COMMAND_WINDOW = 64;
 const HASH_RING_SIZE = 4;
 
+// The fingerprint of a bar is that of the step that reaches it. A choice of card holds the tick
+// there for several steps whose states differ: hashing them too would compare different steps.
+function reachesBar(state: SimState, lastTick: number): boolean {
+  return state.tick > lastTick && state.tick % TICKS_PER_BAR === 0;
+}
+
 export interface LockstepHooks {
   onDesync(tick: number): void;
   onHostLeft(): void;
@@ -65,6 +71,7 @@ export function createHostSource(
     }));
   const hashes = new Array<HashEntry | undefined>(HASH_RING_SIZE).fill(undefined);
   let tick = 0;
+  let lastStateTick = 0;
   let desynced = false;
   let closed = false;
 
@@ -168,12 +175,13 @@ export function createHostSource(
       return commands;
     },
     stepped(state: SimState) {
-      if (state.tick > 0 && state.tick % TICKS_PER_BAR === 0) {
+      if (reachesBar(state, lastStateTick)) {
         hashes[(state.tick / TICKS_PER_BAR) % HASH_RING_SIZE] = {
           tick: state.tick,
           hash: hashState(state),
         };
       }
+      lastStateTick = Math.max(lastStateTick, state.tick);
     },
     pending: 0,
     get retained() {
@@ -206,6 +214,7 @@ export function createGuestSource(
   let head = 0;
   let size = 0;
   let received = 0;
+  let lastStateTick = 0;
   let stopped = false;
   let closed = false;
 
@@ -298,9 +307,10 @@ export function createGuestSource(
       return frame;
     },
     stepped(state: SimState) {
-      if (!stopped && !closed && state.tick > 0 && state.tick % TICKS_PER_BAR === 0) {
+      if (!stopped && !closed && reachesBar(state, lastStateTick)) {
         transport.broadcast({ type: 'hash', tick: state.tick, hash: hashState(state) });
       }
+      lastStateTick = Math.max(lastStateTick, state.tick);
     },
     get pending() {
       return size;

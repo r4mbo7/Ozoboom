@@ -248,6 +248,18 @@ describe('createHostSource', () => {
     expect(source.next([])).toBeNull();
   });
 
+  it('keeps the fingerprint of the step that reaches a bar while a choice holds the tick there', () => {
+    const { host, guest, source, onDesync } = hostWithGuest();
+    const reached = fakeState(TICKS_PER_BAR);
+    source.stepped(reached);
+    source.stepped({ ...reached, status: 'choosingUpgrade' });
+
+    guest.send(host.id, { type: 'hash', tick: TICKS_PER_BAR, hash: hashState(reached) });
+    host.flush();
+
+    expect(onDesync).not.toHaveBeenCalled();
+  });
+
   it('accepts a matching fingerprint', () => {
     const { host, guest, source, onDesync } = hostWithGuest();
     const state = fakeState(TICKS_PER_BAR);
@@ -327,6 +339,20 @@ describe('createGuestSource', () => {
 
     source.stepped(fakeState(TICKS_PER_BAR - 1));
     source.stepped(fakeState(TICKS_PER_BAR));
+    host.flush();
+
+    expect(hashes).toEqual([TICKS_PER_BAR]);
+  });
+
+  it('sends one fingerprint for a bar while a choice holds the tick there', () => {
+    const { host, source } = guestWithHost();
+    const hashes: number[] = [];
+    host.onMessage((_, message) => {
+      if (message.type === 'hash') hashes.push(message.tick);
+    });
+
+    source.stepped(fakeState(TICKS_PER_BAR));
+    source.stepped({ ...fakeState(TICKS_PER_BAR), status: 'choosingUpgrade' });
     host.flush();
 
     expect(hashes).toEqual([TICKS_PER_BAR]);
