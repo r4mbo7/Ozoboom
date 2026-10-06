@@ -78,7 +78,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const stage = document.createElement('div');
   stage.className = 'game-stage';
   root.append(stage);
-  const renderer = await createRenderer(stage, { calmMode: prefs.calmMode }, content);
+  const renderer = await createRenderer(
+    stage,
+    { calmMode: prefs.calmMode },
+    content,
+    dev.mode === 'fast',
+  );
   const hub = createInputHub(stage);
   const audio = createAudioEngine({
     breakBars: (tier) => set.tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,

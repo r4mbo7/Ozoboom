@@ -25,7 +25,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: URL,
-    trace: 'retain-on-failure',
+    // A trace's screenshots film every frame of a game: only the CI, which keeps reports, takes them.
+    trace: { mode: 'retain-on-failure', screenshots: Boolean(process.env.CI) },
   },
   projects: [
     {
