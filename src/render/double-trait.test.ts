@@ -1,9 +1,19 @@
 import { Container, Texture } from 'pixi.js';
+import { TICKS_PER_BEAT } from '../shared/tempo';
 import { describe, expect, it } from 'vitest';
 import { lightAt, paletteAt } from '../shared/palette';
 import type { RenderContext } from './context';
-import { createCore, litShare } from './core';
+import {
+  LOW_SHARE,
+  SEGMENTS,
+  createCore,
+  litSegments,
+  litShare,
+  lostSegmentShown,
+  percentOf,
+} from './core';
 import { createFixtureState, FIXTURE_CONTENT } from './fixture';
+import { contrast } from './ground-sun';
 import { type Frame, createFrame } from './frame';
 import { createLayers } from './layers';
 import { writePixiPalette } from './palette';
@@ -35,6 +45,7 @@ function context(): RenderContext {
       vibes: shape,
       watts: shape,
       traps: { shockwave: shape, beam: shape, mist: shape, lure: shape, strobe: shape },
+      names: { get: () => ({ fill: Texture.EMPTY, edge: Texture.EMPTY }) },
     },
     layers: createLayers(new Container()),
     options: { calmMode: false },
@@ -55,18 +66,68 @@ describe('core ring', () => {
     expect(litShare({ hp, maxHp })).toBeCloseTo(share);
   });
 
+  it.each([
+    [500, 500, 24, 100],
+    [480, 500, 24, 96],
+    [125, 500, 6, 25],
+    [1, 500, 1, 1],
+    [0, 500, 0, 0],
+  ])('lights %i of %i hit points as %i segments and %i %%', (hp, maxHp, segments, percent) => {
+    expect(litSegments({ hp, maxHp })).toBe(segments);
+    expect(percentOf({ hp, maxHp })).toBe(percent);
+  });
+
   it('follows the hit points of the core from one frame to the next', () => {
     const family = createCore(context());
     const state = createFixtureState({ enemies: 0, projectiles: 0 });
 
-    state.core.hp = 40;
+    state.core.hp = state.core.maxHp * 0.4;
     family.update(state, 0, frameAt(0.4));
     const hurt = family.lit;
     state.core.hp = state.core.maxHp;
     family.update(state, 0, frameAt(0.4));
 
-    expect(hurt).toBeCloseTo(0.4);
-    expect(family.lit).toBe(1);
+    expect(hurt).toBe(Math.ceil(SEGMENTS * 0.4));
+    expect(family.lit).toBe(SEGMENTS);
+  });
+
+  it('turns pink and warns that the scene weakens under a quarter of its life', () => {
+    const ctx = context();
+    const family = createCore(ctx);
+    const state = createFixtureState({ enemies: 0, projectiles: 0 });
+    const frame = frameAt(0.4);
+    const tintsWith = (share: number) => {
+      state.core.hp = state.core.maxHp * share;
+      family.update(state, 0, frame);
+      return ctx.layers.core.children
+        .filter((child) => child.visible)
+        .map((child) => (child as unknown as { tint: number }).tint);
+    };
+
+    const healthy = tintsWith(LOW_SHARE);
+    const weak = tintsWith(LOW_SHARE - 0.01);
+
+    expect(weak).toHaveLength(healthy.length + 2);
+    expect(healthy).not.toContain(frame.palette.mage);
+    expect(weak).toContain(frame.palette.mage);
+  });
+
+  it('blinks the lost segment twice per beat for two beats, never in calm mode', () => {
+    const half = TICKS_PER_BEAT / 2;
+
+    const blinks = [0, half, 2 * half, 3 * half, 4 * half].map((since) =>
+      lostSegmentShown(since, false),
+    );
+
+    expect(blinks).toEqual([true, false, true, false, false]);
+    expect(lostSegmentShown(0, true)).toBe(false);
+  });
+
+  it.each(MOMENTS)('keeps its labels readable on their backing at %f', (fraction) => {
+    const { palette } = frameAt(fraction);
+
+    expect(contrast(palette.texte, palette.sol)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(palette.mage, palette.sol)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('wears dark outlines on the ring and the star only by day', () => {
