@@ -6,10 +6,11 @@ import type { PlayerState, SimState } from '../sim/state';
 import { statValue } from '../sim/stats';
 import { type Band, createCompactBand, createFullBand, createSkillView } from './band';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
-import { formatDuration, formatNumber, formatPercent, ratio } from './format';
+import { formatNumber, ratio } from './format';
 import {
-  GEAR_SLOTS,
   type GearSlotView,
+  classToken,
+  dropReading,
   enteredSpeaker,
   gearSlots,
   isNight,
@@ -20,8 +21,8 @@ import {
   trapCapacity,
   volumeCrans,
 } from './hud-model';
-import { BOLT, FOG, MOON, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
-import { type LineupSlot, lineupCursor, lineupSlots, setOf, ticksToDrop } from '../sim/lineup';
+import { BOLT, HEART, MOON, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
+import { type LineupSlot, lineupCursor, lineupSlots, setOf } from '../sim/lineup';
 import { selectTrap } from './navigation';
 import { promptsFor } from './prompts';
 import { cssName } from './sun';
@@ -34,15 +35,12 @@ export interface Hud {
 
 export { skillCharge };
 
-const VU_SEGMENTS = 20;
 const CRITICAL_RATIO = 0.25;
 
-function panel(area: string, label: string): { root: HTMLElement; head: HTMLElement } {
-  const root = el('section', `ui-panel ui-hud__${area}`);
+function section(className: string, label: string): HTMLElement {
+  const root = el('section', className);
   root.setAttribute('aria-label', label);
-  const head = el('div', 'ui-panel__head');
-  root.append(head);
-  return { root, head };
+  return root;
 }
 
 function slotLabel(slot: LineupSlot): string {
@@ -61,93 +59,68 @@ function slotLabel(slot: LineupSlot): string {
 export function createHud(): Hud {
   const element = el('div', 'ui-screen ui-hud');
 
-  const core = panel('core', 'Scène');
-  const coreLabel = el('span', 'ui-panel__label', 'Scène');
-  const coreValue = el('span', 'ui-panel__value');
-  core.head.append(coreLabel, coreValue);
-  const vu = el('div', 'ui-vu');
-  vu.setAttribute('role', 'meter');
-  vu.setAttribute('aria-label', 'Vie de la scène');
-  vu.setAttribute('aria-valuemin', '0');
-  vu.setAttribute('aria-valuemax', '100');
-  const vuSegments = Array.from({ length: VU_SEGMENTS }, (_, index) => {
-    const segment = el('span', 'ui-vu__seg');
-    segment.style.setProperty('--i', String(index));
-    return segment;
-  });
-  vu.append(...vuSegments);
-  core.root.append(vu);
-
-  const lineup = panel('lineup', 'Line-up');
-  const lineupNow = el('span', 'ui-panel__label ui-lineup__now');
-  const lineupNext = el('span', 'ui-lineup__next');
-  lineup.head.append(lineupNow, lineupNext);
+  const ribbon = section('ui-panel ui-hud__ribbon', 'Line-up');
+  const drop = el('div', 'ui-drop');
+  const dropLabel = el('span', 'ui-drop__label', 'Drop');
+  const dropValue = el('span', 'ui-drop__value');
+  dropValue.setAttribute('role', 'timer');
+  dropValue.setAttribute('aria-label', 'Drop');
+  drop.append(dropLabel, dropValue);
   const lineupTrack = el('div', 'ui-lineup');
   const sky = el('div', 'ui-lineup__sky');
   sky.setAttribute('aria-hidden', 'true');
   const sun = el('span', 'ui-lineup__sun');
   sky.append(sun);
-  lineup.root.append(lineupTrack);
+  const plugRow = el('div', 'ui-plugs');
+  plugRow.setAttribute('role', 'meter');
+  plugRow.setAttribute('aria-label', 'Enceintes branchées');
+  plugRow.setAttribute('aria-valuemin', '0');
+  ribbon.append(drop, lineupTrack, plugRow);
 
-  const threat = panel('threat', 'Bad vibes');
-  threat.head.append(el('span', 'ui-panel__label', 'Bad vibes'));
-  const threatCount = el('span', 'ui-threat__count');
-  const threatRow = el('div', 'ui-threat');
-  threatRow.append(icon('ui-threat__icon', FOG), threatCount);
-  threat.root.append(threatRow);
+  const help = el('p', 'ui-hud__help');
+  help.setAttribute('role', 'status');
+  help.hidden = true;
 
-  const level = panel('level', 'Niveau');
-  const levelBadge = el('div', 'ui-level__badge');
+  const bar = el('div', 'ui-panel ui-hud__bar');
+
+  const level = section('ui-hud__level', 'Niveau');
+  const levelRing = el('div', 'ui-level');
   const levelNumber = el('span', 'ui-level__number');
-  levelBadge.append(el('span', 'ui-level__abbr', 'Niv.'), levelNumber);
-  const vibesValue = el('span', 'ui-panel__value ui-panel__value--small');
-  level.head.append(el('span', 'ui-panel__label', 'Vibes'), vibesValue);
-  const vibesBar = el('div', 'ui-bar');
-  vibesBar.append(el('span', 'ui-bar__fill'));
-  const levelBody = el('div', 'ui-level__body');
-  levelBody.append(level.head, vibesBar);
-  level.root.append(levelBadge, levelBody);
+  levelRing.append(levelNumber);
+  level.append(levelRing);
 
-  const traps = panel('traps', 'Pièges');
-  const watts = el('span', 'ui-watts');
+  const life = section('ui-hud__life', 'Vie');
+  const lifeBar = el('div', 'ui-bar ui-life__bar');
+  lifeBar.setAttribute('role', 'meter');
+  lifeBar.setAttribute('aria-label', 'Vie');
+  lifeBar.setAttribute('aria-valuemin', '0');
+  lifeBar.append(el('span', 'ui-bar__fill'));
+  const lifeValue = el('span', 'ui-life__value');
+  life.append(icon('ui-life__icon', HEART), lifeBar, lifeValue);
+
+  const gear = section('ui-hud__gear', 'Agrès');
+
+  const traps = section('ui-hud__traps', 'Pièges');
+  const watts = el('div', 'ui-watts');
   const wattsValue = el('span', 'ui-watts__value');
-  watts.append(icon('ui-watts__icon', BOLT), wattsValue, el('span', 'ui-watts__unit', 'watts'));
+  const wattsAmount = el('span', 'ui-watts__amount');
+  wattsAmount.append(icon('ui-watts__icon', BOLT), wattsValue);
+  wattsAmount.title = 'Watts';
   const trapsCount = el('span', 'ui-traps__count');
-  traps.head.append(watts, trapsCount);
+  watts.append(wattsAmount, trapsCount);
   const trapTiles = el('div', 'ui-traps');
-  const trapRow = el('div', 'ui-traps__row');
   const cyclePrevious = el('span', 'ui-traps__cycle');
   const cycleNext = el('span', 'ui-traps__cycle');
   cyclePrevious.append(keycap('LB', 'button'));
   cycleNext.append(keycap('RB', 'button'));
-  trapRow.append(cyclePrevious, trapTiles, cycleNext);
   const trapName = el('div', 'ui-traps__name');
-  traps.root.append(trapRow, trapName);
+  traps.append(watts, cyclePrevious, trapTiles, cycleNext, trapName);
 
-  const skills = panel('skills', 'Compétence');
-  skills.head.remove();
+  const skills = section('ui-hud__skills', 'Compétence');
   const skill = createSkillView();
-  skills.root.append(skill.root);
+  skills.append(skill.root);
 
-  const volume = panel('volume', 'Volume');
-  const volumeValue = el('span', 'ui-panel__value ui-panel__value--small');
-  volume.head.append(el('span', 'ui-panel__label', 'Volume'), volumeValue);
-  const cranRow = el('div', 'ui-crans');
-  cranRow.setAttribute('role', 'meter');
-  cranRow.setAttribute('aria-label', 'Volume');
-  cranRow.setAttribute('aria-valuemin', '0');
-  const volumeHelp = el('p', 'ui-volume__help');
-  volumeHelp.setAttribute('role', 'status');
-  volumeHelp.hidden = true;
-  volume.root.append(cranRow, volumeHelp);
-
-  const gear = panel('gear', 'Agrès');
-  gear.head.remove();
-  const gearRow = el('div', 'ui-gear');
-  gear.root.append(gearRow);
-
-  const aux = el('div', 'ui-hud__aux');
-  aux.append(volume.root, gear.root);
+  bar.append(level, life, gear, traps, skills);
 
   const roster = el('div', 'ui-hud__roster');
   roster.setAttribute('aria-label', 'Les autres joueurs');
@@ -155,17 +128,9 @@ export function createHud(): Hud {
   const rosterBands: Band[] = [];
   const teamBands: Band[] = [];
 
-  element.append(
-    core.root,
-    lineup.root,
-    threat.root,
-    aux,
-    level.root,
-    traps.root,
-    skills.root,
-    roster,
-    team,
-  );
+  const top = el('div', 'ui-hud__top');
+  top.append(ribbon, help);
+  element.append(top, roster, team, bar);
 
   let builtFor: GameContent | null = null;
   let set: SetDefinition | null = null;
@@ -176,10 +141,9 @@ export function createHud(): Hud {
   let builtDevice: InputDevice | null = null;
   let selectedTrap = 0;
   let previousGameplay: InputSnapshot['gameplay'] | null = null;
-  let litSegments = -1;
-  let crans: HTMLElement[] = [];
-  let gearViews: HTMLElement[] = [];
-  let gearKey = '';
+  let plugs: HTMLElement[] = [];
+  let chips: HTMLElement[] = [];
+  let gearKey: string | null = null;
   let slotEdges: { left: number; width: number }[] = [];
   let sunNight: boolean | null = null;
   let sunAt = -1;
@@ -214,14 +178,15 @@ export function createHud(): Hud {
     lineupTrack.replaceChildren(sky, ...groups);
     measureSlots();
 
-    crans = (set.speakers ?? []).map((speaker) => {
-      const cran = el('span', 'ui-cran');
-      cran.title = speaker.name;
-      return cran;
+    plugs = (set.speakers ?? []).map((speaker) => {
+      const plug = el('span', 'ui-plug');
+      plug.title = speaker.name;
+      plug.append(icon('ui-plug__icon', PLUG));
+      return plug;
     });
-    cranRow.replaceChildren(...crans);
-    cranRow.setAttribute('aria-valuemax', String(crans.length));
-    volume.root.hidden = crans.length === 0;
+    plugRow.replaceChildren(...plugs);
+    plugRow.setAttribute('aria-valuemax', String(plugs.length));
+    plugRow.hidden = plugs.length === 0;
 
     selectedTrap = Math.min(selectedTrap, Math.max(content.traps.length - 1, 0));
     tiles = content.traps.map((trap, index) => {
@@ -265,84 +230,82 @@ export function createHud(): Hud {
     }
   }
 
-  function updateVolume(state: SimState): void {
+  function updateSpeakers(state: SimState): void {
     if (set === null) {
       return;
     }
     const levels = volumeCrans(set, state);
-    levels.forEach((level, index) => {
-      const cran = crans[index];
-      if (cran === undefined) {
+    levels.forEach((speaker, index) => {
+      const plug = plugs[index];
+      if (plug === undefined) {
         return;
       }
-      setVar(cran, '--cran', `var(${cssName(level.token)})`);
-      setVar(cran, '--fill', String(level.fill));
-      cran.dataset.state = level.state;
+      setVar(plug, '--plug', `var(${cssName(speaker.token)})`);
+      setVar(plug, '--fill', String(speaker.fill));
+      plug.dataset.state = speaker.state;
     });
-    const volumeNow = state.volume ?? 0;
-    setText(volumeValue, `${String(volumeNow)} / ${String(levels.length)}`);
-    cranRow.setAttribute('aria-valuenow', String(volumeNow));
-    cranRow.setAttribute(
+    const plugged = state.volume ?? 0;
+    plugRow.setAttribute('aria-valuenow', String(plugged));
+    plugRow.setAttribute(
       'aria-valuetext',
-      `Volume ${String(volumeNow)} sur ${String(levels.length)}`,
+      `${String(plugged)} enceinte${plugged > 1 ? 's' : ''} branchée${plugged > 1 ? 's' : ''} sur ${String(levels.length)}`,
     );
     if (state.events.some((event) => event.type === 'volumeChanged')) {
       beat = !beat;
-      volume.root.dataset.bump = beat ? 'a' : 'b';
+      plugRow.dataset.bump = beat ? 'a' : 'b';
     }
 
     const entered = helpSeen ? null : enteredSpeaker(set, state);
     if (entered !== null) {
-      setText(volumeHelp, plugHelp(entered.plugBars));
+      setText(help, plugHelp(entered.plugBars));
       helpWasShown = true;
     } else if (helpWasShown) {
       helpSeen = true;
     }
-    volumeHelp.hidden = entered === null;
+    help.hidden = entered === null;
   }
 
-  function buildGear(views: readonly GearSlotView[]): void {
-    gearViews = views.map((view) => {
-      const slot = el('div', 'ui-gear__slot');
+  function buildGear(held: readonly GearSlotView[]): void {
+    chips = held.flatMap((view) => {
       if (view.weapon === null) {
-        slot.dataset.empty = '';
-        slot.setAttribute('aria-label', 'Emplacement libre');
-        return slot;
+        return [];
       }
-      slot.setAttribute('role', 'img');
-      slot.setAttribute('aria-label', `${view.weapon.name}, niveau ${String(view.level)}`);
-      slot.title = `${view.weapon.name} : ${view.weapon.description}`;
-      slot.dataset.weapon = view.weapon.id;
+      const chip = el('div', 'ui-gear');
+      chip.setAttribute('role', 'img');
+      chip.setAttribute('aria-label', `${view.weapon.name}, niveau ${String(view.level)}`);
+      chip.title = `${view.weapon.name} : ${view.weapon.description}`;
+      chip.dataset.weapon = view.weapon.id;
       if (view.weapon.rhythm === 'continuous') {
-        slot.dataset.continuous = '';
+        chip.dataset.continuous = '';
       }
       const dots = el('span', 'ui-gear__dots');
-      for (let level = 1; level <= view.weapon.maxLevel; level += 1) {
+      for (let rank = 1; rank <= view.weapon.maxLevel; rank += 1) {
         const dot = el('span', 'ui-gear__dot');
-        setFlag(dot, 'on', level <= view.level);
+        setFlag(dot, 'on', rank <= view.level);
         dots.append(dot);
       }
-      slot.append(icon('ui-gear__icon', weaponIcon(view.weapon.effect)), dots);
-      return slot;
+      chip.append(icon('ui-gear__icon', weaponIcon(view.weapon.effect)), dots);
+      return [chip];
     });
-    gearRow.replaceChildren(...gearViews);
+    gear.replaceChildren(...chips);
+    gear.hidden = chips.length === 0;
   }
 
   function updateGear(player: PlayerState, state: SimState, content: GameContent): void {
-    const views = gearSlots(player, content);
-    const key = views.map((view) => `${view.weapon?.id ?? '-'}:${String(view.level)}`).join(',');
-    if (key !== gearKey || gearViews.length !== GEAR_SLOTS) {
+    const held = gearSlots(player, content).filter((view) => view.weapon !== null);
+    const key = held.map((view) => `${view.weapon?.id ?? '-'}:${String(view.level)}`).join(',');
+    if (key !== gearKey) {
       gearKey = key;
-      buildGear(views);
+      buildGear(held);
     }
     for (const event of state.events) {
       if (event.type !== 'weaponFired' || event.playerId !== player.id) {
         continue;
       }
-      const slot = gearViews.find((view) => view.dataset.weapon === event.weaponId);
-      if (slot !== undefined && slot.dataset.continuous === undefined) {
+      const chip = chips.find((view) => view.dataset.weapon === event.weaponId);
+      if (chip !== undefined && chip.dataset.continuous === undefined) {
         beat = !beat;
-        slot.dataset.pulse = beat ? 'a' : 'b';
+        chip.dataset.pulse = beat ? 'a' : 'b';
       }
     }
   }
@@ -353,23 +316,10 @@ export function createHud(): Hud {
     const prompts = promptsFor(device);
     skill.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(definition.skill.effect)));
     setText(skill.name, definition.skill.name);
+    skill.root.title = `${definition.skill.name} : ${definition.skill.description}`;
     skill.key.replaceChildren(keycap(prompts.skill, prompts.style));
-    setFlag(traps.root, 'gamepad', device === 'gamepad');
-  }
-
-  function updateCore(state: SimState): void {
-    const fraction = ratio(state.core.hp, state.core.maxHp);
-    const lit = Math.ceil(fraction * VU_SEGMENTS);
-    if (lit !== litSegments) {
-      litSegments = lit;
-      vuSegments.forEach((segment, index) => {
-        setFlag(segment, 'on', index < lit);
-      });
-    }
-    setText(coreValue, formatPercent(fraction));
-    vu.setAttribute('aria-valuenow', String(Math.round(fraction * 100)));
-    setFlag(core.root, 'critical', fraction <= CRITICAL_RATIO);
-    setText(coreLabel, fraction <= CRITICAL_RATIO ? 'Scène en danger' : 'Scène');
+    setFlag(traps, 'gamepad', device === 'gamepad');
+    setVar(element, '--who', `var(${cssName(classToken(definition.id))})`);
   }
 
   function updateLineup(state: SimState, content: GameContent): void {
@@ -388,26 +338,21 @@ export function createHud(): Hud {
       }
     });
 
-    const tier = set.tiers[state.set.tier];
-    const tierText = `Palier ${String(state.set.tier + 1)}/${String(set.tiers.length)}`;
-    const boss = content.enemies.find((enemy) => enemy.id === tier?.bossId)?.name ?? 'le boss';
-    const toDrop = ticksToDrop(set, state);
-    if (state.status === 'won' || tier === undefined) {
-      setText(lineupNow, 'Sunrise');
-      setText(lineupNext, 'Le soleil se lève');
-    } else if (state.set.segment === 'buildup') {
-      const phrase = (slotDefs[cursor.slot]?.phrase ?? 0) + 1;
-      setText(lineupNow, `${tierText} · phrase ${String(phrase)}/${String(tier.buildupPhrases)}`);
-      setText(lineupNext, `Drop dans ${formatDuration(toDrop ?? 0)}`);
-    } else if (state.set.segment === 'break') {
-      setText(lineupNow, `${tierText} · break, souffle`);
-      setText(lineupNext, `Drop dans ${formatDuration(toDrop ?? 0)}`);
-    } else {
-      setText(lineupNow, `${tierText} · drop`);
-      setText(lineupNext, `${boss} est là`);
-    }
-    setFlag(lineup.root, 'drop', state.set.segment === 'drop' && state.status !== 'won');
+    const reading = dropReading(set, state, content);
+    setText(dropLabel, reading.label);
+    setText(dropValue, reading.value);
+    dropValue.hidden = reading.value === '';
+    setFlag(ribbon, 'drop', reading.dropping);
     updateSun(setFraction(set, state));
+  }
+
+  function updateLife(player: PlayerState): void {
+    const fraction = ratio(player.hp, player.maxHp);
+    setVar(lifeBar, '--fill', String(fraction));
+    lifeBar.setAttribute('aria-valuemax', String(player.maxHp));
+    lifeBar.setAttribute('aria-valuenow', String(Math.round(player.hp)));
+    setText(lifeValue, formatNumber(player.hp));
+    setFlag(life, 'critical', fraction <= CRITICAL_RATIO);
   }
 
   function fitBands(bands: Band[], container: HTMLElement, count: number, make: () => Band): void {
@@ -443,10 +388,8 @@ export function createHud(): Hud {
     if (builtFor !== content || set?.id !== state.setId) {
       build(content, state.setId);
     }
-    updateCore(state);
     updateLineup(state, content);
-    setText(threatCount, formatNumber(state.enemies.length));
-    updateVolume(state);
+    updateSpeakers(state);
 
     const people = rosterOf(state, frame);
     setFlag(element, 'team', people.team);
@@ -468,8 +411,9 @@ export function createHud(): Hud {
     }
 
     setText(levelNumber, String(player.level));
-    setText(vibesValue, `${formatNumber(player.vibes)} / ${formatNumber(player.vibesToNextLevel)}`);
-    setVar(vibesBar, '--fill', String(ratio(player.vibes, player.vibesToNextLevel)));
+    setVar(levelRing, '--fill', String(ratio(player.vibes, player.vibesToNextLevel)));
+    level.title = `Niveau ${String(player.level)} : ${formatNumber(player.vibes)} vibes sur ${formatNumber(player.vibesToNextLevel)}`;
+    updateLife(player);
 
     selectedTrap = selectTrap(selectedTrap, tiles.length, snapshot.gameplay, previousGameplay);
     previousGameplay = snapshot.gameplay;

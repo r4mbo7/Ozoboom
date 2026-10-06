@@ -1,10 +1,10 @@
 import { type Page, expect, test } from '@playwright/test';
 import { collectConsoleErrors } from './game';
 
-const HUD_PANELS = ['Scène', 'Line-up', 'Bad vibes', 'Niveau', 'Pièges', 'Compétence'];
+const HUD_PANELS = ['Line-up', 'Niveau', 'Vie', 'Pièges', 'Compétence'];
 
 async function secondsToDrop(page: Page): Promise<number> {
-  const text = await page.getByText(/^Drop dans \d+:\d{2}$/).textContent();
+  const text = await page.getByRole('timer', { name: 'Drop' }).textContent();
   const match = /(\d+):(\d{2})$/.exec(text ?? '');
   if (match === null) {
     throw new Error(`No drop countdown in "${String(text)}"`);

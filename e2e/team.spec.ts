@@ -76,7 +76,7 @@ test.describe('the HUD of a team', () => {
     await expect(keys).toHaveText(['E', 'LT', 'LT']);
   });
 
-  test('keeps the traps out of the play area when several players share the screen', async ({
+  test('keeps the traps on the bottom edge, below the bands, when several players share the screen', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -84,8 +84,12 @@ test.describe('the HUD of a team', () => {
 
     const traps = await page.getByRole('region', { name: 'Pièges' }).boundingBox();
     const band = await page.locator('.ui-band').first().boundingBox();
-    expect(traps?.y).toBeLessThan(320);
-    expect(band?.height).toBeLessThan(125);
+    if (traps === null || band === null) {
+      throw new Error('expected the traps and a band on screen');
+    }
+    expect(traps.y).toBeGreaterThan(band.y + band.height);
+    expect(traps.y + traps.height).toBeGreaterThan(800 - 40);
+    expect(band.height).toBeLessThan(125);
   });
 
   test('shows four full bands when four players sit at the screen', async ({ page }) => {

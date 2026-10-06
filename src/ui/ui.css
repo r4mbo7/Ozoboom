@@ -1087,12 +1087,13 @@
 /* HUD */
 
 .ui-hud {
+  --who: var(--or);
+
   display: grid;
   grid-template:
-    'core lineup threat' auto
-    'volume . .' 1fr
-    '. . gear' auto
-    'level traps skills' auto
+    'top top top' auto
+    '. . .' 1fr
+    'bar bar bar' auto
     / minmax(0, 1fr) auto minmax(0, 1fr);
   gap: var(--ui-gap);
   padding: max(var(--ui-gap), env(safe-area-inset-top))
@@ -1100,7 +1101,7 @@
     max(var(--ui-gap), env(safe-area-inset-left));
 }
 
-.ui-hud[data-no-player] :is(.ui-hud__level, .ui-hud__traps, .ui-hud__skills, .ui-hud__gear) {
+.ui-hud[data-no-player] .ui-hud__bar {
   display: none;
 }
 
@@ -1142,97 +1143,48 @@
   font-size: 16px;
 }
 
-.ui-hud__core,
-.ui-hud__lineup,
-.ui-hud__threat {
+.ui-hud__top {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-}
-
-.ui-hud__core {
-  grid-area: core;
-  justify-self: start;
-  width: var(--ui-side-width);
-}
-
-.ui-hud__lineup {
-  grid-area: lineup;
-}
-
-.ui-hud__threat {
-  grid-area: threat;
-  justify-self: end;
-}
-
-.ui-hud__level {
-  display: flex;
-  grid-area: level;
+  grid-area: top;
   align-items: center;
-  align-self: end;
-  justify-self: start;
-  gap: 14px;
-}
-
-.ui-hud__traps {
-  grid-area: traps;
-  justify-self: center;
-}
-
-.ui-hud__traps .ui-panel__head {
-  align-items: baseline;
-}
-
-.ui-hud__skills {
-  display: flex;
-  grid-area: skills;
-  align-items: center;
-  justify-self: end;
   gap: 8px;
 }
 
-.ui-vu {
+.ui-hud__ribbon {
   display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 28px;
+  align-items: center;
+  gap: 22px;
+  max-width: 100%;
+  padding: 8px 22px 9px;
+  border-radius: 999px;
 }
 
-.ui-vu__seg {
-  width: 10px;
-  height: calc(10px + var(--i) * 0.95px);
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--texte) 12%, transparent);
-}
-
-.ui-vu__seg[data-on] {
-  --seg: color-mix(in srgb, var(--turquoise) calc(var(--i) * 5.26%), var(--or));
-
-  background: var(--seg);
-  box-shadow: 0 0 calc(8px * var(--ui-halo)) color-mix(in srgb, var(--seg) 70%, transparent);
-}
-
-.ui-hud__core[data-critical] .ui-vu__seg[data-on] {
-  --seg: var(--tank);
-}
-
-.ui-hud__core[data-critical] :is(.ui-panel__label, .ui-panel__value) {
-  color: var(--ui-tank);
-}
-
-.ui-lineup__now {
-  color: var(--texte);
-}
-
-.ui-lineup__next {
-  color: var(--texte);
-  font-size: 15px;
-  font-weight: 700;
+.ui-drop {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   white-space: nowrap;
 }
 
-.ui-hud__lineup[data-drop] .ui-lineup__next {
+.ui-drop__label {
+  color: var(--texte);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ui-drop__value {
+  min-width: 2.6em;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ui-hud__ribbon[data-drop] .ui-drop__value {
   color: var(--ui-tank);
+  font-size: 17px;
 }
 
 .ui-lineup {
@@ -1369,54 +1321,158 @@
   height: 100%;
 }
 
-.ui-threat {
-  display: flex;
-  align-items: center;
+.ui-hud__ribbon .ui-lineup {
   gap: 10px;
+  height: 14px;
+  margin-top: 20px;
 }
 
-.ui-threat__icon {
-  width: 30px;
-  height: 30px;
-  color: color-mix(in srgb, var(--bad-vibe) 70%, var(--texte));
+.ui-hud__ribbon .ui-lineup__sky {
+  inset: -21px 0 auto;
+  height: 16px;
 }
 
-.ui-threat__count {
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1;
+.ui-hud__ribbon .ui-lineup__sky::before {
+  inset: 7px 0 auto;
 }
 
-.ui-level__badge {
+.ui-hud__ribbon .ui-lineup__sun {
+  width: 16px;
+  height: 16px;
+}
+
+.ui-hud__ribbon .ui-lineup__tier {
+  gap: 4px;
+}
+
+.ui-hud__ribbon .ui-slot--phrase {
+  width: 24px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.ui-hud__ribbon .ui-slot--break {
+  width: 14px;
+  height: 14px;
+}
+
+.ui-hud__ribbon .ui-slot--drop {
+  width: 12px;
+  height: 12px;
+}
+
+.ui-hud__ribbon .ui-slot--sunrise {
+  width: 18px;
+  height: 18px;
+}
+
+.ui-plugs {
   display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  height: 60px;
-  border: 2px solid var(--or);
-  border-radius: 22px;
-  box-shadow: 0 0 calc(12px * var(--ui-halo)) color-mix(in srgb, var(--or) 35%, transparent);
+  gap: 6px;
 }
 
-.ui-level__abbr {
+.ui-plugs[data-bump='a'] {
+  animation: ui-bump-a 700ms ease-out;
+}
+
+.ui-plugs[data-bump='b'] {
+  animation: ui-bump-b 700ms ease-out;
+}
+
+.ui-plug {
+  --plug: var(--or);
+  --fill: 0;
+
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid color-mix(in srgb, var(--texte) 26%, transparent);
+  border-radius: 50%;
   color: var(--ui-muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+}
+
+.ui-plug__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.ui-plug[data-state='plugging'] {
+  border-color: var(--plug);
+  background: conic-gradient(
+    color-mix(in srgb, var(--plug) 45%, transparent) calc(var(--fill) * 360deg),
+    transparent calc(var(--fill) * 360deg)
+  );
+  color: var(--texte);
+}
+
+.ui-plug[data-state='on'] {
+  border-color: var(--plug);
+  background: var(--plug);
+  box-shadow: 0 0 calc(10px * var(--ui-halo)) color-mix(in srgb, var(--plug) 65%, transparent);
+  color: var(--sol);
+}
+
+.ui-hud__help {
+  padding: 6px 16px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: var(--ui-panel);
+  box-shadow: var(--ui-lift);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.ui-hud__bar {
+  display: flex;
+  grid-area: bar;
+  align-items: center;
+  justify-self: center;
+  gap: 16px;
+  max-width: 100%;
+  padding: 8px 18px 8px 8px;
+  border-radius: 999px;
+}
+
+.ui-hud__bar > section {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+}
+
+.ui-hud__bar > section + section {
+  padding-left: 16px;
+  border-left: 1px solid var(--ui-line);
+}
+
+.ui-level {
+  --fill: 0;
+
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--or),
+    var(--turquoise) calc(var(--fill) * 360deg),
+    color-mix(in srgb, var(--texte) 14%, transparent) calc(var(--fill) * 360deg)
+  );
 }
 
 .ui-level__number {
-  color: var(--texte);
-  font-size: 26px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--sol-clair);
+  font-size: 20px;
   font-weight: 900;
   line-height: 1;
-}
-
-.ui-level__body {
-  width: 240px;
 }
 
 .ui-bar {
@@ -1437,30 +1493,127 @@
   box-shadow: 0 0 calc(10px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 55%, transparent);
 }
 
+.ui-hud__life {
+  gap: 8px;
+}
+
+.ui-life__icon {
+  width: 20px;
+  height: 20px;
+  color: color-mix(in srgb, var(--who) 80%, var(--texte));
+}
+
+.ui-life__bar {
+  width: 104px;
+}
+
+.ui-life__bar .ui-bar__fill {
+  background: var(--who);
+  box-shadow: none;
+}
+
+.ui-life__value {
+  min-width: 2em;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ui-hud__life[data-critical] .ui-life__value {
+  color: var(--ui-tank);
+}
+
+.ui-hud__life[data-critical] .ui-bar__fill {
+  background: var(--tank);
+}
+
+.ui-hud__gear {
+  gap: 8px;
+}
+
+.ui-gear {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 46px;
+  height: 52px;
+  border: 1.5px solid color-mix(in srgb, var(--or) 55%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--sol) 60%, transparent);
+  color: var(--ui-or);
+}
+
+.ui-gear[data-continuous] {
+  border-color: var(--or);
+}
+
+.ui-gear__icon {
+  width: 24px;
+  height: 24px;
+}
+
+.ui-gear__dots {
+  display: flex;
+  gap: 3px;
+}
+
+.ui-gear__dot {
+  width: 5px;
+  height: 5px;
+  border: 1px solid color-mix(in srgb, var(--or) 70%, transparent);
+  border-radius: 50%;
+}
+
+.ui-gear__dot[data-on] {
+  background: var(--or);
+  box-shadow: 0 0 calc(4px * var(--ui-halo)) var(--or);
+}
+
+.ui-gear[data-pulse='a'] {
+  animation: ui-gear-a 260ms ease-out;
+}
+
+.ui-gear[data-pulse='b'] {
+  animation: ui-gear-b 260ms ease-out;
+}
+
+.ui-hud__traps {
+  position: relative;
+  gap: 10px;
+}
+
 .ui-watts {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 64px;
+}
+
+.ui-watts__amount {
   display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
 }
 
 .ui-watts__icon {
-  align-self: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: var(--ui-turquoise);
   filter: drop-shadow(0 0 calc(4px * var(--ui-halo)) var(--turquoise));
 }
 
 .ui-watts__value {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   line-height: 1;
 }
 
-.ui-watts__unit,
 .ui-traps__count {
   color: var(--ui-muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -1468,9 +1621,7 @@
 
 .ui-traps {
   display: flex;
-  justify-content: center;
-  gap: 12px;
-  padding-top: 4px;
+  gap: 8px;
 }
 
 .ui-trap {
@@ -1479,32 +1630,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: 76px;
-  height: 76px;
+  gap: 2px;
+  width: 52px;
+  height: 52px;
   border: 1.5px solid var(--ui-line);
-  border-radius: 22px;
+  border-radius: 16px;
   background: color-mix(in srgb, var(--sol) 60%, transparent);
-  transition: transform 120ms ease-out;
 }
 
 .ui-trap[data-selected] {
   border-color: var(--turquoise);
   box-shadow:
-    0 0 0 3px var(--sol),
-    0 0 0 6px var(--turquoise),
-    0 0 calc(18px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 40%, transparent);
-  transform: translateY(-4px);
-}
-
-.ui-trap[data-selected]::after {
-  content: '';
-  position: absolute;
-  bottom: -14px;
-  left: 50%;
-  border-inline: 7px solid transparent;
-  border-bottom: 7px solid var(--turquoise);
-  transform: translateX(-50%);
+    0 0 0 2px var(--sol),
+    0 0 0 4px var(--turquoise),
+    0 0 calc(14px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 40%, transparent);
 }
 
 .ui-trap[data-unaffordable] {
@@ -1513,22 +1652,23 @@
 
 .ui-trap__key {
   position: absolute;
-  top: 5px;
-  left: 7px;
-  color: var(--ui-muted);
-  font-size: 12px;
+  top: -7px;
+  left: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  border: 1px solid var(--ui-line);
+  border-radius: 7px;
+  background: var(--sol-clair);
+  color: var(--texte);
+  font-size: 11px;
   font-weight: 800;
+  line-height: 1;
 }
 
 .ui-hud__traps[data-gamepad] .ui-trap__key {
   display: none;
-}
-
-.ui-traps__row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
 }
 
 .ui-traps__cycle {
@@ -1540,8 +1680,8 @@
 }
 
 .ui-trap__icon {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
 }
 
 .ui-trap[data-selected] .ui-trap__icon {
@@ -1553,22 +1693,30 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1;
 }
 
 .ui-trap__bolt {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   color: var(--ui-turquoise);
 }
 
 .ui-traps__name {
-  margin-top: 16px;
-  font-size: 15px;
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  padding: 4px 14px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: var(--ui-panel);
+  box-shadow: var(--ui-lift);
+  font-size: 14px;
   font-weight: 700;
-  text-align: center;
+  white-space: nowrap;
+  translate: -50% 0;
 }
 
 .ui-skill {
@@ -1651,136 +1799,40 @@
   font-weight: 700;
 }
 
-/* Volume and gear */
+.ui-hud__skills .ui-skill {
+  --skill: var(--who);
 
-.ui-hud__aux {
-  display: contents;
-}
-
-.ui-hud__volume {
-  grid-area: volume;
-  align-self: start;
-  justify-self: start;
-  width: var(--ui-side-width);
-}
-
-.ui-hud__volume[data-bump='a'] {
-  animation: ui-bump-a 700ms ease-out;
-}
-
-.ui-hud__volume[data-bump='b'] {
-  animation: ui-bump-b 700ms ease-out;
-}
-
-.ui-crans {
-  display: flex;
-  gap: 8px;
-}
-
-.ui-cran {
-  --cran: var(--or);
-  --fill: 0;
-
-  flex: 1;
-  height: 16px;
-  border: 1.5px solid color-mix(in srgb, var(--texte) 22%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--texte) 8%, transparent);
-}
-
-.ui-cran[data-state='plugging'] {
-  border-color: color-mix(in srgb, var(--cran) 70%, transparent);
-  background: linear-gradient(
-    90deg,
-    var(--cran) calc(var(--fill) * 100%),
-    color-mix(in srgb, var(--cran) 14%, transparent) calc(var(--fill) * 100%)
-  );
-}
-
-.ui-cran[data-state='on'] {
-  border-color: var(--cran);
-  background: var(--cran);
-  box-shadow: 0 0 calc(10px * var(--ui-halo)) color-mix(in srgb, var(--cran) 65%, transparent);
-}
-
-.ui-volume__help {
-  margin-top: 12px;
-  color: var(--texte);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.3;
-  text-wrap: balance;
-}
-
-.ui-hud__gear {
-  display: flex;
-  grid-area: gear;
-  align-items: center;
-  justify-self: end;
-  padding: 10px 20px;
-}
-
-.ui-gear {
-  display: flex;
-  justify-content: center;
+  flex-direction: row;
   gap: 10px;
+  width: auto;
 }
 
-.ui-gear__slot {
-  position: relative;
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: 68px;
-  height: 68px;
-  border: 1.5px solid color-mix(in srgb, var(--or) 55%, transparent);
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--sol) 60%, transparent);
-  color: var(--ui-or);
+.ui-hud__skills .ui-skill__ring {
+  width: 52px;
+  height: 52px;
 }
 
-.ui-gear__slot[data-empty] {
-  border-style: dashed;
-  border-color: var(--ui-line);
-  background: color-mix(in srgb, var(--sol) 30%, transparent);
-  box-shadow: inset 0 2px 8px color-mix(in srgb, var(--sol) 70%, transparent);
+.ui-hud__skills .ui-skill__glyph {
+  width: 44px;
+  height: 44px;
 }
 
-.ui-gear__slot[data-continuous] {
-  border-color: var(--or);
+.ui-hud__skills .ui-skill__icon {
+  width: 24px;
+  height: 24px;
 }
 
-.ui-gear__icon {
-  width: 32px;
-  height: 32px;
+.ui-hud__skills .ui-skill__key {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  margin: 0;
 }
 
-.ui-gear__dots {
-  display: flex;
-  gap: 4px;
-}
-
-.ui-gear__dot {
-  width: 7px;
-  height: 7px;
-  border: 1px solid color-mix(in srgb, var(--or) 70%, transparent);
-  border-radius: 50%;
-}
-
-.ui-gear__dot[data-on] {
-  background: var(--or);
-  box-shadow: 0 0 calc(5px * var(--ui-halo)) var(--or);
-}
-
-.ui-gear__slot[data-pulse='a'] {
-  animation: ui-gear-a 260ms ease-out;
-}
-
-.ui-gear__slot[data-pulse='b'] {
-  animation: ui-gear-b 260ms ease-out;
+.ui-hud__skills .ui-skill__text {
+  align-items: flex-start;
+  margin: 0;
+  text-align: left;
 }
 
 /* Overlays */
@@ -2152,24 +2204,26 @@
 
 .ui-hud[data-team] {
   grid-template:
-    'core lineup threat' auto
-    'volume . .' auto
-    'roster . gear' 1fr
-    '. traps .' auto
+    'top top top' auto
+    'roster . .' 1fr
     'team team team' auto
+    'bar bar bar' auto
     / minmax(0, 1fr) auto minmax(0, 1fr);
 }
 
-.ui-hud[data-team] :is(.ui-hud__level, .ui-hud__skills) {
+.ui-hud[data-team] :is(.ui-hud__level, .ui-hud__life, .ui-hud__skills) {
   display: none;
 }
 
-.ui-hud[data-multi] .ui-hud__gear {
+.ui-hud[data-multi] .ui-hud__gear,
+.ui-hud[data-team] .ui-traps__name {
   display: none;
 }
 
-.ui-hud[data-team] .ui-hud__gear {
-  align-self: end;
+.ui-hud[data-team] .ui-hud__gear,
+.ui-hud[data-multi] .ui-hud__traps {
+  padding-left: 0;
+  border-left: 0;
 }
 
 .ui-hud[data-team] .ui-hud__roster {
@@ -2189,41 +2243,6 @@
 }
 
 @media (min-width: 721px) {
-  .ui-hud[data-multi] {
-    grid-template:
-      'core lineup threat' auto
-      'volume . traps' auto
-      'roster . .' 1fr
-      'team team team' auto
-      / minmax(0, 1fr) auto minmax(0, 1fr);
-  }
-
-  .ui-hud[data-multi] .ui-hud__traps {
-    align-self: start;
-    justify-self: end;
-    padding: 10px 14px 12px;
-  }
-
-  .ui-hud[data-multi] .ui-trap {
-    width: 56px;
-    height: 56px;
-    gap: 3px;
-    border-radius: 18px;
-  }
-
-  .ui-hud[data-multi] .ui-traps {
-    gap: 8px;
-  }
-
-  .ui-hud[data-multi] .ui-trap__icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .ui-hud[data-multi] .ui-traps__name {
-    margin-top: 12px;
-  }
-
   .ui-hud[data-multi] .ui-band {
     align-items: flex-start;
     gap: 12px;
@@ -2628,10 +2647,6 @@
   animation: ui-spin calc(var(--beat) * 64) linear infinite;
 }
 
-.ui-vu__seg[data-on] {
-  animation: ui-glow var(--beat) ease-out infinite;
-}
-
 .ui-slot--drop[data-open] {
   animation: ui-glow var(--beat) ease-out infinite;
 }
@@ -2733,14 +2748,12 @@
 
   .ui-hud[data-team] {
     grid-template:
-      'core threat' auto
-      'lineup lineup' auto
-      'aux aux' auto
-      'roster roster' auto
-      '. .' 1fr
-      'traps traps' auto
-      'team team' auto
-      / minmax(0, 1fr) auto;
+      'top' auto
+      'roster' auto
+      '.' 1fr
+      'team' auto
+      'bar' auto
+      / minmax(0, 1fr);
   }
 
   .ui-hud[data-team] .ui-hud__roster {
@@ -2830,15 +2843,6 @@
     height: 30px;
   }
 
-  .ui-hud[data-multi] .ui-trap {
-    width: 52px;
-    height: 52px;
-  }
-
-  .ui-hud[data-multi] .ui-traps__name {
-    margin-top: 10px;
-  }
-
   .ui-hud[data-multi] .ui-band .ui-skill__glyph {
     width: 28px;
     height: 28px;
@@ -2907,158 +2911,76 @@
 
   .ui-hud {
     grid-template:
-      'core threat' auto
-      'lineup lineup' auto
-      'aux aux' auto
-      '. .' 1fr
-      'level skills' auto
-      'traps skills' auto
-      / minmax(0, 1fr) auto;
+      'top' auto
+      '.' 1fr
+      'bar' auto
+      / minmax(0, 1fr);
   }
 
   .ui-panel {
     padding: 10px 12px 12px;
   }
 
-  .ui-hud__core {
-    justify-self: stretch;
-    width: auto;
+  .ui-hud__ribbon {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 16px;
+    padding: 4px 16px 8px;
+    border-radius: 22px;
   }
 
-  .ui-hud__aux {
-    display: flex;
-    grid-area: aux;
-    gap: var(--ui-gap);
-  }
-
-  .ui-hud__volume {
-    flex: 1;
-    width: auto;
-  }
-
-  .ui-crans {
-    gap: 5px;
-  }
-
-  .ui-hud__gear {
-    padding: 8px;
-  }
-
-  .ui-gear {
+  .ui-hud__ribbon .ui-lineup {
+    flex-basis: 100%;
+    justify-content: center;
+    order: 1;
     gap: 6px;
   }
 
-  .ui-gear__slot {
-    width: 44px;
-    height: 54px;
+  .ui-hud__ribbon .ui-lineup__tier {
+    gap: 3px;
+  }
+
+  .ui-hud__ribbon .ui-slot--phrase {
+    width: 16px;
+  }
+
+  .ui-drop__value {
+    font-size: 18px;
+  }
+
+  .ui-plugs {
     gap: 4px;
-    border-radius: 16px;
   }
 
-  .ui-gear__icon {
+  .ui-plug {
     width: 24px;
     height: 24px;
   }
 
-  .ui-gear__dots {
-    gap: 2px;
+  .ui-plug__icon {
+    width: 14px;
+    height: 14px;
   }
 
-  .ui-gear__dot {
-    width: 5px;
-    height: 5px;
-  }
-
-  .ui-vu {
-    gap: 2px;
-  }
-
-  .ui-vu__seg {
-    flex: 1;
-    width: auto;
-  }
-
-  .ui-hud__lineup {
-    justify-self: stretch;
-  }
-
-  .ui-lineup {
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .ui-lineup__tier {
-    gap: 3px;
-  }
-
-  .ui-slot--phrase {
-    width: 22px;
-  }
-
-  .ui-hud__level {
-    justify-self: stretch;
-  }
-
-  .ui-level__body {
-    flex: 1;
-    width: auto;
-  }
-
-  .ui-hud__traps {
-    justify-self: stretch;
-  }
-
-  .ui-trap {
-    width: 60px;
-    height: 60px;
-    gap: 3px;
-  }
-
-  .ui-hud__traps[data-gamepad] :is(.ui-traps, .ui-traps__row) {
-    gap: var(--ui-gap);
-  }
-
-  .ui-hud__traps[data-gamepad] .ui-trap {
-    width: 56px;
-    height: 56px;
-  }
-
-  .ui-trap__icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .ui-traps__name {
-    margin-top: 14px;
-    font-size: 14px;
-  }
-
-  .ui-hud__skills {
-    flex-direction: column;
+  .ui-hud__bar {
+    flex-wrap: wrap;
     justify-content: center;
-    justify-self: stretch;
+    gap: 10px 14px;
+    padding: 8px 12px;
+    border-radius: 28px;
   }
 
-  .ui-skill {
-    width: 64px;
+  .ui-hud__bar > section + section {
+    padding-left: 0;
+    border-left: 0;
   }
 
-  .ui-skill__ring {
-    width: 52px;
-    height: 52px;
+  .ui-life__bar {
+    width: 72px;
   }
 
-  .ui-skill__glyph {
-    width: 44px;
-    height: 44px;
-  }
-
-  .ui-skill__icon {
-    width: 22px;
-    height: 22px;
-  }
-
-  .ui-skill__name {
+  .ui-hud__skills .ui-skill__text,
+  .ui-traps__name {
     display: none;
   }
 

@@ -1,9 +1,10 @@
 import type { GameContent, SetDefinition, SkillDefinition, WeaponDefinition } from '../data/types';
 import { NIGHT_END, NIGHT_START, type PaletteToken } from '../shared/palette';
 import { TICKS_PER_BAR } from '../shared/tempo';
+import { ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
 import { skillCooldownTicks } from '../sim/stats';
-import { ratio } from './format';
+import { formatDuration, ratio } from './format';
 import type { UiFrame } from './types';
 
 export function skillCharge(
@@ -159,4 +160,27 @@ export function sunPosition(fraction: number, slots: readonly SlotEdges[]): numb
   const index = Math.min(Math.floor(at), count - 1);
   const slot = slots[index];
   return slot === undefined ? 0 : slot.left + (at - index) * slot.width;
+}
+
+export interface DropReading {
+  label: string;
+  value: string;
+  dropping: boolean;
+}
+
+// The first thing the line-up says: how long until the drop, who the drop brought, or the sunrise.
+export function dropReading(
+  set: SetDefinition,
+  state: SimState,
+  content: GameContent,
+): DropReading {
+  const tier = set.tiers[state.set.tier];
+  if (state.status === 'won' || tier === undefined) {
+    return { label: 'Sunrise', value: '', dropping: false };
+  }
+  if (state.set.segment === 'drop') {
+    const boss = content.enemies.find((enemy) => enemy.id === tier.bossId)?.name ?? 'Le boss';
+    return { label: 'Drop', value: boss, dropping: true };
+  }
+  return { label: 'Drop', value: formatDuration(ticksToDrop(set, state) ?? 0), dropping: false };
 }

@@ -2,6 +2,13 @@ import type { SkillEffect, TrapEffect, UpgradeFamily, WeaponEffect } from '../da
 
 export const BOLT = '<path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z" fill="currentColor"/>';
 
+export const PLUG =
+  '<path d="M9 2.5v4.5M15 2.5v4.5M12 17v4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+  '<path d="M6 7h12v3.5a6 6 0 0 1-12 0z" fill="currentColor"/>';
+
+export const HEART =
+  '<path d="M12 20.5s-8.2-4.7-8.2-10.6A4.7 4.7 0 0 1 12 7a4.7 4.7 0 0 1 8.2 2.9c0 5.9-8.2 10.6-8.2 10.6z" fill="currentColor"/>';
+
 export const FOG =
   '<path d="M7 18.5a4.5 4.5 0 0 1-.6-8.96 6 6 0 0 1 11.47 1.2A3.9 3.9 0 0 1 17.1 18.5z" fill="currentColor"/>' +
   '<path d="M4 21.5h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';

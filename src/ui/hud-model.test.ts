@@ -6,6 +6,7 @@ import type { SimState } from '../sim/state';
 import { UI_FIXTURE_CONTENT, fixtureForScreen, fixtureState, idleSnapshot } from './fixtures';
 import {
   classToken,
+  dropReading,
   enteredSpeaker,
   gearSlots,
   isNight,
@@ -234,5 +235,34 @@ describe('who a player is', () => {
   it('names a player by name, or by place when the name is absent', () => {
     expect(playerLabel({ id: 1, name: 'Tom' })).toBe('Tom');
     expect(playerLabel({ id: 2 })).toBe('Joueur 3');
+  });
+});
+
+describe('dropReading', () => {
+  it('counts down to the drop during the build-up', () => {
+    const state = fixtureForScreen('game');
+
+    const reading = dropReading(SET, state, UI_FIXTURE_CONTENT);
+
+    expect(reading.label).toBe('Drop');
+    expect(reading.value).toMatch(/^\d+:\d{2}$/);
+    expect(reading.dropping).toBe(false);
+  });
+
+  it('names the boss the drop brought', () => {
+    const state = fixtureForScreen('team', true);
+    const bossId = SET.tiers[state.set.tier]?.bossId;
+    const boss = UI_FIXTURE_CONTENT.enemies.find((enemy) => enemy.id === bossId);
+
+    const reading = dropReading(SET, state, UI_FIXTURE_CONTENT);
+
+    expect(boss).toBeDefined();
+    expect(reading).toEqual({ label: 'Drop', value: boss?.name, dropping: true });
+  });
+
+  it('greets the sunrise once the set is won', () => {
+    const reading = dropReading(SET, fixtureForScreen('won'), UI_FIXTURE_CONTENT);
+
+    expect(reading).toEqual({ label: 'Sunrise', value: '', dropping: false });
   });
 });
