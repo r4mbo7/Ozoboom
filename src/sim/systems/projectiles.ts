@@ -1,5 +1,5 @@
 import { damageCore, damagePlayer, playerById } from '../damage';
-import { healPlayer, hurtEnemy, markedDamageMul, pushAway } from '../effects';
+import { healPlayer, hurtEnemy, markedDamageMul, knockBack } from '../effects';
 import type { PlayerId, PlayerState, ProjectileState, SimState } from '../state';
 import type { StepContext } from './types';
 
@@ -78,7 +78,7 @@ function land(
       continue;
     }
     hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer);
-    pushAway(enemy, projectile, projectile.radius * LANDING_KNOCKBACK_PER_RADIUS);
+    knockBack(enemy, projectile, projectile.radius * LANDING_KNOCKBACK_PER_RADIUS);
   }
 }
 
@@ -143,7 +143,7 @@ function hitEnemies(
       });
     }
     if (projectile.knockback !== undefined) {
-      pushAway(enemy, projectile, projectile.knockback);
+      knockBack(enemy, projectile, projectile.knockback);
     }
     if (projectile.pierceLeft <= 0) {
       return true;

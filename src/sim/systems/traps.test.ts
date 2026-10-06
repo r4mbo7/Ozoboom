@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { distanceSquared } from '../../shared/vec';
 import type { PlayerAction, PlayerCommand, PlayerInput } from '../commands';
 import {
   EFFECTS_OPTIONS,
@@ -415,6 +416,29 @@ describe('trap effects', () => {
     expect(state.tick).toBe(97);
     expect(onDrop).toEqual([24, 0]);
     expect(inside.stunTicks).toBe(23);
+  });
+});
+
+describe('bosses against traps', () => {
+  it('a boss keeps closing in on the core through a subwoofer and a lure', () => {
+    const { simulation, state, player } = game();
+    state.core.watts = 1000;
+    player.x = 100;
+    player.y = 100;
+    const boss = placeEnemy(state, 'curfew', 1400, 450);
+    boss.hp = 100_000;
+    simulation.step([
+      actionsFor(0, placeAction('subwoofer', 1250, 450), placeAction('lure', 1050, 600)),
+    ]);
+
+    const distances: number[] = [];
+    for (let i = 0; i < 400; i++) {
+      simulation.step([]);
+      distances.push(distanceSquared(boss, state.core));
+    }
+
+    const stalls = distances.filter((distance, i) => i > 0 && distance >= (distances[i - 1] ?? 0));
+    expect(stalls).toEqual([]);
   });
 });
 

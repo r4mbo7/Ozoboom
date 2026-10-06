@@ -1,5 +1,5 @@
 import { isBeatTick } from '../../shared/tempo';
-import { hurtEnemy, keepWhere, markedDamageMul, pushAway, touches } from '../effects';
+import { hurtEnemy, keepWhere, markedDamageMul, knockBack, touches } from '../effects';
 import type { BarrierState, SimState } from '../state';
 import type { StepContext } from './types';
 
@@ -43,7 +43,7 @@ function holdBack(state: SimState, barrier: BarrierState): void {
     if (gap <= 0) {
       continue;
     }
-    pushAway(enemy, barrier, gap);
+    knockBack(enemy, barrier, gap);
     if (onBeat) {
       barrier.hp -= enemy.damage;
     }

@@ -2,7 +2,7 @@ import type { SkillEffect } from '../../data/types';
 import { normalize } from '../../shared/vec';
 import { IDLE_INPUT, type PlayerInput } from '../commands';
 import { lookup } from '../content';
-import { healPlayer, hurtEnemy, markedDamageMul, pushAway, touches } from '../effects';
+import { healPlayer, hurtEnemy, markedDamageMul, knockBack, touches } from '../effects';
 import type { PlayerState, SimState } from '../state';
 import { skillCooldownTicks, statValue } from '../stats';
 import type { StepContext } from './types';
@@ -53,7 +53,7 @@ function cast(
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && touches(enemy, player, effect.radius)) {
           hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id);
-          pushAway(enemy, player, effect.knockback);
+          knockBack(enemy, player, effect.knockback);
         }
       }
       return;

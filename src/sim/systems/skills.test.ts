@@ -20,9 +20,10 @@ function game(
   return { simulation, state: simulation.state, player };
 }
 
-function frozenBoss(state: SimState, x: number, y: number): EnemyState {
-  const enemy = placeEnemy(state, 'curfew', x, y);
+function frozenEnemy(state: SimState, x: number, y: number, kind = 'curfew'): EnemyState {
+  const enemy = placeEnemy(state, kind, x, y);
   enemy.stunTicks = 100_000;
+  enemy.hp = 500;
   return enemy;
 }
 
@@ -42,15 +43,17 @@ function reachDrop(simulation: Simulation): void {
 }
 
 describe('skill', () => {
-  it('nova: hurts and pushes back the enemies around the caster', () => {
+  it('nova: hurts and pushes back the enemies around the caster, but not a boss', () => {
     const { simulation, state, player } = game();
-    const near = frozenBoss(state, player.x, player.y - 100);
-    const far = frozenBoss(state, player.x, player.y - 120 - 40 - 1);
+    const near = frozenEnemy(state, player.x, player.y - 100, 'grump');
+    const far = frozenEnemy(state, player.x, player.y - 120 - 12 - 1, 'grump');
+    const boss = frozenEnemy(state, player.x, player.y + 100);
 
     press(simulation, { skill: true });
 
     expect({ hp: near.hp, y: near.y }).toEqual({ hp: 470, y: player.y - 120 });
-    expect({ hp: far.hp, y: far.y }).toEqual({ hp: 500, y: player.y - 161 });
+    expect({ hp: far.hp, y: far.y }).toEqual({ hp: 500, y: player.y - 133 });
+    expect({ hp: boss.hp, y: boss.y }).toEqual({ hp: 470, y: player.y + 100 });
     expect(state.events).toContainEqual({ type: 'skillUsed', playerId: 0 });
     expect(player.skillCooldown).toBe(240);
   });
@@ -58,7 +61,7 @@ describe('skill', () => {
   it('nova: hits harder with the skill power multiplier', () => {
     const { simulation, state, player } = game();
     player.modifiers.skillPowerMul = 1.5;
-    const near = frozenBoss(state, player.x, player.y - 100);
+    const near = frozenEnemy(state, player.x, player.y - 100);
 
     press(simulation, { skill: true });
 

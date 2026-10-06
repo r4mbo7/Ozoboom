@@ -52,6 +52,8 @@ Des masques sombres de mauvaises humeurs : les relous que l'on croise en festiva
 | le Couvre-feu      | boss        | arrive sur le premier drop                                                     | drop 1          |
 | la Batterie à plat | boss        | arrive sur le dernier drop                                                     | drop 2          |
 
+Un boss avance toujours vers la scène : pièges, armes et compétences peuvent le ralentir, jamais le repousser, l'attirer ni le retenir.
+
 La variété monte avec le set : chaque phrase amène une sorte nouvelle au moins, et un set plus long ajoute des paliers et des sortes. Les ennemis montent en puissance avec les joueurs : chaque phrase augmente leur vie, leur vitesse et leur nombre selon une courbe définie dans les données.
 
 **Le Festivalier en détresse** n'est pas une bad vibe. Il apparaît dans la foule à partir du palier 2 : un joueur qui reste une mesure à son contact, ou un soin de zone, l'aide, et toute l'équipe gagne des vibes. Si une bad vibe l'atteint avant, il s'en va et l'équipe en perd. Le care l'aide plus vite.

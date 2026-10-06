@@ -30,6 +30,13 @@ export function pushAway(body: Point, from: Point, distance: number): void {
   body.y += (dy / length) * distance;
 }
 
+// A boss always makes its way to the stage: effects may slow it, never push it back nor hold it.
+export function knockBack(enemy: EnemyState, from: Point, distance: number): void {
+  if (!enemy.isBoss) {
+    pushAway(enemy, from, distance);
+  }
+}
+
 export function markEnemy(state: SimState, enemy: EnemyState, ticks: number): void {
   enemy.marked = true;
   enemy.markedUntilTick = Math.max(enemy.markedUntilTick ?? 0, state.tick + ticks);
@@ -129,13 +136,16 @@ export function shockwave(
   for (const enemy of state.enemies) {
     if (enemy.hp > 0 && touches(enemy, at, radius)) {
       hurtEnemy(state, enemy, damage, markedMul, by);
-      pushAway(enemy, at, knockback);
+      knockBack(enemy, at, knockback);
     }
   }
 }
 
 // The lure replaces the step the steering just gave the enemy: same speed, slow and stun, new goal.
 export function drawTo(enemy: EnemyState, at: Point, contact: number): void {
+  if (enemy.isBoss) {
+    return;
+  }
   const step = enemy.stunTicks > 0 ? 0 : enemy.speed * enemy.slowFactor;
   const dx = at.x - enemy.prevX;
   const dy = at.y - enemy.prevY;

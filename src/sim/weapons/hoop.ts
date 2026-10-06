@@ -1,5 +1,5 @@
 import { TICKS_PER_BAR } from '../../shared/tempo';
-import { hurtEnemy, markedDamageMul, pushAway, touches } from '../effects';
+import { hurtEnemy, markedDamageMul, knockBack, touches } from '../effects';
 import type { WeaponModule } from './types';
 
 const BEAT_ONE = 0;
@@ -17,7 +17,7 @@ export const hoop: WeaponModule = {
     for (const enemy of state.enemies) {
       if (enemy.hp > 0 && touches(enemy, player, radius)) {
         hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id);
-        pushAway(enemy, player, effect.knockback);
+        knockBack(enemy, player, effect.knockback);
       }
     }
   },
