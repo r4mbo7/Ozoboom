@@ -56,6 +56,7 @@ test.describe('the HUD of a team', () => {
       await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
     }
     await expect(page.locator('.ui-bracelet__key:visible')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Vie', exact: true })).toContainText('Léa');
   });
 
   test('shows each bracelet of the screen the skill key of its device', async ({ page }) => {
@@ -86,6 +87,7 @@ test.describe('the HUD of a team', () => {
     await expect(page.getByRole('region', { name: 'Niveau' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Compétence' })).toBeVisible();
     await expect(page.locator('.ui-bracelet')).toHaveCount(0);
+    await expect(page.locator('.ui-hud__life .ui-who')).toBeHidden();
     await expect(page.locator('.ui-hud')).not.toHaveAttribute('data-team', '');
   });
 });

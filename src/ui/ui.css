@@ -1497,6 +1497,11 @@
   gap: 8px;
 }
 
+.ui-hud__life .ui-who__name {
+  max-width: 9em;
+  font-size: 15px;
+}
+
 .ui-life__icon {
   width: 20px;
   height: 20px;

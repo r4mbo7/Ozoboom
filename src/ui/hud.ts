@@ -25,6 +25,7 @@ import { BOLT, HEART, MOON, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from '.
 import { type LineupSlot, lineupCursor, lineupSlots, setOf } from '../sim/lineup';
 import { selectTrap } from './navigation';
 import { promptsFor } from './prompts';
+import { createWho, fillWho } from './who';
 import { cssName } from './sun';
 
 export interface Hud {
@@ -96,7 +97,9 @@ export function createHud(): Hud {
   lifeBar.setAttribute('aria-valuemin', '0');
   lifeBar.append(el('span', 'ui-bar__fill'));
   const lifeValue = el('span', 'ui-life__value');
-  life.append(icon('ui-life__icon', HEART), lifeBar, lifeValue);
+  const lifeWho = createWho();
+  const lifeIcon = icon('ui-life__icon', HEART);
+  life.append(lifeWho, lifeIcon, lifeBar, lifeValue);
 
   const gear = section('ui-hud__gear', 'Agrès');
 
@@ -350,6 +353,11 @@ export function createHud(): Hud {
     lifeBar.setAttribute('aria-valuemax', String(player.maxHp));
     lifeBar.setAttribute('aria-valuenow', String(Math.round(player.hp)));
     setText(lifeValue, formatNumber(player.hp));
+    lifeWho.hidden = player.name === undefined;
+    lifeIcon.hidden = !lifeWho.hidden;
+    if (!lifeWho.hidden) {
+      fillWho(lifeWho, player);
+    }
     setFlag(life, 'critical', fraction <= CRITICAL_RATIO);
   }
 
