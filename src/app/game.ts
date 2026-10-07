@@ -425,8 +425,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   function launch(seated: LaunchedSeats): void {
     launched = seated;
     setMatch(newMatch(seated.slots, seated.locals, TOGETHER_FOCUS));
-    audio.cue('launch');
     beginGame(nextTrackId());
+    audio.cue('launch');
   }
 
   function openOnline(): void {
