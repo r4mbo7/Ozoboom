@@ -1,7 +1,8 @@
+import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { SimEvent } from '../sim/state';
 import type { Cue } from './types';
 import { DEFAULT_BPM } from '../shared/tempo';
-import { degreeToHz } from './scale';
+import { keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 
 export type SfxName =
@@ -239,17 +240,17 @@ export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): S
   };
 }
 
-type Voice = (out: AudioNode, at: number, variant: number) => void;
+type Voice = (out: AudioNode, at: number, variant: number, key: MusicKey) => void;
 
 const DIED_DEGREES = [4, 3, 0, 5];
 const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
 
 const VOICES: Readonly<Record<SfxName, Voice>> = {
-  playerFired: (out, at) => {
+  playerFired: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'square',
-      hz: degreeToHz(0, 6),
-      toHz: degreeToHz(0, 5),
+      hz: keyHz(key, 0, 6),
+      toHz: keyHz(key, 0, 5),
       glide: 0.06,
       gain: 0.1,
       attack: 0.002,
@@ -267,8 +268,8 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 900, q: 1 },
     });
   },
-  enemyDied: (out, at, variant) => {
-    const hz = degreeToHz(DIED_DEGREES[variant % DIED_DEGREES.length] ?? 0, 3);
+  enemyDied: (out, at, variant, key) => {
+    const hz = keyHz(key, DIED_DEGREES[variant % DIED_DEGREES.length] ?? 0, 3);
     playTone(out, at, {
       wave: 'triangle',
       hz,
@@ -288,7 +289,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 400 },
     });
   },
-  coreHit: (out, at) => {
+  coreHit: (out, at, _variant, key) => {
     for (const [offset, degree] of [
       [0, 0],
       [0.12, 1],
@@ -296,7 +297,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
     ] as const) {
       playTone(out, at + offset, {
         wave: 'square',
-        hz: degreeToHz(degree, 1),
+        hz: keyHz(key, degree, 1),
         gain: 0.22,
         attack: 0.004,
         hold: 0.06,
@@ -305,11 +306,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     }
   },
-  trapSub: (out, at) => {
+  trapSub: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(0, 1),
-      toHz: degreeToHz(0, 0),
+      hz: keyHz(key, 0, 1),
+      toHz: keyHz(key, 0, 0),
       glide: 0.15,
       gain: 0.45,
       attack: 0.005,
@@ -326,11 +327,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 2600, q: 0.8 },
     });
   },
-  levelUp: (out, at) => {
+  levelUp: (out, at, _variant, key) => {
     [0, 3, 4, 7].forEach((degree, index) => {
       playTone(out, at + index * 0.07, {
         wave: 'triangle',
-        hz: degreeToHz(degree, 4),
+        hz: keyHz(key, degree, 4),
         gain: 0.16,
         attack: 0.005,
         hold: 0.04,
@@ -338,11 +339,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  upgradeChosen: (out, at) => {
+  upgradeChosen: (out, at, _variant, key) => {
     [4, 7].forEach((degree, index) => {
       playTone(out, at + index * 0.09, {
         wave: 'sine',
-        hz: degreeToHz(degree, 4),
+        hz: keyHz(key, degree, 4),
         gain: 0.2,
         attack: 0.004,
         hold: 0.03,
@@ -350,11 +351,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  skillUsed: (out, at) => {
+  skillUsed: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sawtooth',
-      hz: degreeToHz(0, 3),
-      toHz: degreeToHz(0, 5),
+      hz: keyHz(key, 0, 3),
+      toHz: keyHz(key, 0, 5),
       glide: 0.2,
       gain: 0.1,
       attack: 0.01,
@@ -370,11 +371,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 1000, toHz: 6000, glide: 0.25, q: 1.2 },
     });
   },
-  gameWon: (out, at) => {
+  gameWon: (out, at, _variant, key) => {
     [0, 4, 7, 12].forEach((semitones, index) => {
       playTone(out, at + index * 0.15, {
         wave: 'triangle',
-        hz: degreeToHz(0, 4) * 2 ** (semitones / 12),
+        hz: keyHz(key, 0, 4) * 2 ** (semitones / 12),
         gain: 0.14,
         attack: 0.01,
         hold: 0.2,
@@ -382,12 +383,12 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  gameLost: (out, at) => {
+  gameLost: (out, at, _variant, key) => {
     [4, 2, 1, 0].forEach((degree, index) => {
       playTone(out, at + index * 0.3, {
         wave: 'triangle',
-        hz: degreeToHz(degree, 3),
-        toHz: degreeToHz(degree, 3) * 0.94,
+        hz: keyHz(key, degree, 3),
+        toHz: keyHz(key, degree, 3) * 0.94,
         glide: 0.3,
         gain: 0.16,
         attack: 0.01,
@@ -406,11 +407,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 500, toHz: 2400, glide: 0.2, q: 0.9 },
     });
   },
-  weaponSpark: (out, at) => {
+  weaponSpark: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(4, 6),
-      toHz: degreeToHz(4, 6) * 1.5,
+      hz: keyHz(key, 4, 6),
+      toHz: keyHz(key, 4, 6) * 1.5,
       glide: 0.04,
       gain: 0.12,
       attack: 0.001,
@@ -434,11 +435,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 1700, toHz: 3300, glide: 0.2, q: 6 },
     });
   },
-  weaponDiabolo: (out, at) => {
+  weaponDiabolo: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(0, 4),
-      toHz: degreeToHz(4, 4),
+      hz: keyHz(key, 0, 4),
+      toHz: keyHz(key, 4, 4),
       glide: 0.13,
       gain: 0.15,
       attack: 0.005,
@@ -447,8 +448,8 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
     });
     playTone(out, at + 0.14, {
       wave: 'triangle',
-      hz: degreeToHz(4, 4),
-      toHz: degreeToHz(1, 4),
+      hz: keyHz(key, 4, 4),
+      toHz: keyHz(key, 1, 4),
       glide: 0.14,
       gain: 0.15,
       attack: 0.005,
@@ -456,11 +457,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.06,
     });
   },
-  weaponFrisbee: (out, at) => {
+  weaponFrisbee: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(0, 5),
-      toHz: degreeToHz(5, 5),
+      hz: keyHz(key, 0, 5),
+      toHz: keyHz(key, 5, 5),
       glide: 0.24,
       gain: 0.13,
       attack: 0.01,
@@ -469,8 +470,8 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       vibrato: { hz: 9, cents: 25, delay: 0.05 },
     });
   },
-  weaponPlate: (out, at) => {
-    const root = degreeToHz(3, 5);
+  weaponPlate: (out, at, _variant, key) => {
+    const root = keyHz(key, 3, 5);
     [1, 2.76, 5.4].forEach((ratio, index) => {
       playTone(out, at, {
         wave: 'sine',
@@ -482,11 +483,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  weaponTotem: (out, at) => {
+  weaponTotem: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(4, 1),
-      toHz: degreeToHz(4, 0),
+      hz: keyHz(key, 4, 1),
+      toHz: keyHz(key, 4, 0),
       glide: 0.22,
       gain: 0.5,
       attack: 0.003,
@@ -501,10 +502,10 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 350 },
     });
   },
-  weaponFans: (out, at, variant) => {
+  weaponFans: (out, at, variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(FANS_DEGREES[variant % FANS_DEGREES.length] ?? 0, 5),
+      hz: keyHz(key, FANS_DEGREES[variant % FANS_DEGREES.length] ?? 0, 5),
       gain: 0.1,
       attack: 0.002,
       hold: 0.01,
@@ -519,11 +520,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 2600, q: 1.2 },
     });
   },
-  weaponRibbon: (out, at) => {
+  weaponRibbon: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(0, 6),
-      toHz: degreeToHz(4, 7),
+      hz: keyHz(key, 0, 6),
+      toHz: keyHz(key, 4, 7),
       glide: 0.26,
       gain: 0.15,
       attack: 0.01,
@@ -532,11 +533,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       vibrato: { hz: 8, cents: 30, delay: 0.04 },
     });
   },
-  weaponGained: (out, at) => {
+  weaponGained: (out, at, _variant, key) => {
     [0, 3, 5].forEach((degree) => {
       playTone(out, at, {
         wave: 'triangle',
-        hz: degreeToHz(degree, 4),
+        hz: keyHz(key, degree, 4),
         gain: 0.11,
         attack: 0.004,
         hold: 0.08,
@@ -544,11 +545,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  weaponEvolved: (out, at) => {
+  weaponEvolved: (out, at, _variant, key) => {
     [0, 3, 5, 7].forEach((degree, index) => {
       playTone(out, at + index * 0.04, {
         wave: 'triangle',
-        hz: degreeToHz(degree, 4),
+        hz: keyHz(key, degree, 4),
         gain: 0.1,
         attack: 0.004,
         hold: 0.15,
@@ -557,18 +558,18 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
     });
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(0, 5),
+      hz: keyHz(key, 0, 5),
       gain: 0.1,
       attack: 0.004,
       hold: 0.2,
       release: 0.5,
     });
   },
-  enemyYawn: (out, at) => {
+  enemyYawn: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(5, 2),
-      toHz: degreeToHz(0, 2),
+      hz: keyHz(key, 5, 2),
+      toHz: keyHz(key, 0, 2),
       glide: 0.45,
       gain: 0.2,
       attack: 0.12,
@@ -584,7 +585,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 500 },
     });
   },
-  enemySigh: (out, at) => {
+  enemySigh: (out, at, _variant, key) => {
     playNoise(out, at, {
       gain: 0.2,
       attack: 0.05,
@@ -594,8 +595,8 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
     });
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(3, 2),
-      toHz: degreeToHz(0, 2),
+      hz: keyHz(key, 3, 2),
+      toHz: keyHz(key, 0, 2),
       glide: 0.25,
       gain: 0.1,
       attack: 0.04,
@@ -604,8 +605,8 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 500 },
     });
   },
-  enemyBabble: (out, at, variant) => {
-    const hz = degreeToHz(variant % 2 === 0 ? 3 : 5, 2);
+  enemyBabble: (out, at, variant, key) => {
+    const hz = keyHz(key, variant % 2 === 0 ? 3 : 5, 2);
     playNoise(out, at, {
       gain: 0.2,
       attack: 0.002,
@@ -625,11 +626,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 500, toHz: 900, glide: 0.09, q: 3 },
     });
   },
-  enemyGrowl: (out, at) => {
+  enemyGrowl: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sawtooth',
-      hz: degreeToHz(1, 1),
-      toHz: degreeToHz(0, 1),
+      hz: keyHz(key, 1, 1),
+      toHz: keyHz(key, 0, 1),
       glide: 0.3,
       gain: 0.22,
       attack: 0.04,
@@ -639,11 +640,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       vibrato: { hz: 28, cents: 90, delay: 0 },
     });
   },
-  vibesStolen: (out, at) => {
+  vibesStolen: (out, at, _variant, key) => {
     [0, 3, 7].forEach((degree, index) => {
       playTone(out, at + index * 0.05, {
         wave: 'square',
-        hz: degreeToHz(degree, 3),
+        hz: keyHz(key, degree, 3),
         gain: 0.1,
         attack: 0.003,
         hold: 0.03,
@@ -652,11 +653,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  playerShoved: (out, at) => {
+  playerShoved: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(0, 1),
-      toHz: degreeToHz(0, 0),
+      hz: keyHz(key, 0, 1),
+      toHz: keyHz(key, 0, 0),
       glide: 0.1,
       gain: 0.3,
       attack: 0.002,
@@ -671,9 +672,9 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 500 },
     });
   },
-  bystanderHelped: (out, at) => {
+  bystanderHelped: (out, at, _variant, key) => {
     [3, 5, 7, 10].forEach((degree, index) => {
-      const hz = degreeToHz(degree, 5);
+      const hz = keyHz(key, degree, 5);
       playTone(out, at + index * 0.06, {
         wave: 'sine',
         hz,
@@ -692,11 +693,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  bystanderLost: (out, at) => {
+  bystanderLost: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(4, 4),
-      toHz: degreeToHz(2, 4),
+      hz: keyHz(key, 4, 4),
+      toHz: keyHz(key, 2, 4),
       glide: 0.3,
       gain: 0.14,
       attack: 0.02,
@@ -705,11 +706,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 1400, toHz: 600, glide: 0.4 },
     });
   },
-  volumeUp: (out, at) => {
+  volumeUp: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(0, 0),
-      toHz: degreeToHz(0, 1),
+      hz: keyHz(key, 0, 0),
+      toHz: keyHz(key, 0, 1),
       glide: 0.35,
       gain: 0.4,
       attack: 0.05,
@@ -717,7 +718,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.2,
     });
   },
-  skillCharge: (out, at) => {
+  skillCharge: (out, at, _variant, key) => {
     playNoise(out, at, {
       gain: 0.4,
       attack: 0.02,
@@ -727,8 +728,8 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
     });
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(0, 4),
-      toHz: degreeToHz(4, 4),
+      hz: keyHz(key, 0, 4),
+      toHz: keyHz(key, 4, 4),
       glide: 0.1,
       gain: 0.08,
       attack: 0.005,
@@ -736,11 +737,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.08,
     });
   },
-  skillHeal: (out, at) => {
+  skillHeal: (out, at, _variant, key) => {
     [0, 2, 4].forEach((degree, index) => {
       playTone(out, at + index * 0.03, {
         wave: 'sine',
-        hz: degreeToHz(degree, 4),
+        hz: keyHz(key, degree, 4),
         gain: 0.12,
         attack: 0.03,
         hold: 0.1,
@@ -748,11 +749,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  taunted: (out, at) => {
+  taunted: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sawtooth',
-      hz: degreeToHz(0, 1),
-      toHz: degreeToHz(1, 1),
+      hz: keyHz(key, 0, 1),
+      toHz: keyHz(key, 1, 1),
       glide: 0.3,
       gain: 0.2,
       attack: 0.03,
@@ -762,11 +763,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       vibrato: { hz: 6, cents: 25, delay: 0.1 },
     });
   },
-  playerHealed: (out, at) => {
+  playerHealed: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(5, 5),
-      toHz: degreeToHz(5, 5) * 1.35,
+      hz: keyHz(key, 5, 5),
+      toHz: keyHz(key, 5, 5) * 1.35,
       glide: 0.07,
       gain: 0.12,
       attack: 0.002,
@@ -774,11 +775,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.1,
     });
   },
-  playerDowned: (out, at) => {
+  playerDowned: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(3, 3),
-      toHz: degreeToHz(3, 2),
+      hz: keyHz(key, 3, 3),
+      toHz: keyHz(key, 3, 2),
       glide: 0.4,
       gain: 0.2,
       attack: 0.01,
@@ -794,9 +795,9 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 300 },
     });
   },
-  playerRevived: (out, at) => {
+  playerRevived: (out, at, _variant, key) => {
     [0, 4, 7].forEach((degree, index) => {
-      const hz = degreeToHz(degree, 5);
+      const hz = keyHz(key, degree, 5);
       playTone(out, at + index * 0.07, {
         wave: 'sine',
         hz,
@@ -815,31 +816,31 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  playerReviving: (out, at) => {
+  playerReviving: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(4, 5),
+      hz: keyHz(key, 4, 5),
       gain: 0.07,
       attack: 0.002,
       hold: 0.005,
       release: 0.05,
     });
   },
-  seatTaken: (out, at) => {
+  seatTaken: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(4, 5),
+      hz: keyHz(key, 4, 5),
       gain: 0.14,
       attack: 0.004,
       hold: 0.04,
       release: 0.25,
     });
   },
-  seatFreed: (out, at) => {
+  seatFreed: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: degreeToHz(2, 4),
-      toHz: degreeToHz(0, 4),
+      hz: keyHz(key, 2, 4),
+      toHz: keyHz(key, 0, 4),
       glide: 0.15,
       gain: 0.12,
       attack: 0.004,
@@ -847,12 +848,12 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.25,
     });
   },
-  launch: (out, at) => {
+  launch: (out, at, _variant, key) => {
     for (const degree of [0, 4, 7]) {
       playTone(out, at, {
         wave: 'sawtooth',
-        hz: degreeToHz(degree, 3),
-        toHz: degreeToHz(degree, 5),
+        hz: keyHz(key, degree, 3),
+        toHz: keyHz(key, degree, 5),
         glide: 0.9,
         gain: 0.07,
         attack: 0.05,
@@ -881,6 +882,7 @@ export function createSfx(
   out: AudioNode,
   trapEffectOf: TrapEffectOf,
   lookups: SfxLookups = {},
+  key: MusicKey = SOIREE_OUVERTURE,
 ): Sfx {
   const limiter = createSfxLimiter(SFX_LIMITS);
   return {
@@ -888,14 +890,14 @@ export function createSfx(
       for (const event of events) {
         const name = sfxOf(event, trapEffectOf, lookups, players);
         if (name !== null && limiter.tryAcquire(name, now)) {
-          VOICES[name](out, now, 'id' in event ? event.id : 0);
+          VOICES[name](out, now, 'id' in event ? event.id : 0, key);
         }
       }
     },
     cue(cue, now) {
       const name = CUE_SFX[cue];
       if (limiter.tryAcquire(name, now)) {
-        VOICES[name](out, now, 0);
+        VOICES[name](out, now, 0, key);
       }
     },
     beginFrame() {

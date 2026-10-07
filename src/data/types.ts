@@ -276,3 +276,39 @@ export interface GameContent {
   weapons?: readonly WeaponDefinition[];
   fusions?: readonly FusionDefinition[];
 }
+
+export type MusicVoiceId =
+  'rolling-bass' | 'knock' | 'chirp' | 'zap' | 'crickets' | 'arp' | 'squelch' | 'lead' | 'oriental';
+
+// The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
+export type MusicLayer = 'bass' | 'texture' | 'arp' | 'squelch' | 'lead' | 'theme';
+
+// [sixteenth within the loop, scale degree, length in sixteenths], in ascending sixteenths.
+export type MusicNotes = readonly (readonly [step: number, degree: number, steps: number])[];
+
+export interface MusicPart {
+  voice: MusicVoiceId;
+  layer: MusicLayer;
+  loopSteps: number;
+  octave: number;
+  // The degree is added to the chord root of the bar.
+  followsChord: boolean;
+  notes: MusicNotes;
+  // Absent: in and out of the break. `light`: only in the break, `full`: never in it.
+  in?: 'full' | 'light';
+}
+
+// A background track. Every track plays at the set's tempo and follows its buildups, breaks and
+// drops; the effects and the speaker layers play in its key.
+export interface MusicTrack {
+  id: string;
+  name: string;
+  rootMidi: number;
+  scale: readonly number[];
+  // Replaces the scale while the theme plays. Chord roots keep their pitch in both scales.
+  themeScale?: readonly number[];
+  // Chord root degree of each bar, cycled.
+  chords: readonly number[];
+  kick: { fromHz: number; release: number };
+  parts: readonly MusicPart[];
+}

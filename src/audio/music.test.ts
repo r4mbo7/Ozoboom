@@ -2,16 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE } from '../shared/tempo';
 import type { SetProgress } from '../sim/state';
 import { STEP_TICKS } from './clock';
-import { HIJAZ_SEMITONES, degreeToMidi } from './scale';
-import {
-  ORIENTAL_NOTES,
-  breakCueAt,
-  dropTickOf,
-  layersFor,
-  modeOf,
-  phraseAt,
-  segmentAt,
-} from './music';
+import { breakCueAt, dropTickOf, layersFor, modeOf, phraseAt, segmentAt } from './music';
 
 describe('layersFor', () => {
   it('opens the set on kick, rolling bass and hats only', () => {
@@ -19,7 +10,7 @@ describe('layersFor', () => {
 
     expect(layers).toMatchObject({ kick: true, bass: true, hats: true, hats16: false });
     expect(layers).toMatchObject({ pad: false, texture: false, arp: false, lead: false });
-    expect(layers).toMatchObject({ clap: false, squelch: false, oriental: false });
+    expect(layers).toMatchObject({ clap: false, squelch: false, theme: false });
   });
 
   it('stacks the pad and the forest textures, then the arpeggio, then the lead, one per phrase', () => {
@@ -44,11 +35,11 @@ describe('layersFor', () => {
     expect(second.bassCutoff).toBeGreaterThan(first.bassCutoff);
   });
 
-  it('plays the oriental lead from the most intense tier, and in every break and drop', () => {
-    expect(layersFor('buildup', 0, 3).oriental).toBe(false);
-    expect(layersFor('buildup', 1, 4).oriental).toBe(true);
-    expect(layersFor('break', 0, 3).oriental).toBe(true);
-    expect(layersFor('drop', 0, 3).oriental).toBe(true);
+  it('plays the theme from the most intense tier, and in every break and drop', () => {
+    expect(layersFor('buildup', 0, 3).theme).toBe(false);
+    expect(layersFor('buildup', 1, 4).theme).toBe(true);
+    expect(layersFor('break', 0, 3).theme).toBe(true);
+    expect(layersFor('drop', 0, 3).theme).toBe(true);
   });
 
   it('empties the break down to the pad, the textures and a muffled lead', () => {
@@ -124,25 +115,6 @@ describe('breakCueAt', () => {
   it('has no cue outside a break or once the drop has started', () => {
     expect(breakCueAt(null, dropTick)).toEqual({ roll: null, cut: false });
     expect(breakCueAt(dropTick, dropTick)).toEqual({ roll: null, cut: false });
-  });
-});
-
-describe('ORIENTAL_NOTES', () => {
-  it('loops four bars of sixteenths without overlapping notes', () => {
-    const ends = ORIENTAL_NOTES.map(([step, , steps]) => step + steps);
-    const starts = [...ORIENTAL_NOTES.slice(1).map(([step]) => step), 64];
-
-    expect(ORIENTAL_NOTES[0]?.[0]).toBe(0);
-    expect(ends).toEqual(starts);
-  });
-
-  it('leans on the flat second and the major third of the hijaz mode', () => {
-    const pitchClasses = new Set(
-      ORIENTAL_NOTES.map(([, degree]) => degreeToMidi(degree, 0, HIJAZ_SEMITONES) % 12),
-    );
-
-    expect(pitchClasses).toContain(degreeToMidi(1, 0, HIJAZ_SEMITONES) % 12);
-    expect(pitchClasses).toContain(degreeToMidi(2, 0, HIJAZ_SEMITONES) % 12);
   });
 });
 

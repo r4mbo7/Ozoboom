@@ -1,3 +1,5 @@
+import { SOIREE_OUVERTURE } from '../data/tracks';
+import type { MusicTrack } from '../data/types';
 import type { SimState } from '../sim/state';
 import { createAmbience, type Ambience } from './ambience';
 import { createMasterChain, type MasterChain } from './master';
@@ -6,6 +8,7 @@ import { createSfx, type Sfx, type SfxLookups, type TrapEffectOf } from './sfx';
 import type { AudioEngine, Mood } from './types';
 
 export interface AudioEngineOptions {
+  readonly track?: MusicTrack;
   readonly breakBars?: (tier: number) => number;
   readonly trapEffectOf?: TrapEffectOf;
   readonly sfxLookups?: SfxLookups;
@@ -60,6 +63,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const breakBars = options.breakBars ?? (() => DEFAULT_BREAK_BARS);
   const trapEffectOf = options.trapEffectOf ?? ((kind: string) => kind);
   const repeat = options.repeat ?? everyPump;
+  const track = options.track ?? SOIREE_OUVERTURE;
   let running: Running | null = null;
   let starting: Promise<void> | null = null;
   let muted = false;
@@ -125,10 +129,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       context,
       master,
       music: createMusic(master.music, {
+        track,
         breakBars,
         onKickScheduled: options.onKickScheduled,
       }),
-      sfx: createSfx(master.sfx, trapEffectOf, options.sfxLookups),
+      sfx: createSfx(master.sfx, trapEffectOf, options.sfxLookups, track),
       ambience: createAmbience(master.music),
     };
     applyMood();

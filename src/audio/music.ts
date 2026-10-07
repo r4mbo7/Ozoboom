@@ -13,15 +13,8 @@ import {
   type Anchor,
 } from './clock';
 import { CROSSFADE_SECONDS, createFader } from './fade';
-import {
-  HIJAZ_SEMITONES,
-  ROOT_MIDI,
-  SCALE_SEMITONES,
-  SUNRISE_SEMITONES,
-  chordRootOfBar,
-  degreeToHz,
-  midiToHz,
-} from './scale';
+import type { MusicLayer, MusicPart, MusicTrack } from '../data/types';
+import { SUNRISE_SEMITONES, chordRootOfBar, keyHz, midiToHz, type MusicKey } from './scale';
 import {
   SPEAKER_LAYER_IDS,
   SPEAKER_VOICES,
@@ -31,6 +24,7 @@ import {
   type SpeakerLayerId,
 } from './speaker-layers';
 import { playNoise, playTone } from './synth';
+import { MUSIC_VOICES } from './voices';
 
 export type MusicMode = 'playing' | 'won' | 'lost';
 
@@ -45,7 +39,7 @@ export interface Layers {
   arp: boolean;
   lead: boolean;
   squelch: boolean;
-  oriental: boolean;
+  theme: boolean;
   speakers: readonly SpeakerLayerId[];
   leadCutoff: number;
   bassCutoff: number;
@@ -57,6 +51,7 @@ export interface BreakCue {
 }
 
 export interface MusicOptions {
+  track: MusicTrack;
   breakBars: (tier: number) => number;
   onKickScheduled: ((tick: number, time: number) => void) | undefined;
 }
@@ -79,10 +74,7 @@ interface Bus {
   echoReturn: GainNode;
 }
 
-type Note = readonly [step: number, degree: number, steps: number];
-type Texture = 'knock' | 'chirp' | 'zap';
-
-export const ORIENTAL_TIER = 1;
+export const THEME_TIER = 1;
 export const CUT_TICKS = TICKS_PER_BEAT;
 export const ROLL_BARS = 3;
 
@@ -102,80 +94,6 @@ const ECHO_FEEDBACK = 0.38;
 const ECHO_RETURN = 0.32;
 const CRASH_EVERY_BARS = 8;
 const NO_CUE: BreakCue = { roll: null, cut: false };
-const BASS_ACCENTS = [0.8, 1, 1.3];
-const ARP_DEGREES = [0, 2, 4, 7, 9, 7, 4, 2];
-const LEAD_NOTES: readonly Note[] = [
-  [0, 7, 2],
-  [3, 8, 1],
-  [4, 7, 2],
-  [6, 4, 2],
-  [10, 5, 2],
-  [12, 4, 4],
-  [16, 7, 2],
-  [19, 8, 1],
-  [20, 9, 2],
-  [22, 8, 2],
-  [26, 7, 2],
-  [28, 11, 4],
-];
-export const ORIENTAL_NOTES: readonly Note[] = [
-  [0, 7, 3],
-  [3, 8, 1],
-  [4, 9, 2],
-  [6, 8, 2],
-  [8, 7, 4],
-  [12, 6, 2],
-  [14, 7, 2],
-  [16, 8, 3],
-  [19, 9, 1],
-  [20, 10, 4],
-  [24, 9, 2],
-  [26, 8, 2],
-  [28, 9, 4],
-  [32, 11, 2],
-  [34, 10, 1],
-  [35, 9, 1],
-  [36, 8, 1],
-  [37, 9, 1],
-  [38, 8, 1],
-  [39, 7, 1],
-  [40, 7, 6],
-  [46, 9, 2],
-  [48, 10, 2],
-  [50, 9, 1],
-  [51, 8, 1],
-  [52, 6, 4],
-  [56, 8, 2],
-  [58, 9, 2],
-  [60, 8, 2],
-  [62, 7, 2],
-];
-const ORIENTAL_VOICES: readonly (readonly [detune: number, octave: number, gain: number])[] = [
-  [-14, 2, 0.04],
-  [0, 2, 0.04],
-  [14, 2, 0.04],
-  [0, 3, 0.018],
-];
-const TEXTURES: ReadonlyMap<number, Texture> = new Map([
-  [3, 'knock'],
-  [7, 'chirp'],
-  [10, 'knock'],
-  [15, 'zap'],
-  [19, 'knock'],
-  [23, 'chirp'],
-  [26, 'knock'],
-  [29, 'knock'],
-  [31, 'zap'],
-]);
-const SQUELCH_DEGREES: ReadonlyMap<number, number> = new Map([
-  [2, 0],
-  [3, 7],
-  [6, 1],
-  [10, 0],
-  [11, 4],
-  [14, 7],
-]);
-
 export function modeOf(status: GameStatus): MusicMode {
   if (status === 'won' || status === 'lost') {
     return status;
@@ -242,7 +160,7 @@ function segmentLayers(
         arp: phrase >= 2,
         lead: phrase >= 3 || tier >= 1,
         squelch: tier >= 1,
-        oriental: tier >= ORIENTAL_TIER,
+        theme: tier >= THEME_TIER,
         leadCutoff: 900 + 700 * tier,
         bassCutoff: 700 + 150 * tier,
       };
@@ -258,7 +176,7 @@ function segmentLayers(
         arp: false,
         lead: true,
         squelch: false,
-        oriental: true,
+        theme: true,
         leadCutoff: 1100,
         bassCutoff: 0,
       };
@@ -274,27 +192,44 @@ function segmentLayers(
         arp: true,
         lead: true,
         squelch: true,
-        oriental: true,
+        theme: true,
         leadCutoff: 3200 + 800 * tier,
         bassCutoff: 1000 + 150 * tier,
       };
   }
 }
 
-function scaleOf(layers: Layers): readonly number[] {
-  return layers.oriental ? HIJAZ_SEMITONES : SCALE_SEMITONES;
+function keyOf(track: MusicTrack, layers: Layers): MusicKey {
+  return layers.theme && track.themeScale !== undefined
+    ? { rootMidi: track.rootMidi, scale: track.themeScale }
+    : track;
 }
 
-function kick(out: AudioNode, at: number) {
+function isOn(layers: Layers, layer: MusicLayer): boolean {
+  switch (layer) {
+    case 'lead':
+      return layers.lead && !layers.theme;
+    case 'theme':
+      return layers.lead && layers.theme;
+    default:
+      return layers[layer];
+  }
+}
+
+function partHz(part: MusicPart, degree: number, chord: number, key: MusicKey): number {
+  return keyHz(key, part.followsChord ? chord + degree : degree, part.octave);
+}
+
+function kick(out: AudioNode, at: number, track: MusicTrack) {
   playTone(out, at, {
     wave: 'sine',
-    hz: 320,
-    toHz: degreeToHz(0, 0),
+    hz: track.kick.fromHz,
+    toHz: keyHz(track, 0, 0),
     glide: 0.045,
     gain: 1,
     attack: 0.0005,
     hold: 0.04,
-    release: 0.055,
+    release: track.kick.release,
   });
   playNoise(out, at, {
     gain: 0.14,
@@ -302,25 +237,6 @@ function kick(out: AudioNode, at: number) {
     hold: 0.002,
     release: 0.01,
     filter: { type: 'highpass', hz: 2500 },
-  });
-}
-
-function bass(out: AudioNode, at: number, chord: number, position: number, cutoff: number) {
-  const accented = cutoff * (BASS_ACCENTS[position - 1] ?? 1);
-  const envelope = { attack: 0.002, hold: SIXTEENTH * 0.5, release: SIXTEENTH * 0.25 };
-  playTone(out, at, {
-    ...envelope,
-    wave: 'sawtooth',
-    hz: degreeToHz(chord, 0),
-    gain: 0.42,
-    filter: { type: 'lowpass', hz: accented, toHz: 140, glide: SIXTEENTH * 0.55, q: 6 },
-  });
-  playTone(out, at, {
-    ...envelope,
-    wave: 'square',
-    hz: degreeToHz(chord, 1),
-    gain: 0.06,
-    filter: { type: 'lowpass', hz: accented * 1.4, toHz: 220, glide: SIXTEENTH * 0.45, q: 3 },
   });
 }
 
@@ -357,7 +273,7 @@ function crash(out: AudioNode, at: number, gain: number) {
   });
 }
 
-function snare(out: AudioNode, at: number, progress: number) {
+function snare(out: AudioNode, at: number, progress: number, key: MusicKey) {
   playNoise(out, at, {
     gain: 0.04 + 0.1 * progress,
     attack: 0.001,
@@ -367,198 +283,14 @@ function snare(out: AudioNode, at: number, progress: number) {
   });
   playTone(out, at, {
     wave: 'triangle',
-    hz: degreeToHz(3, 2),
-    toHz: degreeToHz(0, 2),
+    hz: keyHz(key, 3, 2),
+    toHz: keyHz(key, 0, 2),
     glide: 0.04,
     gain: 0.03 + 0.06 * progress,
     attack: 0.001,
     hold: 0.005,
     release: 0.05,
   });
-}
-
-function knock(out: AudioNode, at: number, pan: number) {
-  const hz = degreeToHz(4, 3);
-  playTone(out, at, {
-    wave: 'triangle',
-    hz,
-    toHz: hz * 0.85,
-    glide: 0.03,
-    gain: 0.06,
-    attack: 0.001,
-    hold: 0.003,
-    release: 0.05,
-    pan,
-  });
-  playNoise(out, at, {
-    gain: 0.12,
-    attack: 0.001,
-    hold: 0.002,
-    release: 0.02,
-    pan,
-    filter: { type: 'bandpass', hz: 1800, q: 8 },
-  });
-}
-
-function chirp(out: AudioNode, at: number, pan: number) {
-  for (const offset of [0, 0.07]) {
-    playTone(out, at + offset, {
-      wave: 'sine',
-      hz: 2600,
-      toHz: 4400,
-      glide: 0.04,
-      gain: 0.02,
-      attack: 0.004,
-      hold: 0.02,
-      release: 0.03,
-      pan,
-    });
-  }
-}
-
-function zap(out: AudioNode, at: number, pan: number) {
-  playTone(out, at, {
-    wave: 'sine',
-    hz: 2800,
-    toHz: 180,
-    glide: 0.07,
-    gain: 0.04,
-    attack: 0.001,
-    hold: 0.03,
-    release: 0.05,
-    pan,
-  });
-}
-
-function crickets(out: AudioNode, at: number, pan: number) {
-  for (let pulse = 0; pulse < 4; pulse += 1) {
-    playNoise(out, at + pulse * 0.035, {
-      gain: 0.15,
-      attack: 0.002,
-      hold: 0.008,
-      release: 0.012,
-      pan,
-      filter: { type: 'bandpass', hz: 4800, q: 12 },
-    });
-  }
-}
-
-function texture(out: AudioNode, at: number, position: number, sparse: boolean) {
-  const kind = TEXTURES.get(position);
-  const pan = position % 2 === 0 ? -0.6 : 0.6;
-  if (sparse) {
-    if (kind === 'chirp') {
-      chirp(out, at, pan);
-    } else if (position % 8 === 4) {
-      crickets(out, at, -pan);
-    }
-    return;
-  }
-  if (kind === 'knock') {
-    knock(out, at, pan * 0.6);
-  } else if (kind === 'chirp') {
-    chirp(out, at, pan);
-  } else if (kind === 'zap') {
-    zap(out, at, -pan);
-  }
-}
-
-function squelch(
-  out: AudioNode,
-  at: number,
-  chord: number,
-  step: number,
-  scale: readonly number[],
-) {
-  const degree = SQUELCH_DEGREES.get((step % TICKS_PER_BAR) / STEP_TICKS);
-  if (degree === undefined) {
-    return;
-  }
-  const sweep = 0.5 - 0.5 * Math.cos((2 * Math.PI * step) / (8 * TICKS_PER_BAR));
-  const cutoff = 500 + 2200 * sweep;
-  playTone(out, at, {
-    wave: 'sawtooth',
-    hz: degreeToHz(chord + degree, 2, scale),
-    gain: 0.05,
-    attack: 0.002,
-    hold: SIXTEENTH * 0.6,
-    release: SIXTEENTH * 0.3,
-    filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.35, glide: SIXTEENTH * 0.8, q: 14 },
-  });
-}
-
-function arp(
-  out: AudioNode,
-  at: number,
-  chord: number,
-  sixteenth: number,
-  scale: readonly number[],
-) {
-  playTone(out, at, {
-    wave: 'square',
-    hz: degreeToHz(chord + (ARP_DEGREES[sixteenth % ARP_DEGREES.length] ?? 0), 2, scale),
-    gain: 0.045,
-    attack: 0.003,
-    hold: 0.03,
-    release: 0.06,
-    pan: sixteenth % 2 === 0 ? -0.3 : 0.3,
-    filter: { type: 'lowpass', hz: 2500, q: 2 },
-  });
-}
-
-function lead(out: AudioNode, at: number, position: number, cutoff: number, until: number) {
-  const note = LEAD_NOTES.find(([step]) => step === position);
-  if (note === undefined) {
-    return;
-  }
-  const [, degree, steps] = note;
-  for (const detune of [-8, 8]) {
-    playTone(out, at, {
-      wave: 'sawtooth',
-      hz: degreeToHz(degree, 3),
-      detune,
-      gain: 0.04,
-      attack: 0.01,
-      hold: Math.max(0, Math.min(steps * SIXTEENTH * 0.8, until - at - 0.08)),
-      release: 0.08,
-      filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.4, glide: steps * SIXTEENTH, q: 7 },
-    });
-  }
-}
-
-function orientalLead(
-  out: AudioNode,
-  at: number,
-  position: number,
-  cutoff: number,
-  level: number,
-  until: number,
-) {
-  const index = ORIENTAL_NOTES.findIndex(([step]) => step === position);
-  const note = ORIENTAL_NOTES[index];
-  const previous = ORIENTAL_NOTES[(index + ORIENTAL_NOTES.length - 1) % ORIENTAL_NOTES.length];
-  if (note === undefined || previous === undefined) {
-    return;
-  }
-  const [, degree, steps] = note;
-  const long = steps >= 4;
-  const release = long ? 0.16 : 0.07;
-  const hold = Math.max(0, Math.min(steps * SIXTEENTH * 0.85, until - at - release));
-  for (const [detune, octave, gain] of ORIENTAL_VOICES) {
-    playTone(out, at, {
-      wave: 'sawtooth',
-      hz: degreeToHz(previous[1], octave, HIJAZ_SEMITONES),
-      toHz: degreeToHz(degree, octave, HIJAZ_SEMITONES),
-      glide: 0.04,
-      detune,
-      gain: gain * level,
-      attack: 0.008,
-      hold,
-      release,
-      ...(long ? { vibrato: { hz: 5.5, cents: 22, delay: 0.14 } } : {}),
-      filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.55, glide: steps * SIXTEENTH, q: 3 },
-    });
-  }
 }
 
 function pad(
@@ -568,13 +300,13 @@ function pad(
   seconds: number,
   attack: number,
   release: number,
-  scale: readonly number[],
+  key: MusicKey,
 ) {
   for (const offset of [0, 2, 4]) {
     for (const detune of [-10, 10]) {
       playTone(out, at, {
         wave: 'sawtooth',
-        hz: degreeToHz(chord + offset, 2, scale),
+        hz: keyHz(key, chord + offset, 2),
         detune,
         gain: 0.025,
         attack: Math.min(attack, seconds),
@@ -587,7 +319,7 @@ function pad(
   }
 }
 
-function riser(out: AudioNode, from: number, until: number, progress: number) {
+function riser(out: AudioNode, from: number, until: number, progress: number, key: MusicKey) {
   const seconds = until - from;
   const done = Math.min(1, Math.max(0, progress));
   playNoise(out, from, {
@@ -605,8 +337,8 @@ function riser(out: AudioNode, from: number, until: number, progress: number) {
   });
   playTone(out, from, {
     wave: 'sawtooth',
-    hz: degreeToHz(0, 2) * 4 ** done,
-    toHz: degreeToHz(0, 4),
+    hz: keyHz(key, 0, 2) * 4 ** done,
+    toHz: keyHz(key, 0, 4),
     glide: seconds,
     gain: 0.03,
     attack: seconds,
@@ -648,12 +380,12 @@ function impact(out: AudioNode, at: number) {
   crash(out, at, 0.2);
 }
 
-function sunrise(out: AudioNode, at: number) {
+function sunrise(out: AudioNode, at: number, key: MusicKey) {
   for (const semitones of SUNRISE_SEMITONES) {
     for (const detune of [-7, 7]) {
       playTone(out, at, {
         wave: 'triangle',
-        hz: midiToHz(ROOT_MIDI + 24 + semitones),
+        hz: midiToHz(key.rootMidi + 24 + semitones),
         detune,
         gain: 0.035,
         attack: SUNRISE_ATTACK,
@@ -665,9 +397,9 @@ function sunrise(out: AudioNode, at: number) {
   }
 }
 
-function powerDown(out: AudioNode, at: number) {
+function powerDown(out: AudioNode, at: number, key: MusicKey) {
   for (const degree of [0, 4]) {
-    const hz = degreeToHz(degree, 2);
+    const hz = keyHz(key, degree, 2);
     playTone(out, at, {
       wave: 'sawtooth',
       hz,
@@ -683,6 +415,7 @@ function powerDown(out: AudioNode, at: number) {
 }
 
 export function createMusic(out: AudioNode, options: MusicOptions): Music {
+  const { track } = options;
   const context = out.context;
   const level = context.createGain();
   const fader = createFader(level.gain, context, 1);
@@ -754,7 +487,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       bus.input.frequency.exponentialRampToValueAtTime(60, at + EXTINCTION_SECONDS);
     }
     retire(bus, EXTINCTION_SECONDS);
-    powerDown(openBus().input, at);
+    powerDown(openBus().input, at, track);
   }
 
   function cutTime(clock: Anchor): number {
@@ -772,18 +505,18 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       pad(
         target.input,
         from,
-        chordRootOfBar(bar),
+        chordRootOfBar(track.chords, bar),
         end - from,
         CUT_SECONDS,
         release,
-        scaleOf(layers),
+        keyOf(track, layers),
       );
     }
     if (dropTick !== null) {
       const start = tickToTime(clock, set.segmentStartTick);
       const cut = cutTime(clock);
       if (cut - from > SIXTEENTH) {
-        riser(target.input, from, cut, (from - start) / (cut - start));
+        riser(target.input, from, cut, (from - start) / (cut - start), track);
       }
     }
   }
@@ -836,18 +569,16 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       ...entries.keys(),
       ...plugging,
     ]);
-    const scale = scaleOf(layers);
+    const key = keyOf(track, layers);
     const sixteenth = (step % TICKS_PER_BAR) / STEP_TICKS;
     const inBeat = sixteenth % 4;
     const bar = barOfTick(step);
-    const chord = chordRootOfBar(bar);
-    const until = current === 'break' ? cutTime(clock) : Infinity;
+    const chord = chordRootOfBar(track.chords, bar);
+    const light = current === 'break';
+    const until = light ? cutTime(clock) : Infinity;
     if (inBeat === 0 && layers.kick) {
-      kick(input, at);
+      kick(input, at, track);
       options.onKickScheduled?.(step, at);
-    }
-    if (inBeat !== 0 && layers.bass) {
-      bass(input, at, chord, inBeat, layers.bassCutoff);
     }
     if (layers.hats && inBeat === 2) {
       hat(input, at, true, 0);
@@ -866,24 +597,34 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         const progress = 1 - (left - CUT_TICKS) / (ROLL_BARS * TICKS_PER_BAR - CUT_TICKS);
         const hits = Math.max(1, STEP_TICKS / cue.roll);
         for (let hit = 0; hit < hits; hit += 1) {
-          snare(input, at + (hit * SIXTEENTH) / hits, progress);
+          snare(input, at + (hit * SIXTEENTH) / hits, progress, track);
         }
       }
     }
-    if (layers.texture) {
-      texture(input, at, sixteenth + 16 * (bar % 2), current === 'break');
-    }
-    if (layers.arp) {
-      arp(input, at, chord, sixteenth, scale);
-    }
-    if (layers.squelch) {
-      squelch(input, at, chord, step, scale);
-    }
-    if (layers.lead && layers.oriental) {
-      const level = current === 'break' ? 0.45 : 1;
-      orientalLead(target.lead, at, sixteenth + 16 * (bar % 4), layers.leadCutoff, level, until);
-    } else if (layers.lead) {
-      lead(input, at, sixteenth + 16 * (bar % 2), layers.leadCutoff, until);
+    for (const part of track.parts) {
+      if (!isOn(layers, part.layer) || (part.in !== undefined && (part.in === 'light') !== light)) {
+        continue;
+      }
+      const position = (sixteenth + 16 * bar) % part.loopSteps;
+      const index = part.notes.findIndex(([noteStep]) => noteStep === position);
+      const note = part.notes[index];
+      const previous = part.notes[(index + part.notes.length - 1) % part.notes.length];
+      if (note === undefined || previous === undefined) {
+        continue;
+      }
+      MUSIC_VOICES[part.voice]({
+        out: input,
+        send: target.lead,
+        at,
+        step,
+        position,
+        hz: partHz(part, note[1], chord, key),
+        fromHz: partHz(part, previous[1], chord, key),
+        steps: note[2],
+        cutoff: part.layer === 'bass' ? layers.bassCutoff : layers.leadCutoff,
+        light,
+        until,
+      });
     }
     for (const id of layers.speakers) {
       SPEAKER_VOICES[id]({
@@ -892,17 +633,17 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         bar,
         sixteenth,
         chord,
-        scale,
+        key,
         kick: layers.kick,
-        light: current === 'break',
-        ...presenceAt(step, entries.get(id) ?? null, current === 'break'),
+        light,
+        ...presenceAt(step, entries.get(id) ?? null, light),
       });
     }
     if (layers.pad && sixteenth === 0) {
       const barEnd = tickToTime(clock, (bar + 1) * TICKS_PER_BAR);
       const end = Math.min(barEnd, until);
       const release = end < barEnd ? PAD_CUT_RELEASE : PAD_RELEASE;
-      pad(input, at, chord, end - at, 0.3, release, scale);
+      pad(input, at, chord, end - at, 0.3, release, key);
     }
   }
 
@@ -916,7 +657,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         segment = null;
         if (nextMode === 'won') {
           retire(bus, WON_FADE_SECONDS);
-          sunrise(openBus().input, currentTime);
+          sunrise(openBus().input, currentTime, track);
           endsAt = currentTime + SUNRISE_ATTACK + SUNRISE_HOLD;
         } else if (nextMode === 'lost') {
           extinguish(currentTime);

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  HIJAZ_SEMITONES,
   ROOT_MIDI,
   SCALE_SEMITONES,
   SUNRISE_SEMITONES,
@@ -49,18 +48,6 @@ describe('degreeToMidi', () => {
   });
 });
 
-describe('HIJAZ_SEMITONES', () => {
-  it('raises only the third of the phrygian scale, so the roots stay the same', () => {
-    const changed = SCALE_SEMITONES.flatMap((semitones, degree) =>
-      HIJAZ_SEMITONES[degree] === semitones ? [] : [degree],
-    );
-
-    expect(changed).toEqual([2]);
-    expect(degreeToMidi(2, 0, HIJAZ_SEMITONES) - ROOT_MIDI).toBe(4);
-    expect(degreeToMidi(-1, 0, HIJAZ_SEMITONES)).toBe(degreeToMidi(-1));
-  });
-});
-
 describe('degreeToHz', () => {
   it('puts the bass root near 46 Hz', () => {
     expect(degreeToHz(0)).toBeCloseTo(46.25, 2);
@@ -69,11 +56,13 @@ describe('degreeToHz', () => {
 
 describe('chordRootOfBar', () => {
   it('cycles a four bar progression', () => {
-    expect([0, 1, 2, 3, 4, 5].map(chordRootOfBar)).toEqual([0, 1, 0, -1, 0, 1]);
+    expect([0, 1, 2, 3, 4, 5].map((bar) => chordRootOfBar([0, 1, 0, -1], bar))).toEqual([
+      0, 1, 0, -1, 0, 1,
+    ]);
   });
 
   it('rejects a fractional bar', () => {
-    expect(() => chordRootOfBar(1.5)).toThrow(RangeError);
+    expect(() => chordRootOfBar([0, 1, 0, -1], 1.5)).toThrow(RangeError);
   });
 });
 

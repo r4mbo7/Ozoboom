@@ -1,6 +1,6 @@
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import { STEP_TICKS, TICK_SECONDS } from './clock';
-import { degreeToHz } from './scale';
+import { keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 
 export const SPEAKER_LAYER_IDS = ['dome-chill', 'foret', 'sub', 'cercle-acid'] as const;
@@ -26,7 +26,7 @@ export interface VoiceContext {
   bar: number;
   sixteenth: number;
   chord: number;
-  scale: readonly number[];
+  key: MusicKey;
   kick: boolean;
   light: boolean;
   level: number;
@@ -69,13 +69,13 @@ const ACID_DEGREES: readonly number[] = [0, 0, 7, 0, 3, 0, 7, 4, 0, 0, 7, 0, 4, 
 const ACID_SLIDES: ReadonlySet<number> = new Set([3, 7, 13]);
 
 function domeChill(ctx: VoiceContext) {
-  const { out, at, bar, sixteenth, chord, scale, level, open } = ctx;
+  const { out, at, bar, sixteenth, chord, key, level, open } = ctx;
   if (sixteenth % 8 === 0) {
     for (const offset of [0, 4]) {
       for (const detune of [-9, 9]) {
         playTone(out, at, {
           wave: 'triangle',
-          hz: degreeToHz(chord + offset, 3, scale),
+          hz: keyHz(key, chord + offset, 3),
           detune,
           gain: 0.045 * level,
           attack: BAR_SECONDS * 0.2,
@@ -91,7 +91,7 @@ function domeChill(ctx: VoiceContext) {
     const degree = VOICE_DEGREES[(bar >> 1) % VOICE_DEGREES.length] ?? 0;
     playTone(out, at, {
       wave: 'sine',
-      hz: degreeToHz(chord + degree, 3, scale),
+      hz: keyHz(key, chord + degree, 3),
       gain: 0.14 * level,
       attack: 0.3,
       hold: 0.7,
@@ -104,10 +104,10 @@ function domeChill(ctx: VoiceContext) {
 }
 
 function foret(ctx: VoiceContext) {
-  const { out, at, bar, sixteenth, scale, level, open } = ctx;
+  const { out, at, bar, sixteenth, key, level, open } = ctx;
   const degree = KNOCK_DEGREES.get(sixteenth);
   if (!ctx.light && degree !== undefined) {
-    const hz = degreeToHz(degree, 4, scale);
+    const hz = keyHz(key, degree, 4);
     const pan = (bar + sixteenth) % 2 === 0 ? -0.45 : 0.45;
     playTone(out, at, {
       wave: 'sine',
@@ -152,11 +152,11 @@ function foret(ctx: VoiceContext) {
 }
 
 function sub(ctx: VoiceContext) {
-  const { out, at, sixteenth, chord, scale, level, open } = ctx;
+  const { out, at, sixteenth, chord, key, level, open } = ctx;
   if (!ctx.kick || sixteenth % 4 !== 0) {
     return;
   }
-  const hz = degreeToHz(chord, 0, scale);
+  const hz = keyHz(key, chord, 0);
   playTone(out, at, {
     wave: 'sine',
     hz,
@@ -177,7 +177,7 @@ function sub(ctx: VoiceContext) {
 }
 
 function cercleAcid(ctx: VoiceContext) {
-  const { out, at, bar, sixteenth, chord, scale, level, open, light } = ctx;
+  const { out, at, bar, sixteenth, chord, key, level, open, light } = ctx;
   if (light && sixteenth % 4 !== 2) {
     return;
   }
@@ -188,10 +188,10 @@ function cercleAcid(ctx: VoiceContext) {
   const slide = ACID_SLIDES.has(sixteenth);
   playTone(out, at, {
     wave: 'sawtooth',
-    hz: degreeToHz(chord + degree, 1, scale),
+    hz: keyHz(key, chord + degree, 1),
     ...(slide
       ? {
-          toHz: degreeToHz(chord + (ACID_DEGREES[(sixteenth + 1) % 16] ?? 0), 1, scale),
+          toHz: keyHz(key, chord + (ACID_DEGREES[(sixteenth + 1) % 16] ?? 0), 1),
           glide: SIXTEENTH * 0.9,
         }
       : {}),
