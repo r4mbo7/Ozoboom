@@ -1,4 +1,5 @@
 import '../style.css';
+import { SOIREE_OUVERTURE, TRACKS } from '../data/tracks';
 import {
   TICKS_PER_BAR,
   TICKS_PER_PHRASE,
@@ -26,6 +27,9 @@ import { SPEAKER_LAYER_IDS, type SpeakerLayerId } from './speaker-layers';
 import type { AudioEngine, Cue, Mood } from './types';
 
 const BREAK_BARS = 4;
+const TRACK =
+  TRACKS.find((track) => track.id === new URLSearchParams(location.search).get('track')) ??
+  SOIREE_OUVERTURE;
 const PLUG_TICKS = 2 * TICKS_PER_BAR;
 const MAX_TICKS_PER_FRAME = 8;
 const SAMPLE_RATE = 48_000;
@@ -402,6 +406,7 @@ async function drive(
   const kicks = new Map<number, number>();
   const pumps = new Set<() => void>();
   const engine = createAudioEngine({
+    track: TRACK,
     sfxLookups: DEV_LOOKUPS,
     createContext: () => context,
     breakBars: () => BREAK_BARS,
@@ -513,7 +518,7 @@ interface SoundsReport {
 async function renderSounds(): Promise<SoundsReport> {
   const context = new OfflineAudioContext(2, SOUNDS_SECONDS * SAMPLE_RATE, SAMPLE_RATE);
   const master = createMasterChain(context);
-  const sfx = createSfx(master.sfx, (kind) => kind, DEV_LOOKUPS);
+  const sfx = createSfx(master.sfx, (kind) => kind, DEV_LOOKUPS, TRACK);
   const players = DEV_CLASS_IDS.map((classId, id) => ({ id, classId }));
   const batch = (at: number, events: readonly SimEvent[]) => {
     sfx.beginFrame();
@@ -996,6 +1001,7 @@ root.innerHTML = `
     <header>
       <h1>Ozoboom <span>banc audio</span></h1>
       <p>Horloge de ticks factice à 29 Hz, tout le son est synthétisé.</p>
+      <p>Morceau : ${TRACKS.map((track) => (track === TRACK ? `<b>${track.name}</b>` : `<a href="?track=${track.id}">${track.name}</a>`)).join(' · ')}</p>
     </header>
     <section>
       <div class="row">
@@ -1189,6 +1195,7 @@ const kicks = new Map<number, number>();
 const arrivals = new Map<number, number>();
 
 const engine = createAudioEngine({
+  track: TRACK,
   sfxLookups: DEV_LOOKUPS,
   breakBars: () => BREAK_BARS,
   createContext: () => {
