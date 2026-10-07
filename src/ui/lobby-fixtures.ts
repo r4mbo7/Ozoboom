@@ -1,23 +1,23 @@
 import type { ClassInfo } from './class-picker';
 import type { LobbyModel, LobbySeat } from './types';
 
-// The data holds one class until the roadie and the care are written: the harness shows all three.
+// The data holds one class until the tank and the healer are written: the harness shows all three.
 export const LOBBY_CLASSES: readonly ClassInfo[] = [
   {
     id: 'mage',
-    name: 'La VJ',
+    name: 'La Luxiole',
     role: 'Balaie la foule de loin avec ses lasers. Fragile.',
     color: '#ff2bd6',
   },
   {
     id: 'tank',
-    name: 'Le roadie',
+    name: 'Le Nounours',
     role: 'Tient la ligne et attire les bad vibes. Lent.',
     color: '#ff9a3d',
   },
   {
     id: 'healer',
-    name: 'Le care',
+    name: "L'Hygie",
     role: 'Soigne, répare la scène et relève ses amis.',
     color: '#7cf2b0',
   },

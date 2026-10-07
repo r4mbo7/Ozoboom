@@ -18,7 +18,7 @@ export const UI_FIXTURE_CONTENT: GameContent = {
   classes: [
     {
       id: 'mage',
-      name: 'La VJ',
+      name: 'La Luxiole',
       role: 'Dégâts de zone à distance, fragile',
       color: '#ff2bd6',
       maxHp: 100,

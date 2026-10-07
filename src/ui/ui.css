@@ -2660,6 +2660,12 @@
     padding: 8px 6px;
   }
 
+  .ui-class__name {
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+
   .ui-hud[data-team] {
     grid-template:
       'top' auto

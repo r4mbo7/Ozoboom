@@ -4,8 +4,8 @@ import type { ClassDefinition } from './types';
 export const CLASSES: readonly ClassDefinition[] = [
   {
     id: 'mage',
-    name: 'La VJ',
-    role: 'Balaie la foule de loin avec ses lasers. Fragile.',
+    name: 'La Luxiole',
+    role: 'Balaie la foule de loin avec ses poi lumineux. Fragile.',
     color: '#ff2bd6',
     maxHp: 80,
     speed: 7.5,
@@ -31,7 +31,7 @@ export const CLASSES: readonly ClassDefinition[] = [
   },
   {
     id: 'tank',
-    name: 'Le roadie',
+    name: 'Le Nounours',
     role: 'Tient la ligne et attire les bad vibes. Lent.',
     color: '#ff9a3d',
     maxHp: 200,
@@ -60,7 +60,7 @@ export const CLASSES: readonly ClassDefinition[] = [
   },
   {
     id: 'healer',
-    name: 'Le care',
+    name: "L'Hygie",
     role: 'Soigne, répare la scène et relève ses amis.',
     color: '#7cf2b0',
     maxHp: 120,

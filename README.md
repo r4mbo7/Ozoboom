@@ -6,9 +6,9 @@ Jouer : [r4mbo7.github.io/Ozoboom](https://r4mbo7.github.io/Ozoboom/)
 
 ## État
 
-Au 2026-10-05 : la V0.2 est assemblée, il reste à la jouer à distance. Trois classes (la VJ, le roadie, le care), seul ou de 2 à 4 amis, sur un même écran ou en ligne : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
+Au 2026-10-05 : la V0.2 est assemblée, il reste à la jouer à distance. Trois classes (la Luxiole, le Nounours, l'Hygie), seul ou de 2 à 4 amis, sur un même écran ou en ligne : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
 
-![Une partie à quatre, de nuit : la VJ, le roadie, le care et une seconde VJ](docs/captures/coop-quatre-joueurs-nuit.png)
+![Une partie à quatre, de nuit : la VJ, le roadie et le care, devenus depuis la Luxiole, le Nounours et l'Hygie, et une seconde VJ](docs/captures/coop-quatre-joueurs-nuit.png)
 
 ![La partie à l'aube : la Batterie à plat au dernier drop](docs/captures/moment-3-aube.png)
 

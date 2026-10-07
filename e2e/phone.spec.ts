@@ -35,7 +35,7 @@ test.describe('a phone held sideways', () => {
 
   test('keeps the skill name and its state inside the action bar', async ({ page }) => {
     await page.goto('./?dev=bench');
-    await page.getByRole('radio', { name: 'Le roadie' }).tap();
+    await page.getByRole('radio', { name: 'Le Nounours' }).tap();
     await page.getByRole('button', { name: 'Jouer', exact: true }).tap();
     await expect(page.locator('.ui-skill__status')).toHaveText('Prête');
     await expectWholeIn(page.locator('.ui-skill__name, .ui-skill__status'), '.ui-hud__bar');

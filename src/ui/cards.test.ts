@@ -10,7 +10,7 @@ describe('cardFor', () => {
   it('shows a circus weapon with the sixteenth notes it fires on', () => {
     const card = cardFor('baton-de-feu', LEVEL_UP, fixturePlayer(), UI_FIXTURE_CONTENT);
 
-    expect(card).toMatchObject({ kind: 'weapon', rank: 'Nouveau', label: 'Agrès · La VJ' });
+    expect(card).toMatchObject({ kind: 'weapon', rank: 'Nouveau', label: 'Agrès · La Luxiole' });
     expect(card.kind === 'weapon' && card.steps).toEqual(
       Array.from({ length: 16 }, (_, step) => step % 4 === 0),
     );

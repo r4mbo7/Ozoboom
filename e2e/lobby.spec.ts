@@ -34,18 +34,18 @@ test.describe('title', () => {
 
     const picker = page.getByRole('radiogroup', { name: 'Ta classe' });
     await expect(picker.getByRole('radio')).toHaveCount(3);
-    await expect(picker.getByRole('radio', { name: 'La VJ' })).toBeChecked();
-    await picker.getByRole('radio', { name: 'Le roadie' }).click();
-    await expect(picker.getByRole('radio', { name: 'Le roadie' })).toBeChecked();
+    await expect(picker.getByRole('radio', { name: 'La Luxiole' })).toBeChecked();
+    await picker.getByRole('radio', { name: 'Le Nounours' }).click();
+    await expect(picker.getByRole('radio', { name: 'Le Nounours' })).toBeChecked();
     await expect(picker).toContainText('Tient la ligne');
     expect(lines).toContain('[ui] onChooseClass tank');
 
     await expect(picker).toHaveAttribute('aria-current', 'true');
     await tap(page, 'ArrowRight');
-    await expect(picker.getByRole('radio', { name: 'Le care' })).toBeChecked();
+    await expect(picker.getByRole('radio', { name: "L'Hygie" })).toBeChecked();
     await tap(page, 'ArrowLeft');
     await tap(page, 'ArrowLeft');
-    await expect(picker.getByRole('radio', { name: 'La VJ' })).toBeChecked();
+    await expect(picker.getByRole('radio', { name: 'La Luxiole' })).toBeChecked();
     expect(lines).toContain('[ui] onChooseClass healer');
     expect(lines).toContain('[ui] onChooseClass mage');
     expect(errors).toEqual([]);
@@ -256,7 +256,7 @@ test.describe('online lobby', () => {
     await expect(lobby.getByText('K7M2QX', { exact: true })).toBeVisible();
     await expect(lobby).toContainText('#rejoindre=K7M2QX');
     await expect(lobby.getByRole('listitem').nth(1)).toContainText('Camille');
-    await expect(lobby.getByRole('listitem').nth(1)).toContainText('Le roadie');
+    await expect(lobby.getByRole('listitem').nth(1)).toContainText('Le Nounours');
     await expect(lobby.getByRole('listitem').nth(1).getByRole('textbox')).toBeHidden();
     await expect(lobby.getByRole('button', { name: 'Lancer le set' })).toBeVisible();
 
