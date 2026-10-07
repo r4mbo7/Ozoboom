@@ -638,6 +638,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         cutoff: part.layer === 'bass' ? layers.bassCutoff : layers.leadCutoff,
         light,
         until,
+        accent: part.accents?.includes(position) ?? false,
+        slide: part.slides?.includes(position) ?? false,
+        legato: part.slides?.includes((position + 1) % part.loopSteps) ?? false,
       });
     }
     for (const id of layers.speakers) {
