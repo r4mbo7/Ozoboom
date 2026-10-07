@@ -178,8 +178,9 @@ test('a solo game never loads PeerJS, and the first online room does', async ({ 
   });
 
   await page.goto(FAST);
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
+  // A click acts at once; a key waits for a frame read, and a busy machine can drop it.
+  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible({ timeout: 30_000 });
   await page.waitForTimeout(1500);
   expect((await Promise.all(loadsLibrary)).some(Boolean)).toBe(false);
 
