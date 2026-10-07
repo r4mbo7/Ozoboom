@@ -79,7 +79,7 @@ Un lint, un test ou une instabilité qui casse se répare, même sans lien avec 
 
 - `dev` reçoit le travail, `main` les sorties et déploie sur GitHub Pages ([ADR 0008](docs/adr/0008-branche-dev-et-sorties-sur-main.md)). Pas de pull request pour les branches d'issue : elles se fusionnent en local, testées par l'agent.
 - Fusionner une branche : la réduire en un commit au-dessus de `origin/dev`, faire passer `pnpm check` et `pnpm exec playwright test`, puis `git push origin HEAD:dev` et supprimer la branche. Si `dev` a bougé entre-temps, recommencer.
-- Sortir une version, seulement à la demande de Constantin : ouvrir une pull request de `dev` vers `main`, attendre la CI verte, puis `git push origin origin/dev:main` en avance rapide, ce qui la marque fusionnée. Jamais d'autre push sur `main`.
+- Sortir une version, seulement à la demande de Constantin (skill `release`) : monter de 0.1 la version de `package.json` sur `dev` (0.9 donne 1.0), ouvrir une pull request `Sortie X.Y : ...` de `dev` vers `main`, attendre la CI verte et la revue Codex, puis `git push origin origin/dev:main` en avance rapide, ce qui la marque fusionnée. Jamais d'autre push sur `main`.
 - La CI ne tourne que sur la pull request de `dev` vers `main` et sur le push de `main`, qu'elle déploie si elle passe : un échec s'y répare aussitôt. Rien ne tourne sur `dev` : les tests locaux de l'agent sont la seule garde.
 - Messages de commit en anglais, format conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `refactor:`, `test:`), le sujet dit ce que le joueur ou le contributeur peut faire de nouveau.
 - Pas de ligne d'attribution ni de co-auteur agent dans les commits.
