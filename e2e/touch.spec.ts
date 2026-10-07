@@ -36,6 +36,10 @@ function player(page: Page) {
 test('plays a game with a finger: stick, traps and pause', async ({ page }) => {
   const errors = collectConsoleErrors(page);
   const touch = await finger(page);
+  // Chromium reads the controllers plugged into the host: one touched mid-test takes the HUD.
+  await page.addInitScript(() => {
+    navigator.getGamepads = () => [];
+  });
   await page.goto('./?dev=bench');
   await page.getByRole('button', { name: 'Jouer', exact: true }).tap();
   const pause = page.getByRole('button', { name: 'Pause' });
