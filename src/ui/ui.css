@@ -1861,14 +1861,17 @@
 }
 
 .ui-cards {
+  --card-unit: clamp(1px, 100vw / 1700, 1.25px);
+  --card-width: clamp(272px, 16vw, 440px);
+
   display: grid;
-  grid-template-columns: repeat(3, 272px);
-  gap: 24px;
-  margin: 28px 0 24px;
+  grid-template-columns: repeat(3, var(--card-width));
+  gap: calc(24 * var(--card-unit));
+  margin: calc(28 * var(--card-unit)) 0 calc(24 * var(--card-unit));
 }
 
 .ui-cards[data-count='4'] {
-  grid-template-columns: repeat(4, 272px);
+  grid-template-columns: repeat(4, var(--card-width));
 }
 
 .ui-card {
@@ -1877,11 +1880,11 @@
 
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-height: 260px;
-  padding: 22px 22px 20px;
+  gap: calc(12 * var(--card-unit));
+  min-height: calc(260 * var(--card-unit));
+  padding: calc(22 * var(--card-unit)) calc(22 * var(--card-unit)) calc(20 * var(--card-unit));
   border: 1.5px solid var(--ui-line);
-  border-radius: 36px;
+  border-radius: calc(36 * var(--card-unit));
   background: linear-gradient(
     165deg,
     color-mix(in srgb, var(--texte) 9%, var(--ui-panel)),
@@ -1940,30 +1943,30 @@
 
 .ui-card__rarity {
   margin-left: auto;
-  padding: 2px 10px;
+  padding: calc(2 * var(--card-unit)) calc(10 * var(--card-unit));
   border: 1.5px solid var(--tint);
   border-radius: 999px;
   background: color-mix(in srgb, var(--tint) 20%, transparent);
   color: var(--texte);
-  font-size: 12px;
+  font-size: calc(12 * var(--card-unit));
   letter-spacing: 0.1em;
 }
 
 .ui-card__recipe {
   color: var(--ui-mage);
-  font-size: 14px;
+  font-size: calc(14 * var(--card-unit));
   font-weight: 700;
 }
 
 .ui-card__steps {
   display: grid;
   grid-template-columns: repeat(16, minmax(0, 1fr));
-  gap: 3px;
+  gap: calc(3 * var(--card-unit));
   padding: 0;
 }
 
 .ui-card__step {
-  height: 14px;
+  height: calc(14 * var(--card-unit));
   border-radius: 4px;
   background: color-mix(in srgb, var(--texte) 12%, transparent);
 }
@@ -1998,30 +2001,30 @@
   box-shadow:
     var(--ui-focus),
     0 0 calc(32px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 30%, transparent);
-  transform: translateY(-10px);
+  transform: translateY(calc(-10 * var(--card-unit)));
 }
 
 .ui-card__family {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(8 * var(--card-unit));
   color: color-mix(in srgb, var(--family) 60%, var(--texte));
-  font-size: 13px;
+  font-size: calc(13 * var(--card-unit));
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .ui-card__glyph {
-  width: 20px;
-  height: 20px;
+  width: calc(20 * var(--card-unit));
+  height: calc(20 * var(--card-unit));
   flex: none;
   filter: drop-shadow(0 0 calc(6px * var(--ui-halo)) var(--family));
 }
 
 .ui-card__name {
   font-family: var(--font-title);
-  font-size: 22px;
+  font-size: calc(22 * var(--card-unit));
   font-weight: 700;
   line-height: 1.2;
 }
@@ -2029,31 +2032,31 @@
 .ui-card__desc {
   color: var(--ui-muted);
   text-wrap: pretty;
-  font-size: 16px;
+  font-size: calc(16 * var(--card-unit));
 }
 
 .ui-card__foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 32px;
+  min-height: calc(32 * var(--card-unit));
   margin-top: auto;
 }
 
 .ui-card__rank {
   color: var(--ui-muted);
-  font-size: 14px;
+  font-size: calc(14 * var(--card-unit));
   font-weight: 600;
 }
 
 .ui-card__cta {
   visibility: hidden;
-  padding: 6px 14px;
+  padding: calc(6 * var(--card-unit)) calc(14 * var(--card-unit));
   border-radius: 999px;
   border: 1.5px solid var(--turquoise);
   background: color-mix(in srgb, var(--turquoise) 28%, var(--sol-clair));
   color: var(--texte);
-  font-size: 14px;
+  font-size: calc(14 * var(--card-unit));
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2384,6 +2387,8 @@
 }
 
 .ui-offers__panels[data-multi] .ui-cards {
+  --card-unit: 1px;
+
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
