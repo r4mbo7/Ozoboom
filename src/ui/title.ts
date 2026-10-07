@@ -99,8 +99,10 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
 
   const hint = el('p', 'ui-hint');
 
+  const meta = el('p', 'ui-title__meta', `v${__APP_RELEASE__}`);
+
   const body = el('div', 'ui-title__body');
-  body.append(header, nav, controls, hint);
+  body.append(header, nav, controls, hint, meta);
   element.append(body);
 
   function choose(next: string): void {

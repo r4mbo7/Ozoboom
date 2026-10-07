@@ -475,6 +475,14 @@
   font-weight: 600;
 }
 
+.ui-title__meta {
+  margin-top: -16px;
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
 .ui-menu {
   display: flex;
   flex-direction: column;
@@ -518,6 +526,7 @@
       'header header' auto
       'menu controls' auto
       'hint hint' auto
+      'meta meta' auto
       / 440px 640px;
     place-content: center;
     gap: 40px 48px;
@@ -545,6 +554,12 @@
 
   .ui-title__body > .ui-hint {
     grid-area: hint;
+  }
+
+  .ui-title__meta {
+    grid-area: meta;
+    justify-self: center;
+    margin-top: -24px;
   }
 }
 
