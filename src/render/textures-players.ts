@@ -18,9 +18,11 @@ import {
   BAG_PIECES,
   POI_BALL,
   POI_ORBIT,
+  PARASOL_PIECES,
   POI_PIECES,
   REFERENCE,
   type BagParts,
+  type ParasolParts,
   type PoiParts,
 } from './textures-looks';
 
@@ -36,7 +38,8 @@ export const PLAYER_LOOKS: Readonly<Record<string, PlayerLook>> = {
 };
 
 const BAG_REACH = 30;
-const PARASOL_RADIUS = 46;
+export const PARASOL_RADIUS = 46;
+const PARASOL_REACH = 56;
 
 export interface LookTextures {
   // The object drawn whole, for the looks that do not move its parts on their own.
@@ -57,6 +60,7 @@ export interface PlayerTextures {
   readonly looks: Readonly<Record<PlayerLook, LookTextures>>;
   readonly poi: PoiParts;
   readonly bag: BagParts;
+  readonly parasol: ParasolParts;
   // The one source under every texture above, destroyed once.
   readonly source: TextureSource;
 }
@@ -175,6 +179,7 @@ const PIECES = {
   parasolShadow: softBlob(PARASOL_RADIUS - 4, PARASOL_RADIUS - 4, 1),
   ...POI_PIECES,
   ...BAG_PIECES,
+  ...PARASOL_PIECES,
 } satisfies Record<string, Piece>;
 
 // Every texture of the players is one cell of a single sheet: whatever the class of who is on
@@ -192,7 +197,7 @@ export function playerTextures(): PlayerTextures {
       parasol: {
         object: t.parasol,
         downed: t.parasolDowned,
-        extent: PARASOL_RADIUS,
+        extent: PARASOL_REACH,
         height: 2.4,
         shadow: t.parasolShadow,
       },
@@ -212,6 +217,7 @@ export function playerTextures(): PlayerTextures {
       mat: t.mat,
       mug: t.mug,
     },
+    parasol: { sneaker: t.sneaker, pompom: t.pompom },
     source,
   };
 }

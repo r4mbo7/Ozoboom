@@ -6,7 +6,7 @@ import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { shadowAt } from './ground-sun';
 import { createBagLook } from './look-bag';
-import { createObjectLook } from './look-object';
+import { createParasolLook } from './look-parasol';
 import { createPoiLook } from './look-poi';
 import { lerp } from './motion';
 import { TAU } from './paint';
@@ -74,7 +74,7 @@ export function createPlayers(ctx: RenderContext): Family {
   const makers: Readonly<Record<PlayerLook, () => Look>> = {
     poi: () => createPoiLook(bodies, textures, spawn),
     bag: () => createBagLook(bodies, textures, spawn),
-    parasol: () => createObjectLook(bodies, textures, 'parasol'),
+    parasol: () => createParasolLook(bodies, layers.glow, textures, spawn),
   };
 
   const views = new ViewPool(

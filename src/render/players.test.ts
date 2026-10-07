@@ -7,7 +7,7 @@ import type { RenderContext } from './context';
 import { createFrame } from './frame';
 import type { Layers } from './layers';
 import { createPixiPalette, writePixiPalette } from './palette';
-import { parasolAngle } from './look-object';
+import { chase } from './look-parasol';
 import { novaStretch, poiAngle, whippedBall } from './look-poi';
 import { contourAlpha, createPlayers } from './players';
 import type { NameLabel } from './textures-names';
@@ -53,6 +53,7 @@ function createContext(): { ctx: RenderContext; players: Container } {
         mat: shape(),
         mug: shape(),
       },
+      parasol: { sneaker: shape(), pompom: shape() },
       source: Texture.EMPTY.source,
     } satisfies PlayerTextures,
   };
@@ -107,11 +108,6 @@ describe('poiAngle', () => {
     expect(poiAngle(start + TICKS_PER_BAR / 4)).toBeCloseTo(TAU / 4, 9);
     expect(poiAngle(start + TICKS_PER_BAR / 2)).toBeCloseTo(TAU / 2, 9);
   });
-
-  it('keeps the parasol twice slower than the poi', () => {
-    expect(parasolAngle(TICKS_PER_BAR)).toBeCloseTo(TAU / 2, 9);
-    expect(parasolAngle(2 * TICKS_PER_BAR + 1)).toBeCloseTo(parasolAngle(1), 9);
-  });
 });
 
 describe('contourAlpha', () => {
@@ -126,6 +122,21 @@ describe('contourAlpha', () => {
       expect(Math.abs((samples[index] ?? 0) - (samples[index - 1] ?? 0))).toBeLessThan(0.12);
     }
     expect(contourAlpha(TICKS_PER_BEAT)).toBeCloseTo(contourAlpha(0), 9);
+  });
+});
+
+describe("the pompoms of l'Hygie", () => {
+  it('light up one after the other on the sixteenths, the head brightest', () => {
+    const sixteenth = TICKS_PER_BEAT / 4;
+
+    expect(chase(0, 0, false)).toBe(1);
+    expect(chase(0, 1, false)).toBeCloseTo(0.3, 9);
+    expect(chase(sixteenth, 1, false)).toBe(1);
+    expect(chase(sixteenth, 0, false)).toBeCloseTo(0.3 + 0.7 * (2 / 3), 9);
+  });
+
+  it('hold one steady glow in calm mode', () => {
+    expect(new Set([0, 1, 2, 7].map((index) => chase(5, index, true))).size).toBe(1);
   });
 });
 

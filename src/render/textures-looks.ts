@@ -213,6 +213,46 @@ export const BAG_PIECES = {
 
 export type BagParts = Readonly<Record<keyof typeof BAG_PIECES, Shape>>;
 
+// L'Hygie: a sneaker along +x, its toe forward, and a pompom with its string back along -x.
+export const POMPOM_STRING = 6;
+export const PARASOL_PIECES = {
+  sneaker: [
+    24,
+    16,
+    REFERENCE,
+    (ctx) => {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 6.2, 3.8, 0, 0, TAU);
+      ctx.fillStyle = SHADE_SOFT;
+      ctx.fill();
+      rim(ctx, 1.2);
+      ctx.beginPath();
+      ctx.ellipse(3.2, 0, 2.4, 2.8, 0, 0, TAU);
+      ctx.fillStyle = WHITE;
+      ctx.fill();
+    },
+  ],
+  pompom: [
+    32,
+    16,
+    REFERENCE,
+    (ctx) => {
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = SHADE;
+      ctx.beginPath();
+      ctx.moveTo(-POMPOM_STRING, 0);
+      ctx.lineTo(0, 0);
+      ctx.stroke();
+      circle(ctx, 4.6);
+      ctx.fillStyle = WHITE;
+      ctx.fill();
+      rim(ctx, 1.2);
+    },
+  ],
+} satisfies Record<string, Piece>;
+
+export type ParasolParts = Readonly<Record<keyof typeof PARASOL_PIECES, Shape>>;
+
 export const MANDALA_RADIUS = 116;
 
 // The flower of life the nova opens: its radius is the ring of dots, where the wave stops.
