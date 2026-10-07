@@ -152,7 +152,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       if (running === null || isRealtimeStalled(running.context)) {
         return;
       }
-      running.sfx.play(state.events, running.context.currentTime, state.players);
+      running.sfx.play(state.events, running.context.currentTime, state.players, state.core);
       if (latest === null) {
         queueMicrotask(flush);
       }

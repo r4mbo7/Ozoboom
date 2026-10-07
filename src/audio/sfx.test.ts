@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SimEvent } from '../sim/state';
+import { SOIREE_OUVERTURE } from '../data/tracks';
+import { keyHz } from './scale';
 import {
   SFX_LIMITS,
+  coreHitDegree,
   createSfx,
   createSfxLimiter,
   sfxOf,
@@ -208,11 +211,12 @@ interface FakeParam {
 
 // Records the loudest envelope of every voice that reaches the output, which is all the synth
 // needs: oscillators and noise are normalised to 1, so the envelope gain is the voice's peak.
-function recordingOutput(): { out: AudioNode; peaks: number[] } {
+function recordingOutput(): { out: AudioNode; peaks: number[]; tones: number[] } {
   const peaks: number[] = [];
-  const param = (onRamp?: (value: number) => void): FakeParam => ({
+  const tones: number[] = [];
+  const param = (onRamp?: (value: number) => void, onSet?: (value: number) => void): FakeParam => ({
     value: 0,
-    setValueAtTime: () => undefined,
+    setValueAtTime: (value) => onSet?.(value),
     linearRampToValueAtTime: (value) => onRamp?.(value),
     exponentialRampToValueAtTime: () => undefined,
   });
@@ -224,7 +228,7 @@ function recordingOutput(): { out: AudioNode; peaks: number[] } {
     createOscillator: () =>
       node({
         context,
-        frequency: param(),
+        frequency: param(undefined, (value) => tones.push(value)),
         detune: param(),
         start: () => undefined,
         stop: () => undefined,
@@ -248,7 +252,7 @@ function recordingOutput(): { out: AudioNode; peaks: number[] } {
     },
   };
   out.context = context;
-  return { out: out as AudioNode, peaks };
+  return { out: out as AudioNode, peaks, tones };
 }
 
 const everyEvent: readonly SimEvent[] = [
@@ -447,5 +451,57 @@ describe('the lobby cues', () => {
     sfx.cue(cue, 1);
 
     expect(peaks.reduce((sum, peak) => sum + peak, 0) * 0.45).toBeLessThan(0.5);
+  });
+});
+
+describe('the hit on the stage', () => {
+  const coreHit: SimEvent = { type: 'coreHit', damage: 2 };
+
+  it.each([
+    [1000, 7],
+    [0, 0],
+    [500, 4],
+    [430, 3],
+    [72, 1],
+    [71, 0],
+  ])('reads %i of 1000 life as degree %i', (hp, degree) => {
+    expect(coreHitDegree({ hp, maxHp: 1000 })).toBe(degree);
+  });
+
+  it('thuds at the degree of the life left, in octave 2 of the track key', () => {
+    const { out, tones } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups, SOIREE_OUVERTURE);
+
+    sfx.play([coreHit], 1, players, { hp: 250, maxHp: 1000 });
+
+    expect(tones).toEqual([keyHz(SOIREE_OUVERTURE, 2, 2)]);
+  });
+
+  it('thuds highest at full life and an octave lower when the stage is empty', () => {
+    const full = recordingOutput();
+    const empty = recordingOutput();
+
+    createSfx(full.out, trapEffectOf).play([coreHit], 1, [], { hp: 1000, maxHp: 1000 });
+    createSfx(empty.out, trapEffectOf).play([coreHit], 1, [], { hp: 0, maxHp: 1000 });
+
+    expect(full.tones).toEqual([keyHz(SOIREE_OUVERTURE, 7, 2)]);
+    expect(empty.tones).toEqual([keyHz(SOIREE_OUVERTURE, 0, 2)]);
+    expect(full.tones[0]).toBeCloseTo((empty.tones[0] ?? 0) * 2);
+  });
+
+  it('sounds once for a burst of hits, then waits for its limit to pass', () => {
+    const { out, tones } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf);
+    const core = { hp: 600, maxHp: 1000 };
+
+    sfx.beginFrame();
+    sfx.play([coreHit, coreHit, coreHit], 1, [], core);
+    sfx.beginFrame();
+    sfx.play([coreHit], 1 + SFX_LIMITS.coreHit.seconds / 2, [], core);
+    sfx.beginFrame();
+    sfx.play([coreHit], 1 + SFX_LIMITS.coreHit.seconds + 0.01, [], core);
+
+    expect(tones).toHaveLength(2);
+    expect(SFX_LIMITS.coreHit).toEqual({ perFrame: 1, concurrent: 1, seconds: 0.36 });
   });
 });

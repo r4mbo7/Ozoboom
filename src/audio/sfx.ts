@@ -107,6 +107,17 @@ export interface SfxPlayer {
   readonly classId: string;
 }
 
+export interface SfxCore {
+  readonly hp: number;
+  readonly maxHp: number;
+}
+
+const FULL_CORE: SfxCore = { hp: 1, maxHp: 1 };
+
+export function coreHitDegree(core: SfxCore): number {
+  return Math.round((core.hp / core.maxHp) * 7);
+}
+
 const BEAT_SECONDS = 60 / DEFAULT_BPM;
 
 export const SFX_LIMITS: Readonly<Record<SfxName, SfxLimit>> = {
@@ -289,22 +300,26 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 400 },
     });
   },
-  coreHit: (out, at, _variant, key) => {
-    for (const [offset, degree] of [
-      [0, 0],
-      [0.12, 1],
-      [0.24, 0],
-    ] as const) {
-      playTone(out, at + offset, {
-        wave: 'square',
-        hz: keyHz(key, degree, 1),
-        gain: 0.22,
-        attack: 0.004,
-        hold: 0.06,
-        release: 0.05,
-        filter: { type: 'lowpass', hz: 900, q: 3 },
-      });
-    }
+  coreHit: (out, at, degree, key) => {
+    const hz = keyHz(key, degree, 2);
+    playTone(out, at, {
+      wave: 'triangle',
+      hz,
+      toHz: hz * 0.62,
+      glide: 0.06,
+      gain: 0.38,
+      attack: 0.001,
+      hold: 0.01,
+      release: 0.09,
+      filter: { type: 'lowpass', hz: 900 },
+    });
+    playNoise(out, at, {
+      gain: 0.18,
+      attack: 0.001,
+      hold: 0.004,
+      release: 0.04,
+      filter: { type: 'bandpass', hz: 850, q: 2.5 },
+    });
   },
   trapSub: (out, at, _variant, key) => {
     playTone(out, at, {
@@ -873,7 +888,12 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
 };
 
 export interface Sfx {
-  play(events: readonly SimEvent[], now: number, players?: readonly SfxPlayer[]): void;
+  play(
+    events: readonly SimEvent[],
+    now: number,
+    players?: readonly SfxPlayer[],
+    core?: SfxCore,
+  ): void;
   cue(cue: Cue, now: number): void;
   beginFrame(): void;
   setKey(key: MusicKey): void;
@@ -888,11 +908,12 @@ export function createSfx(
   let key = initialKey;
   const limiter = createSfxLimiter(SFX_LIMITS);
   return {
-    play(events, now, players = []) {
+    play(events, now, players = [], core = FULL_CORE) {
       for (const event of events) {
         const name = sfxOf(event, trapEffectOf, lookups, players);
         if (name !== null && limiter.tryAcquire(name, now)) {
-          VOICES[name](out, now, 'id' in event ? event.id : 0, key);
+          const variant = name === 'coreHit' ? coreHitDegree(core) : 'id' in event ? event.id : 0;
+          VOICES[name](out, now, variant, key);
         }
       }
     },
