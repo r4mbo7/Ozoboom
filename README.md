@@ -22,6 +22,8 @@ Au 2026-10-05 : la V0.2 est assemblée, il reste à la jouer à distance. Trois 
 
 Au doigt, seul ou en ligne, de préférence tenu à l'horizontale. Un pouce sur l'arène fait naître un joystick sous lui ; la visée et le tir sont automatiques, sur la bad vibe la plus proche à portée. Toucher la tuile d'un piège le pose à tes pieds, la glisser sur l'arène le pose sous le doigt. La compétence se touche sur sa tuile, la pause sur le bouton ❚❚ du bandeau. Les menus se touchent. Le tactile ne prend pas de place en coop sur un même écran.
 
+Pour jouer sans les barres du navigateur, ajouter le jeu à l'écran d'accueil (Safari : Partager puis « Sur l'écran d'accueil » ; Chrome : menu puis « Installer l'application ») et le lancer depuis son icône.
+
 Les autres captures (crépuscule, sunrise, chaque écran, le banc à 300 masques, la partie à quatre) sont dans [docs/captures](docs/captures).
 
 | Jalon      | Contenu                                                                                                                                                                                                                                    | État                                        |
