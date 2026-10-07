@@ -67,8 +67,14 @@ export interface Music {
   setTrack(track: MusicTrack): void;
 }
 
+export interface Threshold {
+  below: number;
+  offAt: number;
+}
+
 interface Bus {
   input: BiquadFilterNode;
+  cutoff: number;
   output: GainNode;
   lead: GainNode;
   echoFeedback: GainNode;
@@ -78,6 +84,8 @@ interface Bus {
 export const THEME_TIER = 1;
 export const CUT_TICKS = TICKS_PER_BEAT;
 export const ROLL_BARS = 3;
+export const PULSE: Threshold = { below: 0.25, offAt: 0.27 };
+export const CHOKE: Threshold = { below: 0.1, offAt: 0.12 };
 
 const SIXTEENTH = STEP_TICKS * TICK_SECONDS;
 const CUT_SECONDS = 0.02;
@@ -96,6 +104,36 @@ const ECHO_FEEDBACK = 0.38;
 const ECHO_RETURN = 0.32;
 const CRASH_EVERY_BARS = 8;
 const NO_CUE: BreakCue = { roll: null, cut: false };
+const OPEN_HZ = 20_000;
+const CHOKED_HZ = 380;
+const CHOKE_TOP_HZ = 3000;
+const CHOKE_SMOOTHING = 0.12;
+const PULSE_GLIDE = 0.12;
+
+export function latched(on: boolean, life: number, threshold: Threshold): boolean {
+  return life < (on ? threshold.offAt : threshold.below);
+}
+
+export function pulseGain(sixteenth: number, pulse: boolean, choke: boolean): number {
+  if (!pulse || (sixteenth >= 8 && !choke)) {
+    return 0;
+  }
+  switch (sixteenth % 8) {
+    case 2:
+      return 0.55;
+    case 3:
+      return 0.4;
+    default:
+      return 0;
+  }
+}
+
+export function musicCutoff(choke: boolean, life: number): number {
+  return choke
+    ? CHOKED_HZ * (CHOKE_TOP_HZ / CHOKED_HZ) ** (Math.max(0, life) / CHOKE.below)
+    : OPEN_HZ;
+}
+
 export function modeOf(status: GameStatus): MusicMode {
   if (status === 'won' || status === 'lost') {
     return status;
@@ -239,6 +277,25 @@ function kick(out: AudioNode, at: number, track: MusicTrack) {
     hold: 0.002,
     release: 0.01,
     filter: { type: 'highpass', hz: 2500 },
+  });
+}
+
+function pulse(out: AudioNode, at: number, gain: number, track: MusicTrack) {
+  const envelope = { attack: 0.003, hold: 0.03, release: 0.14 };
+  playTone(out, at, {
+    wave: 'sine',
+    hz: keyHz(track, 0, 2),
+    toHz: keyHz(track, 0, 0),
+    glide: PULSE_GLIDE,
+    gain,
+    ...envelope,
+  });
+  playTone(out, at, {
+    wave: 'triangle',
+    hz: keyHz(track, 0, 2),
+    gain: gain * 0.22,
+    ...envelope,
+    filter: { type: 'lowpass', hz: 700 },
   });
 }
 
@@ -444,13 +501,15 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let tier = 0;
   let dropTick: number | null = null;
   let followedTick = -1;
+  let pulsing = false;
+  let choking = false;
   const entries = new Map<SpeakerLayerId, number>();
   const plugging = new Set<SpeakerLayerId>();
 
-  function openBus(): Bus {
+  function openBus(cutoff = OPEN_HZ): Bus {
     const input = context.createBiquadFilter();
     input.type = 'lowpass';
-    input.frequency.value = 20_000;
+    input.frequency.value = cutoff;
     input.Q.value = 0.7;
     const output = context.createGain();
     input.connect(output);
@@ -472,7 +531,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     echoFeedback.connect(echo);
     echoTone.connect(echoReturn);
     echoReturn.connect(input);
-    bus = { input, output, lead, echoFeedback, echoReturn };
+    bus = { input, cutoff, output, lead, echoFeedback, echoReturn };
     return bus;
   }
 
@@ -586,6 +645,10 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     ]);
     const key = keyOf(track, layers);
     const sixteenth = (step % TICKS_PER_BAR) / STEP_TICKS;
+    const thump = pulseGain(sixteenth, pulsing, choking);
+    if (thump > 0) {
+      pulse(input, at, thump, track);
+    }
     const inBeat = sixteenth % 4;
     const bar = barOfTick(step);
     const chord = chordRootOfBar(track.chords, bar);
@@ -704,10 +767,15 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       segment = set.segment;
       tier = set.tier;
       dropTick = dropTickOf(set, set.segment === 'break' ? options.breakBars(set.tier) : 0);
+      const { core } = state;
+      const life = core.maxHp > 0 ? core.hp / core.maxHp : 1;
+      pulsing = latched(pulsing, life, PULSE);
+      choking = latched(choking, life, CHOKE);
+      const cutoff = musicCutoff(choking, life);
       let target = bus;
       if (target === null || followed.resynced || entered) {
         retire(bus, CUT_SECONDS);
-        target = openBus();
+        target = openBus(cutoff);
         cursor = firstStepAtOrAfter(
           followed.resynced ? state.tick : Math.max(state.tick, timeToTick(clock, currentTime)),
         );
@@ -720,6 +788,10 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         sustain(target, state, currentTime, clock);
       }
 
+      if (cutoff !== target.cutoff) {
+        target.input.frequency.setTargetAtTime(cutoff, currentTime, CHOKE_SMOOTHING);
+        target.cutoff = cutoff;
+      }
       followSpeakers(state);
       const range = stepsToSchedule(
         clock,

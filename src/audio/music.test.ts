@@ -3,7 +3,20 @@ import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE } from '../shared/tempo
 import type { SetProgress } from '../sim/state';
 import { STEP_TICKS } from './clock';
 import { BRUME_DU_LAC, SOIREE_OUVERTURE } from '../data/tracks';
-import { breakCueAt, dropTickOf, layersFor, modeOf, padCutoff, phraseAt, segmentAt } from './music';
+import {
+  CHOKE,
+  PULSE,
+  breakCueAt,
+  dropTickOf,
+  latched,
+  layersFor,
+  modeOf,
+  musicCutoff,
+  padCutoff,
+  phraseAt,
+  pulseGain,
+  segmentAt,
+} from './music';
 
 describe('layersFor', () => {
   it('opens the set on kick, rolling bass and hats only', () => {
@@ -190,5 +203,42 @@ describe('padCutoff', () => {
     expect(cutoffs).toEqual([900, 1200, 1500, 1800]);
     expect(padCutoff(BRUME_DU_LAC, 'drop', inBreak, 68)).toBe(900);
     expect(padCutoff(SOIREE_OUVERTURE, 'break', inBreak, 67)).toBe(900);
+  });
+});
+
+describe('the scene in danger', () => {
+  const pulsedSixteenths = (life: number) => {
+    const pulse = latched(false, life, PULSE);
+    const choke = latched(false, life, CHOKE);
+    return [...Array(16).keys()].filter((sixteenth) => pulseGain(sixteenth, pulse, choke) > 0);
+  };
+
+  it('beats a pulse between two kicks below a quarter of the scene life, twice per bar below a tenth', () => {
+    expect(pulsedSixteenths(0.5)).toEqual([]);
+    expect(pulsedSixteenths(0.24)).toEqual([2, 3]);
+    expect(pulsedSixteenths(0.09)).toEqual([2, 3, 10, 11]);
+  });
+
+  it('strikes the second beat of each pulse softer than the first', () => {
+    expect(pulseGain(2, true, true)).toBe(0.55);
+    expect(pulseGain(3, true, true)).toBe(0.4);
+    expect(pulseGain(10, true, true)).toBe(0.55);
+    expect(pulseGain(11, true, true)).toBe(0.4);
+  });
+
+  it('keeps each sound until the scene climbs two points above its threshold', () => {
+    expect(latched(false, 0.25, PULSE)).toBe(false);
+    expect(latched(true, 0.26, PULSE)).toBe(true);
+    expect(latched(true, 0.27, PULSE)).toBe(false);
+    expect(latched(true, 0.11, CHOKE)).toBe(true);
+    expect(latched(true, 0.12, CHOKE)).toBe(false);
+  });
+
+  it('chokes the music filter as the scene dies below a tenth, and opens it fully once it recovers', () => {
+    expect(musicCutoff(false, 0.5)).toBe(20_000);
+    expect(musicCutoff(true, 0.1)).toBeCloseTo(3000);
+    expect(musicCutoff(true, 0.05)).toBeCloseTo(Math.sqrt(380 * 3000));
+    expect(musicCutoff(true, 0)).toBeCloseTo(380);
+    expect(musicCutoff(latched(true, 0.12, CHOKE), 0.12)).toBe(20_000);
   });
 });
