@@ -64,7 +64,7 @@ describe('createRoom as host', () => {
     expect(first.changes.length).toBeGreaterThan(0);
   });
 
-  it('refuses a different version with the host version and disconnects the peer', () => {
+  it('refuses a different version with the host version and leaves the guest to hang up', () => {
     const [h, g] = network(2) as [MemoryTransport, MemoryTransport];
     const room = host(h);
     const guest = join(g, { version: 'v0', name: 'Ana', classId: 'ranger' });
@@ -75,7 +75,7 @@ describe('createRoom as host', () => {
 
     expect(guest.refusals).toEqual([['version', V1]]);
     expect(room.seats).toHaveLength(1);
-    expect(left).toEqual(['peer-0:left']);
+    expect(left).toEqual([]);
   });
 
   it('refuses a fifth player', () => {

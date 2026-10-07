@@ -82,9 +82,9 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
     throw new RangeError('no free seat: the caller must check the room is not full');
   };
 
+  // Hanging up here could drop the refusal still in PeerJS's send buffer: the guest hangs up itself.
   const refuse = (peer: PeerId, reason: RefusalReason): void => {
     transport.send(peer, { type: 'refused', reason, version: profile.version });
-    transport.disconnect(peer);
   };
 
   const updateSeat = (peer: PeerId, change: { name?: string; classId?: string }): void => {
