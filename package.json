@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "balance": "BALANCE=1 vitest run src/sim/balance.slow.test.ts",
-    "contrast": "CONTRAST=1 playwright test e2e/contrast.spec.ts --project=chromium",
+    "e2e": "flock /tmp/ozoboom-e2e.lock playwright test",
+    "contrast": "CONTRAST=1 flock /tmp/ozoboom-e2e.lock playwright test e2e/contrast.spec.ts --project=chromium",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build"
   },
   "devDependencies": {

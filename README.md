@@ -51,7 +51,7 @@ pnpm dev       # http://localhost:5173
 pnpm check     # types, lint, format, tests, build
 ```
 
-Node 24 et pnpm (version épinglée dans `package.json`). `pnpm exec playwright test` lance les tests navigateur (`pnpm exec playwright install chromium` la première fois).
+Node 24 et pnpm (version épinglée dans `package.json`). `pnpm e2e` lance les tests navigateur (`pnpm exec playwright install chromium` la première fois).
 
 Pages de développement, une par couche : [rendu](https://r4mbo7.github.io/Ozoboom/dev/render.html), [entrées](https://r4mbo7.github.io/Ozoboom/dev/input.html), [audio](https://r4mbo7.github.io/Ozoboom/dev/audio.html), [interface](https://r4mbo7.github.io/Ozoboom/dev/ui.html) ; le jeu accepte aussi `?dev=fast` (set court et accéléré) et `?dev=bench` (300 masques sur la rive du lac, trois agrès et une enceinte branchée, coût par image dans la console et `window.ozoboom.report` ; `&players=4` pose quatre joueurs, un de chaque classe plus une VJ).
 

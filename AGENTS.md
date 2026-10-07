@@ -29,6 +29,7 @@ Une session d'agent dure 5 à 15 minutes. Le temps va au changement, pas aux pre
 - Lire le strict nécessaire : l'issue, les fichiers à changer, la section de document qu'elle cite.
 - Pendant le travail, ne lancer que les tests des fichiers touchés (`pnpm exec vitest run <fichiers>`, une seule spec Playwright si le parcours change). La suite complète ne tourne qu'une fois, à la fusion, et `pnpm check` aussi.
 - La machine est partagée avec d'autres sessions : ne tuer que ses propres processus (jamais `pkill -f playwright`), et arrêter ses serveurs (`pnpm dev`, `pnpm preview`) avant de finir.
+- Un seul agent à la fois lance la suite navigateur complète ou `pnpm contrast` : `pnpm e2e` et `pnpm contrast` attendent leur tour, donc les lancer en arrière-plan. Les tests unitaires et une spec Playwright seule n'ont pas de limite.
 - Une preuve au plus : une capture si le changement se voit, un rendu si il s'entend. Pas de matrice d'écrans, de moments ou de tailles.
 - Une issue décrit un changement qui tient dans une session. Plus grosse, on la coupe.
 
@@ -68,7 +69,7 @@ pnpm install          # dépendances (Node 24, pnpm épinglé dans package.json)
 pnpm dev              # serveur de développement
 pnpm check            # types, lint, format, tests, build : doit passer avant tout commit
 pnpm test:watch       # tests en continu
-pnpm exec playwright test   # tests navigateur, sur des ports propres à chaque checkout
+pnpm e2e              # tests navigateur, un checkout à la fois sur la machine
 pnpm contrast         # contraste de chaque écran à chaque moment (6 min), après un changement de couleur
 pnpm format           # formate tout
 ```
@@ -78,7 +79,7 @@ Un lint, un test ou une instabilité qui casse se répare, même sans lien avec 
 ## Git
 
 - `dev` reçoit le travail, `main` les sorties et déploie sur GitHub Pages ([ADR 0008](docs/adr/0008-branche-dev-et-sorties-sur-main.md)). Pas de pull request pour les branches d'issue : elles se fusionnent en local, testées par l'agent.
-- Fusionner une branche : la réduire en un commit au-dessus de `origin/dev`, faire passer `pnpm check` et `pnpm exec playwright test`, puis `git push origin HEAD:dev` et supprimer la branche. Si `dev` a bougé entre-temps, recommencer. Une branche qui ne touche ni `src/`, ni `e2e/`, ni `public/`, ni `index.html`, ni les dépendances, ni la configuration de build ou de test se fusionne sans lancer les tests.
+- Fusionner une branche : la réduire en un commit au-dessus de `origin/dev`, faire passer `pnpm check` et `pnpm e2e`, puis `git push origin HEAD:dev` et supprimer la branche. Si `dev` a bougé entre-temps, recommencer. Une branche qui ne touche ni `src/`, ni `e2e/`, ni `public/`, ni `index.html`, ni les dépendances, ni la configuration de build ou de test se fusionne sans lancer les tests.
 - Sortir une version, seulement à la demande de Constantin (skill `release`) : monter de 0.1 la version de `package.json` sur `dev` (0.9 donne 1.0), ouvrir une pull request `Sortie X.Y : ...` de `dev` vers `main`, attendre la CI verte et la revue Codex, puis `git push origin origin/dev:main` en avance rapide, ce qui la marque fusionnée. Jamais d'autre push sur `main`.
 - La CI ne tourne que sur la pull request de `dev` vers `main` et sur le push de `main`, qu'elle déploie si elle passe : un échec s'y répare aussitôt. Rien ne tourne sur `dev` : les tests locaux de l'agent sont la seule garde.
 - Messages de commit en anglais, format conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `refactor:`, `test:`), le sujet dit ce que le joueur ou le contributeur peut faire de nouveau.
