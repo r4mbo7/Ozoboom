@@ -2,7 +2,7 @@
 
 Ozoboom est un jeu web léger de survie coopérative. Des amis défendent le sound system d'un festival de psytrance contre des vagues de « bad vibes » de plus en plus puissantes, chacun avec sa classe, jusqu'au lever du soleil.
 
-Projet de loisir de Constantin, sans visée de revenu. Le but est de s'amuser à le construire et d'y jouer entre amis.
+Projet de loisir de Constantin. Le but est de s'amuser à le construire et d'y jouer entre amis. Le jeu est libre et la version navigateur reste gratuite ; une version payante sur une boutique reste possible ([ADR 0009](adr/0009-licence-gpl-et-nom-protege.md)).
 
 ## Piliers
 
@@ -17,7 +17,7 @@ Ces six piliers tranchent les débats. Quand deux options se valent, celle qui s
 
 ## Ce que le jeu n'est pas
 
-- Pas de monétisation, pas de publicité, pas de collecte de données au-delà du classement public.
+- Pas de publicité, pas de collecte de données au-delà du classement public. Rien à payer pour jouer dans le navigateur.
 - Pas de compte obligatoire. Un pseudonyme suffit pour le classement.
 - Pas de 3D, pas de monde ouvert, pas d'histoire à suivre.
 - Pas de joueur contre joueur.

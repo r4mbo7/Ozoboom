@@ -57,4 +57,4 @@ Pages de développement, une par couche : [rendu](https://r4mbo7.github.io/Ozobo
 
 ## Licence
 
-[MIT](LICENSE).
+Le code et le contenu sont sous [GPL-3.0](LICENSE) : qui redistribue le jeu, modifié ou non, publie ses sources sous la même licence. Le nom Ozoboom et son logo n'en font pas partie : une version dérivée porte un autre nom. Les polices gardent leur licence OFL ([public/fonts/](public/fonts/)). Voir l'[ADR 0009](docs/adr/0009-licence-gpl-et-nom-protege.md).
