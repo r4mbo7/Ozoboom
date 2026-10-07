@@ -87,6 +87,7 @@ const EXTINCTION_SECONDS = 1.6;
 const BUS_TAIL_SECONDS = 2;
 const RISER_LOW_HZ = 300;
 const RISER_HIGH_HZ = 7000;
+const PAD_HZ = 900;
 const PAD_RELEASE = 0.6;
 const PAD_CUT_RELEASE = 0.05;
 const ECHO_SECONDS = 3 * SIXTEENTH;
@@ -301,6 +302,7 @@ function pad(
   attack: number,
   release: number,
   key: MusicKey,
+  cutoff: number,
 ) {
   for (const offset of [0, 2, 4]) {
     for (const detune of [-10, 10]) {
@@ -313,7 +315,7 @@ function pad(
         hold: Math.max(0, seconds - attack),
         release,
         pan: detune < 0 ? -0.4 : 0.4,
-        filter: { type: 'lowpass', hz: 900 },
+        filter: { type: 'lowpass', hz: cutoff },
       });
     }
   }
@@ -395,6 +397,17 @@ function sunrise(out: AudioNode, at: number, key: MusicKey) {
       });
     }
   }
+}
+
+export function padCutoff(
+  track: MusicTrack,
+  segment: SetSegment,
+  progress: SetProgress,
+  bar: number,
+) {
+  return segment === 'break'
+    ? PAD_HZ + (track.padOpens ?? 0) * (bar - barOfTick(progress.segmentStartTick))
+    : PAD_HZ;
 }
 
 function powerDown(out: AudioNode, at: number, key: MusicKey) {
@@ -510,6 +523,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         CUT_SECONDS,
         release,
         keyOf(track, layers),
+        padCutoff(track, set.segment, set, bar),
       );
     }
     if (dropTick !== null) {
@@ -643,7 +657,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       const barEnd = tickToTime(clock, (bar + 1) * TICKS_PER_BAR);
       const end = Math.min(barEnd, until);
       const release = end < barEnd ? PAD_CUT_RELEASE : PAD_RELEASE;
-      pad(input, at, chord, end - at, 0.3, release, key);
+      pad(input, at, chord, end - at, 0.3, release, key, padCutoff(track, current, state.set, bar));
     }
   }
 

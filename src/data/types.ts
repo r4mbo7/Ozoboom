@@ -278,10 +278,25 @@ export interface GameContent {
 }
 
 export type MusicVoiceId =
-  'rolling-bass' | 'knock' | 'chirp' | 'zap' | 'crickets' | 'arp' | 'squelch' | 'lead' | 'oriental';
+  | 'rolling-bass'
+  | 'knock'
+  | 'chirp'
+  | 'zap'
+  | 'crickets'
+  | 'arp'
+  | 'squelch'
+  | 'lead'
+  | 'oriental'
+  | 'round-bass'
+  | 'ghost-bass'
+  | 'lake-pluck'
+  | 'mist-lead'
+  | 'droplet';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
-export type MusicLayer = 'bass' | 'texture' | 'arp' | 'squelch' | 'lead' | 'theme';
+// `kick` plays out of the break, `clap` only in the drop.
+export type MusicLayer =
+  'bass' | 'texture' | 'arp' | 'squelch' | 'lead' | 'theme' | 'kick' | 'clap';
 
 // [sixteenth within the loop, scale degree, length in sixteenths], in ascending sixteenths.
 export type MusicNotes = readonly (readonly [step: number, degree: number, steps: number])[];
@@ -310,5 +325,7 @@ export interface MusicTrack {
   // Chord root degree of each bar, cycled.
   chords: readonly number[];
   kick: { fromHz: number; release: number };
+  // Hz the pad's filter opens by at each bar of the break.
+  padOpens?: number;
   parts: readonly MusicPart[];
 }

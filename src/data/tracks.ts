@@ -145,4 +145,120 @@ export const SOIREE_OUVERTURE: MusicTrack = {
   ],
 };
 
-export const TRACKS: readonly MusicTrack[] = [SOIREE_OUVERTURE];
+const AEOLIAN = [0, 2, 3, 5, 7, 8, 10];
+
+const BRUME_PLUCKS: MusicNotes = [
+  [0, 7, 1],
+  [3, 9, 1],
+  [6, 11, 1],
+  [8, 7, 1],
+  [11, 9, 1],
+  [14, 12, 1],
+];
+
+const BRUME_DROPLETS: MusicNotes = [
+  [5, 14, 1],
+  [13, 18, 1],
+  [22, 16, 1],
+  [30, 21, 1],
+  [37, 14, 1],
+  [46, 18, 1],
+  [53, 16, 1],
+  [61, 11, 1],
+];
+
+function brumeDroplets(oddBars: boolean): MusicNotes {
+  return BRUME_DROPLETS.filter(([step]) => Math.floor(step / 16) % 2 === (oddBars ? 1 : 0));
+}
+
+export const BRUME_DU_LAC: MusicTrack = {
+  id: 'brume-du-lac',
+  name: 'Brume du lac',
+  rootMidi: 26,
+  scale: AEOLIAN,
+  chords: [0, 0, -2, -1],
+  kick: { fromHz: 230, release: 0.11 },
+  padOpens: 300,
+  parts: [
+    {
+      voice: 'round-bass',
+      layer: 'bass',
+      loopSteps: 4,
+      octave: 0,
+      followsChord: true,
+      notes: [[2, 0, 1]],
+    },
+    {
+      voice: 'ghost-bass',
+      layer: 'bass',
+      loopSteps: 4,
+      octave: 1,
+      followsChord: true,
+      notes: [[3, 0, 1]],
+    },
+    {
+      voice: 'lake-pluck',
+      layer: 'kick',
+      loopSteps: 16,
+      octave: 2,
+      followsChord: true,
+      notes: BRUME_PLUCKS,
+    },
+    {
+      voice: 'lake-pluck',
+      layer: 'texture',
+      loopSteps: 16,
+      octave: 2,
+      followsChord: true,
+      notes: BRUME_PLUCKS,
+      in: 'light',
+    },
+    {
+      voice: 'droplet',
+      layer: 'texture',
+      loopSteps: 64,
+      octave: 3,
+      followsChord: false,
+      notes: brumeDroplets(true),
+    },
+    {
+      voice: 'droplet',
+      layer: 'texture',
+      loopSteps: 64,
+      octave: 3,
+      followsChord: false,
+      notes: brumeDroplets(false),
+      in: 'light',
+    },
+    {
+      voice: 'droplet',
+      layer: 'clap',
+      loopSteps: 64,
+      octave: 3,
+      followsChord: false,
+      notes: brumeDroplets(false),
+    },
+    {
+      voice: 'mist-lead',
+      layer: 'clap',
+      loopSteps: 64,
+      octave: 3,
+      followsChord: false,
+      notes: [
+        [0, 11, 6],
+        [6, 12, 2],
+        [8, 11, 8],
+        [16, 9, 10],
+        [26, 8, 2],
+        [28, 9, 4],
+        [32, 11, 6],
+        [38, 12, 2],
+        [40, 14, 8],
+        [48, 12, 8],
+        [56, 11, 8],
+      ],
+    },
+  ],
+};
+
+export const TRACKS: readonly MusicTrack[] = [SOIREE_OUVERTURE, BRUME_DU_LAC];

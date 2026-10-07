@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE } from '../shared/tempo';
 import type { SetProgress } from '../sim/state';
 import { STEP_TICKS } from './clock';
-import { breakCueAt, dropTickOf, layersFor, modeOf, phraseAt, segmentAt } from './music';
+import { BRUME_DU_LAC, SOIREE_OUVERTURE } from '../data/tracks';
+import { breakCueAt, dropTickOf, layersFor, modeOf, padCutoff, phraseAt, segmentAt } from './music';
 
 describe('layersFor', () => {
   it('opens the set on kick, rolling bass and hats only', () => {
@@ -170,5 +171,24 @@ describe('foreseeing the drop', () => {
     expect(segmentAt('break', dropTick, dropTick - 3)).toBe('break');
     expect(segmentAt('break', dropTick, dropTick)).toBe('drop');
     expect(segmentAt('buildup', null, dropTick)).toBe('buildup');
+  });
+});
+
+describe('padCutoff', () => {
+  const inBreak: SetProgress = {
+    tier: 0,
+    segment: 'break',
+    phrase: 4,
+    bar: 64,
+    beat: 256,
+    segmentStartTick: 64 * TICKS_PER_BAR,
+  };
+
+  it('opens the pad bar after bar in the break of a track that asks for it', () => {
+    const cutoffs = [64, 65, 66, 67].map((bar) => padCutoff(BRUME_DU_LAC, 'break', inBreak, bar));
+
+    expect(cutoffs).toEqual([900, 1200, 1500, 1800]);
+    expect(padCutoff(BRUME_DU_LAC, 'drop', inBreak, 68)).toBe(900);
+    expect(padCutoff(SOIREE_OUVERTURE, 'break', inBreak, 67)).toBe(900);
   });
 });
