@@ -2619,9 +2619,30 @@
   }
 }
 
+@media (max-width: 960px) {
+  .ui-hud__bar {
+    gap: 8px;
+    padding-right: 14px;
+  }
+
+  .ui-hud__bar > section + section {
+    padding-left: 8px;
+  }
+
+  .ui-life__bar {
+    width: 64px;
+  }
+}
+
 @media (max-width: 720px) {
   .ui {
     --ui-gap: 10px;
+  }
+
+  .ui-class {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 6px;
   }
 
   .ui-hud[data-team] {
