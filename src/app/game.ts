@@ -11,6 +11,7 @@ import { TRACKS } from '../data/tracks';
 import { createInputHub } from '../input';
 import type { DeviceId, InputSnapshot } from '../input/intents';
 import { createRenderer } from '../render';
+import { SUN_PALETTES } from '../shared/palette';
 import { TICK_MS } from '../shared/tempo';
 import { parseJoinCode } from '../net/code';
 import { createLocalSource } from '../net/local';
@@ -43,6 +44,7 @@ import {
   type InputView,
   type Match,
 } from './match';
+import { endingMs, endingTicks } from './ending';
 import { createPauseScreen } from './pause';
 import { loadPrefs, savePref } from './prefs';
 import { createSeats, type LaunchedSeats } from './seats';
@@ -114,6 +116,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   let screen: Screen = 'title';
   let paused = false;
   let frozenAlpha = 0;
+  let endingLeft = 0;
   let match = soloMatch();
   let onlineMatch: OnlineMatch | null = null;
   let onlineLobby = false;
@@ -258,6 +261,14 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   autoFireToggle.set(prefs.autoFire);
   const autoAimToggle = createAutoAimToggle();
   autoAimToggle.set(prefs.autoAim);
+  // An opacity transition on one layer: the compositor runs the fade, the frame loop does nothing.
+  // It darkens to the end screen's night, whatever the time of the set.
+  const fade = document.createElement('div');
+  fade.className = 'defeat-fade';
+  fade.style.transitionDuration = `${String(endingMs('lost', dev.speed))}ms`;
+  fade.style.setProperty('--sol', SUN_PALETTES.nuit.sol);
+  fade.style.setProperty('--bad-vibe', SUN_PALETTES.nuit.badVibe);
+  root.append(fade);
   const pause = createPauseScreen(root, [
     {
       label: 'Reprendre',
@@ -430,6 +441,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       benchScene(match.session.state, content, match.session.state.seed, BENCH_ENEMIES);
     }
     screen = 'game';
+    // An online guest may still be fading out when the host plays again.
+    fade.classList.remove('defeat-fade--on');
     ui.showGame();
     applySound();
   }
@@ -485,6 +498,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     interruption = next;
     paused = false;
     pause.hide();
+    fade.classList.remove('defeat-fade--on');
     screen = 'end';
     ui.showNotice(next.notice, next.details);
     applySound();
@@ -593,6 +607,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function step(): false | undefined {
+    if (screen === 'ending') {
+      endingLeft -= 1;
+      if (endingLeft <= 0) {
+        openEnd();
+      }
+    }
     if (onlineMatch === null) {
       if (screen === 'title' || screen === 'lobby' || paused) {
         return;
@@ -634,15 +654,26 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     audio.update(session.state);
     const { status } = session.state;
     if (screen === 'game' && (status === 'won' || status === 'lost')) {
-      screen = 'end';
-      ui.showEnd(session.state, onlineMatch === null ? undefined : { role: onlineMatch.role });
       online.matchEnded();
+      endingLeft = endingTicks(status);
+      if (endingLeft === 0) {
+        openEnd();
+      } else {
+        screen = 'ending';
+        fade.classList.add('defeat-fade--on');
+      }
       applySound();
     }
     if (probe !== null) {
       probe.cost.sim += performance.now() - start;
     }
     return true;
+  }
+
+  function openEnd(): void {
+    screen = 'end';
+    fade.classList.remove('defeat-fade--on');
+    ui.showEnd(match.session.state, onlineMatch === null ? undefined : { role: onlineMatch.role });
   }
 
   // A hidden tab gets no animation frames: an online game keeps its place in the set by timer,
@@ -679,7 +710,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function render(alpha: number): void {
-    if (paused && onlineMatch === null) {
+    // Online, the sim stops at the end: a moving alpha would swing the last two ticks back and forth.
+    if ((paused && onlineMatch === null) || screen === 'ending') {
       alpha = frozenAlpha;
     } else {
       frozenAlpha = alpha;

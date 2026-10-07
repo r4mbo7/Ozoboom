@@ -46,3 +46,26 @@ body {
   box-shadow: var(--ui-lift);
   font-size: 18px;
 }
+
+/* The lost end screen's backdrop, without its blur, which would cost a frame of its own. */
+.defeat-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background:
+    radial-gradient(
+      ellipse 60% 50% at 50% 0%,
+      color-mix(in srgb, var(--bad-vibe) 35%, transparent),
+      transparent 70%
+    ),
+    color-mix(in srgb, var(--sol) 90%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition-property: none;
+}
+
+.defeat-fade--on {
+  opacity: 1;
+  transition-property: opacity;
+  transition-timing-function: ease-in;
+}
