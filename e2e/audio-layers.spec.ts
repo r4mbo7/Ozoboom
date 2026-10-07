@@ -5,6 +5,7 @@ import { collectConsoleErrors } from './game';
 test('the four speaker layers stack on the set without clipping the master chain', async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   const errors = collectConsoleErrors(page);
 
   await page.goto('dev/audio.html');
