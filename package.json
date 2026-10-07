@@ -12,6 +12,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "prepare": "cp .githooks/post-checkout \"$(git rev-parse --git-common-dir)/hooks/\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",

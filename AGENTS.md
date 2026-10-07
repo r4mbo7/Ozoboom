@@ -17,8 +17,8 @@ Documentation, interface du jeu et textes en français. Code, identifiants, mess
 
 ## Prendre une tâche
 
-- Les tâches sont les issues GitHub du jalon en cours. Une issue porte le label `ready` quand rien ne la bloque. Ne pas commencer une issue `blocked`.
-- Une branche par issue, fusionnée en un commit qui la ferme (`Closes #N`). Une branche reste petite et ne fait que ce que dit l'issue.
+- Les tâches sont les issues GitHub du jalon en cours. Une issue porte le label `ready` quand rien ne la bloque. Ne pas commencer une issue `blocked` ou `in-progress`.
+- Une branche par issue, nommée `issue-N-sujet` : le hook `.githooks/post-checkout` (activé par `pnpm install`) pose alors `in-progress` sur l'issue. Abandonner une issue, c'est lui retirer ce label. Une branche est fusionnée en un commit qui la ferme (`Closes #N`). Une branche reste petite et ne fait que ce que dit l'issue.
 - Les contrats partagés (voir `docs/architecture.md`) sont communs à toutes les tâches en cours. Un changement y est additif, minimal, dans sa propre branche, et annoncé dans l'issue concernée avant de fusionner.
 - Ce qui dépasse l'issue devient une nouvelle issue, jamais un `TODO` ni du périmètre ajouté au diff.
 
@@ -78,7 +78,7 @@ Un lint, un test ou une instabilité qui casse se répare, même sans lien avec 
 ## Git
 
 - `dev` reçoit le travail, `main` les sorties et déploie sur GitHub Pages ([ADR 0008](docs/adr/0008-branche-dev-et-sorties-sur-main.md)). Pas de pull request pour les branches d'issue : elles se fusionnent en local, testées par l'agent.
-- Fusionner une branche : la réduire en un commit au-dessus de `origin/dev`, faire passer `pnpm check` et `pnpm exec playwright test`, puis `git push origin HEAD:dev` et supprimer la branche. Si `dev` a bougé entre-temps, recommencer.
+- Fusionner une branche : la réduire en un commit au-dessus de `origin/dev`, faire passer `pnpm check` et `pnpm exec playwright test`, puis `git push origin HEAD:dev` et supprimer la branche. Si `dev` a bougé entre-temps, recommencer. Une branche qui ne touche ni `src/`, ni `e2e/`, ni `public/`, ni `index.html`, ni les dépendances, ni la configuration de build ou de test se fusionne sans lancer les tests.
 - Sortir une version, seulement à la demande de Constantin (skill `release`) : monter de 0.1 la version de `package.json` sur `dev` (0.9 donne 1.0), ouvrir une pull request `Sortie X.Y : ...` de `dev` vers `main`, attendre la CI verte et la revue Codex, puis `git push origin origin/dev:main` en avance rapide, ce qui la marque fusionnée. Jamais d'autre push sur `main`.
 - La CI ne tourne que sur la pull request de `dev` vers `main` et sur le push de `main`, qu'elle déploie si elle passe : un échec s'y répare aussitôt. Rien ne tourne sur `dev` : les tests locaux de l'agent sont la seule garde.
 - Messages de commit en anglais, format conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `refactor:`, `test:`), le sujet dit ce que le joueur ou le contributeur peut faire de nouveau.

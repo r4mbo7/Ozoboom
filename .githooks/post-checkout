@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Marks the open GitHub issue of a checked-out branch (issue-N-... or <type>/N-...) as in progress.
+[ "$3" = 1 ] || exit 0
+branch=$(git symbolic-ref --short -q HEAD) || exit 0
+issue=$(printf '%s\n' "$branch" | sed -nE 's#^([a-z]+/)?(issue-)?([0-9]+)-.*#\3#p')
+[ -n "$issue" ] || exit 0
+if ! state=$(gh issue view "$issue" --json state --jq .state 2>&1); then
+  echo "post-checkout: could not read issue #$issue, label in-progress not set: $state" >&2
+  exit 0
+fi
+[ "$state" = OPEN ] || exit 0
+if gh issue edit "$issue" --add-label in-progress >/dev/null; then
+  echo "post-checkout: issue #$issue labeled in-progress"
+else
+  echo "post-checkout: could not label issue #$issue in-progress" >&2
+fi
