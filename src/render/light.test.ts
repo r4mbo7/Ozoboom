@@ -1,4 +1,4 @@
-import { Container, Texture } from 'pixi.js';
+import { Container, type Sprite, Texture } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
 import { lightAt, paletteAt } from '../shared/palette';
 import type { RenderContext } from './context';
@@ -24,18 +24,29 @@ function frameAt(fraction: number): Frame {
   return frame;
 }
 
+function named(): Shape {
+  return { texture: new Texture(), radius: 32 };
+}
+
+const shape: Shape = { texture: Texture.EMPTY, radius: 32 };
+const look = { object: shape, downed: shape, extent: 40, height: 1, shadow: shape };
+const playerTextures = {
+  shoulders: named(),
+  head: shape,
+  aim: shape,
+  contour: shape,
+  looks: { poi: look, case: look, parasol: look },
+  poi: { arm: shape, ball: named(), strandRoot: shape, strandTip: shape, bead: shape },
+};
+
+function bodies(ctx: RenderContext, texture: Texture) {
+  const sprites = (ctx.layers.players.children[1]?.children ?? []) as Sprite[];
+  return sprites.filter((sprite) => sprite.texture === texture);
+}
+
 function context(): RenderContext {
-  const shape: Shape = { texture: Texture.EMPTY, radius: 32 };
-  const look = { object: shape, downed: shape, extent: 40, height: 1, shadow: shape };
-  const playerTextures = {
-    shoulders: shape,
-    head: shape,
-    aim: shape,
-    contour: shape,
-    looks: { poi: look, case: look, parasol: look },
-  };
   return {
-    textures: { halo: shape, players: playerTextures },
+    textures: { halo: shape, ring: shape, players: playerTextures },
     layers: createLayers(new Container()),
     options: { calmMode: false },
     classTokens: new Map([
@@ -80,9 +91,10 @@ describe('players', () => {
       players.update(state, 0, frame);
 
       const [halo] = ctx.layers.glow.children;
-      const [outline, , shoulders, , object] = ctx.layers.players.children[1]?.children ?? [];
+      const [outline, shoulders] = bodies(ctx, playerTextures.shoulders.texture);
+      const [ball] = bodies(ctx, playerTextures.poi.ball.texture);
       expect(shoulders?.tint).toBe(frame.palette.mage);
-      expect(object?.tint).toBe(frame.palette.mage);
+      expect(ball?.tint).toBe(frame.palette.mage);
       expect(halo?.tint).toBe(frame.palette.mage);
       expect(halo?.alpha).toBe(frame.light.haloAlpha);
       expect(outline?.visible).toBe(!night);
@@ -95,6 +107,7 @@ describe('players', () => {
 
     createPlayers(ctx).update(createFixtureState({ enemies: 0, projectiles: 0 }), 0, frame);
 
-    expect(ctx.layers.players.children[1]?.children[0]?.tint).toBe(frame.palette.texte);
+    const [outline] = bodies(ctx, playerTextures.shoulders.texture);
+    expect(outline?.tint).toBe(frame.palette.texte);
   });
 });

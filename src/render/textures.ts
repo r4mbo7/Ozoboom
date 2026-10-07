@@ -239,6 +239,7 @@ export function destroyTextures(textures: Textures): void {
     ...Object.values(textures).filter((value): value is Shape => 'texture' in value),
     ...Object.values(textures.traps),
     textures.classFx.trail,
+    textures.classFx.mandala,
     ...specialShapes(textures.specials),
     ...playerShapes(textures.players),
   ];

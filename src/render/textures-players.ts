@@ -12,6 +12,16 @@ import {
   type Shape,
 } from './paint';
 import { lyingBody, lyingObject } from './textures-players-downed';
+import {
+  POI_BALL,
+  POI_ORBIT,
+  REFERENCE,
+  type PoiParts,
+  createPoiParts,
+  poiPartShapes,
+} from './textures-looks';
+
+export { REFERENCE } from './textures-looks';
 
 export type PlayerLook = 'poi' | 'case' | 'parasol';
 
@@ -22,15 +32,12 @@ export const PLAYER_LOOKS: Readonly<Record<string, PlayerLook>> = {
   healer: 'parasol',
 };
 
-// Every player texture is drawn at the scale of REFERENCE: that many pixels are one player radius.
-export const REFERENCE = 32;
-export const POI_ORBIT = 46;
-const POI_BALL = 9;
 const CASE_HALF = { along: 15, across: 26 };
 const PARASOL_RADIUS = 46;
 
 export interface LookTextures {
-  readonly object: Shape;
+  // The object drawn whole, for the looks that do not move its parts on their own.
+  readonly object?: Shape;
   readonly downed: Shape;
   // Outer reach of the object, in reference pixels: where the aim line starts and the contour sits.
   readonly extent: number;
@@ -45,6 +52,7 @@ export interface PlayerTextures {
   readonly aim: Shape;
   readonly contour: Shape;
   readonly looks: Readonly<Record<PlayerLook, LookTextures>>;
+  readonly poi: PoiParts;
 }
 
 function shoulders(ctx: Ctx): void {
@@ -66,37 +74,6 @@ function head(ctx: Ctx): void {
   ctx.arc(0, 0, 10, Math.PI / 2 - 0.35, (3 * Math.PI) / 2 + 0.35);
   ctx.closePath();
   ctx.fill();
-}
-
-function poi(ctx: Ctx): void {
-  ctx.lineCap = 'round';
-  for (const turn of [0, Math.PI]) {
-    ctx.save();
-    ctx.rotate(turn);
-    // The trail lags behind the ball: the poi turn clockwise, so behind is toward negative angles.
-    const steps = 10;
-    for (let step = 0; step < steps; step += 1) {
-      const from = -1.1 * ((step + 1) / steps);
-      const to = -1.1 * (step / steps);
-      const fade = 1 - step / steps;
-      ctx.strokeStyle = `rgb(255 255 255 / ${String(0.9 * fade)})`;
-      ctx.lineWidth = 2 + 7 * fade;
-      ctx.beginPath();
-      ctx.arc(0, 0, POI_ORBIT, from, to);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = SHADE;
-    ctx.lineWidth = 1.3;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(POI_ORBIT - POI_BALL, 0);
-    ctx.stroke();
-    circle(ctx, POI_BALL, POI_ORBIT, 0);
-    ctx.fillStyle = WHITE;
-    ctx.fill();
-    rim(ctx, 2.5);
-    ctx.restore();
-  }
 }
 
 function flightCase(ctx: Ctx): void {
@@ -165,10 +142,12 @@ function softBlob(width: number, height: number, roundness: number): Shape {
 }
 
 function look(kind: PlayerLook): LookTextures {
-  const size = kind === 'poi' ? 128 : kind === 'parasol' ? 112 : 96;
-  const object = paint(size, size, REFERENCE, (ctx) => {
-    ({ poi, case: flightCase, parasol })[kind](ctx);
-  });
+  const object =
+    kind === 'poi'
+      ? undefined
+      : paint(kind === 'parasol' ? 112 : 96, kind === 'parasol' ? 112 : 96, REFERENCE, (ctx) => {
+          (kind === 'case' ? flightCase : parasol)(ctx);
+        });
   const downed = paint(128, 128, REFERENCE, (ctx) => {
     lyingBody(ctx);
     lyingObject(kind, ctx);
@@ -176,7 +155,7 @@ function look(kind: PlayerLook): LookTextures {
   switch (kind) {
     case 'poi':
       return {
-        object,
+        ...(object === undefined ? {} : { object }),
         downed,
         extent: POI_ORBIT + POI_BALL,
         height: 1,
@@ -184,7 +163,7 @@ function look(kind: PlayerLook): LookTextures {
       };
     case 'case':
       return {
-        object,
+        ...(object === undefined ? {} : { object }),
         downed,
         extent: CASE_HALF.across,
         height: 1.7,
@@ -192,7 +171,7 @@ function look(kind: PlayerLook): LookTextures {
       };
     case 'parasol':
       return {
-        object,
+        ...(object === undefined ? {} : { object }),
         downed,
         extent: PARASOL_RADIUS,
         height: 2.4,
@@ -224,16 +203,20 @@ export function playerTextures(): PlayerTextures {
       ctx.stroke();
     }),
     looks: { poi: look('poi'), case: look('case'), parasol: look('parasol') },
+    poi: createPoiParts(),
   };
 }
 
 export function playerShapes(textures: PlayerTextures): Shape[] {
-  const { looks, shoulders: s, head: h, aim, contour } = textures;
+  const { looks, shoulders: s, head: h, aim, contour, poi } = textures;
   return [
     s,
     h,
     aim,
     contour,
-    ...Object.values(looks).flatMap(({ object, downed, shadow }) => [object, downed, shadow]),
+    ...Object.values(looks).flatMap(({ object, downed, shadow }) =>
+      object === undefined ? [downed, shadow] : [object, downed, shadow],
+    ),
+    ...poiPartShapes(poi),
   ];
 }

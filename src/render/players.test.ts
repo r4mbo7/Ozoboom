@@ -7,7 +7,9 @@ import type { RenderContext } from './context';
 import { createFrame } from './frame';
 import type { Layers } from './layers';
 import { createPixiPalette, writePixiPalette } from './palette';
-import { contourAlpha, createPlayers, parasolAngle, poiAngle } from './players';
+import { parasolAngle } from './look-object';
+import { novaStretch, poiAngle, whippedBall } from './look-poi';
+import { contourAlpha, createPlayers } from './players';
 import type { NameLabel } from './textures-names';
 import type { Shape } from './textures';
 import type { LookTextures, PlayerTextures } from './textures-players';
@@ -22,9 +24,12 @@ function lookTextures(): LookTextures {
   return { object: shape(), downed: shape(), extent: 40, height: 1, shadow: shape() };
 }
 
+const BODIES = 1;
+const MARKS = 2;
+
 function createContext(): { ctx: RenderContext; players: Container } {
   const players = new Container();
-  const layers = { players, glow: new Container() } as unknown as Layers;
+  const layers = { players, glow: new Container(), fx: new Container() } as unknown as Layers;
   const textures = {
     halo: shape(),
     ring: shape(),
@@ -39,6 +44,7 @@ function createContext(): { ctx: RenderContext; players: Container } {
       aim: shape(),
       contour: shape(),
       looks: { poi: lookTextures(), case: lookTextures(), parasol: lookTextures() },
+      poi: { arm: shape(), ball: shape(), strandRoot: shape(), strandTip: shape(), bead: shape() },
     } satisfies PlayerTextures,
   };
   const ctx = {
@@ -114,24 +120,39 @@ describe('contourAlpha', () => {
   });
 });
 
+describe('the poi of la Luxiole', () => {
+  it('throws the two balls in turn, the first shot with ball 0', () => {
+    expect([1, 2, 3, 4].map(whippedBall)).toEqual([0, 1, 0, 1]);
+  });
+
+  it('flies out after the nova and settles back on the orbit', () => {
+    expect(novaStretch(Infinity)).toBe(1);
+    expect(novaStretch(0)).toBeCloseTo(2.1, 9);
+    expect(novaStretch(48)).toBe(1);
+    const lowest = Math.min(...Array.from({ length: 48 }, (_, tick) => novaStretch(tick)));
+    expect(lowest).toBeGreaterThanOrEqual(0.6);
+    expect(lowest).toBeLessThan(0.8);
+  });
+});
+
 describe('createPlayers', () => {
-  function drawn(alpha: number, current: PlayerState) {
+  function drawn(alpha: number, current: PlayerState, layer = BODIES) {
     const { ctx, players } = createContext();
     const family = createPlayers(ctx);
     const state = { players: [current] } as unknown as SimState;
     family.update(state, alpha, frameAt(0.4));
-    const bodies = players.children[1] as Container;
-    return bodies.children;
+    return (players.children[layer] as Container).children;
   }
 
-  it('draws the object between the previous and the current position', () => {
-    const [, , , , object] = drawn(0.25, player());
+  it('draws the body between the previous and the current position', () => {
+    const visible = drawn(0.25, player()).filter((sprite) => sprite.visible);
 
-    expect(object?.x).toBeCloseTo(110, 9);
-    expect(object?.y).toBeCloseTo(30, 9);
+    expect(
+      visible.some((sprite) => Math.abs(sprite.x - 110) < 1e-9 && Math.abs(sprite.y - 30) < 1e-9),
+    ).toBe(true);
   });
 
-  it('lays the object next to the player when downed, as one gray sprite', () => {
+  it('lays the player down with its object when downed, as one gray sprite', () => {
     const sprites = drawn(1, player({ downed: true }));
     const visible = sprites.filter((sprite) => sprite.visible);
 
@@ -141,7 +162,7 @@ describe('createPlayers', () => {
 
   it('shows the contour only while invulnerable', () => {
     const contour = (invulnerableTicks: number) => {
-      const sprites = drawn(1, player({ invulnerableTicks }));
+      const sprites = drawn(1, player({ invulnerableTicks }), MARKS);
       return sprites[sprites.length - 1]?.visible;
     };
 
@@ -163,8 +184,8 @@ describe('player names and relève', () => {
     family.update(state, 1, frame);
     const containers = root.children.map((child) => child);
     return {
-      rings: containers[2] ?? new Container(),
-      tags: containers[3] ?? new Container(),
+      rings: containers[3] ?? new Container(),
+      tags: containers[4] ?? new Container(),
       family,
       state,
       frame,
