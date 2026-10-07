@@ -97,7 +97,7 @@ describe('createRoom as host', () => {
     const room = host(h);
     join(g1, { name: 'Ana', classId: 'ranger' });
     h.flush();
-    room.start('set-1', 42);
+    room.start('set-1', 42, 'track-1');
     const late = join(g2, { name: 'Bob', classId: 'tank' });
 
     h.flush();
@@ -192,13 +192,14 @@ describe('createRoom as host', () => {
     const hostStarts: StartMessage[] = [];
     room.onStart((start) => hostStarts.push(start));
 
-    room.start('set-1', 7);
+    room.start('set-1', 7, 'track-1');
     h.flush();
 
     const expected: StartMessage = {
       type: 'start',
       seed: 7,
       setId: 'set-1',
+      trackId: 'track-1',
       players: [
         { id: 0, classId: 'mage', name: 'Hôte' },
         { id: 1, classId: 'ranger', name: 'Ana' },
@@ -213,7 +214,7 @@ describe('createRoom as host', () => {
     const room = host(h);
     join(g, { name: 'Ana', classId: 'a' });
     h.flush();
-    room.start('set-1', 7);
+    room.start('set-1', 7, 'track-1');
 
     g.close();
     h.flush();
@@ -226,8 +227,8 @@ describe('createRoom as host', () => {
     const room = host(h);
     const guest = join(g, { name: 'Ana', classId: 'a' });
 
-    expect(() => guest.room.start('set-1', 1)).toThrow();
-    room.start('set-1', 1);
-    expect(() => room.start('set-1', 1)).toThrow();
+    expect(() => guest.room.start('set-1', 1, 'track-1')).toThrow();
+    room.start('set-1', 1, 'track-1');
+    expect(() => room.start('set-1', 1, 'track-1')).toThrow();
   });
 });

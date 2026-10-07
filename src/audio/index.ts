@@ -63,7 +63,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const breakBars = options.breakBars ?? (() => DEFAULT_BREAK_BARS);
   const trapEffectOf = options.trapEffectOf ?? ((kind: string) => kind);
   const repeat = options.repeat ?? everyPump;
-  const track = options.track ?? SOIREE_OUVERTURE;
+  let track = options.track ?? SOIREE_OUVERTURE;
   let running: Running | null = null;
   let starting: Promise<void> | null = null;
   let muted = false;
@@ -168,6 +168,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     setMuted(value) {
       muted = value;
       running?.master.setMuted(value);
+    },
+    setTrack(value) {
+      track = value;
+      running?.music.setTrack(value);
+      running?.sfx.setKey(value);
     },
     setMood(value) {
       mood = value;

@@ -64,6 +64,7 @@ export interface Music {
   fadeOut(currentTime: number): number;
   // Fades the set back in over one bar, on the grid of the next update.
   fadeIn(): void;
+  setTrack(track: MusicTrack): void;
 }
 
 interface Bus {
@@ -428,7 +429,7 @@ function powerDown(out: AudioNode, at: number, key: MusicKey) {
 }
 
 export function createMusic(out: AudioNode, options: MusicOptions): Music {
-  const { track } = options;
+  let { track } = options;
   const context = out.context;
   const level = context.createGain();
   const fader = createFader(level.gain, context, 1);
@@ -665,6 +666,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   }
 
   return {
+    setTrack(next) {
+      track = next;
+    },
     update(state, now, currentTime) {
       last = state;
       const nextMode = modeOf(state.status);

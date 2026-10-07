@@ -7,6 +7,7 @@ import {
   githubFormLink,
   openFeedback,
 } from '../feedback';
+import { TRACKS } from '../data/tracks';
 import { createInputHub } from '../input';
 import type { DeviceId, InputSnapshot } from '../input/intents';
 import { createRenderer } from '../render';
@@ -44,6 +45,7 @@ import { loadPrefs, savePref } from './prefs';
 import { createSeats, type LaunchedSeats } from './seats';
 import { soundOf, type Screen } from './sound';
 import { createToast } from './toast';
+import { drawTrack, trackOf } from './track';
 import { countVisit } from './visits';
 import { playerLabel } from '../ui/hud-model';
 
@@ -78,6 +80,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     autoFire: false,
     autoAim: false,
     classId: DEFAULT_CLASS_ID,
+    trackId: '',
   });
   if (!classIds.includes(prefs.classId)) {
     prefs.classId = classIds.includes(DEFAULT_CLASS_ID) ? DEFAULT_CLASS_ID : (classIds[0] ?? '');
@@ -231,6 +234,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     setId: SET_ID,
     classIds,
     classId: () => prefs.classId,
+    trackId: nextTrackId,
     version: () => probe?.forcedVersion ?? APP_VERSION,
     onMatch: startOnline,
     onInterruption: interrupt,
@@ -394,8 +398,15 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     autoAimToggle.set(enabled);
   }
 
-  function beginGame(): void {
+  function nextTrackId(): string {
+    return drawTrack(TRACKS, prefs.trackId, Math.random).id;
+  }
+
+  function beginGame(trackId: string): void {
     void audio.start();
+    audio.setTrack(trackOf(TRACKS, trackId));
+    prefs.trackId = trackId;
+    savePref(storage, 'trackId', trackId);
     played = true;
     if (dev.mode === 'bench') {
       benchScene(match.session.state, content, match.session.state.seed, BENCH_ENEMIES);
@@ -408,14 +419,14 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   function play(): void {
     launched = null;
     setMatch(soloMatch());
-    beginGame();
+    beginGame(nextTrackId());
   }
 
   function launch(seated: LaunchedSeats): void {
     launched = seated;
     setMatch(newMatch(seated.slots, seated.locals, TOGETHER_FOCUS));
     audio.cue('launch');
-    beginGame();
+    beginGame(nextTrackId());
   }
 
   function openOnline(): void {
@@ -448,7 +459,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     );
     paused = false;
     pause.hide();
-    beginGame();
+    beginGame(started.start.trackId);
   }
 
   // A game that cannot go on: nothing steps any more, and the notice offers the way out.
