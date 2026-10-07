@@ -57,6 +57,9 @@ const DEFAULT_BREAK_BARS = 4;
 // per second 3. Past 4 ticks (138 ms, under 7.25 frames per second), the game slows down instead
 // of jumping ahead, so a hitch never lands a burst of hits the player could not react to.
 const MAX_TICKS_PER_FRAME = 4;
+// A sped-up game keeps its pace down to 29 frames per second at eight times the speed, then slows
+// down too, so that a browser test sees at most 276 ms of play per frame on a loaded machine.
+const MAX_SPED_UP_TICKS_PER_FRAME = 8;
 // An online guest with frames to spare plays up to this many extra steps a frame to get back to
 // the host's pace.
 const CATCH_UP_TICKS_PER_FRAME = 2;
@@ -671,7 +674,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const loop = createFixedStepLoop(
     {
       tickMs: TICK_MS / dev.speed,
-      maxTicksPerFrame: MAX_TICKS_PER_FRAME * dev.speed,
+      maxTicksPerFrame: dev.speed === 1 ? MAX_TICKS_PER_FRAME : MAX_SPED_UP_TICKS_PER_FRAME,
       now: () => performance.now(),
       // Input is polled once per frame, before the steps of that frame.
       requestFrame: (callback) =>

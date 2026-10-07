@@ -148,9 +148,11 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
   await tapButtonUntil(page, PAD.Start, () => pause.isHidden());
 
   // A player in the page: aims the right stick at the nearest bad vibe and fires, picks up the
-  // vibes, stays by the scene, places traps and novas the close ones.
+  // vibes, stays by the scene, places traps and novas the close ones. It counts in ticks, not in
+  // milliseconds, so that a loaded machine does not change how it plays.
   await page.evaluate(() => {
-    let lastTrap = 0;
+    const TICKS_BETWEEN_TRAPS = 336;
+    let lastTrap = -TICKS_BETWEEN_TRAPS;
     const play = () => {
       const pad = window.fakePad;
       const state = window.ozoboom?.state;
@@ -175,14 +177,13 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
       pad.buttons[7] = running && nearest !== undefined ? 1 : 0;
       pad.buttons[6] =
         running && state.enemies.some((enemy) => distance(enemy.x, enemy.y) < 140) ? 1 : 0;
-      const now = performance.now();
       if (!running) {
         // The test taps A itself in the menus.
       } else if (pad.buttons[0] === 1) {
         pad.buttons[0] = 0;
-      } else if (state.core.watts >= 15 && now - lastTrap > 1500) {
+      } else if (state.core.watts >= 15 && state.tick - lastTrap > TICKS_BETWEEN_TRAPS) {
         pad.buttons[0] = 1;
-        lastTrap = now;
+        lastTrap = state.tick;
       }
       if (state.status !== 'won' && state.status !== 'lost') {
         requestAnimationFrame(play);
