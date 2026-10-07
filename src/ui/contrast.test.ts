@@ -30,12 +30,12 @@ describe.each(MOMENTS)('contrast at %s', (moment) => {
   );
 });
 
-// The ui.css `--ui-muted`: color-mix(in srgb, var(--texte) 76%, var(--sol-clair)).
+// The ui.css `--ui-muted`: color-mix(in srgb, var(--texte) 82%, var(--sol-clair)).
 function muted(texte: string, solClair: string): string {
   const mix = (shift: number) => {
     const a = (Number.parseInt(texte.slice(1), 16) >> shift) & 0xff;
     const b = (Number.parseInt(solClair.slice(1), 16) >> shift) & 0xff;
-    return Math.round(a * 0.76 + b * 0.24);
+    return Math.round(a * 0.82 + b * 0.18);
   };
   return `#${[16, 8, 0].map((shift) => mix(shift).toString(16).padStart(2, '0')).join('')}`;
 }

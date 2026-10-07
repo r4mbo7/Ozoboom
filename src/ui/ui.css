@@ -1,11 +1,11 @@
 .ui {
   --ui-panel: color-mix(in srgb, var(--sol-clair) 92%, transparent);
   --ui-line: color-mix(in srgb, var(--texte) 16%, transparent);
-  --ui-muted: color-mix(in srgb, var(--texte) 76%, var(--sol-clair));
+  --ui-muted: color-mix(in srgb, var(--texte) 82%, var(--sol-clair));
   --ui-turquoise: color-mix(in srgb, var(--turquoise) 60%, var(--texte));
   --ui-or: color-mix(in srgb, var(--or) 50%, var(--texte));
   --ui-noyau: color-mix(in srgb, var(--noyau) 45%, var(--texte));
-  --ui-mage: color-mix(in srgb, var(--mage) 80%, var(--texte));
+  --ui-mage: color-mix(in srgb, var(--mage) 60%, var(--texte));
   --ui-tank: color-mix(in srgb, var(--tank) 80%, var(--texte));
   --ui-lift:
     0 10px 30px color-mix(in srgb, var(--sol) 45%, transparent),
@@ -455,7 +455,7 @@
 }
 
 .ui-title__logo {
-  color: color-mix(in srgb, var(--or) 80%, var(--texte));
+  color: color-mix(in srgb, var(--or) 60%, var(--texte));
   font-family: var(--font-title);
   font-size: clamp(40px, 11vw, 104px);
   font-weight: 900;
@@ -647,10 +647,6 @@
   align-items: center;
   gap: 6px;
   text-align: center;
-}
-
-.ui-lobby .ui-kicker {
-  color: color-mix(in srgb, var(--mage) 70%, var(--texte));
 }
 
 .ui-lobby__title {
@@ -2008,7 +2004,7 @@
   display: flex;
   align-items: center;
   gap: calc(8 * var(--card-unit));
-  color: color-mix(in srgb, var(--family) 60%, var(--texte));
+  color: color-mix(in srgb, var(--family) 50%, var(--texte));
   font-size: calc(13 * var(--card-unit));
   font-weight: 800;
   letter-spacing: 0.12em;

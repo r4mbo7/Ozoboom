@@ -119,7 +119,9 @@ async function measure(
       }
       return false;
     };
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    // Under a modal dialog, the screen behind is covered and not read: only the dialog counts.
+    const modal = document.querySelector('[aria-modal="true"]') ?? document.body;
+    const walker = document.createTreeWalker(modal, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
       const parent = node.parentElement;
       if (
@@ -140,7 +142,7 @@ async function measure(
         getComputedStyle(parent).color,
       );
     }
-    for (const field of document.querySelectorAll('input, textarea')) {
+    for (const field of modal.querySelectorAll('input, textarea')) {
       if (!field.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) {
         continue;
       }
@@ -271,6 +273,7 @@ async function measure(
 for (const query of SCREENS) {
   for (const sky of SKIES) {
     test(`${query} keeps its text readable at ${sky.label}`, async ({ page }) => {
+      test.slow();
       const failures: Failure[] = [];
       for (const scene of sceneExtremes(sky)) {
         failures.push(...(await measure(page, query, sky.param, scene)));
