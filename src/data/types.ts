@@ -291,7 +291,11 @@ export type MusicVoiceId =
   | 'ghost-bass'
   | 'lake-pluck'
   | 'mist-lead'
-  | 'droplet';
+  | 'droplet'
+  | 'goa-lead'
+  | 'gate'
+  | 'goa-arp'
+  | 'tom';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
 // `kick` plays out of the break, `clap` only in the drop.

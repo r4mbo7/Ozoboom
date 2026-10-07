@@ -39,6 +39,8 @@ const LAKE_PLUCK_VOICES: readonly (readonly [
   ['triangle', -6, 0.06],
   ['square', 6, 0.03],
 ];
+const TOM_HZ = [190, 160, 130, 105];
+const GATE_TOP_HZ = 2200;
 
 function texturePan(position: number): number {
   return position % 2 === 0 ? -0.6 : 0.6;
@@ -258,6 +260,65 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       hold: 0.01,
       release: 0.45,
       pan: Math.floor(position / 8) % 2 === 0 ? -0.6 : 0.6,
+    });
+  },
+  'goa-lead': ({ send, at, hz, steps, cutoff, until }) => {
+    const long = steps >= 4;
+    const release = long ? 0.16 : 0.08;
+    for (const detune of [-12, 0, 12]) {
+      playTone(send, at, {
+        wave: 'sawtooth',
+        hz,
+        detune,
+        gain: 0.027,
+        attack: 0.01,
+        hold: Math.max(0, Math.min(steps * SIXTEENTH * 0.82, until - at - release)),
+        release,
+        ...(long ? { vibrato: { hz: 5.5, cents: 18, delay: 0.14 } } : {}),
+        filter: {
+          type: 'lowpass',
+          hz: cutoff,
+          toHz: cutoff * 0.45,
+          glide: steps * SIXTEENTH,
+          q: 5,
+        },
+      });
+    }
+  },
+  gate: ({ out, at, hz, cutoff }) => {
+    playTone(out, at, {
+      wave: 'sawtooth',
+      hz,
+      gain: 0.018,
+      attack: 0.002,
+      hold: SIXTEENTH * 0.5,
+      release: SIXTEENTH * 0.25,
+      filter: { type: 'lowpass', hz: Math.min(cutoff, GATE_TOP_HZ), q: 2 },
+    });
+  },
+  'goa-arp': ({ out, at, hz, position }) => {
+    playTone(out, at, {
+      wave: 'square',
+      hz,
+      gain: 0.022,
+      attack: 0.003,
+      hold: 0.025,
+      release: 0.05,
+      pan: position % 2 === 0 ? -0.4 : 0.4,
+      filter: { type: 'lowpass', hz: 3000, q: 2 },
+    });
+  },
+  tom: ({ out, at, position }) => {
+    const hz = TOM_HZ[position % TOM_HZ.length] ?? 0;
+    playTone(out, at, {
+      wave: 'triangle',
+      hz,
+      toHz: hz * 0.55,
+      glide: 0.18,
+      gain: 0.32,
+      attack: 0.001,
+      hold: 0.03,
+      release: 0.18,
     });
   },
 };
