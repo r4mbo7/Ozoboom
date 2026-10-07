@@ -47,6 +47,8 @@ export interface UiCallbacks {
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
   onToggleCalmMode(enabled: boolean): void;
   onToggleMute(muted: boolean): void;
+  // From 1 to `VOLUME_STEPS`.
+  onSetVolume(volume: number): void;
   onToggleAutoFire(enabled: boolean): void;
   onToggleAutoAim(enabled: boolean): void;
   onPlayTogether(): void;
@@ -71,6 +73,7 @@ export interface Ui {
   showTitle(options: {
     calmMode: boolean;
     muted: boolean;
+    volume: number;
     autoFire: boolean;
     autoAim: boolean;
     device: InputDevice;

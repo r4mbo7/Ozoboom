@@ -24,11 +24,13 @@ const PAUSE_TEXT: PauseText = {
 
 export interface PauseItem {
   readonly label: string;
-  // A button built elsewhere, for an entry that must look the same on every screen.
-  readonly button?: HTMLButtonElement;
+  // An item built elsewhere, for an entry that must look the same on every screen.
+  readonly element?: HTMLElement;
   // Asked before `activate`, which only « leave » runs: « stay » goes back to the pause menu.
   readonly confirm?: PauseConfirmation;
   activate(): void;
+  // Takes the left and right presses, for an entry set from side to side.
+  adjust?(side: -1 | 1): void;
 }
 
 export interface PauseScreen {
@@ -88,22 +90,28 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
   let device: InputDevice = 'none';
   let pending: PauseItem | null = null;
 
-  const buttons = items.map((item, index) => {
-    const node =
-      item.button ?? button(index === 0 ? 'ui-button ui-button--primary' : 'ui-button', item.label);
-    node.type = 'button';
-    return node;
-  });
-  main.nav.append(...buttons);
-  const menu = createMenu((index) => {
-    const item = items[index];
-    if (item?.confirm === undefined) {
-      item?.activate();
-    } else {
-      ask(item, item.confirm);
-    }
-  });
-  menu.setItems(buttons);
+  const nodes = items.map(
+    (item, index) =>
+      item.element ??
+      button(index === 0 ? 'ui-button ui-button--primary' : 'ui-button', item.label),
+  );
+  main.nav.append(...nodes);
+  const menu = createMenu(
+    (index) => {
+      const item = items[index];
+      if (item?.confirm === undefined) {
+        item?.activate();
+      } else {
+        ask(item, item.confirm);
+      }
+    },
+    (index, side) => {
+      const item = items[index];
+      item?.adjust?.(side);
+      return item?.adjust !== undefined;
+    },
+  );
+  menu.setItems(nodes);
 
   const stay = button('ui-button ui-button--primary', '');
   const leave = button('ui-button', '');

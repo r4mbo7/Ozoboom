@@ -26,11 +26,6 @@ export function createToggle(label: string, hint: string, onText: string, offTex
   };
 }
 
-// The same switch on the title and in the pause: both read and write the `muted` preference.
-export function createSoundToggle(): Toggle {
-  return createToggle('Son', 'Musique et effets', 'Activé', 'Coupé');
-}
-
 // The touch screen always fires and aims by itself: these switches only show elsewhere.
 export function createAutoFireToggle(): Toggle {
   return assistToggle('Tir automatique', 'Sans tenir le tir');

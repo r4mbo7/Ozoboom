@@ -15,6 +15,7 @@ import type { GameContent } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
 import type { LobbyModel, Notice, Ui, UiCallbacks } from './types';
 import { createUpgradeOverlay } from './upgrade';
+import { VOLUME_STEPS, type SoundLevel, stepSound } from './volume';
 
 export type {
   EndSession,
@@ -27,7 +28,8 @@ export type {
   UiFrame,
 } from './types';
 export { createFeedbackButton } from './feedback-button';
-export { createAutoAimToggle, createAutoFireToggle, createSoundToggle } from './toggle';
+export { createAutoAimToggle, createAutoFireToggle } from './toggle';
+export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './volume';
 export { selectTrap } from './navigation';
 export { SEAT_IDS, defaultName } from './lobby-model';
 
@@ -70,6 +72,7 @@ export function createUi(
   let screen: Screen = 'title';
   let calmMode = false;
   let muted = false;
+  let volume = VOLUME_STEPS;
   let autoFire = false;
   let autoAim = false;
   let device: InputDevice = 'none';
@@ -113,9 +116,10 @@ export function createUi(
         callbacks.onToggleCalmMode(calmMode);
       },
       toggleMute() {
-        muted = !muted;
-        applyOptions();
-        callbacks.onToggleMute(muted);
+        setSound({ volume, muted: !muted });
+      },
+      stepVolume(side) {
+        setSound(stepSound({ volume, muted }, side));
       },
       toggleAutoFire() {
         autoFire = !autoFire;
@@ -207,7 +211,19 @@ export function createUi(
 
   function applyOptions(): void {
     root.classList.toggle('calm', calmMode);
-    title.setOptions({ calmMode, muted, autoFire, autoAim });
+    title.setOptions({ calmMode, muted, volume, autoFire, autoAim });
+  }
+
+  function setSound(next: SoundLevel): void {
+    const before = { volume, muted };
+    ({ volume, muted } = next);
+    applyOptions();
+    if (next.muted !== before.muted) {
+      callbacks.onToggleMute(muted);
+    }
+    if (next.volume !== before.volume) {
+      callbacks.onSetVolume(volume);
+    }
   }
 
   function applyDevice(next: InputDevice): void {
@@ -245,6 +261,7 @@ export function createUi(
     showTitle(options) {
       calmMode = options.calmMode;
       muted = options.muted;
+      volume = options.volume;
       autoFire = options.autoFire;
       autoAim = options.autoAim;
       applyOptions();

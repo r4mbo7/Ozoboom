@@ -20,13 +20,16 @@ import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId } from '../sim/state';
 import {
   type LocalPlayer,
+  type SoundLevel,
   type UiFrame,
+  VOLUME_STEPS,
   createFeedbackButton,
   createAutoAimToggle,
   createAutoFireToggle,
-  createSoundToggle,
+  createSoundControl,
   createUi,
   prefersCalmMode,
+  stepSound,
 } from '../ui';
 import { BENCH_ENEMIES, type DevOptions, benchScene, benchSlots, createDevProbe } from './dev';
 import { createFpsMeter } from './fps';
@@ -77,6 +80,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const prefs = loadPrefs(storage, {
     calmMode: prefersCalmMode(),
     muted: false,
+    volume: VOLUME_STEPS,
     autoFire: false,
     autoAim: false,
     classId: DEFAULT_CLASS_ID,
@@ -165,7 +169,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       renderer.setOptions({ calmMode: enabled });
       savePref(storage, 'calmMode', enabled);
     },
-    onToggleMute: setMuted,
+    onToggleMute(muted) {
+      setSound({ volume: prefs.volume, muted });
+    },
+    onSetVolume(volume) {
+      setSound({ volume, muted: prefs.muted });
+    },
     onToggleAutoFire: setAutoFire,
     onToggleAutoAim: setAutoAim,
     onFeedback: openForm,
@@ -243,8 +252,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       toast.show(`${player === undefined ? 'Un joueur' : playerLabel(player)} a quitté le set`);
     },
   });
-  const soundToggle = createSoundToggle();
-  soundToggle.set(!prefs.muted);
+  const soundControl = createSoundControl(stepVolume);
+  soundControl.set(prefs);
   const autoFireToggle = createAutoFireToggle();
   autoFireToggle.set(prefs.autoFire);
   const autoAimToggle = createAutoAimToggle();
@@ -258,26 +267,27 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     },
     {
       label: 'Son',
-      button: soundToggle.button,
+      element: soundControl.element,
       activate() {
-        setMuted(!prefs.muted);
+        setSound({ volume: prefs.volume, muted: !prefs.muted });
       },
+      adjust: stepVolume,
     },
     {
       label: 'Tir automatique',
-      button: autoFireToggle.button,
+      element: autoFireToggle.button,
       activate() {
         setAutoFire(!prefs.autoFire);
       },
     },
     {
       label: 'Visée automatique',
-      button: autoAimToggle.button,
+      element: autoAimToggle.button,
       activate() {
         setAutoAim(!prefs.autoAim);
       },
     },
-    { label: 'Ton avis', button: createFeedbackButton(), activate: openForm },
+    { label: 'Ton avis', element: createFeedbackButton(), activate: openForm },
     {
       label: 'Quitter la partie',
       get confirm() {
@@ -293,6 +303,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     ui.showTitle({
       calmMode: prefs.calmMode,
       muted: prefs.muted,
+      volume: prefs.volume,
       autoFire: prefs.autoFire,
       autoAim: prefs.autoAim,
       device: view.merged.device,
@@ -309,6 +320,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       hidden: document.hidden,
     });
     audio.setMuted(sound.muted);
+    audio.setVolume(prefs.volume / VOLUME_STEPS);
     audio.setMood(sound.mood);
   }
 
@@ -379,11 +391,17 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     });
   }
 
-  function setMuted(muted: boolean): void {
+  function setSound({ volume, muted }: SoundLevel): void {
+    prefs.volume = volume;
     prefs.muted = muted;
     applySound();
+    savePref(storage, 'volume', volume);
     savePref(storage, 'muted', muted);
-    soundToggle.set(!muted);
+    soundControl.set(prefs);
+  }
+
+  function stepVolume(side: -1 | 1): void {
+    setSound(stepSound(prefs, side));
   }
 
   function setAutoFire(enabled: boolean): void {

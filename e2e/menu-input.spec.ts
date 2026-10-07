@@ -167,7 +167,7 @@ test('the left stick alone walks through a menu, and still moves the player in g
   await plugFakeGamepad(page);
   await page.goto('./?dev=fast');
   const play = page.getByRole('button', { name: 'Jouer', exact: true });
-  const sound = page.getByRole('switch', { name: /^Son/ });
+  const sound = page.getByRole('slider', { name: 'Son' });
   await expect(play).toHaveAttribute('aria-current', 'true');
 
   await repeatUntil(
@@ -178,7 +178,7 @@ test('the left stick alone walks through a menu, and still moves the player in g
   await tapButtonUntil(
     page,
     PAD.A,
-    async () => (await sound.getAttribute('aria-checked')) === 'false',
+    async () => (await sound.getAttribute('aria-valuetext')) === 'Coupé',
   );
   await repeatUntil(
     () => tiltLeftStick(page, 0.2, -0.9),

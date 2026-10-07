@@ -4,6 +4,7 @@ import { loadPrefs, savePref } from './prefs';
 const DEFAULTS = {
   calmMode: true,
   muted: false,
+  volume: 10,
   autoFire: false,
   autoAim: false,
   classId: 'mage',
@@ -46,6 +47,7 @@ describe('prefs', () => {
 
     savePref(() => storage, 'calmMode', false);
     savePref(() => storage, 'muted', true);
+    savePref(() => storage, 'volume', 4);
     savePref(() => storage, 'autoFire', true);
     savePref(() => storage, 'autoAim', true);
     savePref(() => storage, 'classId', 'tank');
@@ -54,6 +56,7 @@ describe('prefs', () => {
     expect(loadPrefs(() => storage, DEFAULTS)).toEqual({
       calmMode: false,
       muted: true,
+      volume: 4,
       autoFire: true,
       autoAim: true,
       classId: 'tank',
@@ -64,6 +67,7 @@ describe('prefs', () => {
   it('ignores a value it did not write', () => {
     const storage = memoryStorage();
     storage.setItem('ozoboom.muted', 'yes');
+    storage.setItem('ozoboom.volume', '11');
 
     expect(loadPrefs(() => storage, DEFAULTS)).toEqual(DEFAULTS);
   });

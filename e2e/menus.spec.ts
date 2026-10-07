@@ -92,7 +92,7 @@ test('the title shows again under a resting cursor without moving the selection'
   const errors = collectConsoleErrors(page);
   await page.goto('./');
   const feedback = page.getByRole('button', { name: /^Ton avis/ });
-  const sound = page.getByRole('switch', { name: /^Son/ });
+  const sound = page.getByRole('slider', { name: 'Son' });
   for (let index = 0; index < 7; index++) {
     await page.keyboard.press('ArrowDown');
     await frames(page);

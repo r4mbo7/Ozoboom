@@ -6,6 +6,12 @@ export interface MasterChain {
   music: GainNode;
   sfx: GainNode;
   setMuted(muted: boolean): void;
+  setVolume(volume: number): void;
+}
+
+// The ear hears loudness on a log scale: a squared level spreads its steps evenly.
+export function loudness(volume: number): number {
+  return Math.min(Math.max(volume, 0), 1) ** 2;
 }
 
 export function softClipCurve(size = 4097): Float32Array<ArrayBuffer> {
@@ -23,7 +29,11 @@ export function softClipCurve(size = 4097): Float32Array<ArrayBuffer> {
   return curve;
 }
 
-export function createMasterChain(context: BaseAudioContext, muted = false): MasterChain {
+export function createMasterChain(
+  context: BaseAudioContext,
+  muted = false,
+  volume = 1,
+): MasterChain {
   const music = context.createGain();
   music.gain.value = 0.5;
   const sfx = context.createGain();
@@ -47,23 +57,33 @@ export function createMasterChain(context: BaseAudioContext, muted = false): Mas
   clipper.curve = softClipCurve();
   clipper.oversample = 'none';
 
-  const mute = context.createGain();
-  mute.gain.value = muted ? 0 : 1;
+  // After the limiter, so that a lower level keeps the same mix and dynamics.
+  const output = context.createGain();
+  output.gain.value = muted ? 0 : loudness(volume);
 
   music.connect(glue);
   sfx.connect(glue);
   glue.connect(limiter);
   limiter.connect(clipper);
-  clipper.connect(mute);
-  mute.connect(context.destination);
+  clipper.connect(output);
+  output.connect(context.destination);
+
+  function glide(): void {
+    const now = context.currentTime;
+    output.gain.cancelScheduledValues(now);
+    output.gain.setTargetAtTime(muted ? 0 : loudness(volume), now, MUTE_SECONDS);
+  }
 
   return {
     music,
     sfx,
-    setMuted(muted) {
-      const now = context.currentTime;
-      mute.gain.cancelScheduledValues(now);
-      mute.gain.setTargetAtTime(muted ? 0 : 1, now, MUTE_SECONDS);
+    setMuted(value) {
+      muted = value;
+      glide();
+    },
+    setVolume(value) {
+      volume = value;
+      glide();
     },
   };
 }

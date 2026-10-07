@@ -1,6 +1,10 @@
+import { VOLUME_STEPS } from '../ui/volume';
+
 export interface Prefs {
   calmMode: boolean;
   muted: boolean;
+  // From 1 to `VOLUME_STEPS`.
+  volume: number;
   autoFire: boolean;
   autoAim: boolean;
   // The class of a solo game: the last one chosen on the title.
@@ -12,6 +16,7 @@ export interface Prefs {
 const KEYS: Readonly<Record<keyof Prefs, string>> = {
   calmMode: 'ozoboom.calmMode',
   muted: 'ozoboom.muted',
+  volume: 'ozoboom.volume',
   autoFire: 'ozoboom.autoFire',
   autoAim: 'ozoboom.autoAim',
   classId: 'ozoboom.classId',
@@ -24,6 +29,7 @@ export function loadPrefs(storage: () => Storage, defaults: Prefs): Prefs {
   return {
     calmMode: readFlag(storage, KEYS.calmMode) ?? defaults.calmMode,
     muted: readFlag(storage, KEYS.muted) ?? defaults.muted,
+    volume: readVolume(storage, KEYS.volume) ?? defaults.volume,
     autoFire: readFlag(storage, KEYS.autoFire) ?? defaults.autoFire,
     autoAim: readFlag(storage, KEYS.autoAim) ?? defaults.autoAim,
     classId: readText(storage, KEYS.classId) ?? defaults.classId,
@@ -37,7 +43,7 @@ export function savePref<K extends keyof Prefs>(
   value: Prefs[K],
 ): void {
   try {
-    storage().setItem(KEYS[key], typeof value === 'boolean' ? (value ? '1' : '0') : value);
+    storage().setItem(KEYS[key], typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
   } catch {
     // Not remembered: the choice still applies to this visit.
   }
@@ -46,6 +52,11 @@ export function savePref<K extends keyof Prefs>(
 function readFlag(storage: () => Storage, key: string): boolean | null {
   const value = readText(storage, key);
   return value === '1' ? true : value === '0' ? false : null;
+}
+
+function readVolume(storage: () => Storage, key: string): number | null {
+  const value = Number(readText(storage, key));
+  return Number.isInteger(value) && value >= 1 && value <= VOLUME_STEPS ? value : null;
 }
 
 function readText(storage: () => Storage, key: string): string | null {

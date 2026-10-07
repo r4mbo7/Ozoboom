@@ -174,6 +174,48 @@
   transform: translateX(20px);
 }
 
+.ui-volume__control {
+  gap: 4px;
+}
+
+.ui-volume .ui-stepper__arrow {
+  width: 30px;
+  height: 30px;
+}
+
+.ui-volume .ui-stepper__glyph {
+  width: 18px;
+  height: 18px;
+}
+
+.ui-volume__meter {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 22px;
+}
+
+.ui-volume__bar {
+  width: 4px;
+  height: calc(6px + var(--step) * 16px / 9);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--ui-muted) 45%, transparent);
+}
+
+.ui-volume__bar[data-lit] {
+  background: var(--turquoise);
+}
+
+.ui-volume .ui-toggle__state {
+  min-width: 3.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-volume[data-on] .ui-toggle__state {
+  color: var(--texte);
+  font-weight: 700;
+}
+
 .ui-action__text {
   display: flex;
   flex-direction: column;

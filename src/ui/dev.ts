@@ -50,6 +50,7 @@ const session = params.get('role') === 'guest' ? ({ role: 'guest' } as const) : 
 const titleOptions = {
   calmMode: params.has('calm') || prefersCalmMode(),
   muted: params.has('muted'),
+  volume: 10,
   autoFire: params.has('autoFire'),
   autoAim: params.has('autoAim'),
   classId: 'mage',
@@ -126,6 +127,10 @@ const ui = createUi(
     onToggleMute(muted) {
       console.info('[ui] onToggleMute', muted);
       titleOptions.muted = muted;
+    },
+    onSetVolume(volume) {
+      console.info('[ui] onSetVolume', volume);
+      titleOptions.volume = volume;
     },
     onToggleAutoFire(enabled) {
       console.info('[ui] onToggleAutoFire', enabled);

@@ -6,12 +6,8 @@ import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
 import { stepClass } from './lobby-model';
 import { promptsFor } from './prompts';
-import {
-  createAutoAimToggle,
-  createAutoFireToggle,
-  createSoundToggle,
-  createToggle,
-} from './toggle';
+import { createAutoAimToggle, createAutoFireToggle, createToggle } from './toggle';
+import { createSoundControl } from './volume';
 
 export interface TitleActions {
   start(): void;
@@ -19,6 +15,7 @@ export interface TitleActions {
   chooseClass(classId: string): void;
   toggleCalmMode(): void;
   toggleMute(): void;
+  stepVolume(side: -1 | 1): void;
   toggleAutoFire(): void;
   toggleAutoAim(): void;
   feedback?(): void;
@@ -27,6 +24,7 @@ export interface TitleActions {
 export interface TitleOptions {
   readonly calmMode: boolean;
   readonly muted: boolean;
+  readonly volume: number;
   readonly autoFire: boolean;
   readonly autoAim: boolean;
 }
@@ -71,7 +69,9 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
     choose(next);
   });
   const calm = createToggle('Mode calme', 'Sans strobos, secousses ni halos forts', 'Oui', 'Non');
-  const sound = createSoundToggle();
+  const sound = createSoundControl((side) => {
+    actions.stepVolume(side);
+  });
   const autoFire = createAutoFireToggle();
   const autoAim = createAutoAimToggle();
 
@@ -80,7 +80,7 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
     picker.element,
     together,
     calm.button,
-    sound.button,
+    sound.element,
     autoFire.button,
     autoAim.button,
   ];
@@ -146,6 +146,10 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
       activations[index]?.();
     },
     (index, side) => {
+      if (items[index] === sound.element) {
+        actions.stepVolume(side);
+        return true;
+      }
       if (items[index] !== picker.element) {
         return false;
       }
@@ -163,7 +167,7 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
     menu,
     setOptions(options) {
       calm.set(options.calmMode);
-      sound.set(!options.muted);
+      sound.set(options);
       autoFire.set(options.autoFire);
       autoAim.set(options.autoAim);
     },
@@ -194,7 +198,7 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
         hint,
         [
           { keys: prompts.navigate, label: 'naviguer' },
-          { keys: prompts.navigateRow, label: 'classe' },
+          { keys: prompts.navigateRow, label: 'classe, son' },
           { keys: [prompts.confirm], label: 'valider' },
         ],
         prompts.style,

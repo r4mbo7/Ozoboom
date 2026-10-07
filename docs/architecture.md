@@ -56,7 +56,7 @@ Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick
 | `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`, `MusicTrack`                         |
 | `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource` (vue fusionnée), `DeviceId` et `InputHub` (un instantané par périphérique, pour la coop locale)             |
 | `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme et le cadrage (`CameraFocus` : suivre un joueur, ou cadrer tout le monde)                 |
-| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setMood('set' \| 'menu')`, `setTrack(track)` au lancement d'une partie                                              |
+| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setVolume`, `setMood('set' \| 'menu')`, `setTrack(track)` au lancement d'une partie                                 |
 | `src/ui/types.ts`       | `Ui` et `UiCallbacks` : écrans (titre, salon, jeu, fin, avis), `UiFrame` (les joueurs de cet écran et leurs instantanés), `LobbyModel` rendu par le salon                  |
 | `src/net/types.ts`      | `Transport` (envoyer, diffuser, couper un pair, écouter), `NetMessage` (salon, lancement, commande, trame, empreinte, divergence), `CommandSource` consommée par la boucle |
 

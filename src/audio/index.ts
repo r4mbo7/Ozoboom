@@ -67,6 +67,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   let running: Running | null = null;
   let starting: Promise<void> | null = null;
   let muted = false;
+  let volume = 1;
   let latest: SimState | null = null;
   let mood: Mood = 'set';
   let heard: Mood = 'set';
@@ -124,7 +125,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
   const begin = async () => {
     const context = (options.createContext ?? (() => new AudioContext()))();
-    const master = createMasterChain(context, muted);
+    const master = createMasterChain(context, muted, volume);
     running = {
       context,
       master,
@@ -168,6 +169,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     setMuted(value) {
       muted = value;
       running?.master.setMuted(value);
+    },
+    setVolume(value) {
+      volume = value;
+      running?.master.setVolume(value);
     },
     setTrack(value) {
       track = value;

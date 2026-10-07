@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLIP_CEILING, CLIP_KNEE, softClipCurve } from './master';
+import { CLIP_CEILING, CLIP_KNEE, loudness, softClipCurve } from './master';
 
 describe('softClipCurve', () => {
   const curve = softClipCurve(2001);
@@ -24,5 +24,17 @@ describe('softClipCurve', () => {
       expect(curve[index]).toBeGreaterThan(curve[index - 1] ?? Number.POSITIVE_INFINITY);
     }
     expect(at(0.85)).toBeCloseTo(-at(-0.85), 6);
+  });
+});
+
+describe('loudness', () => {
+  it('plays the full level untouched and silences the lowest', () => {
+    expect(loudness(1)).toBe(1);
+    expect(loudness(0)).toBe(0);
+  });
+
+  it('lowers the gain faster than the level, as the ear hears it', () => {
+    expect(loudness(0.5)).toBeCloseTo(0.25, 6);
+    expect(loudness(0.1)).toBeCloseTo(0.01, 6);
   });
 });

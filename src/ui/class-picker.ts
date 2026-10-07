@@ -73,7 +73,7 @@ export interface ClassStepper {
 const CHEVRON =
   '<path d="M14.5 5.5 8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>';
 
-function arrow(label: string, flipped: boolean): HTMLButtonElement {
+export function stepperArrow(label: string, flipped: boolean): HTMLButtonElement {
   const button = el('button', 'ui-stepper__arrow');
   button.type = 'button';
   button.tabIndex = -1;
@@ -92,8 +92,8 @@ export function createClassStepper(
   onStep: (side: -1 | 1) => void,
 ): ClassStepper {
   const element = el('div', 'ui-stepper');
-  const previous = arrow('Classe précédente', false);
-  const next = arrow('Classe suivante', true);
+  const previous = stepperArrow('Classe précédente', false);
+  const next = stepperArrow('Classe suivante', true);
   const current = el('div', 'ui-stepper__current');
   const dot = el('span', 'ui-swatch');
   dot.setAttribute('aria-hidden', 'true');
