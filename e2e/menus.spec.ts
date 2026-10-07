@@ -93,12 +93,12 @@ test('the title shows again under a resting cursor without moving the selection'
   await page.goto('./');
   const feedback = page.getByRole('button', { name: /^Ton avis/ });
   const sound = page.getByRole('switch', { name: /^Son/ });
-  const spot = await centerOf(sound);
-  for (let index = 0; index < 5; index++) {
+  for (let index = 0; index < 7; index++) {
     await page.keyboard.press('ArrowDown');
     await frames(page);
   }
   await expect(feedback).toHaveAttribute('aria-current', 'true');
+  const spot = await centerOf(sound);
   await page.keyboard.press('Enter');
   const form = page.getByRole('dialog', { name: 'Raconte-nous ta soirée' });
   await expect(form).toBeVisible();

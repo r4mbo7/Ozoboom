@@ -50,6 +50,8 @@ const session = params.get('role') === 'guest' ? ({ role: 'guest' } as const) : 
 const titleOptions = {
   calmMode: params.has('calm') || prefersCalmMode(),
   muted: params.has('muted'),
+  autoFire: params.has('autoFire'),
+  autoAim: params.has('autoAim'),
   classId: 'mage',
 };
 const blockedTab: FeedbackTransport = {
@@ -124,6 +126,14 @@ const ui = createUi(
     onToggleMute(muted) {
       console.info('[ui] onToggleMute', muted);
       titleOptions.muted = muted;
+    },
+    onToggleAutoFire(enabled) {
+      console.info('[ui] onToggleAutoFire', enabled);
+      titleOptions.autoFire = enabled;
+    },
+    onToggleAutoAim(enabled) {
+      console.info('[ui] onToggleAutoAim', enabled);
+      titleOptions.autoAim = enabled;
     },
     onFeedback(details) {
       console.info('[ui] onFeedback', details ?? '');

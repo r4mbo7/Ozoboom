@@ -5,7 +5,12 @@ import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
 import { stepClass } from './lobby-model';
 import { promptsFor } from './prompts';
-import { createSoundToggle, createToggle } from './toggle';
+import {
+  createAutoAimToggle,
+  createAutoFireToggle,
+  createSoundToggle,
+  createToggle,
+} from './toggle';
 
 export interface TitleActions {
   start(): void;
@@ -13,13 +18,22 @@ export interface TitleActions {
   chooseClass(classId: string): void;
   toggleCalmMode(): void;
   toggleMute(): void;
+  toggleAutoFire(): void;
+  toggleAutoAim(): void;
   feedback?(): void;
+}
+
+export interface TitleOptions {
+  readonly calmMode: boolean;
+  readonly muted: boolean;
+  readonly autoFire: boolean;
+  readonly autoAim: boolean;
 }
 
 export interface TitleScreen {
   readonly element: HTMLElement;
   readonly menu: Menu;
-  setOptions(calmMode: boolean, muted: boolean): void;
+  setOptions(options: TitleOptions): void;
   setClass(classId: string): void;
   setDevice(device: InputDevice): void;
 }
@@ -56,8 +70,18 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
   });
   const calm = createToggle('Mode calme', 'Sans strobos, secousses ni halos forts', 'Oui', 'Non');
   const sound = createSoundToggle();
+  const autoFire = createAutoFireToggle();
+  const autoAim = createAutoAimToggle();
 
-  const items = [play, picker.element, together, calm.button, sound.button];
+  const items = [
+    play,
+    picker.element,
+    together,
+    calm.button,
+    sound.button,
+    autoFire.button,
+    autoAim.button,
+  ];
   if (actions.feedback !== undefined) {
     items.push(createFeedbackButton());
   }
@@ -104,6 +128,12 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
       actions.toggleMute();
     },
     () => {
+      actions.toggleAutoFire();
+    },
+    () => {
+      actions.toggleAutoAim();
+    },
+    () => {
       actions.feedback?.();
     },
   ];
@@ -127,9 +157,11 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
   return {
     element,
     menu,
-    setOptions(calmMode, muted) {
-      calm.set(calmMode);
-      sound.set(!muted);
+    setOptions(options) {
+      calm.set(options.calmMode);
+      sound.set(!options.muted);
+      autoFire.set(options.autoFire);
+      autoAim.set(options.autoAim);
     },
     setClass(next) {
       classId = next;

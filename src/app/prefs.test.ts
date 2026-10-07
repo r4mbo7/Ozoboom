@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { loadPrefs, savePref } from './prefs';
 
-const DEFAULTS = { calmMode: true, muted: false, classId: 'mage' };
+const DEFAULTS = {
+  calmMode: true,
+  muted: false,
+  autoFire: false,
+  autoAim: false,
+  classId: 'mage',
+};
 
 function memoryStorage(): Storage {
   const items = new Map<string, string>();
@@ -39,11 +45,15 @@ describe('prefs', () => {
 
     savePref(() => storage, 'calmMode', false);
     savePref(() => storage, 'muted', true);
+    savePref(() => storage, 'autoFire', true);
+    savePref(() => storage, 'autoAim', true);
     savePref(() => storage, 'classId', 'tank');
 
     expect(loadPrefs(() => storage, DEFAULTS)).toEqual({
       calmMode: false,
       muted: true,
+      autoFire: true,
+      autoAim: true,
       classId: 'tank',
     });
   });

@@ -109,7 +109,7 @@ test('sends feedback from the title, before any game', async ({ page }) => {
   const feedback = page.getByRole('button', { name: /^Ton avis/ });
   await expect(feedback).toBeVisible();
 
-  for (let index = 0; index < 5; index++) {
+  for (let index = 0; index < 7; index++) {
     await press(page, 'ArrowDown');
   }
   await expect(feedback).toHaveAttribute('aria-current', 'true');

@@ -3,7 +3,7 @@ import { CONTENT } from '../data/content';
 import type { TrapDefinition } from '../data/types';
 import type { GameplayIntents, InputSnapshot } from '../input/intents';
 import type { Vec2 } from '../sim/state';
-import { Controls, buildCommand } from './controls';
+import { Controls, NO_ASSIST, buildCommand } from './controls';
 
 const PLAYER = { id: 0, x: 400, y: 300, radius: 14, aim: { x: 1, y: 0 } } as const;
 const OUTWARD = { x: -1, y: 0 };
@@ -58,6 +58,7 @@ describe('buildCommand', () => {
       trap: LASER,
       placeTrap: true,
       upgradeId: null,
+      assist: NO_ASSIST,
       target: null,
       trapScreen: null,
     });
@@ -87,6 +88,7 @@ describe('buildCommand', () => {
       trap: CAISSON,
       placeTrap: false,
       upgradeId: null,
+      assist: NO_ASSIST,
       target: null,
       trapScreen: null,
     });
@@ -105,6 +107,7 @@ describe('buildCommand', () => {
       trap: CAISSON,
       placeTrap: true,
       upgradeId: 'double-tempo',
+      assist: NO_ASSIST,
       target: null,
       trapScreen: null,
     });
@@ -125,6 +128,7 @@ describe('buildCommand', () => {
       trap: undefined,
       placeTrap: true,
       upgradeId: null,
+      assist: NO_ASSIST,
       target: null,
       trapScreen: null,
     });
@@ -240,6 +244,54 @@ describe('Controls', () => {
     );
 
     expectVec(command.input.aim, OUTWARD);
+    expect(command.input.fire).toBe(false);
+  });
+
+  it('fires a keyboard by itself at a bad vibe in reach, where the player aims, with automatic fire', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    controls.frame(snapshot());
+
+    const command = controls.command(
+      PLAYER,
+      toWorld,
+      [{ x: 400, y: 320, radius: 10, hp: 5 }],
+      REACH,
+      { autoFire: true, autoAim: false },
+    );
+
+    expectVec(command.input.aim, OUTWARD);
+    expect(command.input.fire).toBe(true);
+  });
+
+  it('aims a gamepad at the nearest bad vibe in reach without firing, with automatic aim', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    controls.frame(snapshot({}, { device: 'gamepad' }));
+
+    const command = controls.command(
+      PLAYER,
+      toWorld,
+      [{ x: 400, y: 320, radius: 10, hp: 5 }],
+      REACH,
+      { autoFire: false, autoAim: true },
+    );
+
+    expectVec(command.input.aim, { x: 0, y: 1 });
+    expect(command.input.fire).toBe(false);
+  });
+
+  it('keeps the mouse aim and holds fire with both assists and no bad vibe in reach', () => {
+    const controls = new Controls(CONTENT.traps, OUTWARD);
+    controls.frame(snapshot({}, { pointerScreen: { x: 300, y: 350 }, aimFromPointer: true }));
+
+    const command = controls.command(
+      PLAYER,
+      toWorld,
+      [{ x: 400, y: 300 + REACH + 20, radius: 10, hp: 5 }],
+      REACH,
+      { autoFire: true, autoAim: true },
+    );
+
+    expectVec(command.input.aim, { x: 0, y: 1 });
     expect(command.input.fire).toBe(false);
   });
 

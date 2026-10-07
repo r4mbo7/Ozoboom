@@ -21,6 +21,8 @@ import {
   type LocalPlayer,
   type UiFrame,
   createFeedbackButton,
+  createAutoAimToggle,
+  createAutoFireToggle,
   createSoundToggle,
   createUi,
   prefersCalmMode,
@@ -69,6 +71,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const prefs = loadPrefs(storage, {
     calmMode: prefersCalmMode(),
     muted: false,
+    autoFire: false,
+    autoAim: false,
     classId: DEFAULT_CLASS_ID,
   });
   if (!classIds.includes(prefs.classId)) {
@@ -155,6 +159,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       savePref(storage, 'calmMode', enabled);
     },
     onToggleMute: setMuted,
+    onToggleAutoFire: setAutoFire,
+    onToggleAutoAim: setAutoAim,
     onFeedback: openForm,
     onPlayTogether: openLobby,
     onChooseClass(classId) {
@@ -228,6 +234,10 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   });
   const soundToggle = createSoundToggle();
   soundToggle.set(!prefs.muted);
+  const autoFireToggle = createAutoFireToggle();
+  autoFireToggle.set(prefs.autoFire);
+  const autoAimToggle = createAutoAimToggle();
+  autoAimToggle.set(prefs.autoAim);
   const pause = createPauseScreen(root, [
     {
       label: 'Reprendre',
@@ -240,6 +250,20 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       button: soundToggle.button,
       activate() {
         setMuted(!prefs.muted);
+      },
+    },
+    {
+      label: 'Tir automatique',
+      button: autoFireToggle.button,
+      activate() {
+        setAutoFire(!prefs.autoFire);
+      },
+    },
+    {
+      label: 'Visée automatique',
+      button: autoAimToggle.button,
+      activate() {
+        setAutoAim(!prefs.autoAim);
       },
     },
     { label: 'Ton avis', button: createFeedbackButton(), activate: openForm },
@@ -258,6 +282,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     ui.showTitle({
       calmMode: prefs.calmMode,
       muted: prefs.muted,
+      autoFire: prefs.autoFire,
+      autoAim: prefs.autoAim,
       device: view.merged.device,
       classId: prefs.classId,
     });
@@ -288,6 +314,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       locals,
       source: createLocalSource(),
       focus,
+      assist: () => prefs,
     });
   }
 
@@ -348,6 +375,18 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     soundToggle.set(!muted);
   }
 
+  function setAutoFire(enabled: boolean): void {
+    prefs.autoFire = enabled;
+    savePref(storage, 'autoFire', enabled);
+    autoFireToggle.set(enabled);
+  }
+
+  function setAutoAim(enabled: boolean): void {
+    prefs.autoAim = enabled;
+    savePref(storage, 'autoAim', enabled);
+    autoAimToggle.set(enabled);
+  }
+
   function beginGame(): void {
     void audio.start();
     played = true;
@@ -397,6 +436,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         locals: new Map([[started.localPlayer, null]]),
         source: started.source,
         focus: { kind: 'player', playerId: started.localPlayer },
+        assist: () => prefs,
       }),
     );
     paused = false;

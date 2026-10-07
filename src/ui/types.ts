@@ -47,6 +47,8 @@ export interface UiCallbacks {
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
   onToggleCalmMode(enabled: boolean): void;
   onToggleMute(muted: boolean): void;
+  onToggleAutoFire(enabled: boolean): void;
+  onToggleAutoAim(enabled: boolean): void;
   onPlayTogether(): void;
   onChooseClass(classId: string): void;
   onJoinSeat(device: DeviceId): void;
@@ -69,6 +71,8 @@ export interface Ui {
   showTitle(options: {
     calmMode: boolean;
     muted: boolean;
+    autoFire: boolean;
+    autoAim: boolean;
     device: InputDevice;
     classId: string;
   }): void;

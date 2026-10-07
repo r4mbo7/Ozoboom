@@ -162,6 +162,7 @@ Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-0
 
 - Les menus et l'écran de fin se parcourent entièrement à la manette, à la croix comme au stick gauche : une poussée franche au-delà de 0,6 sur l'axe dominant vaut un appui, le stick revient sous 0,3 avant le suivant, et le maintien répète comme la croix (400 ms, puis toutes les 120 ms).
 - La compétence de classe se lance à la touche E au clavier, à la gâchette gauche à la manette.
+- Au clavier et à la manette, deux réglages de l'écran titre et de la pause, coupés par défaut, font ce que le tactile fait toujours : le tir automatique tire dès qu'une bad vibe est à portée, la visée automatique vise la plus proche à portée.
 - Au tactile, les menus se touchent, la compétence se touche sur sa tuile et la pause sur un bouton du bandeau ; aucune touche n'est affichée. Le tactile joue seul ou en ligne, pas en coop sur un même écran.
 - Au clavier, les menus se parcourent aux flèches ou ZQSD et se valident avec Entrée. Espace ne sert qu'au tir : sans effet dans les menus, hors zone de texte.
 - Les commandes se remappent (V1).

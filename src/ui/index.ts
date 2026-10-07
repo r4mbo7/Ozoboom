@@ -27,7 +27,7 @@ export type {
   UiFrame,
 } from './types';
 export { createFeedbackButton } from './feedback-button';
-export { createSoundToggle } from './toggle';
+export { createAutoAimToggle, createAutoFireToggle, createSoundToggle } from './toggle';
 export { selectTrap } from './navigation';
 export { SEAT_IDS, defaultName } from './lobby-model';
 
@@ -70,6 +70,8 @@ export function createUi(
   let screen: Screen = 'title';
   let calmMode = false;
   let muted = false;
+  let autoFire = false;
+  let autoAim = false;
   let device: InputDevice = 'none';
   let acted = false;
   let lastContent: GameContent | null = null;
@@ -114,6 +116,16 @@ export function createUi(
         muted = !muted;
         applyOptions();
         callbacks.onToggleMute(muted);
+      },
+      toggleAutoFire() {
+        autoFire = !autoFire;
+        applyOptions();
+        callbacks.onToggleAutoFire(autoFire);
+      },
+      toggleAutoAim() {
+        autoAim = !autoAim;
+        applyOptions();
+        callbacks.onToggleAutoAim(autoAim);
       },
     },
     classes,
@@ -195,7 +207,7 @@ export function createUi(
 
   function applyOptions(): void {
     root.classList.toggle('calm', calmMode);
-    title.setOptions(calmMode, muted);
+    title.setOptions({ calmMode, muted, autoFire, autoAim });
   }
 
   function applyDevice(next: InputDevice): void {
@@ -233,6 +245,8 @@ export function createUi(
     showTitle(options) {
       calmMode = options.calmMode;
       muted = options.muted;
+      autoFire = options.autoFire;
+      autoAim = options.autoAim;
       applyOptions();
       applyDevice(options.device);
       title.setClass(options.classId);

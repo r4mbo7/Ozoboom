@@ -8,7 +8,7 @@ import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId, PlayerState } from '../sim/state';
 import { statValue } from '../sim/stats';
 import type { LocalPlayer } from '../ui';
-import { Controls, type ScreenToWorld } from './controls';
+import { type Assist, Controls, type ScreenToWorld } from './controls';
 import { createSession, type Session } from './session';
 
 // What the hub saw this frame. A local player reads the snapshot of their device, or the merged
@@ -27,6 +27,8 @@ export interface MatchOptions {
   readonly locals: ReadonlyMap<PlayerId, DeviceId | null>;
   readonly source: CommandSource;
   readonly focus: CameraFocus;
+  // What the game does by itself for the players of this screen, read at every step.
+  readonly assist?: () => Assist;
 }
 
 export interface MatchSeat {
@@ -157,7 +159,13 @@ export function createMatch(options: MatchOptions): Match {
           if (player === undefined) {
             throw new Error(`The game has no player ${String(playerId)}`);
           }
-          return own.command(player, toWorld, session.state.enemies, reachOf(content, player));
+          return own.command(
+            player,
+            toWorld,
+            session.state.enemies,
+            reachOf(content, player),
+            options.assist?.(),
+          );
         }),
       );
       if (commands === null) {

@@ -2838,7 +2838,8 @@
   }
 }
 
-/* Touch screens: menus are touched, no key is shown, and the HUD gets a pause button. */
+/* Touch screens: menus are touched, no key is shown, the HUD gets a pause button, and the game
+   always fires and aims by itself, so its switches do not show. */
 
 .ui-hud__pause {
   display: none;
@@ -2862,7 +2863,7 @@
   height: 18px;
 }
 
-[data-touch] :is(.ui-hint, .ui-trap__key, .ui-skill__key) {
+[data-touch] :is(.ui-hint, .ui-trap__key, .ui-skill__key, .ui-toggle--assist) {
   display: none;
 }
 

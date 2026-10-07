@@ -1,6 +1,8 @@
 export interface Prefs {
   calmMode: boolean;
   muted: boolean;
+  autoFire: boolean;
+  autoAim: boolean;
   // The class of a solo game: the last one chosen on the title.
   classId: string;
 }
@@ -8,6 +10,8 @@ export interface Prefs {
 const KEYS: Readonly<Record<keyof Prefs, string>> = {
   calmMode: 'ozoboom.calmMode',
   muted: 'ozoboom.muted',
+  autoFire: 'ozoboom.autoFire',
+  autoAim: 'ozoboom.autoAim',
   classId: 'ozoboom.classId',
 };
 
@@ -17,6 +21,8 @@ export function loadPrefs(storage: () => Storage, defaults: Prefs): Prefs {
   return {
     calmMode: readFlag(storage, KEYS.calmMode) ?? defaults.calmMode,
     muted: readFlag(storage, KEYS.muted) ?? defaults.muted,
+    autoFire: readFlag(storage, KEYS.autoFire) ?? defaults.autoFire,
+    autoAim: readFlag(storage, KEYS.autoAim) ?? defaults.autoAim,
     classId: readText(storage, KEYS.classId) ?? defaults.classId,
   };
 }

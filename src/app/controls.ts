@@ -9,6 +9,16 @@ export type ScreenToWorld = (point: Vec2) => Vec2;
 type Body = Pick<PlayerState, 'id' | 'x' | 'y' | 'radius' | 'aim'>;
 export type Target = Pick<EnemyState, 'x' | 'y' | 'radius' | 'hp'>;
 
+// What the game does by itself for the player, on the nearest bad vibe in reach. A touch screen
+// always has both; elsewhere the player turns them on.
+export interface Assist {
+  readonly autoFire: boolean;
+  readonly autoAim: boolean;
+}
+
+export const NO_ASSIST: Assist = { autoFire: false, autoAim: false };
+const TOUCH_ASSIST: Assist = { autoFire: true, autoAim: true };
+
 export interface CommandRequest {
   readonly snapshot: InputSnapshot;
   readonly player: Body;
@@ -17,7 +27,8 @@ export interface CommandRequest {
   readonly trap: TrapDefinition | undefined;
   readonly placeTrap: boolean;
   readonly upgradeId: string | null;
-  // On a touch screen, the bad vibe the player aims and fires at by themselves.
+  readonly assist: Assist;
+  // The bad vibe the assist aims or fires at.
   readonly target: Vec2 | null;
   // Where on the screen a finger dropped the trap; null places it under the player.
   readonly trapScreen: Vec2 | null;
@@ -53,9 +64,10 @@ export function aimOf(
 }
 
 export function buildCommand(request: CommandRequest): PlayerCommand {
-  const { snapshot, player, toWorld, heldAim, trap, target } = request;
+  const { snapshot, player, toWorld, heldAim, trap, assist, target } = request;
   const { gameplay } = snapshot;
-  const toTarget = target === null ? null : { x: target.x - player.x, y: target.y - player.y };
+  const toTarget =
+    target === null || !assist.autoAim ? null : { x: target.x - player.x, y: target.y - player.y };
   const aim =
     toTarget !== null && length(toTarget) > 0
       ? normalize(toTarget)
@@ -80,7 +92,7 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
     input: {
       move: gameplay.move,
       aim,
-      fire: gameplay.fire || target !== null,
+      fire: gameplay.fire || (assist.autoFire && target !== null),
       skill: gameplay.skill,
     },
     actions,
@@ -143,16 +155,18 @@ export class Controls {
     this.upgradeId = upgradeId;
   }
 
-  // `reach`: how far the player's attack flies now, for the automatic aim of a touch screen.
+  // `reach`: how far the player's attack flies now, for the assist.
   command(
     player: Body,
     toWorld: ScreenToWorld,
     enemies: readonly Target[],
     reach: number,
+    chosen: Assist = NO_ASSIST,
   ): PlayerCommand {
     if (this.snapshot === null) {
       return { playerId: player.id, input: IDLE_INPUT, actions: [] };
     }
+    const assist = this.snapshot.device === 'touch' ? TOUCH_ASSIST : chosen;
     const command = buildCommand({
       snapshot: this.snapshot,
       player,
@@ -161,7 +175,8 @@ export class Controls {
       trap: this.traps[this.trapIndex],
       placeTrap: this.placeTrap,
       upgradeId: this.upgradeId,
-      target: this.snapshot.device === 'touch' ? autoTarget(player, enemies, reach) : null,
+      assist,
+      target: assist.autoFire || assist.autoAim ? autoTarget(player, enemies, reach) : null,
       trapScreen: this.trapScreen,
     });
     this.placeTrap = false;

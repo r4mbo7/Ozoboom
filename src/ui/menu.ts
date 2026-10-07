@@ -68,6 +68,8 @@ export function createMenu(
       const step = navigateMenu(index, items.length, edges);
       if (step.index !== index) {
         select(step.index);
+        // A long menu scrolls: the keyboard and the gamepad follow their selection.
+        items[index]?.scrollIntoView({ block: 'nearest' });
       }
       if (step.confirmed && items.length > 0) {
         onActivate(index);
