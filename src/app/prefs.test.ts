@@ -7,6 +7,7 @@ const DEFAULTS = {
   autoFire: false,
   autoAim: false,
   classId: 'mage',
+  trackId: '',
 };
 
 function memoryStorage(): Storage {
@@ -48,6 +49,7 @@ describe('prefs', () => {
     savePref(() => storage, 'autoFire', true);
     savePref(() => storage, 'autoAim', true);
     savePref(() => storage, 'classId', 'tank');
+    savePref(() => storage, 'trackId', 'soiree-ouverture');
 
     expect(loadPrefs(() => storage, DEFAULTS)).toEqual({
       calmMode: false,
@@ -55,6 +57,7 @@ describe('prefs', () => {
       autoFire: true,
       autoAim: true,
       classId: 'tank',
+      trackId: 'soiree-ouverture',
     });
   });
 

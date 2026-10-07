@@ -1,7 +1,9 @@
 import { WHITE, paint, polygon, type Shape } from './paint';
+import { mandala } from './textures-looks';
 
 export interface ClassFxTextures {
   readonly trail: Shape;
+  readonly mandala: Shape;
 }
 
 export const TRAIL_HALF_LENGTH = 64;
@@ -22,5 +24,6 @@ export function createClassFxTextures(): ClassFxTextures {
       ]);
       ctx.fill();
     }),
+    mandala: mandala(),
   };
 }

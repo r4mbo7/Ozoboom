@@ -25,7 +25,7 @@ export interface Room {
   // Changes this peer's own name and/or class and tells the room.
   setSeat(change: { name?: string; classId?: string }): void;
   // Host only: freezes the room, sends the start to the guests and fires onStart here too.
-  start(setId: string, seed: number): StartMessage;
+  start(setId: string, seed: number, trackId: string): StartMessage;
   onChange(listener: (seats: readonly Seat[]) => void): () => void;
   // Guest only: the host's version is given so the player can be told what to update to.
   onRefused(listener: (reason: RefusalReason, hostVersion: string) => void): () => void;
@@ -215,7 +215,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         transport.broadcast(message);
       }
     },
-    start(setId, seed) {
+    start(setId, seed, trackId) {
       if (role !== 'host') {
         throw new Error('only the host starts the game');
       }
@@ -228,7 +228,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         classId: seat.classId,
         name: seat.name,
       }));
-      const message: StartMessage = { type: 'start', seed, setId, players };
+      const message: StartMessage = { type: 'start', seed, setId, trackId, players };
       for (const seat of seats) {
         if (seat.peer !== null && seat.peer !== transport.id) {
           transport.send(seat.peer, message);

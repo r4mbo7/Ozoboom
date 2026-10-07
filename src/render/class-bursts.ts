@@ -14,8 +14,8 @@ export interface Burster {
 }
 
 // The calm mode keeps every effect but lowers its intensity and stretches it, with no spin.
-export function createBurster(ctx: RenderContext): Burster {
-  const bursts = new Bursts(ctx.layers.fx, BURST_CAPACITY, ctx.textures.ring);
+export function createBurster(ctx: RenderContext, capacity = BURST_CAPACITY): Burster {
+  const bursts = new Bursts(ctx.layers.fx, capacity, ctx.textures.ring);
   return {
     bursts,
     tokenOf: (player) => {

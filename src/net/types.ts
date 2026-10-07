@@ -17,7 +17,14 @@ export type NetMessage =
   | { type: 'refused'; reason: 'version' | 'full' | 'started'; version: string }
   | { type: 'lobby'; seats: readonly Seat[] }
   | { type: 'seat'; name?: string; classId?: string }
-  | { type: 'start'; seed: number; setId: string; players: readonly PlayerSlot[] }
+  | {
+      type: 'start';
+      seed: number;
+      setId: string;
+      // The music every peer plays: the simulation never sees it.
+      trackId: string;
+      players: readonly PlayerSlot[];
+    }
   | { type: 'command'; tick: number; command: PlayerCommand }
   | { type: 'frame'; tick: number; commands: readonly PlayerCommand[] }
   | { type: 'hash'; tick: number; hash: string }

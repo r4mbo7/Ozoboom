@@ -1,6 +1,8 @@
 import type { PlayerState, SimEvent, SimState } from '../sim/state';
+import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { FixtureEvent } from './fixture-classes';
 
+const LUXIOLE = 0;
 const ROADIE = 1;
 const CARE = 2;
 const TAUNT_RADIUS = 150;
@@ -15,12 +17,25 @@ function tauntedCount(state: SimState, x: number, y: number): number {
 }
 
 // The classes of the V0.2 are not in the content yet: this plays their events on the fixture party,
-// the roadie being its second player and the care its third.
+// la Luxiole being its first player, the Nounours its second and l'Hygie its third. Everyone
+// standing fires on every half beat.
 export function advanceClassFx(
   state: SimState,
   queued: readonly FixtureEvent[],
   events: SimEvent[],
 ): void {
+  if (state.tick % (TICKS_PER_BEAT / 2) === 0) {
+    for (const player of state.players) {
+      if (!player.downed) {
+        const angle = Math.atan2(player.aim.y, player.aim.x);
+        events.push({ type: 'playerFired', playerId: player.id, x: player.x, y: player.y, angle });
+      }
+    }
+  }
+  const luxiole = member(state, LUXIOLE);
+  if (luxiole !== undefined && queued.includes('nova')) {
+    events.push({ type: 'skillUsed', playerId: luxiole.id });
+  }
   const roadie = member(state, ROADIE);
   const care = member(state, CARE);
   if (roadie !== undefined && queued.includes('charge')) {

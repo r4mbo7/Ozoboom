@@ -476,7 +476,7 @@
 }
 
 .ui-title__meta {
-  margin-top: -16px;
+  margin-top: -12px;
   color: var(--ui-muted);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
@@ -2658,6 +2658,12 @@
     flex-direction: column;
     gap: 4px;
     padding: 8px 6px;
+  }
+
+  .ui-class__name {
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
   }
 
   .ui-hud[data-team] {

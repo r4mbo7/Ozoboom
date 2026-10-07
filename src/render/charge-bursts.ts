@@ -103,9 +103,11 @@ export function createChargeBursts(
     } as const;
     spawn(frame, {
       ...base,
-      shape: t.ring,
+      shape: classFx.mandala,
+      duration: TICKS_PER_BEAT * 1.6,
       fromRadius: player.radius,
       toRadius: radius,
+      spin: 1.4,
       peak: 0.95,
       outline: true,
     });

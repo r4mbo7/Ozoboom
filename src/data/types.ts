@@ -291,7 +291,14 @@ export type MusicVoiceId =
   | 'ghost-bass'
   | 'lake-pluck'
   | 'mist-lead'
-  | 'droplet';
+  | 'droplet'
+  | 'goa-lead'
+  | 'gate'
+  | 'goa-arp'
+  | 'tom'
+  | 'acid'
+  | 'croak'
+  | 'laser';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
 // `kick` plays out of the break, `clap` only in the drop.
@@ -311,6 +318,9 @@ export interface MusicPart {
   notes: MusicNotes;
   // Absent: in and out of the break. `light`: only in the break, `full`: never in it.
   in?: 'full' | 'light';
+  // Steps of the loop whose note is accented, or slides from the previous note.
+  accents?: readonly number[];
+  slides?: readonly number[];
 }
 
 // A background track. Every track plays at the set's tempo and follows its buildups, breaks and

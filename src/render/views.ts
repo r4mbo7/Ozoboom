@@ -57,4 +57,9 @@ export class ViewPool<V> {
   end(): void {
     this.active.forEach(this.releaseStale);
   }
+
+  releaseAll(): void {
+    this.begin();
+    this.end();
+  }
 }

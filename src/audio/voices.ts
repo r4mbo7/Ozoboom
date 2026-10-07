@@ -18,11 +18,17 @@ export interface MusicVoiceContext {
   light: boolean;
   // Nothing may sound past it: the cut before a drop.
   until: number;
+  accent: boolean;
+  // Glides from the previous note.
+  slide: boolean;
+  // The next note slides from this one.
+  legato: boolean;
 }
 
 export type MusicVoice = (ctx: MusicVoiceContext) => void;
 
 const SIXTEENTH = STEP_TICKS * TICK_SECONDS;
+const SWEEP_TICKS = 8 * TICKS_PER_BAR;
 const BASS_ACCENTS = [0.8, 1, 1.3];
 const ORIENTAL_VOICES: readonly (readonly [detune: number, octaves: number, gain: number])[] = [
   [-14, 0, 0.04],
@@ -39,6 +45,12 @@ const LAKE_PLUCK_VOICES: readonly (readonly [
   ['triangle', -6, 0.06],
   ['square', 6, 0.03],
 ];
+const TOM_HZ = [190, 160, 130, 105];
+const GATE_TOP_HZ = 2200;
+
+function sweepOf(step: number): number {
+  return 0.5 - 0.5 * Math.cos((2 * Math.PI * step) / SWEEP_TICKS);
+}
 
 function texturePan(position: number): number {
   return position % 2 === 0 ? -0.6 : 0.6;
@@ -138,7 +150,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
     });
   },
   squelch: ({ out, at, hz, step }) => {
-    const sweep = 0.5 - 0.5 * Math.cos((2 * Math.PI * step) / (8 * TICKS_PER_BAR));
+    const sweep = sweepOf(step);
     const cutoff = 500 + 2200 * sweep;
     playTone(out, at, {
       wave: 'sawtooth',
@@ -258,6 +270,116 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       hold: 0.01,
       release: 0.45,
       pan: Math.floor(position / 8) % 2 === 0 ? -0.6 : 0.6,
+    });
+  },
+  'goa-lead': ({ send, at, hz, steps, cutoff, until }) => {
+    const long = steps >= 4;
+    const release = long ? 0.16 : 0.08;
+    for (const detune of [-12, 0, 12]) {
+      playTone(send, at, {
+        wave: 'sawtooth',
+        hz,
+        detune,
+        gain: 0.027,
+        attack: 0.01,
+        hold: Math.max(0, Math.min(steps * SIXTEENTH * 0.82, until - at - release)),
+        release,
+        ...(long ? { vibrato: { hz: 5.5, cents: 18, delay: 0.14 } } : {}),
+        filter: {
+          type: 'lowpass',
+          hz: cutoff,
+          toHz: cutoff * 0.45,
+          glide: steps * SIXTEENTH,
+          q: 5,
+        },
+      });
+    }
+  },
+  gate: ({ out, at, hz, cutoff }) => {
+    playTone(out, at, {
+      wave: 'sawtooth',
+      hz,
+      gain: 0.018,
+      attack: 0.002,
+      hold: SIXTEENTH * 0.5,
+      release: SIXTEENTH * 0.25,
+      filter: { type: 'lowpass', hz: Math.min(cutoff, GATE_TOP_HZ), q: 2 },
+    });
+  },
+  'goa-arp': ({ out, at, hz, position }) => {
+    playTone(out, at, {
+      wave: 'square',
+      hz,
+      gain: 0.022,
+      attack: 0.003,
+      hold: 0.025,
+      release: 0.05,
+      pan: position % 2 === 0 ? -0.4 : 0.4,
+      filter: { type: 'lowpass', hz: 3000, q: 2 },
+    });
+  },
+  tom: ({ out, at, position }) => {
+    const hz = TOM_HZ[position % TOM_HZ.length] ?? 0;
+    playTone(out, at, {
+      wave: 'triangle',
+      hz,
+      toHz: hz * 0.55,
+      glide: 0.18,
+      gain: 0.32,
+      attack: 0.001,
+      hold: 0.03,
+      release: 0.18,
+    });
+  },
+  acid: ({ out, send, at, step, hz, fromHz, cutoff, light, accent, slide, legato }) => {
+    // 380-1300 Hz in a first buildup, 700-3800 Hz in a first drop, brighter with each tier.
+    const [low, high] = light ? [300, 2200] : [250 + cutoff * 0.14, 320 + cutoff * 1.09];
+    const open = low + (high - low) * sweepOf(step);
+    playTone(light ? send : out, at, {
+      wave: 'sawtooth',
+      hz: slide ? fromHz : hz,
+      toHz: hz,
+      glide: 0.06,
+      gain: (accent ? 0.085 : 0.06) * (light ? 0.55 : 1),
+      attack: 0.002,
+      hold: legato ? SIXTEENTH : SIXTEENTH * 0.55,
+      release: SIXTEENTH * 0.3,
+      filter: {
+        type: 'lowpass',
+        hz: open * (accent ? 2.2 : 1.3),
+        toHz: open * 0.4,
+        glide: SIXTEENTH * 0.9,
+        q: 17,
+      },
+    });
+  },
+  croak: ({ out, at, position }) => {
+    for (let pulse = 0; pulse < 3; pulse += 1) {
+      playTone(out, at + pulse * 0.045, {
+        wave: 'square',
+        hz: 230 - pulse * 14,
+        toHz: 170,
+        glide: 0.035,
+        gain: 0.07,
+        attack: 0.002,
+        hold: 0.012,
+        release: 0.03,
+        pan: position < 32 ? -0.55 : 0.55,
+        filter: { type: 'bandpass', hz: 720, q: 7 },
+      });
+    }
+  },
+  laser: ({ send, at, position }) => {
+    playTone(send, at, {
+      wave: 'sine',
+      hz: 2800,
+      toHz: 180,
+      glide: 0.08,
+      gain: 0.04,
+      attack: 0.001,
+      hold: 0.03,
+      release: 0.05,
+      pan: position < 12 ? -0.5 : 0.5,
     });
   },
 };

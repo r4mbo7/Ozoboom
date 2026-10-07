@@ -1,4 +1,4 @@
-import type { MusicNotes, MusicTrack } from './types';
+import type { MusicNotes, MusicPart, MusicTrack } from './types';
 
 const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
 const HIJAZ = [0, 1, 4, 5, 7, 8, 10];
@@ -261,4 +261,173 @@ export const BRUME_DU_LAC: MusicTrack = {
   ],
 };
 
-export const TRACKS: readonly MusicTrack[] = [SOIREE_OUVERTURE, BRUME_DU_LAC];
+const HARMONIC_MINOR = [0, 2, 3, 5, 7, 8, 11];
+const TRANCE_GATE = [0, 2, 3, 5, 6, 8, 10, 11, 13, 15];
+
+const GOA_LEAD: MusicNotes = [
+  [0, 7, 2],
+  [2, 6, 2],
+  [4, 7, 2],
+  [6, 9, 2],
+  [8, 10, 4],
+  [12, 9, 2],
+  [14, 7, 2],
+  [16, 6, 4],
+  [20, 4, 4],
+  [24, 5, 2],
+  [26, 6, 2],
+  [28, 7, 4],
+  [32, 7, 2],
+  [34, 9, 2],
+  [36, 10, 2],
+  [38, 11, 2],
+  [40, 12, 6],
+  [46, 11, 2],
+  [48, 10, 2],
+  [50, 9, 2],
+  [52, 10, 2],
+  [54, 9, 2],
+  [56, 7, 4],
+  [60, 6, 4],
+];
+
+export const GOA_DES_ETOILES: MusicTrack = {
+  id: 'goa-des-etoiles',
+  name: 'Goa des étoiles',
+  rootMidi: 28,
+  scale: HARMONIC_MINOR,
+  chords: [0, -2, -3, 0],
+  kick: { fromHz: 300, release: 0.06 },
+  parts: [
+    {
+      voice: 'rolling-bass',
+      layer: 'bass',
+      loopSteps: 4,
+      octave: 0,
+      followsChord: true,
+      notes: [
+        [1, 0, 1],
+        [2, 7, 1],
+        [3, 0, 1],
+      ],
+    },
+    ...[0, 2, 4].map((degree): MusicPart => ({
+      voice: 'gate',
+      layer: 'kick',
+      loopSteps: 16,
+      octave: 2,
+      followsChord: true,
+      notes: hits(TRANCE_GATE, degree),
+    })),
+    {
+      voice: 'goa-lead',
+      layer: 'lead',
+      loopSteps: 64,
+      octave: 3,
+      followsChord: false,
+      notes: GOA_LEAD.filter(([step]) => step >= 32),
+    },
+    {
+      voice: 'goa-lead',
+      layer: 'theme',
+      loopSteps: 64,
+      octave: 3,
+      followsChord: false,
+      notes: GOA_LEAD,
+    },
+    {
+      voice: 'goa-arp',
+      layer: 'clap',
+      loopSteps: 8,
+      octave: 3,
+      followsChord: true,
+      notes: [0, 2, 4, 6, 7, 6, 4, 2].map((degree, step) => [step, degree, 1]),
+    },
+    {
+      voice: 'tom',
+      layer: 'clap',
+      loopSteps: 64,
+      octave: 0,
+      followsChord: false,
+      notes: hits([60, 61, 62, 63]),
+    },
+  ],
+};
+
+const DORIAN = [0, 2, 3, 5, 7, 9, 10];
+
+const ACID_LINE = {
+  loopSteps: 16,
+  octave: 2,
+  followsChord: true,
+  notes: [
+    [0, 0, 1],
+    [1, 7, 1],
+    [3, 2, 1],
+    [4, 0, 1],
+    [5, 4, 1],
+    [6, 3, 1],
+    [8, 0, 1],
+    [9, 6, 1],
+    [10, 7, 1],
+    [11, 4, 1],
+    [13, 2, 1],
+    [14, 3, 1],
+    [15, 0, 1],
+  ],
+  accents: [0, 5, 9, 13],
+  slides: [3, 6, 10, 14],
+} as const;
+
+export const GRENOUILLE_ACIDE: MusicTrack = {
+  id: 'grenouille-acide',
+  name: 'La Grenouille acide',
+  rootMidi: 33,
+  scale: DORIAN,
+  chords: [0, 0, 0, -2],
+  kick: { fromHz: 340, release: 0.05 },
+  parts: [
+    {
+      voice: 'rolling-bass',
+      layer: 'bass',
+      loopSteps: 4,
+      octave: 0,
+      followsChord: true,
+      notes: hits([1, 2, 3]),
+    },
+    { voice: 'acid', layer: 'kick', ...ACID_LINE },
+    { voice: 'acid', layer: 'texture', ...ACID_LINE, in: 'light' },
+    {
+      voice: 'croak',
+      layer: 'texture',
+      loopSteps: 64,
+      octave: 0,
+      followsChord: false,
+      notes: hits([23, 55]),
+    },
+    {
+      voice: 'croak',
+      layer: 'texture',
+      loopSteps: 64,
+      octave: 0,
+      followsChord: false,
+      notes: hits([11, 27, 43, 59]),
+      in: 'light',
+    },
+    {
+      voice: 'laser',
+      layer: 'clap',
+      loopSteps: 16,
+      octave: 0,
+      followsChord: false,
+      notes: hits([9, 15]),
+    },
+  ],
+};
+
+export const TRACKS: readonly MusicTrack[] = [
+  SOIREE_OUVERTURE,
+  BRUME_DU_LAC,
+  GRENOUILLE_ACIDE,
+  GOA_DES_ETOILES,
+];

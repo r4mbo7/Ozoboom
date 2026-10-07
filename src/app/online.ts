@@ -29,6 +29,8 @@ export interface OnlineEnv {
   now?(): number;
   // The class picked on the title.
   classId(): string;
+  // The track of a new game, drawn by the host.
+  trackId(): string;
   version(): string;
   onMatch(match: OnlineMatch): void;
   // A game that cannot go on: the app shows the notice and stops stepping.
@@ -424,7 +426,7 @@ export function createOnline(env: OnlineEnv): Online {
       if (room === null || role !== 'host' || !model().canLaunch) {
         return;
       }
-      room.start(env.setId, crypto.getRandomValues(new Uint32Array(1))[0] ?? 0);
+      room.start(env.setId, crypto.getRandomValues(new Uint32Array(1))[0] ?? 0, env.trackId());
     },
     matchEnded() {
       if (phase !== 'playing') {
@@ -448,6 +450,7 @@ export function createOnline(env: OnlineEnv): Online {
         type: 'start',
         seed: crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
         setId: env.setId,
+        trackId: env.trackId(),
         players: present.map((seat) => ({
           id: seat.playerId,
           classId: seat.classId,

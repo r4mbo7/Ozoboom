@@ -32,7 +32,7 @@ function context() {
       ring: shape,
       shard: shape,
       vibes: shape,
-      classFx: { trail: shape },
+      classFx: { trail: shape, mandala: shape },
     },
     layers: createLayers(new Container()),
     options: { calmMode: false },

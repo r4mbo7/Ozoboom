@@ -7,7 +7,8 @@ import type { PlayerId, SimState } from '../sim/state';
 
 // Development modes, only behind the `dev` URL parameter, never by default:
 // - `?dev=fast`: a short set (one phrase per tier, one-bar break, weaker bad vibes, sturdier
-//   scene) played eight times faster and drawn light, to reach the end of a game in a browser test;
+//   scene) played eight times faster, slower when the browser draws under 29 frames per second, and
+//   drawn light, to reach the end of a game in a browser test;
 // - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
 //   weapons and a plugged speaker, to measure a frame. `&players=4` seats four players on one
 //   screen instead (one of each class, then the first again), three weapons each, camera on everyone.

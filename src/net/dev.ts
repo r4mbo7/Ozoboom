@@ -141,7 +141,7 @@ element('join', HTMLElement).addEventListener('click', () => {
 });
 
 startButton.addEventListener('click', () => {
-  room?.start('dev', 0);
+  room?.start('dev', 0, 'dev');
 });
 
 nameInput.addEventListener('change', () => room?.setSeat({ name: nameInput.value }));

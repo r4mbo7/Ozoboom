@@ -5,6 +5,8 @@ export interface Prefs {
   autoAim: boolean;
   // The class of a solo game: the last one chosen on the title.
   classId: string;
+  // The track of the last game, which the next one does not play.
+  trackId: string;
 }
 
 const KEYS: Readonly<Record<keyof Prefs, string>> = {
@@ -13,6 +15,7 @@ const KEYS: Readonly<Record<keyof Prefs, string>> = {
   autoFire: 'ozoboom.autoFire',
   autoAim: 'ozoboom.autoAim',
   classId: 'ozoboom.classId',
+  trackId: 'ozoboom.trackId',
 };
 
 // Storage can be missing or throw (private browsing, blocked site data): the game then plays with
@@ -24,6 +27,7 @@ export function loadPrefs(storage: () => Storage, defaults: Prefs): Prefs {
     autoFire: readFlag(storage, KEYS.autoFire) ?? defaults.autoFire,
     autoAim: readFlag(storage, KEYS.autoAim) ?? defaults.autoAim,
     classId: readText(storage, KEYS.classId) ?? defaults.classId,
+    trackId: readText(storage, KEYS.trackId) ?? defaults.trackId,
   };
 }
 

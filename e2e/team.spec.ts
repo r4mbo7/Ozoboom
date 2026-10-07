@@ -157,7 +157,7 @@ test.describe('the end of a team', () => {
     const team = page.getByRole('list', { name: 'L’équipe' });
     await expect(team.getByRole('listitem')).toHaveCount(4);
     await expect(team.getByRole('listitem').nth(0)).toContainText('Léa');
-    await expect(team.getByRole('listitem').nth(0)).toContainText('La VJ');
+    await expect(team.getByRole('listitem').nth(0)).toContainText('La Luxiole');
     await expect(team.getByRole('listitem').nth(0)).toContainText('Debout');
     await expect(team.getByRole('listitem').nth(3)).toContainText('Sam');
     await expect(team.getByRole('listitem').nth(3)).toContainText('À terre');

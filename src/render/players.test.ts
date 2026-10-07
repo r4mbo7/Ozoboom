@@ -7,7 +7,9 @@ import type { RenderContext } from './context';
 import { createFrame } from './frame';
 import type { Layers } from './layers';
 import { createPixiPalette, writePixiPalette } from './palette';
-import { contourAlpha, createPlayers, parasolAngle, poiAngle } from './players';
+import { chase } from './look-parasol';
+import { novaStretch, poiAngle, whippedBall } from './look-poi';
+import { contourAlpha, createPlayers } from './players';
 import type { NameLabel } from './textures-names';
 import type { Shape } from './textures';
 import type { LookTextures, PlayerTextures } from './textures-players';
@@ -22,9 +24,12 @@ function lookTextures(): LookTextures {
   return { object: shape(), downed: shape(), extent: 40, height: 1, shadow: shape() };
 }
 
+const BODIES = 1;
+const MARKS = 2;
+
 function createContext(): { ctx: RenderContext; players: Container } {
   const players = new Container();
-  const layers = { players, glow: new Container() } as unknown as Layers;
+  const layers = { players, glow: new Container(), fx: new Container() } as unknown as Layers;
   const textures = {
     halo: shape(),
     ring: shape(),
@@ -38,14 +43,28 @@ function createContext(): { ctx: RenderContext; players: Container } {
       head: shape(),
       aim: shape(),
       contour: shape(),
-      looks: { poi: lookTextures(), case: lookTextures(), parasol: lookTextures() },
+      looks: { poi: lookTextures(), bag: lookTextures(), parasol: lookTextures() },
+      poi: { arm: shape(), ball: shape(), strandRoot: shape(), strandTip: shape(), bead: shape() },
+      bag: {
+        torso: shape(),
+        hands: shape(),
+        hat: shape(),
+        pack: shape(),
+        mat: shape(),
+        mug: shape(),
+      },
+      parasol: { sneaker: shape(), pompom: shape() },
+      source: Texture.EMPTY.source,
     } satisfies PlayerTextures,
   };
   const ctx = {
     textures,
     layers,
     options: { calmMode: false },
-    classTokens: new Map([['mage', 'mage']]),
+    classTokens: new Map([
+      ['mage', 'mage'],
+      ['tank', 'tank'],
+    ]),
   } as unknown as RenderContext;
   return { ctx, players };
 }
@@ -92,11 +111,6 @@ describe('poiAngle', () => {
     expect(poiAngle(start + TICKS_PER_BAR / 4)).toBeCloseTo(TAU / 4, 9);
     expect(poiAngle(start + TICKS_PER_BAR / 2)).toBeCloseTo(TAU / 2, 9);
   });
-
-  it('keeps the parasol twice slower than the poi', () => {
-    expect(parasolAngle(TICKS_PER_BAR)).toBeCloseTo(TAU / 2, 9);
-    expect(parasolAngle(2 * TICKS_PER_BAR + 1)).toBeCloseTo(parasolAngle(1), 9);
-  });
 });
 
 describe('contourAlpha', () => {
@@ -114,24 +128,54 @@ describe('contourAlpha', () => {
   });
 });
 
+describe("the pompoms of l'Hygie", () => {
+  it('light up one after the other on the sixteenths, the head brightest', () => {
+    const sixteenth = TICKS_PER_BEAT / 4;
+
+    expect(chase(0, 0, false)).toBe(1);
+    expect(chase(0, 1, false)).toBeCloseTo(0.3, 9);
+    expect(chase(sixteenth, 1, false)).toBe(1);
+    expect(chase(sixteenth, 0, false)).toBeCloseTo(0.3 + 0.7 * (2 / 3), 9);
+  });
+
+  it('hold one steady glow in calm mode', () => {
+    expect(new Set([0, 1, 2, 7].map((index) => chase(5, index, true))).size).toBe(1);
+  });
+});
+
+describe('the poi of la Luxiole', () => {
+  it('throws the two balls in turn, the first shot with ball 0', () => {
+    expect([1, 2, 3, 4].map(whippedBall)).toEqual([0, 1, 0, 1]);
+  });
+
+  it('flies out after the nova and settles back on the orbit', () => {
+    expect(novaStretch(Infinity)).toBe(1);
+    expect(novaStretch(0)).toBeCloseTo(2.1, 9);
+    expect(novaStretch(48)).toBe(1);
+    const lowest = Math.min(...Array.from({ length: 48 }, (_, tick) => novaStretch(tick)));
+    expect(lowest).toBeGreaterThanOrEqual(0.6);
+    expect(lowest).toBeLessThan(0.8);
+  });
+});
+
 describe('createPlayers', () => {
-  function drawn(alpha: number, current: PlayerState) {
+  function drawn(alpha: number, current: PlayerState, layer = BODIES) {
     const { ctx, players } = createContext();
     const family = createPlayers(ctx);
     const state = { players: [current] } as unknown as SimState;
     family.update(state, alpha, frameAt(0.4));
-    const bodies = players.children[1] as Container;
-    return bodies.children;
+    return (players.children[layer] as Container).children;
   }
 
-  it('draws the object between the previous and the current position', () => {
-    const [, , , , object] = drawn(0.25, player());
+  it('draws the body between the previous and the current position', () => {
+    const visible = drawn(0.25, player()).filter((sprite) => sprite.visible);
 
-    expect(object?.x).toBeCloseTo(110, 9);
-    expect(object?.y).toBeCloseTo(30, 9);
+    expect(
+      visible.some((sprite) => Math.abs(sprite.x - 110) < 1e-9 && Math.abs(sprite.y - 30) < 1e-9),
+    ).toBe(true);
   });
 
-  it('lays the object next to the player when downed, as one gray sprite', () => {
+  it('lays the player down with its object when downed, as one gray sprite', () => {
     const sprites = drawn(1, player({ downed: true }));
     const visible = sprites.filter((sprite) => sprite.visible);
 
@@ -139,9 +183,32 @@ describe('createPlayers', () => {
     expect(visible[0]?.x).toBeCloseTo(140, 9);
   });
 
+  it('draws only the new class when the next game seats the same player in another class', () => {
+    const visibleBodies = (players: Container) =>
+      (players.children[BODIES] as Container).children.filter((sprite) => sprite.visible).length;
+    const fresh = createContext();
+    createPlayers(fresh.ctx).update(
+      { players: [player({ classId: 'tank' })] } as unknown as SimState,
+      1,
+      frameAt(0.4),
+    );
+    const { ctx, players } = createContext();
+    const family = createPlayers(ctx);
+    family.update({ players: [player()] } as unknown as SimState, 1, frameAt(0.4));
+
+    family.reset?.();
+    family.update(
+      { players: [player({ classId: 'tank' })] } as unknown as SimState,
+      1,
+      frameAt(0.4),
+    );
+
+    expect(visibleBodies(players)).toBe(visibleBodies(fresh.players));
+  });
+
   it('shows the contour only while invulnerable', () => {
     const contour = (invulnerableTicks: number) => {
-      const sprites = drawn(1, player({ invulnerableTicks }));
+      const sprites = drawn(1, player({ invulnerableTicks }), MARKS);
       return sprites[sprites.length - 1]?.visible;
     };
 
@@ -163,8 +230,8 @@ describe('player names and relève', () => {
     family.update(state, 1, frame);
     const containers = root.children.map((child) => child);
     return {
-      rings: containers[2] ?? new Container(),
-      tags: containers[3] ?? new Container(),
+      rings: containers[3] ?? new Container(),
+      tags: containers[4] ?? new Container(),
       family,
       state,
       frame,

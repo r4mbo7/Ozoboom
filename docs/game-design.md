@@ -62,16 +62,16 @@ Les bad vibes visent le noyau. Elles se retournent contre un joueur seulement s'
 
 ## Les classes
 
-Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fait une chose que les autres font mal. Habillage festival, **tranché le 2026-10-05** : la VJ, le roadie, le care.
+Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fait une chose que les autres font mal. Habillage festival, **tranché le 2026-10-07** sur maquettes animées : la Luxiole, le Nounours, l'Hygie (noms proposés avec Gemini ; la VJ, le roadie et le care avant).
 
-| Classe | Habillage          | Rôle                                   | Penche vers | Couleur      |
-| ------ | ------------------ | -------------------------------------- | ----------- | ------------ |
-| Mage   | la VJ, le chaman   | dégâts de zone à distance, fragile     | tirer       | `uv-magenta` |
-| Tank   | le roadie, la sécu | tient la ligne, attire, bouclier, lent | piéger      | `sun-orange` |
-| Healer | le bénévole care   | soigne, répare la scène, ralentit      | piéger      | `uv-lime`    |
+| Classe | Habillage                            | Rôle                                   | Penche vers | Couleur      |
+| ------ | ------------------------------------ | -------------------------------------- | ----------- | ------------ |
+| Mage   | la Luxiole, qui fait tourner des poi | dégâts de zone à distance, fragile     | tirer       | `uv-magenta` |
+| Tank   | le Nounours, festivalier au gros sac | tient la ligne, attire, bouclier, lent | piéger      | `sun-orange` |
+| Healer | l'Hygie, sous son parasol à pompons  | soigne, répare la scène, ralentit      | piéger      | `uv-lime`    |
 
 - En solo chaque classe doit rester jouable, en coop elle brille. L'équilibrage se règle dans les données, jamais dans la logique.
-- Chaque classe a : une attaque de base et une seule attaque spéciale, sa compétence sur temps de recharge. La VJ : nova. Le roadie : attaque courte qui repousse, charge qui attire à l'arrivée les bad vibes autour de lui. Le care : soin de zone qui répare la scène.
+- Chaque classe a : une attaque de base et une seule attaque spéciale, sa compétence sur temps de recharge. La Luxiole : nova. Le Nounours : attaque courte qui repousse, charge qui attire à l'arrivée les bad vibes autour de lui. L'Hygie : soin de zone qui répare la scène.
 - Les classes, ennemis, pièges et améliorations sont des données déclaratives (voir `architecture.md`), pour itérer vite.
 
 ## Les pièges
@@ -171,8 +171,8 @@ Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-0
 ## Coop
 
 - 2 à 4 joueurs. **Coop locale et coop en ligne en V0.2**, décidé le 2026-10-05 : en local, le clavier et la souris comptent pour un joueur et chaque manette pour un autre ; en ligne, un lien d'invitation, sans compte, pair à pair avec le navigateur d'un joueur qui fait l'hôte et fait foi (ADR 0007).
-- Un allié à terre se relève par un coéquipier qui reste une mesure à son contact, deux temps pour le care ; il revient avec la moitié de sa vie. Tous à terre, la scène est seule : la partie finit vite.
-- Vibes, watts et Volume sont d'équipe, le noyau est commun. La difficulté monte avec le nombre de joueurs (apparitions et vie des bad vibes, données du set). Cible mesurée sans écran (`pnpm balance`) : une équipe de N joueurs de la même classe tient autant de phrases que cette classe seule, à plus ou moins une ; chaque classe seule tient au moins autant que la VJ moins une phrase ; trois classes différentes tiennent au moins autant que trois VJ.
+- Un allié à terre se relève par un coéquipier qui reste une mesure à son contact, deux temps pour l'Hygie ; il revient avec la moitié de sa vie. Tous à terre, la scène est seule : la partie finit vite.
+- Vibes, watts et Volume sont d'équipe, le noyau est commun. La difficulté monte avec le nombre de joueurs (apparitions et vie des bad vibes, données du set). Cible mesurée sans écran (`pnpm balance`) : une équipe de N joueurs de la même classe tient autant de phrases que cette classe seule, à plus ou moins une ; chaque classe seule tient au moins autant que la Luxiole moins une phrase ; trois classes différentes tiennent au moins autant que trois Luxiole.
 - Chaque joueur porte un nom libre, affiché au-dessus de lui et dans le HUD. En ligne, chacun suit son personnage à la caméra ; en local, la caméra cadre tout le monde.
 
 ## Classement public

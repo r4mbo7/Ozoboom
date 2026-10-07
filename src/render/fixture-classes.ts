@@ -17,4 +17,5 @@ export const FIXTURE_CLASSES: RenderContent['classes'] = [
   },
 ];
 
-export type FixtureEvent = 'beat' | 'enemyDied' | 'coreHit' | 'speakerPlugged' | 'charge' | 'heal';
+export type FixtureEvent =
+  'beat' | 'enemyDied' | 'coreHit' | 'speakerPlugged' | 'nova' | 'charge' | 'heal';

@@ -876,14 +876,16 @@ export interface Sfx {
   play(events: readonly SimEvent[], now: number, players?: readonly SfxPlayer[]): void;
   cue(cue: Cue, now: number): void;
   beginFrame(): void;
+  setKey(key: MusicKey): void;
 }
 
 export function createSfx(
   out: AudioNode,
   trapEffectOf: TrapEffectOf,
   lookups: SfxLookups = {},
-  key: MusicKey = SOIREE_OUVERTURE,
+  initialKey: MusicKey = SOIREE_OUVERTURE,
 ): Sfx {
+  let key = initialKey;
   const limiter = createSfxLimiter(SFX_LIMITS);
   return {
     play(events, now, players = []) {
@@ -902,6 +904,9 @@ export function createSfx(
     },
     beginFrame() {
       limiter.beginFrame();
+    },
+    setKey(next) {
+      key = next;
     },
   };
 }

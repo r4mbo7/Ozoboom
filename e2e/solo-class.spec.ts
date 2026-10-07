@@ -7,9 +7,9 @@ test('Jouer plays the class chosen on the title, and the next visit proposes it 
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
   const picker = page.getByRole('radiogroup', { name: 'Ta classe' });
-  await expect(picker.getByRole('radio', { name: 'La VJ' })).toBeChecked();
+  await expect(picker.getByRole('radio', { name: 'La Luxiole' })).toBeChecked();
 
-  await picker.getByRole('radio', { name: 'Le roadie' }).click();
+  await picker.getByRole('radio', { name: 'Le Nounours' }).click();
   await page.getByRole('button', { name: 'Jouer', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   expect(await page.evaluate(() => window.ozoboom?.state.players[0]?.classId)).toBe('tank');
@@ -19,7 +19,7 @@ test('Jouer plays the class chosen on the title, and the next visit proposes it 
 
   await page.reload();
   await expect(
-    page.getByRole('radiogroup', { name: 'Ta classe' }).getByRole('radio', { name: 'Le roadie' }),
+    page.getByRole('radiogroup', { name: 'Ta classe' }).getByRole('radio', { name: 'Le Nounours' }),
   ).toBeChecked();
   expect(errors).toEqual([]);
 });

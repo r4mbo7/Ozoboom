@@ -15,7 +15,7 @@ import {
 import { MASK_BODY } from './face-kit';
 import { type MaskSet, createMasks } from './textures-enemies';
 import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
-import { type PlayerTextures, playerShapes, playerTextures } from './textures-players';
+import { type PlayerTextures, playerTextures } from './textures-players';
 import { type ClassFxTextures, createClassFxTextures } from './textures-class';
 import { type NameTextures, createNameTextures } from './textures-names';
 import { createSpeakerShapes } from './textures-speakers';
@@ -239,12 +239,13 @@ export function destroyTextures(textures: Textures): void {
     ...Object.values(textures).filter((value): value is Shape => 'texture' in value),
     ...Object.values(textures.traps),
     textures.classFx.trail,
+    textures.classFx.mandala,
     ...specialShapes(textures.specials),
-    ...playerShapes(textures.players),
   ];
   for (const shape of shapes) {
     shape.texture.destroy(true);
   }
+  textures.players.source.destroy();
   textures.masks.destroy();
   textures.names.destroy();
   destroyWeaponTextures(textures.weapons);

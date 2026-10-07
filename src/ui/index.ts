@@ -253,6 +253,9 @@ export function createUi(
       show('title');
       title.menu.select(0);
     },
+    showVisits(count) {
+      title.setVisits(count);
+    },
     showLobby(model) {
       sun.fix('nuit');
       show('lobby');

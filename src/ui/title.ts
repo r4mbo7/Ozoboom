@@ -1,6 +1,7 @@
 import type { InputDevice } from '../input/intents';
 import { type ClassInfo, createClassCards } from './class-picker';
 import { el, fillHint, keycap, setText } from './dom';
+import { formatNumber } from './format';
 import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
 import { stepClass } from './lobby-model';
@@ -36,6 +37,7 @@ export interface TitleScreen {
   setOptions(options: TitleOptions): void;
   setClass(classId: string): void;
   setDevice(device: InputDevice): void;
+  setVisits(count: number): void;
 }
 
 const MANDALA =
@@ -164,6 +166,9 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
       sound.set(!options.muted);
       autoFire.set(options.autoFire);
       autoAim.set(options.autoAim);
+    },
+    setVisits(count) {
+      setText(meta, `v${__APP_RELEASE__} · ${formatNumber(count)} visite${count > 1 ? 's' : ''}`);
     },
     setClass(next) {
       classId = next;
