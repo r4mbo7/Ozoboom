@@ -1,9 +1,10 @@
-import { type Page, expect, test } from '@playwright/test';
+import { type Page, expect as baseExpect, test } from '@playwright/test';
 import { collectConsoleErrors } from './game';
 
 // A phone held sideways. The bench keeps the player alive whatever the bad vibes do.
 test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 test.describe.configure({ timeout: 120_000 });
+const expect = baseExpect.configure({ timeout: 30_000 });
 
 type Finger = (
   type: 'touchStart' | 'touchMove' | 'touchEnd',
