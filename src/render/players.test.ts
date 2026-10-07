@@ -61,7 +61,10 @@ function createContext(): { ctx: RenderContext; players: Container } {
     textures,
     layers,
     options: { calmMode: false },
-    classTokens: new Map([['mage', 'mage']]),
+    classTokens: new Map([
+      ['mage', 'mage'],
+      ['tank', 'tank'],
+    ]),
   } as unknown as RenderContext;
   return { ctx, players };
 }
@@ -178,6 +181,29 @@ describe('createPlayers', () => {
 
     expect(visible).toHaveLength(1);
     expect(visible[0]?.x).toBeCloseTo(140, 9);
+  });
+
+  it('draws only the new class when the next game seats the same player in another class', () => {
+    const visibleBodies = (players: Container) =>
+      (players.children[BODIES] as Container).children.filter((sprite) => sprite.visible).length;
+    const fresh = createContext();
+    createPlayers(fresh.ctx).update(
+      { players: [player({ classId: 'tank' })] } as unknown as SimState,
+      1,
+      frameAt(0.4),
+    );
+    const { ctx, players } = createContext();
+    const family = createPlayers(ctx);
+    family.update({ players: [player()] } as unknown as SimState, 1, frameAt(0.4));
+
+    family.reset?.();
+    family.update(
+      { players: [player({ classId: 'tank' })] } as unknown as SimState,
+      1,
+      frameAt(0.4),
+    );
+
+    expect(visibleBodies(players)).toBe(visibleBodies(fresh.players));
   });
 
   it('shows the contour only while invulnerable', () => {

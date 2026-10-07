@@ -36,7 +36,6 @@ function teintOf(player: PlayerState): number {
 }
 
 interface PlayerView {
-  owner: PlayerId | null;
   lastNow: number;
   moving: number;
   heading: number;
@@ -79,7 +78,6 @@ export function createPlayers(ctx: RenderContext): Family {
 
   const views = new ViewPool(
     (): PlayerView => ({
-      owner: null,
       lastNow: NEVER,
       moving: 0,
       heading: 0,
@@ -91,11 +89,15 @@ export function createPlayers(ctx: RenderContext): Family {
       aim: add(marks, t.aim),
       contour: add(marks, t.contour),
     }),
+    // A released view forgets its player, so that the next one starts from rest.
     (view) => {
+      view.lastNow = NEVER;
+      view.moving = 0;
       view.tag.hide();
       hide(view.halo, view.shadow, view.lying, view.aim, view.contour);
       for (const look of Object.values(view.looks)) {
         look.hide();
+        look.reset();
       }
     },
   );
@@ -159,6 +161,7 @@ export function createPlayers(ctx: RenderContext): Family {
       moments.clear();
       burster.bursts.clear();
       beatTick = NEVER;
+      views.releaseAll();
     },
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, light, pulse, now } = frame;
@@ -176,14 +179,6 @@ export function createPlayers(ctx: RenderContext): Family {
         const scale = player.radius / REFERENCE;
         const angle = Math.atan2(player.aim.y, player.aim.x);
         const look = (view.looks[kind] ??= makers[kind]());
-        if (view.owner !== player.id) {
-          view.owner = player.id;
-          view.lastNow = NEVER;
-          view.moving = 0;
-          for (const each of Object.values(view.looks)) {
-            each.reset();
-          }
-        }
         const { halo, tag, shadow, lying, aim, contour } = view;
 
         const dazzled = (player.dazzledTicks ?? 0) > 0;
