@@ -17,7 +17,7 @@ Ces six piliers tranchent les débats. Quand deux options se valent, celle qui s
 
 ## Ce que le jeu n'est pas
 
-- Pas de publicité, pas de collecte de données au-delà du classement public. Rien à payer pour jouer dans le navigateur.
+- Pas de publicité, pas de collecte de données au-delà du classement public et d'un compteur de visites anonyme. Rien à payer pour jouer dans le navigateur.
 - Pas de compte obligatoire. Un pseudonyme suffit pour le classement.
 - Pas de 3D, pas de monde ouvert, pas d'histoire à suivre.
 - Pas de joueur contre joueur.

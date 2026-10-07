@@ -76,6 +76,7 @@ export interface Ui {
     device: InputDevice;
     classId: string;
   }): void;
+  showVisits(count: number): void;
   showLobby(model: LobbyModel): void;
   updateLobby(model: LobbyModel): void;
   showNotice(notice: Notice, details: string): void;

@@ -1,4 +1,4 @@
-# Ozoboom
+# Ozoboom ![](https://visitor-badge.laobi.icu/badge?page_id=r4mbo7.Ozoboom)
 
 Jeu web léger de survie coopérative dans un festival de psytrance. De 1 à 4 amis défendent le sound system de la scène principale contre des vagues de bad vibes de plus en plus puissantes, chacun avec sa classe, jusqu'au lever du soleil.
 

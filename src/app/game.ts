@@ -44,6 +44,7 @@ import { loadPrefs, savePref } from './prefs';
 import { createSeats, type LaunchedSeats } from './seats';
 import { soundOf, type Screen } from './sound';
 import { createToast } from './toast';
+import { countVisit } from './visits';
 import { playerLabel } from '../ui/hud-model';
 
 const GESTURES = ['pointerdown', 'pointerup', 'keydown'] as const;
@@ -218,6 +219,9 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     },
     onLeaveLobby: toTitle,
     onLeaveNotice: quit,
+  });
+  void countVisit(window.location.hostname, (url) => fetch(url)).then((count) => {
+    if (count !== null) ui.showVisits(count);
   });
   const online = createOnline({
     ui,

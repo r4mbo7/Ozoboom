@@ -476,7 +476,7 @@
 }
 
 .ui-title__meta {
-  margin-top: -16px;
+  margin-top: -12px;
   color: var(--ui-muted);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
