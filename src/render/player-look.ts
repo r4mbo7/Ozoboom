@@ -53,7 +53,7 @@ export function lerpAngle(from: number, to: number, share: number): number {
 }
 
 // A damped spring on one value, stepped in ticks: values[at] is the position, values[at + 1] the
-// velocity. Semi-implicit, stable for the stiffness used here at up to three ticks per image.
+// velocity. Semi-implicit, in steps of at most one tick: a slow image cannot make it blow up.
 export function spring(
   values: Float64Array,
   at: number,
@@ -62,12 +62,7 @@ export function spring(
   damping: number,
   dt: number,
 ): void {
-  const position = values[at] ?? 0;
-  const velocity =
-    (values[at + 1] ?? 0) +
-    (stiffness * (target - position) - damping * (values[at + 1] ?? 0)) * dt;
-  values[at + 1] = velocity;
-  values[at] = position + velocity * dt;
+  step(values, at, target, stiffness, damping, dt, false);
 }
 
 // The same on an angle, along the shortest way round.
@@ -79,12 +74,29 @@ export function angleSpring(
   damping: number,
   dt: number,
 ): void {
-  const position = values[at] ?? 0;
-  const velocity =
-    (values[at + 1] ?? 0) +
-    (stiffness * angleTo(position, target) - damping * (values[at + 1] ?? 0)) * dt;
+  step(values, at, target, stiffness, damping, dt, true);
+}
+
+function step(
+  values: Float64Array,
+  at: number,
+  target: number,
+  stiffness: number,
+  damping: number,
+  dt: number,
+  angle: boolean,
+): void {
+  const steps = Math.max(1, Math.ceil(dt));
+  const tick = dt / steps;
+  let position = values[at] ?? 0;
+  let velocity = values[at + 1] ?? 0;
+  for (let index = 0; index < steps; index += 1) {
+    const gap = angle ? angleTo(position, target) : target - position;
+    velocity += (stiffness * gap - damping * velocity) * tick;
+    position += velocity * tick;
+  }
+  values[at] = position;
   values[at + 1] = velocity;
-  values[at] = position + velocity * dt;
 }
 
 // A burst of light that fades out over a few ticks after an event: 1 at the event, 0 once gone.

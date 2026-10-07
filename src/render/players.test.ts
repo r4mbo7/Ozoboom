@@ -43,8 +43,17 @@ function createContext(): { ctx: RenderContext; players: Container } {
       head: shape(),
       aim: shape(),
       contour: shape(),
-      looks: { poi: lookTextures(), case: lookTextures(), parasol: lookTextures() },
+      looks: { poi: lookTextures(), bag: lookTextures(), parasol: lookTextures() },
       poi: { arm: shape(), ball: shape(), strandRoot: shape(), strandTip: shape(), bead: shape() },
+      bag: {
+        torso: shape(),
+        hands: shape(),
+        hat: shape(),
+        pack: shape(),
+        mat: shape(),
+        mug: shape(),
+      },
+      source: Texture.EMPTY.source,
     } satisfies PlayerTextures,
   };
   const ctx = {

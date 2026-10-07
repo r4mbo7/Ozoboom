@@ -1,6 +1,6 @@
 import { SHADE, SHADE_SOFT, TAU, WHITE, circle, polygon, rim, type Ctx } from './paint';
 
-type PlayerLook = 'poi' | 'case' | 'parasol';
+type PlayerLook = 'poi' | 'bag' | 'parasol';
 
 // Lying along x, head to the left, its object laid on the ground beside it.
 export function lyingBody(ctx: Ctx): void {
@@ -41,16 +41,18 @@ export function lyingObject(look: PlayerLook, ctx: Ctx): void {
       ctx.fill();
       rim(ctx, 2);
     }
-  } else if (look === 'case') {
+  } else if (look === 'bag') {
     ctx.rotate(0.12);
+    ctx.beginPath();
+    ctx.ellipse(-4, 0, 17, 12, 0, 0, TAU);
     ctx.fillStyle = SHADE_SOFT;
-    ctx.fillRect(-16, -9, 32, 18);
-    rim(ctx, 2.5);
+    ctx.fill();
+    rim(ctx, 2);
+    ctx.beginPath();
+    ctx.roundRect(14, -10, 9, 20, 4.5);
     ctx.fillStyle = WHITE;
-    for (const x of [-16, 9]) {
-      ctx.fillRect(x, -9, 7, 7);
-      ctx.fillRect(x, 2, 7, 7);
-    }
+    ctx.fill();
+    rim(ctx, 1.6);
   } else {
     ctx.rotate(-0.08);
     polygon(ctx, [

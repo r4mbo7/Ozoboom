@@ -5,6 +5,7 @@ import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { shadowAt } from './ground-sun';
+import { createBagLook } from './look-bag';
 import { createObjectLook } from './look-object';
 import { createPoiLook } from './look-poi';
 import { lerp } from './motion';
@@ -72,7 +73,7 @@ export function createPlayers(ctx: RenderContext): Family {
 
   const makers: Readonly<Record<PlayerLook, () => Look>> = {
     poi: () => createPoiLook(bodies, textures, spawn),
-    case: () => createObjectLook(bodies, textures, 'case'),
+    bag: () => createBagLook(bodies, textures, spawn),
     parasol: () => createObjectLook(bodies, textures, 'parasol'),
   };
 

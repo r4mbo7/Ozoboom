@@ -35,8 +35,9 @@ const playerTextures = {
   head: shape,
   aim: shape,
   contour: shape,
-  looks: { poi: look, case: look, parasol: look },
+  looks: { poi: look, bag: look, parasol: look },
   poi: { arm: shape, ball: named(), strandRoot: shape, strandTip: shape, bead: shape },
+  bag: { torso: shape, hands: shape, hat: shape, pack: shape, mat: shape, mug: shape },
 };
 
 function bodies(ctx: RenderContext, texture: Texture) {

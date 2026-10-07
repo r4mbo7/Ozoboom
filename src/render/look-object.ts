@@ -12,12 +12,8 @@ export function parasolAngle(now: number): number {
   return (((now % period) + period) % period) * (TAU / period);
 }
 
-// A look drawn as one object: the flight case turned toward the aim, the parasol turning on time.
-export function createObjectLook(
-  bodies: Container,
-  textures: Textures,
-  kind: 'case' | 'parasol',
-): Look {
+// A look drawn as one object: the parasol turning on time.
+export function createObjectLook(bodies: Container, textures: Textures, kind: 'parasol'): Look {
   const shape = textures.players.looks[kind].object;
   if (shape === undefined) {
     throw new Error(`The ${kind} look has no object texture`);
@@ -31,11 +27,11 @@ export function createObjectLook(
     hide() {
       hide(outline, object);
     },
-    place({ x, y, angle, scale, color, frame }) {
+    place({ x, y, scale, color, frame }) {
       object.visible = true;
       object.position.set(x, y);
       object.scale.set(scale);
-      object.rotation = kind === 'case' ? angle : parasolAngle(frame.now);
+      object.rotation = parasolAngle(frame.now);
       setTint(object, color);
       placeOutline(outline, object, shape.texture, REFERENCE, frame);
       return 0;

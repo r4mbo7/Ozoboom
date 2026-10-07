@@ -1,5 +1,7 @@
 import {
   SHADE,
+  SHADE_DEEP,
+  SHADE_SOFT,
   TAU,
   WHITE,
   circle,
@@ -8,6 +10,7 @@ import {
   polygon,
   rim,
   type Ctx,
+  type Piece,
   type Shape,
 } from './paint';
 
@@ -16,17 +19,6 @@ export const REFERENCE = 32;
 export const POI_ORBIT = 46;
 export const POI_BALL = 9;
 export const STRAND_LENGTH = 18;
-
-// The parts a look moves on its own, each drawn once in white and grays, tinted at draw time.
-export interface PoiParts {
-  // One poi seen from its handle: the string along +x and the light trail behind the ball.
-  readonly arm: Shape;
-  readonly ball: Shape;
-  // A hair ribbon in two segments along +x from the origin, the second thinner, and its bead.
-  readonly strandRoot: Shape;
-  readonly strandTip: Shape;
-  readonly bead: Shape;
-}
 
 function arm(ctx: Ctx): void {
   ctx.lineCap = 'round';
@@ -65,29 +57,161 @@ function strand(from: number, to: number): (ctx: Ctx) => void {
   };
 }
 
-export function createPoiParts(): PoiParts {
-  return {
-    arm: paint(128, 128, REFERENCE, arm),
-    ball: paint(32, 32, REFERENCE, (ctx) => {
+// The parts la Luxiole moves on her own, drawn once in white and grays and tinted at draw time:
+// one poi seen from its handle (the string along +x and the light trail behind the ball), the
+// ball, and a hair ribbon in two segments along +x from the origin with its bead.
+export const POI_PIECES = {
+  arm: [128, 128, REFERENCE, arm],
+  ball: [
+    32,
+    32,
+    REFERENCE,
+    (ctx) => {
       circle(ctx, POI_BALL);
       ctx.fillStyle = WHITE;
       ctx.fill();
       rim(ctx, 2.5);
-    }),
-    strandRoot: paint(48, 12, REFERENCE, strand(6, 3.8)),
-    strandTip: paint(48, 12, REFERENCE, strand(3.8, 1.8)),
-    bead: paint(24, 24, REFERENCE, (ctx) => {
+    },
+  ],
+  strandRoot: [48, 12, REFERENCE, strand(6, 3.8)],
+  strandTip: [48, 12, REFERENCE, strand(3.8, 1.8)],
+  bead: [
+    24,
+    24,
+    REFERENCE,
+    (ctx) => {
       glow(ctx, WHITE, 5);
       ctx.fillStyle = WHITE;
       circle(ctx, 3.2);
       ctx.fill();
-    }),
-  };
-}
+    },
+  ],
+} satisfies Record<string, Piece>;
 
-export function poiPartShapes(parts: PoiParts): Shape[] {
-  return [parts.arm, parts.ball, parts.strandRoot, parts.strandTip, parts.bead];
-}
+export type PoiParts = Readonly<Record<keyof typeof POI_PIECES, Shape>>;
+
+// Le Nounours seen from above, facing +x: the bag sits behind him, its center BAG_BACK behind his.
+export const BAG_BACK = 24;
+export const MAT_BACK = 40;
+export const MUG_HOOK = { back: 20, side: 24 } as const;
+
+// Le Nounours: torso and straps, the hands on the straps and the bucket hat tinted apart, the bag,
+// its rolled mat, and the mug hanging along +x from its hook.
+export const BAG_PIECES = {
+  torso: [
+    64,
+    64,
+    REFERENCE,
+    (ctx) => {
+      ctx.beginPath();
+      ctx.ellipse(-1, 0, 14, 27.5, 0, 0, TAU);
+      ctx.fillStyle = SHADE_SOFT;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = WHITE;
+      ctx.stroke();
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = SHADE_DEEP;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(-14, side * 14);
+        ctx.quadraticCurveTo(-2, side * 17.5, 7, side * 14.7);
+        ctx.stroke();
+      }
+    },
+  ],
+  hands: [
+    32,
+    48,
+    REFERENCE,
+    (ctx) => {
+      for (const side of [-1, 1]) {
+        circle(ctx, 4.6, 6, side * 15);
+        ctx.fillStyle = WHITE;
+        ctx.fill();
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = SHADE;
+        ctx.stroke();
+      }
+    },
+  ],
+  hat: [
+    40,
+    40,
+    REFERENCE,
+    (ctx) => {
+      circle(ctx, 15);
+      ctx.fillStyle = WHITE;
+      ctx.fill();
+      rim(ctx, 1.2);
+      circle(ctx, 9.4);
+      ctx.fillStyle = SHADE_SOFT;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = SHADE;
+      ctx.stroke();
+    },
+  ],
+  pack: [
+    48,
+    64,
+    REFERENCE,
+    (ctx) => {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 17, 25, 0, 0, TAU);
+      ctx.fillStyle = SHADE_SOFT;
+      ctx.fill();
+      rim(ctx, 1.6);
+      ctx.beginPath();
+      ctx.ellipse(-2, 0, 7, 11, 0, 0, TAU);
+      ctx.fillStyle = SHADE;
+      ctx.fill();
+      rim(ctx, 1.2);
+    },
+  ],
+  mat: [
+    16,
+    52,
+    REFERENCE,
+    (ctx) => {
+      ctx.beginPath();
+      ctx.roundRect(-5, -22, 10, 44, 5);
+      ctx.fillStyle = WHITE;
+      ctx.fill();
+      rim(ctx, 1.2);
+      ctx.strokeStyle = SHADE;
+      for (const y of [-11, 0, 11]) {
+        ctx.beginPath();
+        ctx.moveTo(-5, y);
+        ctx.lineTo(5, y);
+        ctx.stroke();
+      }
+    },
+  ],
+  mug: [
+    48,
+    16,
+    REFERENCE,
+    (ctx) => {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = SHADE;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(9, 0);
+      ctx.stroke();
+      circle(ctx, 4, 13, 0);
+      ctx.fillStyle = WHITE;
+      ctx.fill();
+      rim(ctx, 1.2);
+      ctx.beginPath();
+      ctx.arc(13, -4.4, 2, Math.PI, TAU);
+      ctx.stroke();
+    },
+  ],
+} satisfies Record<string, Piece>;
+
+export type BagParts = Readonly<Record<keyof typeof BAG_PIECES, Shape>>;
 
 export const MANDALA_RADIUS = 116;
 
