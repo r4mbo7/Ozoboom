@@ -1,6 +1,10 @@
 import { type Page, expect, test } from '@playwright/test';
 import { collectConsoleErrors } from './game';
 
+// Without a GPU, each page load builds the stage for seconds: a test that reloads needs more than
+// the default 30 s on a busy machine.
+test.describe.configure({ timeout: 120_000 });
+
 const HUD_PANELS = ['Line-up', 'Niveau', 'Vie', 'Pièges', 'Compétence'];
 
 async function secondsToDrop(page: Page): Promise<number> {
