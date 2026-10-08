@@ -67,6 +67,29 @@ export const TRAP_TOKENS: Readonly<Record<TrapLook, PaletteToken>> = {
   strobe: 'texte',
 };
 
+type Point = readonly [number, number];
+export type Facet = readonly [Point, Point, Point];
+
+function corner(count: number, radius: number, turn: number, index: number): Point {
+  const angle = turn + ((index % count) / count) * TAU - Math.PI / 2;
+  return [Math.cos(angle) * radius, Math.sin(angle) * radius];
+}
+
+// A geodesic dome seen from above, in core texture pixels: a decagon rim, a pentagon turned by a
+// tenth of a turn, and a small pentagon at the top, with triangles between them.
+export const DOME_FACETS: readonly Facet[] = [0, 1, 2, 3, 4].flatMap((index): Facet[] => {
+  const rim = (at: number) => corner(10, 80, 0, at);
+  const middle = (at: number) => corner(5, 50, TAU / 10, at);
+  const top = (at: number) => corner(5, 23, 0, at);
+  return [
+    [rim(2 * index), rim(2 * index + 1), middle(index)],
+    [rim(2 * index + 1), rim(2 * index + 2), middle(index)],
+    [rim(2 * index + 2), middle(index), middle(index + 1)],
+    [middle(index), middle(index + 1), top(index + 1)],
+    [middle(index), top(index), top(index + 1)],
+  ];
+});
+
 export function createTextures(): Textures {
   return {
     halo: paint(128, 128, 64, (ctx) => {
@@ -149,21 +172,25 @@ export function createTextures(): Textures {
       ctx.fillStyle = SHADE_DEEP;
       circle(ctx, 92);
       ctx.fill();
+      ctx.save();
       glow(ctx, WHITE, 16);
-      ctx.lineJoin = 'miter';
       ctx.strokeStyle = WHITE;
-      for (const turn of [0, Math.PI]) {
-        polygon(
-          ctx,
-          [0, 1, 2].map((index) => {
-            const angle = turn + (index / 3) * TAU - Math.PI / 2;
-            return [Math.cos(angle) * 82, Math.sin(angle) * 82] as const;
-          }),
-        );
-        doubleStroke(ctx, 11, 4.5);
+      circle(ctx, 86);
+      doubleStroke(ctx, 11, 4.5);
+      ctx.restore();
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgb(255 255 255 / 0.75)';
+      ctx.beginPath();
+      for (const facet of DOME_FACETS) {
+        ctx.moveTo(...facet[2]);
+        for (const point of facet) {
+          ctx.lineTo(...point);
+        }
       }
+      ctx.stroke();
       ctx.fillStyle = WHITE;
-      circle(ctx, 22);
+      circle(ctx, 7);
       ctx.fill();
     }),
     coreRay: paint(256, 32, 16, (ctx) => {
@@ -172,10 +199,10 @@ export function createTextures(): Textures {
       gradient.addColorStop(1, 'rgb(255 255 255 / 0)');
       ctx.fillStyle = gradient;
       polygon(ctx, [
-        [-128, -3],
+        [-128, -2],
         [128, -15],
         [128, 15],
-        [-128, 3],
+        [-128, 2],
       ]);
       ctx.fill();
     }),

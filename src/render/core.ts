@@ -3,6 +3,7 @@ import type { SimState } from '../sim/state';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
+import { DOME_FACETS, type Facet } from './textures';
 import { add, placeOutline, setTint } from './util';
 import {
   LOW_SHARE,
@@ -26,6 +27,34 @@ const MAX_SWELL = 1.05;
 const PERCENT_SIZE = 1.3;
 const BLINK_TICKS = 2 * TICKS_PER_BEAT;
 const BLINK_PERIOD = TICKS_PER_BEAT / 2;
+const RAYS = 8;
+export const LIT_FACETS = 3;
+
+function scramble(value: number): number {
+  let bits = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
+  bits = Math.imul(bits ^ (bits >>> 16), 0x45d9f3b);
+  return (bits ^ (bits >>> 16)) >>> 0;
+}
+
+export function litFacets(beat: number): Facet[] {
+  const lit: Facet[] = [];
+  const seed = scramble(beat);
+  for (let draw = 0; lit.length < LIT_FACETS; draw += 1) {
+    const facet = DOME_FACETS[scramble(seed + draw) % DOME_FACETS.length];
+    if (facet !== undefined && !lit.includes(facet)) {
+      lit.push(facet);
+    }
+  }
+  return lit;
+}
+
+function drawFacets(facets: Graphics, beat: number): void {
+  facets.clear();
+  for (const facet of litFacets(beat)) {
+    facets.poly(facet.flat());
+  }
+  facets.fill(0xffffff);
+}
 
 export const LOW_WARNING = 'La scène faiblit';
 
@@ -45,10 +74,12 @@ export function lostSegmentShown(sinceLoss: number, calm: boolean): boolean {
 
 export function createCore(ctx: RenderContext): CoreFamily {
   const { textures: t, layers } = ctx;
-  const rays = [add(layers.glow, t.coreRay, 0), add(layers.glow, t.coreRay, 0)] as const;
+  const rays = Array.from({ length: RAYS }, () => add(layers.glow, t.coreRay, 0));
   const halo = add(layers.glow, t.halo);
   const outline = add(layers.core, t.core);
   const body = add(layers.core, t.core);
+  const facets = new Graphics();
+  layers.core.addChild(facets);
   const track = new Graphics();
   const rim = new Graphics();
   const lit = new Graphics();
@@ -62,6 +93,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
   outline.visible = false;
 
   let segments = 0;
+  let facetBeat = Number.NaN;
   let drawn = { radius: Number.NaN, segments: Number.NaN };
   let loss = { from: 0, to: 0, tick: Number.NEGATIVE_INFINITY };
 
@@ -130,23 +162,32 @@ export function createCore(ctx: RenderContext): CoreFamily {
 
       body.position.set(core.x, core.y);
       body.scale.set((core.radius / t.core.radius) * swell);
-      body.rotation = frame.calm ? 0 : (frame.now / RAY_TURN_TICKS) * TAU;
       setTint(body, palette.noyau);
       placeOutline(outline, body, t.core.texture, t.core.radius, frame);
+
+      facets.visible = !frame.calm;
+      if (facets.visible && facetBeat !== state.set.beat) {
+        facetBeat = state.set.beat;
+        drawFacets(facets, facetBeat);
+      }
+      facets.position.copyFrom(body.position);
+      facets.scale.copyFrom(body.scale);
+      setTint(facets, palette.noyau);
+      facets.alpha = 0.25 + 0.35 * pulse;
 
       setTint(halo, palette.noyau);
       halo.position.set(core.x, core.y);
       halo.scale.set(((core.radius * 3.4) / t.halo.radius) * (1 + 0.3 * pulse));
       halo.alpha = (0.55 + 0.45 * pulse) * light.haloAlpha;
 
-      let turn = frame.calm ? Math.PI / 4 : (frame.now / RAY_TURN_TICKS) * TAU;
+      let turn = frame.calm ? 0 : (frame.now / RAY_TURN_TICKS) * TAU;
       for (const ray of rays) {
         setTint(ray, palette.noyau);
         ray.position.set(core.x, core.y);
         ray.rotation = turn;
-        ray.scale.set((core.radius * 9) / 256, (core.radius * 1.6) / 32);
-        ray.alpha = (0.25 + 0.35 * pulse) * light.haloAlpha;
-        turn += Math.PI;
+        ray.scale.set((core.radius * 9) / 256, (core.radius * 1.1) / 32);
+        ray.alpha = (0.16 + 0.22 * pulse) * light.haloAlpha;
+        turn += TAU / RAYS;
       }
 
       setTint(flash, palette.or);
