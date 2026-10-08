@@ -4,7 +4,15 @@ import { handleRequest, handleScheduled, type Env, type Fetcher } from './index'
 const NOW = new Date('2026-10-15T12:00:00Z');
 const ICE = [{ urls: ['stun:stun.cloudflare.com:3478'] }];
 
-function makeEnv(initial: Record<string, string> = {}, allowed = true): Env {
+const usage = (gb: number, month = '2026-10', minutesAgo = 5) => ({
+  usage: JSON.stringify({
+    month,
+    bytes: gb * 1e9,
+    at: new Date(NOW.getTime() - minutesAgo * 60_000).toISOString(),
+  }),
+});
+
+function makeEnv(initial: Record<string, string> = usage(0), allowed = true): Env {
   const store = new Map(Object.entries(initial));
   return {
     CF_TURN_TOKEN_ID: 'key-id',
@@ -24,10 +32,6 @@ function makeEnv(initial: Record<string, string> = {}, allowed = true): Env {
     RATE_LIMIT: { limit: () => Promise.resolve({ success: allowed }) },
   };
 }
-
-const usage = (gb: number, month = '2026-10') => ({
-  usage: JSON.stringify({ month, bytes: gb * 1e9 }),
-});
 
 const ask = (env: Env, fetcher: Fetcher, origin: string | null = 'https://r4mbo7.github.io') =>
   handleRequest(
@@ -117,9 +121,21 @@ describe('POST /ice', () => {
   });
 
   it('answers 503 once the key was cut this month', async () => {
-    const response = await ask(makeEnv({ cutoff: '2026-10' }), iceFetcher());
+    const response = await ask(makeEnv({ ...usage(0), cutoff: '2026-10' }), iceFetcher());
 
     expect(response.status).toBe(503);
+  });
+
+  it.each([
+    ['no usage was ever measured', {}],
+    ['the last measure is over 30 minutes old', usage(0, '2026-10', 31)],
+  ])('answers 503 when %s', async (_case, initial) => {
+    const fetcher = iceFetcher();
+
+    const response = await ask(makeEnv(initial), fetcher);
+
+    expect(response.status).toBe(503);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it('answers 502 when Cloudflare refuses', async () => {
@@ -136,7 +152,11 @@ describe('scheduled usage check', () => {
 
     await handleScheduled(env, fetcher, NOW);
 
-    expect(await env.USAGE.get('usage', 'json')).toEqual({ month: '2026-10', bytes: 120e9 });
+    expect(await env.USAGE.get('usage', 'json')).toEqual({
+      month: '2026-10',
+      bytes: 120e9,
+      at: NOW.toISOString(),
+    });
     const [url, init] = fetcher.mock.calls[0] ?? [];
     expect(url).toBe('https://api.cloudflare.com/client/v4/graphql');
     expect(JSON.parse(init?.body as string)).toMatchObject({

@@ -11,7 +11,7 @@ L'ADR 0007 a choisi le pair à pair sans TURN. Le 2026-10-07, un invité en Fran
 
 - **TURN Cloudflare Realtime** sur un compte Cloudflare dédié au jeu (1000 Go gratuits par mois, puis 0,05 $/Go), STUN `stun.cloudflare.com`. ICE garde le direct quand il passe : seules les paires qui échouent consomment du relais. L'ADR 0007 ne change pas autrement.
 - **Un Worker `turn`** (plan Workers gratuit, plafonné sans facture), dans `worker/turn/` de ce dépôt, déployé à la main par `wrangler deploy`. `POST /ice` rend les `iceServers` avec des identifiants de 2 heures. Il garde la clé TURN et les jetons d'API en secrets Wrangler ; il n'accepte que l'origine du jeu et limite le débit par IP.
-- **Coupe-circuit dans le Worker.** Toutes les 10 minutes, une tâche planifiée lit la sortie TURN du mois (GraphQL, `callsTurnUsageAdaptiveGroups`) et la range en KV. À 500 Go, `POST /ice` refuse ; à 800 Go, le Worker supprime la clé TURN, que Constantin recrée à la main le mois suivant. Alerte budgétaire Cloudflare à 1 $ en filet.
+- **Coupe-circuit dans le Worker.** Toutes les 10 minutes, une tâche planifiée lit la sortie TURN du mois (GraphQL, `callsTurnUsageAdaptiveGroups`) et la range en KV. À 500 Go, ou si la dernière mesure a plus de 30 minutes, `POST /ice` refuse ; à 800 Go, le Worker supprime la clé TURN, que Constantin recrée à la main le mois suivant. Alerte budgétaire Cloudflare à 1 $ en filet.
 - **Côté jeu,** `VITE_TURN_URL` donne l'adresse du Worker à la construction. À l'ouverture d'un salon, `src/net/peerjs.ts` demande les `iceServers` (3 s au plus) ; sans réponse, refus ou variable absente (tests, développement), il garde STUN seul, comme avant.
 
 ## Alternatives écartées

@@ -1,6 +1,7 @@
 export const TTL_SECONDS = 7200;
 export const REFUSE_BYTES = 500e9;
 export const CUTOFF_BYTES = 800e9;
+export const STALE_USAGE_MS = 30 * 60_000;
 
 const GAME_ORIGIN = 'https://r4mbo7.github.io';
 const LOCAL_ORIGIN = /^http:\/\/localhost(:\d+)?$/;
@@ -21,6 +22,7 @@ export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 interface UsageRecord {
   month: string;
   bytes: number;
+  at: string;
 }
 
 const monthOf = (now: Date): string => now.toISOString().slice(0, 7);
@@ -28,10 +30,13 @@ const monthOf = (now: Date): string => now.toISOString().slice(0, 7);
 const isAllowedOrigin = (origin: string | null): origin is string =>
   origin !== null && (origin === GAME_ORIGIN || LOCAL_ORIGIN.test(origin));
 
-async function relayIsCut(env: Env, month: string): Promise<boolean> {
+// A usage figure the cron could not refresh counts as over quota: the relay fails closed.
+async function relayIsCut(env: Env, now: Date): Promise<boolean> {
+  const month = monthOf(now);
   if ((await env.USAGE.get('cutoff')) === month) return true;
   const usage = await env.USAGE.get<UsageRecord>('usage', 'json');
-  return usage?.month === month && usage.bytes >= REFUSE_BYTES;
+  if (usage === null || now.getTime() - Date.parse(usage.at) > STALE_USAGE_MS) return true;
+  return usage.month === month && usage.bytes >= REFUSE_BYTES;
 }
 
 export async function handleRequest(
@@ -57,7 +62,7 @@ export async function handleRequest(
   if (!(await env.RATE_LIMIT.limit({ key: ip })).success) {
     return new Response('too many requests', { status: 429, headers: cors });
   }
-  if (await relayIsCut(env, monthOf(now))) {
+  if (await relayIsCut(env, now)) {
     return new Response('relay disabled', { status: 503, headers: cors });
   }
 
@@ -124,7 +129,10 @@ export async function handleScheduled(
 ): Promise<void> {
   const month = monthOf(now);
   const bytes = await readEgressBytes(env, fetcher, now);
-  await env.USAGE.put('usage', JSON.stringify({ month, bytes } satisfies UsageRecord));
+  await env.USAGE.put(
+    'usage',
+    JSON.stringify({ month, bytes, at: now.toISOString() } satisfies UsageRecord),
+  );
   if (bytes < CUTOFF_BYTES || (await env.USAGE.get('cutoff')) === month) return;
 
   const response = await fetcher(
