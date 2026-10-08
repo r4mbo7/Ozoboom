@@ -1,9 +1,18 @@
-import { Graphics, type Sprite } from 'pixi.js';
+import { Graphics, Sprite, Texture } from 'pixi.js';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import type { SimEvent, SimState, SpeakerState } from '../sim/state';
 import type { Family, RenderContext, SpeakerLook } from './context';
 import type { Frame } from './frame';
-import { drawCable, mixColor, plugShare, speakerToken, strokeCircle } from './speaker-kit';
+import {
+  drawCable,
+  drawWaves,
+  mixColor,
+  ofSpeaker,
+  plugShare,
+  speakerToken,
+  speakerTurn,
+  strokeCircle,
+} from './speaker-kit';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
@@ -14,7 +23,6 @@ const CLOUDS = 3;
 const FLASH_TICKS = TICKS_PER_BEAT;
 const SHOCK_TICKS = TICKS_PER_BEAT / 2;
 const DRIFT_TICKS = TICKS_PER_BAR * 2;
-const STACK_SCALE = 0.8 / 32;
 const OFF_LIFT = 0.35;
 const BEAMS = 3;
 const SWEEP_TICKS = TICKS_PER_BAR * 8;
@@ -35,8 +43,10 @@ interface SpeakerView {
   readonly shock: Sprite;
   readonly flash: Sprite;
   readonly marks: readonly Sprite[];
+  readonly waves: Graphics;
   cableKey: string;
   arcShare: number;
+  wavePhase: number;
 }
 
 export function createSpeakers(ctx: RenderContext): Family {
@@ -52,12 +62,15 @@ export function createSpeakers(ctx: RenderContext): Family {
       layers.speakers.addChild(cable);
       const cableGlow = new Graphics();
       layers.glow.addChild(cableGlow);
-      const outline = add(layers.speakers, t.stack);
-      const body = add(layers.speakers, t.stack);
+      const outline = new Sprite({ texture: Texture.EMPTY, anchor: 0.5 });
+      const body = new Sprite({ texture: Texture.EMPTY, anchor: 0.5 });
+      layers.speakers.addChild(outline, body);
       const track = new Graphics();
       const arc = new Graphics();
       layers.speakers.addChild(track, arc);
       const marks = Array.from({ length: MARKS }, () => add(layers.speakers, t.traps.mist));
+      const waves = new Graphics();
+      layers.speakers.addChild(waves);
       return {
         zone,
         cable,
@@ -71,8 +84,10 @@ export function createSpeakers(ctx: RenderContext): Family {
         shock: add(layers.fx, t.ring),
         flash: add(layers.fx, t.ring),
         marks,
+        waves,
         cableKey: '',
         arcShare: Number.NaN,
+        wavePhase: Number.NaN,
       };
     },
     (view) => {
@@ -90,8 +105,10 @@ export function createSpeakers(ctx: RenderContext): Family {
       view.cableGlow.clear();
       view.track.clear();
       view.arc.clear();
+      view.waves.clear();
       view.cableKey = '';
       view.arcShare = Number.NaN;
+      view.wavePhase = Number.NaN;
     },
   );
 
@@ -225,11 +242,15 @@ export function createSpeakers(ctx: RenderContext): Family {
         view.zone.alpha = lit ? 0.4 : 0.8;
 
         const { body } = view;
+        const shape = ofSpeaker(t.speakers, speaker.id, 'drawing');
+        body.texture = shape.texture;
         setTint(body, tint);
         body.visible = true;
         body.position.set(x, y);
-        body.scale.set(speaker.radius * STACK_SCALE * (lit ? 1 + 0.06 * pulse : 1));
-        placeOutline(view.outline, body, t.stack.texture, t.stack.radius, frame);
+        body.rotation = speakerTurn(speaker, state.core);
+        const swell = lit ? 1 + 0.06 * pulse : 1;
+        body.scale.set((speaker.radius * swell) / shape.radius);
+        placeOutline(view.outline, body, shape.texture, shape.radius, frame);
 
         const ringRadius = speaker.radius + 9;
         view.track.visible = view.arc.visible = !lit && (plugging || share > 0);
@@ -252,8 +273,10 @@ export function createSpeakers(ctx: RenderContext): Family {
         if (lit) {
           drawAura(view, speaker, look, color, frame);
           drawFlash(view, speaker, color, frame);
+          drawWaves(view, speaker, body, swell, color, frame);
         } else {
           hide(view.halo, view.shock, view.flash, ...view.beams, ...view.marks);
+          view.waves.visible = false;
         }
       }
       views.end();

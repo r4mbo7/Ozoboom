@@ -46,7 +46,7 @@ export interface Textures {
   readonly beam: Shape;
   readonly pip: Shape;
   readonly enemyShot: Shape;
-  readonly stack: Shape;
+  readonly speakers: Readonly<Record<string, Shape>>;
   readonly zone: Shape;
   readonly sweep: Shape;
   readonly masks: MaskSet;
@@ -276,6 +276,7 @@ export function destroyTextures(textures: Textures): void {
   const shapes = [
     ...Object.values(textures).filter((value): value is Shape => 'texture' in value),
     ...Object.values(textures.traps),
+    ...Object.values(textures.speakers),
     textures.classFx.trail,
     textures.classFx.mandala,
     ...specialShapes(textures.specials),
