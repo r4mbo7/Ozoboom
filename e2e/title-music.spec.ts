@@ -58,6 +58,7 @@ test('the title stays silent while the sound is off', async ({ page }) => {
     window.localStorage.setItem('ozoboom.muted', '1');
   });
   await page.goto('./');
+  await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
 
   await page.keyboard.press('Space');
 
