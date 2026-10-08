@@ -1,6 +1,6 @@
 # Worker TURN
 
-Délivre les identifiants du relais TURN Cloudflare et le coupe avant toute facture ([ADR 0010](../../docs/adr/0010-relais-turn-cloudflare-plafonne.md)).
+Délivre les identifiants du relais TURN Cloudflare et le coupe avant toute facture ([ADR 0011](../../docs/adr/0011-relais-turn-cloudflare-plafonne.md)).
 
 1. Le KV `USAGE` et la limite de débit sont déjà dans `wrangler.toml` (KV créé le 2026-10-08) ; seul un nouveau compte demande `wrangler kv namespace create USAGE`.
 2. Créer les secrets, un par un : `wrangler secret put CF_TURN_TOKEN_ID`, `CF_TURN_API_TOKEN`, `CF_ACCOUNT_ID`, `CF_ANALYTICS_REALTIME_TOKEN`.

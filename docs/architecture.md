@@ -108,7 +108,7 @@ L'accumulateur plafonne le nombre de ticks par image pour ne pas s'enfoncer apr�
 
 ## Coop en ligne
 
-ADR 0007 : le navigateur d'un joueur est l'hôte et fait foi, les invités s'y connectent en pair à pair (WebRTC, canaux de données fiables et ordonnés) par le courtier public PeerJS, avec un relais TURN Cloudflare en secours (ADR 0010, identifiants délivrés par le Worker `worker/turn/`), et tout le monde simule les mêmes commandes au même tick, en lockstep séquencé par l'hôte.
+ADR 0007 : le navigateur d'un joueur est l'hôte et fait foi, les invités s'y connectent en pair à pair (WebRTC, canaux de données fiables et ordonnés) par le courtier public PeerJS, avec un relais TURN Cloudflare en secours (ADR 0011, identifiants délivrés par le Worker `worker/turn/`), et tout le monde simule les mêmes commandes au même tick, en lockstep séquencé par l'hôte.
 
 - Le code de salon est l'identifiant PeerJS de l'hôte ; le lien `…/#rejoindre=CODE` le porte dans le fragment.
 - À l'entrée, un invité envoie sa version (`__APP_VERSION__`), son nom et sa classe ; l'hôte refuse une version différente, un salon plein ou une partie commencée, et diffuse le salon à chaque changement.
