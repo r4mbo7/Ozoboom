@@ -1,4 +1,4 @@
-import type { StatKey } from '../data/types';
+import type { Rarity, StatKey } from '../data/types';
 
 export type EntityId = number;
 export type PlayerId = 0 | 1 | 2 | 3;
@@ -73,6 +73,8 @@ export interface PlayerState extends Positioned {
   attackCooldown: number;
   skillCooldown: number;
   upgrades: string[];
+  // The rarity of each stack in `upgrades`, same order; absent means all common.
+  upgradeRarities?: Rarity[];
   modifiers: Partial<Record<StatKey, number>>;
   downed: boolean;
   invulnerableTicks?: number;
@@ -213,6 +215,9 @@ export interface BystanderState extends Positioned {
 export interface UpgradeOffer {
   playerId: PlayerId;
   options: readonly string[];
+  // The rarity of each option, same order, common for weapons and relics; absent means the rarity
+  // of each option's definition.
+  rarities?: readonly Rarity[];
   // Absent means levelUp.
   kind?: 'levelUp' | 'relic';
 }

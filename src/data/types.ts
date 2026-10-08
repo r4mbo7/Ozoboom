@@ -122,17 +122,29 @@ export type UpgradeFamily = 'class' | 'generic' | 'defense' | 'relic';
 
 export type Rarity = 'common' | 'rare' | 'legendary';
 
+export interface RarityForm {
+  description: string;
+  modifiers: readonly StatModifier[];
+}
+
+// `description` and `modifiers` are the common form.
 export interface UpgradeDefinition {
   id: string;
   name: string;
   description: string;
   family: UpgradeFamily;
   classId?: string;
-  // Absent means common.
+  // Legacy, one entry per rarity: removed once every upgrade carries `rarities` (ADR 0010).
   rarity?: Rarity;
+  // Absent, the upgrade is always drawn common.
+  rarities?: { rare: RarityForm; legendary: RarityForm };
   modifiers: readonly StatModifier[];
+  // Counts stacks of every rarity.
   maxStacks: number;
 }
+
+// Draw weights of each rarity, indexed by Volume; the last entry holds beyond.
+export type RarityWeights = Record<Rarity, number>;
 
 // `steps`: sixteenth notes, 0 to 15, within the bar.
 export type WeaponRhythm = { everyBars: number; steps: readonly number[] } | 'continuous';
@@ -275,6 +287,7 @@ export interface GameContent {
   bystanders?: readonly BystanderDefinition[];
   weapons?: readonly WeaponDefinition[];
   fusions?: readonly FusionDefinition[];
+  rarityWeights?: readonly RarityWeights[];
 }
 
 export type MusicVoiceId =
