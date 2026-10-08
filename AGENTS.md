@@ -18,9 +18,9 @@ Documentation, interface du jeu et textes en français. Code, identifiants, mess
 ## Prendre une tâche
 
 - Les tâches sont les issues GitHub du jalon en cours. Une issue porte le label `ready` quand rien ne la bloque. Ne pas commencer une issue `blocked` ou `in-progress`.
-- Une branche par issue, nommée `issue-N-sujet` : le hook `.githooks/post-checkout` (activé par `pnpm install`) pose alors `in-progress` sur l'issue. Abandonner une issue, c'est lui retirer ce label. Une branche est fusionnée en un commit qui la ferme (`Closes #N`). Une branche reste petite et ne fait que ce que dit l'issue.
+- Une branche par issue, nommée `issue-N-sujet` : le hook `.githooks/post-checkout` (activé par `pnpm install`) pose alors `in-progress` sur l'issue. Abandonner une issue, c'est lui retirer ce label. Une branche est fusionnée en un commit qui la ferme (`Closes #N`). Une branche reste petite : elle fait ce que dit l'issue, plus ce qu'il faut régler pour y arriver.
 - Les contrats partagés (voir `docs/architecture.md`) sont communs à toutes les tâches en cours. Un changement y est additif, minimal, dans sa propre branche, et annoncé dans l'issue concernée avant de fusionner.
-- Ce qui dépasse l'issue devient une nouvelle issue, jamais un `TODO` ni du périmètre ajouté au diff.
+- Un problème rencontré pendant l'implémentation se règle dans la branche. Il ne devient une nouvelle issue que s'il éloigne trop de l'objectif de l'issue. Jamais de `TODO`.
 
 ## Aller vite
 
