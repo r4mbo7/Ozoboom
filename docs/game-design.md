@@ -86,7 +86,7 @@ Du matériel de festival, posé avec des watts, qui agit sur le temps musical :
 | Déco UV          | attire les ennemis, les marque (dégâts bonus)       |
 | Stroboscope      | étourdit sur le drop                                |
 
-Nombre d'emplacements limité, un de plus par niveau de Volume. Un piège posé se renforce avec des watts. Les lourds peuvent pousser ou casser un piège.
+Nombre d'emplacements limité, un de plus par niveau de Volume. Un piège posé se renforce avec des watts : le passer au niveau N coûte N fois son prix de pose (caisson : 15, 30, 45). Les lourds peuvent pousser ou casser un piège.
 
 ## Progression dans la partie
 

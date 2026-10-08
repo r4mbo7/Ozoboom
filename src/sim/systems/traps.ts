@@ -99,24 +99,21 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
   if (definition === undefined || player.downed) {
     return;
   }
-  const cost = statValue(player, 'trapCostMul', definition.cost);
-  if (state.core.watts < cost) {
+  const under = trapAt(content.traps, state.traps, action);
+  const cost = actionCost(definition, under, player);
+  if (cost === null || state.core.watts < cost) {
+    return;
+  }
+
+  if (under !== undefined) {
+    under.level += 1;
+    pay(state, cost);
+    const { id, kind, level } = under;
+    state.events.push({ type: 'trapUpgraded', id, kind, level, x: under.x, y: under.y });
     return;
   }
 
   const { x, y } = action;
-  const under = state.traps.find((trap) =>
-    touches({ x, y, radius: 0 }, trap, trapDefinition(content, trap).radius),
-  );
-  if (under !== undefined) {
-    if (under.kind === definition.id && under.level < definition.maxLevel) {
-      under.level += 1;
-      pay(state, cost);
-      const { id, kind, level } = under;
-      state.events.push({ type: 'trapUpgraded', id, kind, level, x: under.x, y: under.y });
-    }
-    return;
-  }
 
   const { radius } = definition;
   const { arena, core } = state;
@@ -150,6 +147,43 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
   });
   pay(state, cost);
   state.events.push({ type: 'trapPlaced', id, kind: definition.id, x, y });
+}
+
+export function trapActionCost(
+  definitions: ReadonlyMap<string, TrapDefinition>,
+  traps: readonly TrapState[],
+  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks'>,
+  trapId: string,
+  at: Vec2,
+): number | null {
+  const definition = definitions.get(trapId);
+  return definition === undefined
+    ? null
+    : actionCost(definition, trapAt(definitions, traps, at), player);
+}
+
+function actionCost(
+  definition: TrapDefinition,
+  under: TrapState | undefined,
+  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks'>,
+): number | null {
+  if (under === undefined) {
+    return statValue(player, 'trapCostMul', definition.cost);
+  }
+  if (under.kind !== definition.id || under.level >= definition.maxLevel) {
+    return null;
+  }
+  return statValue(player, 'trapCostMul', definition.cost * (under.level + 1));
+}
+
+function trapAt(
+  definitions: ReadonlyMap<string, TrapDefinition>,
+  traps: readonly TrapState[],
+  { x, y }: Vec2,
+): TrapState | undefined {
+  return traps.find((trap) =>
+    touches({ x, y, radius: 0 }, trap, lookup(definitions, trap.kind, 'trap').radius),
+  );
 }
 
 function facing(action: PlaceTrap, player: PlayerState): Vec2 {

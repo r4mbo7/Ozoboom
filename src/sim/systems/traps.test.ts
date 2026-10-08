@@ -11,6 +11,7 @@ import {
 } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { EnemyState, PlayerState, SimState, Vec2 } from '../state';
+import { trapActionCost } from './traps';
 
 function game(setId = 'fixture-set'): {
   simulation: Simulation;
@@ -203,12 +204,37 @@ describe('trap placement', () => {
     ]);
 
     expect(state.traps.map((trap) => trap.level)).toEqual([3, 1, 1, 1, 1, 1]);
-    expect(state.core.watts).toBe(1000 - 8 * 20);
-    expect(state.stats.wattsSpent).toBe(8 * 20);
+    expect(state.core.watts).toBe(1000 - 6 * 20 - 2 * 20 - 3 * 20);
+    expect(state.stats.wattsSpent).toBe(6 * 20 + 2 * 20 + 3 * 20);
     expect(state.events.filter((event) => event.type === 'trapUpgraded')).toEqual([
       { type: 'trapUpgraded', id: 1, kind: 'mister', level: 2, x: 100, y: 100 },
       { type: 'trapUpgraded', id: 1, kind: 'mister', level: 3, x: 100, y: 100 },
     ]);
+  });
+
+  it('costs the base cost times the level reached, with the trap cost multiplier', () => {
+    const { simulation, state, player } = game();
+    player.modifiers.trapCostMul = 0.5;
+    state.core.watts = 1000;
+
+    for (let i = 0; i < 3; i += 1) {
+      simulation.step([place('subwoofer', 400, 450)]);
+    }
+
+    expect(state.traps.map((trap) => trap.level)).toEqual([3]);
+    expect(state.stats.wattsSpent).toBe(15 + 30 + 45);
+  });
+
+  it('refuses an upgrade the watts cannot pay, without touching the trap', () => {
+    const { simulation, state } = game();
+    simulation.step([place('subwoofer', 400, 450)]);
+    state.core.watts = 59;
+
+    simulation.step([place('subwoofer', 400, 450)]);
+
+    expect(state.traps.map((trap) => trap.level)).toEqual([1]);
+    expect(state.core.watts).toBe(59);
+    expect(state.events.filter((event) => event.type === 'trapUpgraded')).toEqual([]);
   });
 
   it('refuses a trap placed on a trap of another kind', () => {
@@ -501,5 +527,30 @@ describe('heavy enemies against traps', () => {
     ]);
 
     expect(state.traps.map((trap) => trap.hp)).toEqual([20, 50]);
+  });
+});
+
+describe('trapActionCost', () => {
+  const definitions = new Map(EFFECTS_OPTIONS.content.traps.map((trap) => [trap.id, trap]));
+
+  it.each<[string, number, number, string, Vec2, number | null]>([
+    ['placing on free ground', 1, 1, 'mister', { x: 100, y: 100 }, 20],
+    ['upgrading to level 2', 1, 1, 'subwoofer', { x: 405, y: 450 }, 60],
+    ['upgrading to level 3', 2, 1, 'subwoofer', { x: 400, y: 450 }, 90],
+    ['upgrading with a cheaper trap cost', 1, 0.5, 'subwoofer', { x: 400, y: 450 }, 30],
+    ['upgrading past the max level', 3, 1, 'subwoofer', { x: 400, y: 450 }, null],
+    ['placing on a trap of another kind', 1, 1, 'mister', { x: 400, y: 450 }, null],
+    ['an unknown trap', 1, 1, 'flamethrower', { x: 100, y: 100 }, null],
+  ])('prices %s', (_, level, trapCostMul, trapId, at, expected) => {
+    const { simulation, state, player } = game();
+    simulation.step([place('subwoofer', 400, 450)]);
+    state.traps.forEach((trap) => {
+      trap.level = level;
+    });
+    player.modifiers.trapCostMul = trapCostMul;
+
+    const cost = trapActionCost(definitions, state.traps, player, trapId, at);
+
+    expect(cost).toBe(expected);
   });
 });

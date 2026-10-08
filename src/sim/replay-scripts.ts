@@ -258,7 +258,7 @@ export function playTeam(): { state: SimState; downs: number; revives: number } 
 export const REPLAY_SCRIPTS: readonly ReplayScript[] = [
   {
     id: 'reference',
-    hash: 'af2ac9e9',
+    hash: '83ec74fd',
     run: () => runScript(DUO, referenceCommands(2000)),
   },
   {
