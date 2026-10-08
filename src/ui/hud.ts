@@ -1,9 +1,9 @@
-import type { ClassDefinition, GameContent, SetDefinition } from '../data/types';
+import type { ClassDefinition, GameContent, SetDefinition, TrapDefinition } from '../data/types';
 import { setFraction } from '../sim/lineup';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
 import type { PlayerState, SimState } from '../sim/state';
-import { statValue, trapCapacity } from '../sim/stats';
+import { trapCapacity } from '../sim/stats';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
@@ -18,6 +18,7 @@ import {
   rosterOf,
   skillCharge,
   sunPosition,
+  trapTile,
   volumeCrans,
 } from './hud-model';
 import { BOLT, HEART, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
@@ -144,6 +145,8 @@ export function createHud(): Hud {
   let slots: HTMLElement[] = [];
   let slotDefs: LineupSlot[] = [];
   let tiles: HTMLElement[] = [];
+  let tileCosts: HTMLElement[] = [];
+  let trapDefinitions: ReadonlyMap<string, TrapDefinition> = new Map();
   let classDef: ClassDefinition | null = null;
   let builtDevice: InputDevice | null = null;
   let selectedTrap = 0;
@@ -196,16 +199,21 @@ export function createHud(): Hud {
     plugRow.hidden = plugs.length === 0;
 
     selectedTrap = Math.min(selectedTrap, Math.max(content.traps.length - 1, 0));
+    trapDefinitions = new Map(content.traps.map((trap) => [trap.id, trap]));
+    tileCosts = [];
     tiles = content.traps.map((trap, index) => {
       const tile = el('div', 'ui-trap');
       tile.title = `${trap.name} : ${trap.description}`;
       tile.dataset.touchControl = `trap:${String(index)}`;
+      const amount = el('span', '', formatNumber(trap.cost));
+      tileCosts.push(amount);
       const cost = el('span', 'ui-trap__cost');
-      cost.append(icon('ui-trap__bolt', BOLT), el('span', '', formatNumber(trap.cost)));
+      cost.append(icon('ui-trap__bolt', BOLT), amount);
       tile.append(
         el('span', 'ui-trap__key', String(index + 1)),
         icon('ui-trap__icon', trapIcon(trap.effect)),
         cost,
+        el('span', 'ui-trap__reinforce', 'Renforcer'),
       );
       return tile;
     });
@@ -434,13 +442,14 @@ export function createHud(): Hud {
       if (tile === undefined) {
         return;
       }
+      const view = trapTile(trapDefinitions, state, player, trap.id, maxTraps);
       setFlag(tile, 'selected', index === selectedTrap);
-      setFlag(
-        tile,
-        'unaffordable',
-        statValue(player, 'trapCostMul', trap.cost) > state.core.watts ||
-          state.traps.length >= maxTraps,
-      );
+      setFlag(tile, 'unaffordable', !view.available);
+      setFlag(tile, 'reinforce', view.reinforce);
+      const amount = tileCosts[index];
+      if (amount !== undefined) {
+        setText(amount, formatNumber(view.cost));
+      }
     });
     setText(trapName, content.traps[selectedTrap]?.name ?? '');
 

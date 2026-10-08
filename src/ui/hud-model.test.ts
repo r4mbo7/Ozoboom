@@ -2,8 +2,15 @@ import { describe, expect, it } from 'vitest';
 import type { GameContent, SetDefinition } from '../data/types';
 import { TICKS_PER_BAR } from '../shared/tempo';
 import { setFraction } from '../sim/lineup';
-import type { SimState } from '../sim/state';
-import { UI_FIXTURE_CONTENT, fixtureForScreen, fixtureState, idleSnapshot } from './fixtures';
+import type { SimState, TrapState } from '../sim/state';
+import {
+  UI_FIXTURE_CONTENT,
+  fixtureForScreen,
+  fixturePlayer,
+  fixtureState,
+  fixtureTrap,
+  idleSnapshot,
+} from './fixtures';
 import {
   classToken,
   dropReading,
@@ -14,6 +21,7 @@ import {
   plugHelp,
   rosterOf,
   sunPosition,
+  trapTile,
   volumeCrans,
 } from './hud-model';
 
@@ -97,6 +105,61 @@ describe('volumeCrans', () => {
     const bare = { ...SET, speakers: [] };
 
     expect(volumeCrans(bare, fixtureState())).toEqual([]);
+  });
+});
+
+describe('trapTile', () => {
+  const definitions = new Map(UI_FIXTURE_CONTENT.traps.map((trap) => [trap.id, trap]));
+  const player = fixturePlayer({ x: 760, y: 500 });
+
+  function fullField(under: Partial<TrapState> | null, watts = 200): SimState {
+    const far = Array.from({ length: under === null ? 6 : 5 }, (_, index) => ({
+      ...fixtureTrap(1 + index, 'laser'),
+      x: 100 + index * 200,
+      y: 100,
+    }));
+    const mine = under === null ? [] : [{ ...fixtureTrap(9, 'caisson-de-basse'), ...under }];
+    return fixtureState({
+      traps: [...far, ...mine],
+      core: { ...fixtureState().core, watts },
+    });
+  }
+
+  it('offers to reinforce the trap of the same kind under the player when all slots are taken', () => {
+    const state = fullField({ x: 760, y: 500, level: 1 });
+
+    const tile = trapTile(definitions, state, player, 'caisson-de-basse', 6);
+
+    expect(tile).toEqual({ reinforce: true, cost: 60, available: true });
+  });
+
+  it('greys a new placement out when all slots are taken', () => {
+    const state = fullField(null);
+
+    const tile = trapTile(definitions, state, player, 'caisson-de-basse', 6);
+
+    expect(tile).toEqual({ reinforce: false, cost: 30, available: false });
+  });
+
+  it('greys a reinforcement out when the watts do not cover it', () => {
+    const state = fullField({ x: 760, y: 500, level: 2 }, 80);
+
+    const tile = trapTile(definitions, state, player, 'caisson-de-basse', 6);
+
+    expect(tile).toEqual({ reinforce: true, cost: 90, available: false });
+  });
+
+  it('greys out a trap at its last level and a kind that differs from the one underfoot', () => {
+    const state = fullField({ x: 760, y: 500, level: 3 });
+
+    const tiles = ['caisson-de-basse', 'laser'].map((id) =>
+      trapTile(definitions, state, player, id, 6),
+    );
+
+    expect(tiles).toEqual([
+      { reinforce: false, cost: 30, available: false },
+      { reinforce: false, cost: 50, available: false },
+    ]);
   });
 });
 

@@ -12,9 +12,21 @@ import type {
 import { BYSTANDERS } from '../data/bystanders';
 import { ENEMIES } from '../data/enemies';
 import { SETS } from '../data/sets';
+import { TRAPS } from '../data/traps';
+import type { TrapDefinition } from '../data/types';
 import { WEAPONS } from '../data/weapons';
 import type { RenderContent } from './context';
 import { FIXTURE_CLASSES } from './fixture-classes';
+
+const OTHER_TRAPS: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect'>[] = [
+  {
+    id: 'brumisateur',
+    radius: 16,
+    effect: { kind: 'mist', slowFactor: 0.6, healPerBar: 1, radius: 90 },
+  },
+  { id: 'deco-uv', radius: 15, effect: { kind: 'lure', radius: 140, markedDamageMul: 1.5 } },
+  { id: 'stroboscope', radius: 15, effect: { kind: 'strobe', stunTicks: 30, radius: 100 } },
+];
 
 export const FIXTURE_CONTENT: RenderContent = {
   classes: FIXTURE_CLASSES,
@@ -22,21 +34,7 @@ export const FIXTURE_CONTENT: RenderContent = {
   sets: SETS,
   enemies: ENEMIES,
   bystanders: BYSTANDERS,
-  traps: [
-    {
-      id: 'caisson-de-basse',
-      radius: 18,
-      effect: { kind: 'shockwave', damage: 6, radius: 110, knockback: 24 },
-    },
-    { id: 'laser', radius: 14, effect: { kind: 'beam', damagePerTick: 1, length: 360, width: 12 } },
-    {
-      id: 'brumisateur',
-      radius: 16,
-      effect: { kind: 'mist', slowFactor: 0.6, healPerBar: 1, radius: 90 },
-    },
-    { id: 'deco-uv', radius: 15, effect: { kind: 'lure', radius: 140, markedDamageMul: 1.5 } },
-    { id: 'stroboscope', radius: 15, effect: { kind: 'strobe', stunTicks: 30, radius: 100 } },
-  ],
+  traps: [...TRAPS, ...OTHER_TRAPS.map((trap) => ({ ...trap, maxLevel: 3 }))],
 };
 
 export interface FixtureOptions {

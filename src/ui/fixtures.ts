@@ -339,7 +339,7 @@ function fixtureEnemies(count: number): EnemyState[] {
   }));
 }
 
-function fixtureTrap(id: number, kind: string): TrapState {
+export function fixtureTrap(id: number, kind: string): TrapState {
   return {
     id,
     kind,

@@ -176,8 +176,8 @@ function actionCost(
   return statValue(player, 'trapCostMul', definition.cost * (under.level + 1));
 }
 
-function trapAt(
-  definitions: ReadonlyMap<string, TrapDefinition>,
+export function trapAt(
+  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
   traps: readonly TrapState[],
   { x, y }: Vec2,
 ): TrapState | undefined {

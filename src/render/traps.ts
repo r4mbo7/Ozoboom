@@ -1,5 +1,6 @@
 import type { Sprite } from 'pixi.js';
 import type { EntityId, PlayerState, SimState, TrapState } from '../sim/state';
+import { trapAt } from '../sim/systems/traps';
 import { BEAM_LENGTH, TRAP_TOKENS } from './textures';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
@@ -20,6 +21,7 @@ interface TrapView {
 const MAX_PIPS = 5;
 const PIP_SPACING = 0.42;
 const PIP_LENGTH = 5;
+const NEXT_PIP_ALPHA = 0.45;
 
 export interface TrapsFamily extends Family {
   reachOf(id: EntityId): number | undefined;
@@ -54,6 +56,12 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, light, pulse } = frame;
       views.begin();
+      const underfoot = new Set(
+        state.players.flatMap((player) => {
+          const under = player.downed ? undefined : trapAt(ctx.trapLooks, state.traps, player);
+          return under === undefined ? [] : [under];
+        }),
+      );
       for (const trap of state.traps) {
         const look = lookup(ctx.trapLooks, trap.kind, 'trap kind');
         const view = views.acquire(trap.id);
@@ -72,7 +80,9 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
         body.rotation = kind === 'beam' ? facing : 0;
         placeOutline(outline, body, shape.texture, shape.radius, frame);
 
-        const shown = Math.min(trap.level, MAX_PIPS);
+        // A trap a player stands on previews, faintly, the pip of its next level.
+        const next = underfoot.has(trap) && trap.level < look.maxLevel;
+        const shown = Math.min(trap.level + (next ? 1 : 0), MAX_PIPS);
         const ringRadius = look.radius * 1.25;
         for (let index = 0; index < MAX_PIPS; index += 1) {
           const pip = pips[index];
@@ -86,6 +96,10 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
             pip.position.set(x + Math.cos(angle) * ringRadius, y + Math.sin(angle) * ringRadius);
             pip.rotation = angle;
             pip.scale.set(PIP_LENGTH / (t.pip.radius * 2));
+            pip.alpha =
+              next && index === shown - 1
+                ? NEXT_PIP_ALPHA * (frame.calm ? 1 : 0.6 + 0.4 * pulse)
+                : 1;
           }
         }
 

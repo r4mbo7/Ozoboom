@@ -1,9 +1,16 @@
-import type { GameContent, SetDefinition, SkillDefinition, WeaponDefinition } from '../data/types';
+import type {
+  GameContent,
+  SetDefinition,
+  SkillDefinition,
+  TrapDefinition,
+  WeaponDefinition,
+} from '../data/types';
 import { NIGHT_END, NIGHT_START, type PaletteToken } from '../shared/palette';
 import { TICKS_PER_BAR } from '../shared/tempo';
 import { ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
-import { skillCooldownTicks } from '../sim/stats';
+import { skillCooldownTicks, statValue } from '../sim/stats';
+import { trapActionCost, trapAt } from '../sim/systems/traps';
 import { formatDuration, ratio } from './format';
 import type { UiFrame } from './types';
 
@@ -91,6 +98,32 @@ export function volumeCrans(set: SetDefinition, state: SimState): Cran[] {
       fill,
     };
   });
+}
+
+export interface TrapTile {
+  reinforce: boolean;
+  cost: number;
+  available: boolean;
+}
+
+// What the trap key does where the player stands: a new placement, or a reinforcement of the trap
+// of that kind underfoot, which needs no free slot.
+export function trapTile(
+  definitions: ReadonlyMap<string, TrapDefinition>,
+  state: Pick<SimState, 'traps' | 'core'>,
+  player: Pick<PlayerState, 'x' | 'y' | 'modifiers' | 'suppressedTicks'>,
+  trapId: string,
+  capacity: number,
+): TrapTile {
+  const cost = trapActionCost(definitions, state.traps, player, trapId, player);
+  const reinforce = cost !== null && trapAt(definitions, state.traps, player)?.kind === trapId;
+  const placement = statValue(player, 'trapCostMul', definitions.get(trapId)?.cost ?? 0);
+  return {
+    reinforce,
+    cost: cost ?? placement,
+    available:
+      cost !== null && cost <= state.core.watts && (reinforce || state.traps.length < capacity),
+  };
 }
 
 const COUNT_WORDS = ['zéro', 'une', 'deux', 'trois', 'quatre'];
