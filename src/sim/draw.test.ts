@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { CONTENT } from '../data/content';
+import { RARITY_WEIGHTS } from '../data/upgrades';
 import type {
   GameContent,
   SetDefinition,
@@ -9,6 +11,7 @@ import { resolveContent } from './content';
 import { drawOffer } from './draw';
 import { FIXTURE_CONTENT, FIXTURE_OPTIONS, FIXTURE_SET } from './fixtures';
 import { createSimulation } from './index';
+import type { UpgradeOffer } from './state';
 
 const weapon = (id: string, extra: Partial<WeaponDefinition> = {}): WeaponDefinition => ({
   id,
@@ -31,6 +34,15 @@ const upgrade = (id: string, extra: Partial<UpgradeDefinition> = {}): UpgradeDef
   ...extra,
 });
 
+const tiered = (id: string): UpgradeDefinition =>
+  upgrade(id, {
+    rarities: {
+      rare: { description: `${id} rare`, modifiers: [{ stat: 'speedMul', mul: 1.2 }] },
+      legendary: { description: `${id} legendary`, modifiers: [{ stat: 'speedMul', mul: 1.3 }] },
+    },
+    maxStacks: 3,
+  });
+
 function setup(
   upgrades: UpgradeDefinition[],
   weapons: WeaponDefinition[],
@@ -39,15 +51,32 @@ function setup(
   speakers: SetDefinition['speakers'] = [],
 ) {
   const set = { ...FIXTURE_SET, weaponSlots: slots, speakers };
-  const content: GameContent = { ...FIXTURE_CONTENT, upgrades, weapons, fusions, sets: [set] };
+  const content: GameContent = {
+    ...FIXTURE_CONTENT,
+    upgrades,
+    weapons,
+    fusions,
+    sets: [set],
+    rarityWeights: RARITY_WEIGHTS,
+  };
   const { state } = createSimulation({ ...FIXTURE_OPTIONS, content });
   const player = state.players[0];
   if (player === undefined) {
     throw new Error('expected one player');
   }
   const resolved = resolveContent(content);
-  const draw = (): string[] => drawOffer(state.rng, state, resolved, set, player);
-  return { state, player, draw };
+  const offer = (): Omit<UpgradeOffer, 'playerId'> =>
+    drawOffer(state.rng, state, resolved, set, player);
+  const draw = (): string[] => [...offer().options];
+  return { state, player, draw, offer };
+}
+
+function rarityCounts(offer: () => Omit<UpgradeOffer, 'playerId'>, times: number) {
+  const counts = { common: 0, rare: 0, legendary: 0 };
+  for (let i = 0; i < times; i++) {
+    offer().rarities.forEach((rarity) => (counts[rarity] += 1));
+  }
+  return counts;
 }
 
 function seen(draw: () => string[], times: number): Set<string> {
@@ -59,30 +88,85 @@ function seen(draw: () => string[], times: number): Set<string> {
 }
 
 describe('draw', () => {
-  const tiered = [
-    upgrade('common'),
-    upgrade('other'),
-    upgrade('third'),
-    upgrade('rare', { rarity: 'rare' }),
-    upgrade('legend', { rarity: 'legendary' }),
-  ];
+  it('never offers the same upgrade twice, at any Volume and for any seed', () => {
+    const resolved = resolveContent(CONTENT);
+    const set = CONTENT.sets[0];
+    if (set === undefined) {
+      throw new Error('expected a set');
+    }
+    const repeated: string[][] = [];
 
-  it('offers neither rare nor legendary upgrades without Volume', () => {
-    const { draw } = setup(tiered, []);
+    for (let seed = 1; seed <= 300; seed++) {
+      const { state } = createSimulation({
+        seed,
+        content: CONTENT,
+        setId: set.id,
+        players: [{ id: 0, classId: CONTENT.classes[seed % CONTENT.classes.length]?.id ?? '' }],
+      });
+      const player = state.players[0];
+      if (player === undefined) {
+        throw new Error('expected a player');
+      }
+      state.volume = seed % 6;
+      const { options } = drawOffer(state.rng, state, resolved, set, player);
+      if (new Set(options).size !== options.length) {
+        repeated.push([...options]);
+      }
+    }
 
-    expect(seen(draw, 200)).toEqual(new Set(['common', 'other', 'third']));
+    expect(repeated).toEqual([]);
   });
 
-  it('opens rare upgrades at Volume 2 and legendary ones at Volume 3', () => {
-    const { state, draw } = setup(tiered, []);
+  it('draws every upgrade common at Volume 0 and 1', () => {
+    const { state, offer } = setup([tiered('a'), tiered('b'), tiered('c')], []);
+
+    const atZero = rarityCounts(offer, 300);
+    state.volume = 1;
+    const atOne = rarityCounts(offer, 300);
+
+    expect(atZero).toEqual({ common: 900, rare: 0, legendary: 0 });
+    expect(atOne).toEqual({ common: 900, rare: 0, legendary: 0 });
+  });
+
+  it('opens rares at Volume 2, legendaries at Volume 3, with the weights of the data', () => {
+    const { state, offer } = setup([tiered('a'), tiered('b'), tiered('c')], []);
 
     state.volume = 2;
-    const atTwo = seen(draw, 200);
-    state.volume = 3;
-    const atThree = seen(draw, 200);
+    const atTwo = rarityCounts(offer, 2000);
+    state.volume = 9;
+    const beyond = rarityCounts(offer, 2000);
 
-    expect(atTwo).toEqual(new Set(['common', 'other', 'third', 'rare']));
-    expect(atThree).toEqual(new Set(['common', 'other', 'third', 'rare', 'legend']));
+    expect(atTwo.legendary).toBe(0);
+    expect(atTwo.rare / 6000).toBeCloseTo(0.25, 1);
+    expect(beyond.rare / 6000).toBeCloseTo(0.3, 1);
+    expect(beyond.legendary / 6000).toBeCloseTo(0.1, 1);
+  });
+
+  it('keeps weapons, and upgrades without rarities, common', () => {
+    const { state, offer } = setup([upgrade('plain')], [weapon('a'), weapon('b')]);
+    state.volume = 4;
+
+    expect(rarityCounts(offer, 200)).toEqual({ common: 600, rare: 0, legendary: 0 });
+  });
+
+  it('keeps the share of weapons in the draw as the Volume rises', () => {
+    const { state, draw } = setup(
+      [tiered('a'), tiered('b'), tiered('c'), tiered('d')],
+      [weapon('w1'), weapon('w2'), weapon('w3'), weapon('w4')],
+    );
+    const weaponShare = (): number => {
+      let weapons = 0;
+      for (let i = 0; i < 2000; i++) {
+        weapons += draw().filter((id) => id.startsWith('w')).length;
+      }
+      return weapons / 6000;
+    };
+
+    const atZero = weaponShare();
+    state.volume = 4;
+    const atFour = weaponShare();
+
+    expect(atFour).toBeCloseTo(atZero, 1);
   });
 
   it('doubles the frequency of a weapon with the class affinity', () => {

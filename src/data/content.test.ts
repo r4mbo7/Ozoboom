@@ -177,7 +177,6 @@ describe('CONTENT weapons, fusions and speakers', () => {
 
 describe('CONTENT circus weapons, rarities and relics', () => {
   const upgradeIds = new Set(upgrades.map((upgrade) => upgrade.id));
-  const withRarity = (rarity: string) => upgrades.filter((upgrade) => upgrade.rarity === rarity);
 
   it('has the ten circus weapons and seven evolved forms', () => {
     expect(weapons.filter((weapon) => weapon.evolvedFrom === undefined).map((w) => w.id)).toEqual([
@@ -212,38 +211,38 @@ describe('CONTENT circus weapons, rarities and relics', () => {
     );
   });
 
-  it.each([...withRarity('rare'), ...withRarity('legendary')])(
-    'has a common variant for $id, one stack only',
+  it.each(upgrades.filter((upgrade) => upgrade.family !== 'relic'))(
+    'gives $id a rare and a legendary form, on the stats of its common form',
     (upgrade) => {
-      const suffix = upgrade.rarity === 'rare' ? '-rare' : '-legendaire';
-      const common = upgrades.find((candidate) => `${candidate.id}${suffix}` === upgrade.id);
+      const stats = (modifiers: readonly { stat: string }[]) => modifiers.map((m) => m.stat);
+      const { rare, legendary } = upgrade.rarities ?? {};
 
-      expect(common?.rarity).toBe('common');
-      expect(common?.family).toBe(upgrade.family);
-      expect(common?.classId).toBe(upgrade.classId);
-      expect(upgrade.maxStacks).toBe(1);
+      expect(stats(rare?.modifiers ?? [])).toEqual(stats(upgrade.modifiers));
+      expect(stats(legendary?.modifiers ?? [])).toEqual(stats(upgrade.modifiers));
+      expect(new Set([upgrade.description, rare?.description, legendary?.description]).size).toBe(
+        3,
+      );
+      expect(`${rare?.description ?? ''} ${legendary?.description ?? ''}`).not.toMatch(
+        /rare|légendaire/i,
+      );
     },
   );
 
-  it('gives every common upgrade a rare and a legendary variant', () => {
-    const commons = upgrades.filter((upgrade) => upgrade.rarity === 'common');
+  it('keeps a single entry per upgrade, thirteen of them besides the relics', () => {
+    const ids = upgrades.map((upgrade) => upgrade.id);
 
-    expect(commons).toHaveLength(13);
-    for (const common of commons) {
-      expect(upgradeIds.has(`${common.id}-rare`), common.id).toBe(true);
-      expect(upgradeIds.has(`${common.id}-legendaire`), common.id).toBe(true);
-    }
+    expect(upgrades.filter((upgrade) => upgrade.family !== 'relic')).toHaveLength(13);
+    expect(ids.filter((id) => /-(rare|legendaire)$/.test(id))).toEqual([]);
+    expect(upgrades.filter((upgrade) => upgrade.family === 'relic' && upgrade.rarities)).toEqual(
+      [],
+    );
   });
 
-  it('names the rarity in the name of rare and legendary upgrades, never again in the description', () => {
-    for (const upgrade of withRarity('rare')) {
-      expect(upgrade.name).toMatch(/rare$/);
-      expect(upgrade.description).not.toMatch(/rare/i);
-    }
-    for (const upgrade of withRarity('legendary')) {
-      expect(upgrade.name).toMatch(/légendaire$/);
-      expect(upgrade.description).not.toMatch(/légendaire/i);
-    }
+  it('opens rares at Volume 2 and legendaries at Volume 3', () => {
+    const weights = CONTENT.rarityWeights ?? [];
+
+    expect(weights.findIndex((row) => row.rare > 0)).toBe(2);
+    expect(weights.findIndex((row) => row.legendary > 0)).toBe(3);
   });
 
   it('has six relics, one stack each, of two or three modifiers', () => {

@@ -4,6 +4,7 @@ import type {
   EnemyDefinition,
   FusionDefinition,
   GameContent,
+  RarityWeights,
   SetDefinition,
   TrapDefinition,
   UpgradeDefinition,
@@ -21,6 +22,7 @@ export interface ResolvedContent {
   readonly bystanders: ReadonlyMap<string, BystanderDefinition>;
   readonly weapons: ReadonlyMap<string, WeaponDefinition>;
   readonly fusions: readonly FusionDefinition[];
+  readonly rarityWeights: readonly RarityWeights[];
 }
 
 export function resolveContent(content: GameContent): ResolvedContent {
@@ -33,6 +35,7 @@ export function resolveContent(content: GameContent): ResolvedContent {
     bystanders: indexById(content.bystanders ?? [], 'bystander'),
     weapons: indexById(content.weapons ?? [], 'weapon'),
     fusions: content.fusions ?? [],
+    rarityWeights: content.rarityWeights ?? [],
   };
 
   for (const enemy of content.enemies) {

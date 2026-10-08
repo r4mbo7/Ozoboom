@@ -2,7 +2,7 @@ import type { WeaponDefinition } from '../../data/types';
 import { lookup } from '../content';
 import { isEligible, isWeaponOffered, openFusion } from '../draw';
 import type { PlayerState } from '../state';
-import { applyModifiers, refreshDerivedStats } from '../stats';
+import { applyModifiers, refreshDerivedStats, upgradeForm } from '../stats';
 import { presentNextOffer } from './progression';
 import type { StepContext } from './types';
 
@@ -14,7 +14,9 @@ export function upgradeChoice(ctx: StepContext): void {
         continue;
       }
       const index = state.pendingUpgrades.findIndex((offer) => offer.playerId === player.id);
-      if (!state.pendingUpgrades[index]?.options.includes(action.upgradeId)) {
+      const offer = state.pendingUpgrades[index];
+      const option = offer?.options.indexOf(action.upgradeId) ?? -1;
+      if (offer === undefined || option < 0) {
         continue;
       }
       const weapon = content.weapons.get(action.upgradeId);
@@ -35,8 +37,10 @@ export function upgradeChoice(ctx: StepContext): void {
         if (!isEligible(upgrade, player)) {
           continue;
         }
-        applyModifiers(player, upgrade.modifiers);
+        const rarity = offer.rarities[option] ?? 'common';
+        applyModifiers(player, upgradeForm(upgrade, rarity).modifiers);
         refreshDerivedStats(player, lookup(content.classes, player.classId, 'class'));
+        (player.upgradeRarities ??= player.upgrades.map(() => 'common')).push(rarity);
         player.upgrades.push(upgrade.id);
         state.events.push({ type: 'upgradeChosen', playerId: player.id, upgradeId: upgrade.id });
       }

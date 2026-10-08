@@ -215,9 +215,8 @@ export interface BystanderState extends Positioned {
 export interface UpgradeOffer {
   playerId: PlayerId;
   options: readonly string[];
-  // The rarity of each option, same order, common for weapons and relics; absent means the rarity
-  // of each option's definition.
-  rarities?: readonly Rarity[];
+  // The rarity of each option, same order, common for weapons and relics.
+  rarities: readonly Rarity[];
   // Absent means levelUp.
   kind?: 'levelUp' | 'relic';
 }

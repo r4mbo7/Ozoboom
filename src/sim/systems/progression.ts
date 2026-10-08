@@ -30,9 +30,9 @@ export function presentNextOffer(
   }
   while ((player.pendingLevelUps ?? 0) > 0) {
     player.pendingLevelUps = (player.pendingLevelUps ?? 0) - 1;
-    const options = drawOffer(state.rng, state, content, set, player);
-    if (options.length > 0) {
-      state.pendingUpgrades.push({ playerId: player.id, options });
+    const offer = drawOffer(state.rng, state, content, set, player);
+    if (offer.options.length > 0) {
+      state.pendingUpgrades.push({ playerId: player.id, ...offer });
       return;
     }
   }

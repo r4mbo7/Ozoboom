@@ -127,13 +127,13 @@ describe('choosing a weapon', () => {
     const { simulation, player } = armed(weapon('continuous'));
     player.weapons = [];
     simulation.step([]);
-    simulation.state.pendingUpgrades.push({ playerId: 0, options: ['club'] });
+    simulation.state.pendingUpgrades.push({ playerId: 0, options: ['club'], rarities: ['common'] });
     simulation.step([]);
     const choose = actionsFor(0, { type: 'chooseUpgrade', upgradeId: 'club' });
 
     simulation.step([choose]);
     const first = simulation.state.events.filter((event) => event.type === 'weaponGained');
-    simulation.state.pendingUpgrades.push({ playerId: 0, options: ['club'] });
+    simulation.state.pendingUpgrades.push({ playerId: 0, options: ['club'], rarities: ['common'] });
     simulation.step([choose]);
     const second = simulation.state.events.filter((event) => event.type === 'weaponGained');
 

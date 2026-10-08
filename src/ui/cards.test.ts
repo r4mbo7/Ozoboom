@@ -3,8 +3,8 @@ import type { UpgradeOffer } from '../sim/state';
 import { cardFor, offerHeading, offerKicker, waitingFor } from './cards';
 import { UI_FIXTURE_CONTENT, fixturePlayer } from './fixtures';
 
-const LEVEL_UP: UpgradeOffer = { playerId: 0, options: [] };
-const RELICS: UpgradeOffer = { playerId: 0, options: [], kind: 'relic' };
+const LEVEL_UP: UpgradeOffer = { playerId: 0, options: [], rarities: [] };
+const RELICS: UpgradeOffer = { playerId: 0, options: [], rarities: [], kind: 'relic' };
 
 describe('cardFor', () => {
   it('shows a circus weapon with the sixteenth notes it fires on', () => {
@@ -30,11 +30,22 @@ describe('cardFor', () => {
     expect(card).toMatchObject({ kind: 'weapon', rank: 'Niveau 3' });
   });
 
-  it('names the rarity of a rare upgrade and leaves a common one plain', () => {
-    const rare = cardFor('baskets-de-feu-rare', LEVEL_UP, fixturePlayer(), UI_FIXTURE_CONTENT);
-    const common = cardFor('baskets-de-feu', LEVEL_UP, fixturePlayer(), UI_FIXTURE_CONTENT);
+  it('names the rarity drawn for an upgrade and tells its form, and leaves a common one plain', () => {
+    const offer: UpgradeOffer = {
+      playerId: 0,
+      options: ['baskets-de-feu', 'nova-elargie'],
+      rarities: ['legendary', 'common'],
+    };
 
-    expect(rare).toMatchObject({ tint: 'rare', rarityLabel: 'Rare' });
+    const legendary = cardFor('baskets-de-feu', offer, fixturePlayer(), UI_FIXTURE_CONTENT);
+    const common = cardFor('nova-elargie', offer, fixturePlayer(), UI_FIXTURE_CONTENT);
+
+    expect(legendary).toMatchObject({
+      name: 'Baskets de feu',
+      description: 'Tu fends la foule à toute allure.',
+      tint: 'legendary',
+      rarityLabel: 'Légendaire',
+    });
     expect(common).toMatchObject({ tint: 'common', rarityLabel: null });
   });
 

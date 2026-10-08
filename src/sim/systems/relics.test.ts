@@ -133,7 +133,11 @@ describe('boss relics', () => {
 
   it('chain behind a level offer already waiting', () => {
     const simulation = game();
-    simulation.state.pendingUpgrades.push({ playerId: 0, options: ['quick-feet'] });
+    simulation.state.pendingUpgrades.push({
+      playerId: 0,
+      options: ['quick-feet'],
+      rarities: ['common'],
+    });
     killBoss(simulation);
 
     simulation.step([]);
@@ -163,7 +167,7 @@ describe('level draw', () => {
 
     for (let draw = 0; draw < 50; draw += 1) {
       const offer = drawOffer(simulation.state.rng, simulation.state, content, set, player);
-      expect(offer.some((id) => RELICS.includes(id))).toBe(false);
+      expect(offer.options.some((id) => RELICS.includes(id))).toBe(false);
     }
   });
 });

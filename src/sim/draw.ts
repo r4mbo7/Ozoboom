@@ -1,17 +1,17 @@
 import type {
   FusionDefinition,
+  Rarity,
+  RarityWeights,
   SetDefinition,
   UpgradeDefinition,
   WeaponDefinition,
 } from '../data/types';
 import { nextInt } from '../shared/prng';
 import type { ResolvedContent } from './content';
-import type { PlayerState, RngState, SimState } from './state';
+import type { PlayerState, RngState, SimState, UpgradeOffer } from './state';
 
 export const OFFER_SIZE = 3;
 export const DEFAULT_WEAPON_SLOTS = 3;
-const RARE_FROM_VOLUME = 2;
-const LEGENDARY_FROM_VOLUME = 3;
 const AFFINITY_WEIGHT = 2;
 const FUSION_WEIGHT = 3;
 
@@ -96,15 +96,16 @@ function pluggedSpeakers(state: SimState): number {
   return (state.speakers ?? []).filter((speaker) => speaker.plugged).length;
 }
 
-function isRarityOpen(upgrade: UpgradeDefinition, volume: number): boolean {
-  switch (upgrade.rarity) {
-    case 'rare':
-      return volume >= RARE_FROM_VOLUME;
-    case 'legendary':
-      return volume >= LEGENDARY_FROM_VOLUME;
-    default:
-      return true;
+// A Volume without rare nor legendary weight draws nothing, so that it leaves the generator as is.
+function drawRarity(rng: RngState, weights: RarityWeights | undefined): Rarity {
+  if (weights === undefined || weights.rare + weights.legendary === 0) {
+    return 'common';
   }
+  const roll = nextInt(rng, weights.common + weights.rare + weights.legendary);
+  if (roll < weights.common) {
+    return 'common';
+  }
+  return roll < weights.common + weights.rare ? 'rare' : 'legendary';
 }
 
 function candidates(
@@ -113,14 +114,9 @@ function candidates(
   set: SetDefinition,
   player: PlayerState,
 ): Candidate[] {
-  const volume = state.volume ?? 0;
   const pool: Candidate[] = [];
   for (const upgrade of content.upgrades.values()) {
-    if (
-      upgrade.family !== 'relic' &&
-      isEligible(upgrade, player) &&
-      isRarityOpen(upgrade, volume)
-    ) {
+    if (upgrade.family !== 'relic' && isEligible(upgrade, player)) {
       pool.push({ id: upgrade.id, weight: 1 });
     }
   }
@@ -136,18 +132,21 @@ function candidates(
 }
 
 // Weighted draw without replacement; a pool of unit weights consumes the generator exactly as a
-// uniform draw would.
+// uniform draw would. The rarity of each upgrade is drawn right after the upgrade (ADR 0010).
 export function drawOffer(
   rng: RngState,
   state: SimState,
   content: ResolvedContent,
   set: SetDefinition,
   player: PlayerState,
-): string[] {
+): Pick<UpgradeOffer, 'options' | 'rarities'> {
   const pool = candidates(state, content, set, player);
+  const { rarityWeights } = content;
+  const weights = rarityWeights[Math.min(state.volume ?? 0, rarityWeights.length - 1)];
   let total = pool.reduce((sum, candidate) => sum + candidate.weight, 0);
-  const offer: string[] = [];
-  while (offer.length < OFFER_SIZE && pool.length > 0) {
+  const options: string[] = [];
+  const rarities: Rarity[] = [];
+  while (options.length < OFFER_SIZE && pool.length > 0) {
     let roll = nextInt(rng, total);
     let index = 0;
     while (roll >= (pool[index]?.weight ?? 0)) {
@@ -156,11 +155,16 @@ export function drawOffer(
     }
     const [picked] = pool.splice(index, 1);
     if (picked !== undefined) {
-      offer.push(picked.id);
+      options.push(picked.id);
+      rarities.push(
+        content.upgrades.get(picked.id)?.rarities === undefined
+          ? 'common'
+          : drawRarity(rng, weights),
+      );
       total -= picked.weight;
     }
   }
-  return offer;
+  return { options, rarities };
 }
 
 export function relicOfferSize(state: SimState): number {

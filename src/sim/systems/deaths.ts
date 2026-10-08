@@ -62,7 +62,8 @@ function offerRelics({ state, content }: StepContext): void {
   for (const player of state.players) {
     const options = drawRelics(state.rng, state, content, player);
     if (options.length > 0) {
-      state.pendingUpgrades.push({ playerId: player.id, options, kind: 'relic' });
+      const rarities = options.map(() => 'common' as const);
+      state.pendingUpgrades.push({ playerId: player.id, options, rarities, kind: 'relic' });
       state.events.push({ type: 'relicOffered', playerId: player.id, options });
     }
   }

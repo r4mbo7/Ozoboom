@@ -1,9 +1,12 @@
 import type {
   ClassDefinition,
+  Rarity,
+  RarityForm,
   SetDefinition,
   SkillDefinition,
   StatKey,
   StatModifier,
+  UpgradeDefinition,
 } from '../data/types';
 import { wholeTicks } from './effects';
 import type { PlayerState, SimState } from './state';
@@ -57,6 +60,17 @@ export function trapCapacity(
     capacity = statValue(player, 'trapSlotsAdd', capacity);
   }
   return capacity;
+}
+
+export function upgradeForm(upgrade: UpgradeDefinition, rarity: Rarity): RarityForm {
+  if (rarity === 'common') {
+    return upgrade;
+  }
+  const form = upgrade.rarities?.[rarity];
+  if (form === undefined) {
+    throw new Error(`upgrade "${upgrade.id}" has no ${rarity} form`);
+  }
+  return form;
 }
 
 export function applyModifiers(

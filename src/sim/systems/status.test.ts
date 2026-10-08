@@ -89,7 +89,11 @@ describe('status', () => {
   it('pauses the game while an upgrade offer is pending and resumes once it is answered', () => {
     const simulation = createSimulation(FIXTURE_OPTIONS);
     const player = simulation.state.players[0];
-    simulation.state.pendingUpgrades.push({ playerId: 0, options: ['quick-feet', 'big-bass'] });
+    simulation.state.pendingUpgrades.push({
+      playerId: 0,
+      options: ['quick-feet', 'big-bass'],
+      rarities: ['common', 'common'],
+    });
 
     simulation.step([]);
     const statusWhenOffered = simulation.state.status;

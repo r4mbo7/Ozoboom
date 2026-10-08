@@ -135,8 +135,6 @@ export interface UpgradeDefinition {
   description: string;
   family: UpgradeFamily;
   classId?: string;
-  // Legacy, one entry per rarity: removed once every upgrade carries `rarities` (ADR 0010).
-  rarity?: Rarity;
   // Absent, the upgrade is always drawn common.
   rarities?: { rare: RarityForm; legendary: RarityForm };
   modifiers: readonly StatModifier[];

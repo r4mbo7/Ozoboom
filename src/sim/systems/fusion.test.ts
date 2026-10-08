@@ -119,7 +119,11 @@ describe('fusion', () => {
     const { simulation, player } = game();
     holdRecipe(player, 1);
     simulation.step([]);
-    simulation.state.pendingUpgrades.push({ playerId: 0, options: ['double-stick'] });
+    simulation.state.pendingUpgrades.push({
+      playerId: 0,
+      options: ['double-stick'],
+      rarities: ['common'],
+    });
     simulation.step([]);
 
     simulation.step([choose('double-stick')]);

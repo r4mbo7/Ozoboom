@@ -5,7 +5,7 @@ import { FUSIONS } from './fusions';
 import { SETS } from './sets';
 import { TRAPS } from './traps';
 import type { GameContent } from './types';
-import { UPGRADES } from './upgrades';
+import { RARITY_WEIGHTS, UPGRADES } from './upgrades';
 import { WEAPONS } from './weapons';
 
 export const CONTENT: GameContent = {
@@ -17,4 +17,5 @@ export const CONTENT: GameContent = {
   bystanders: BYSTANDERS,
   weapons: WEAPONS,
   fusions: FUSIONS,
+  rarityWeights: RARITY_WEIGHTS,
 };

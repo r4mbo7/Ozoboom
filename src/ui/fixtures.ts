@@ -161,15 +161,6 @@ export const UI_FIXTURE_CONTENT: GameContent = {
   fusions: [{ weaponId: 'diabolo', upgradeId: 'nova-elargie', resultId: 'pluie-de-diabolos' }],
   upgrades: [
     {
-      id: 'baskets-de-feu-rare',
-      name: 'Baskets de feu rare',
-      description: 'Rare : tu traverses la foule bien plus vite.',
-      family: 'generic',
-      rarity: 'rare',
-      modifiers: [{ stat: 'speedMul', mul: 1.25 }],
-      maxStacks: 1,
-    },
-    {
       id: 'relique-casque',
       name: 'Casque de Berlin',
       description: 'Tu encaisses plus, et tes pièges frappent plus fort.',
@@ -208,6 +199,16 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       family: 'class',
       classId: 'mage',
       modifiers: [{ stat: 'skillPowerMul', mul: 1.25 }],
+      rarities: {
+        rare: {
+          description: 'Ta nova frappe bien plus fort.',
+          modifiers: [{ stat: 'skillPowerMul', mul: 1.5 }],
+        },
+        legendary: {
+          description: 'Ta nova frappe deux fois plus fort, jusqu’au bout de la piste.',
+          modifiers: [{ stat: 'skillPowerMul', mul: 1.75 }],
+        },
+      },
       maxStacks: 3,
     },
     {
@@ -216,6 +217,16 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       description: 'Tu traverses la foule plus vite.',
       family: 'generic',
       modifiers: [{ stat: 'speedMul', mul: 1.1 }],
+      rarities: {
+        rare: {
+          description: 'Tu traverses la foule bien plus vite.',
+          modifiers: [{ stat: 'speedMul', mul: 1.25 }],
+        },
+        legendary: {
+          description: 'Tu fends la foule à toute allure.',
+          modifiers: [{ stat: 'speedMul', mul: 1.4 }],
+        },
+      },
       maxStacks: 5,
     },
     {
@@ -526,9 +537,21 @@ export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimStat
         status: 'choosingUpgrade',
         players,
         pendingUpgrades: [
-          { playerId: 0, options: ['nova-elargie', 'baskets-de-feu-rare', 'baton-de-feu'] },
-          { playerId: 1, options: ['caissons-gonfles', 'baskets-de-feu', 'eventails-de-feu'] },
-          { playerId: 2, options: ['baskets-de-feu', 'caissons-gonfles', 'diabolo'] },
+          {
+            playerId: 0,
+            options: ['nova-elargie', 'baskets-de-feu', 'baton-de-feu'],
+            rarities: ['common', 'rare', 'common'],
+          },
+          {
+            playerId: 1,
+            options: ['caissons-gonfles', 'baskets-de-feu', 'eventails-de-feu'],
+            rarities: ['common', 'common', 'common'],
+          },
+          {
+            playerId: 2,
+            options: ['baskets-de-feu', 'caissons-gonfles', 'diabolo'],
+            rarities: ['common', 'common', 'common'],
+          },
         ],
       });
     }
@@ -552,7 +575,11 @@ export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimStat
         status: 'choosingUpgrade',
         players: [fixturePlayer({ level: 5, vibes: 0, vibesToNextLevel: 65 })],
         pendingUpgrades: [
-          { playerId: 0, options: ['nova-elargie', 'baskets-de-feu-rare', 'baton-de-feu'] },
+          {
+            playerId: 0,
+            options: ['nova-elargie', 'baskets-de-feu', 'baton-de-feu'],
+            rarities: ['legendary', 'rare', 'common'],
+          },
         ],
       });
     case 'fusion':
@@ -567,7 +594,11 @@ export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimStat
           }),
         ],
         pendingUpgrades: [
-          { playerId: 0, options: ['pluie-de-diabolos', 'diabolo', 'eventails-de-feu'] },
+          {
+            playerId: 0,
+            options: ['pluie-de-diabolos', 'diabolo', 'eventails-de-feu'],
+            rarities: ['common', 'common', 'common'],
+          },
         ],
       });
     case 'relics':
@@ -578,6 +609,7 @@ export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimStat
             playerId: 0,
             kind: 'relic',
             options: ['relique-casque', 'relique-sifflet', 'relique-bracelet', 'relique-bob'],
+            rarities: ['common', 'common', 'common', 'common'],
           },
         ],
       });

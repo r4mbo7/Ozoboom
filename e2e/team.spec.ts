@@ -114,7 +114,7 @@ test.describe('offers side by side', () => {
     await expect(panels.nth(1)).toHaveAttribute('data-state', 'choosing');
     await expect(first.nth(1)).toContainText('Choisi');
     expect(await currentIndex(second)).toBe(2);
-    expect(logs).toContain('[ui] onChooseUpgrade 0 baskets-de-feu-rare');
+    expect(logs).toContain('[ui] onChooseUpgrade 0 baskets-de-feu');
     expect(logs.filter((line) => line.startsWith('[ui] onChooseUpgrade'))).toHaveLength(1);
     expect(errors).toEqual([]);
   });

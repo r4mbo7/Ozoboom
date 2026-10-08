@@ -1,5 +1,6 @@
 import type { GameContent, Rarity, UpgradeFamily, WeaponDefinition } from '../data/types';
 import type { PlayerState, UpgradeOffer } from '../sim/state';
+import { upgradeForm } from '../sim/stats';
 
 export const SIXTEENTHS_PER_BAR = 16;
 
@@ -89,7 +90,7 @@ export function cardFor(
 ): Card {
   const upgrade = content.upgrades.find((entry) => entry.id === id);
   if (upgrade !== undefined) {
-    const rarity = upgrade.rarity ?? 'common';
+    const rarity = offer.rarities[offer.options.indexOf(id)] ?? 'common';
     const className =
       upgrade.family === 'class'
         ? content.classes.find((entry) => entry.id === upgrade.classId)?.name
@@ -100,7 +101,7 @@ export function cardFor(
       kind: 'upgrade',
       id,
       name: upgrade.name,
-      description: upgrade.description,
+      description: upgradeForm(upgrade, rarity).description,
       family: upgrade.family,
       label: className === undefined ? label : `${label} · ${className}`,
       rank: rankOf(upgrade.family, stacks, upgrade.maxStacks),

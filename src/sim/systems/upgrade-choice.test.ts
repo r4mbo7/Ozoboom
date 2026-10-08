@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GameContent } from '../../data/types';
+import type { GameContent, Rarity } from '../../data/types';
 import { FIXTURE_CONTENT, FIXTURE_OPTIONS, actionsFor, commandFor } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { PlayerState } from '../state';
@@ -14,14 +14,24 @@ const WITH_TOUGH: GameContent = {
       description: 'Plus de vie.',
       family: 'generic',
       modifiers: [{ stat: 'maxHpAdd', add: 20 }],
+      rarities: {
+        rare: { description: 'Bien plus de vie.', modifiers: [{ stat: 'maxHpAdd', add: 40 }] },
+        legendary: {
+          description: 'Énormément de vie.',
+          modifiers: [{ stat: 'maxHpAdd', add: 60 }],
+        },
+      },
       maxStacks: 2,
     },
   ],
 };
 
+const commons = (options: readonly string[]): Rarity[] => options.map(() => 'common');
+
 function pausedOnOffer(
   options: readonly string[],
   content: GameContent = FIXTURE_CONTENT,
+  rarities: readonly Rarity[] = commons(options),
 ): { simulation: Simulation; player: PlayerState } {
   const simulation = createSimulation({ ...FIXTURE_OPTIONS, content });
   const player = simulation.state.players[0];
@@ -29,7 +39,7 @@ function pausedOnOffer(
     throw new Error('expected one player');
   }
   simulation.step([]);
-  simulation.state.pendingUpgrades.push({ playerId: 0, options });
+  simulation.state.pendingUpgrades.push({ playerId: 0, options, rarities });
   simulation.step([]);
   return { simulation, player };
 }
@@ -74,6 +84,30 @@ describe('upgrade choice', () => {
     expect(simulation.state.pendingUpgrades).toEqual([]);
   });
 
+  it('applies the modifiers of the rarity offered and records that rarity', () => {
+    const { simulation, player } = pausedOnOffer(['quick-feet', 'tough'], WITH_TOUGH, [
+      'common',
+      'rare',
+    ]);
+    const maxHp = player.maxHp;
+
+    simulation.step([choose('tough')]);
+
+    expect(player.upgrades).toEqual(['tough']);
+    expect(player.upgradeRarities).toEqual(['rare']);
+    expect(player.maxHp).toBe(maxHp + 40);
+  });
+
+  it('counts the stacks of every rarity against the maximum', () => {
+    const { simulation, player } = pausedOnOffer(['tough'], WITH_TOUGH, ['legendary']);
+    player.upgrades.push('tough', 'tough');
+
+    simulation.step([choose('tough')]);
+
+    expect(player.upgrades).toEqual(['tough', 'tough']);
+    expect(simulation.state.status).toBe('choosingUpgrade');
+  });
+
   it('ignores an upgrade outside the offer without error', () => {
     const { simulation, player } = pausedOnOffer(['quick-feet', 'big-bass']);
 
@@ -83,7 +117,7 @@ describe('upgrade choice', () => {
     expect(player.upgrades).toEqual([]);
     expect(simulation.state.events).toEqual([]);
     expect(simulation.state.pendingUpgrades).toEqual([
-      { playerId: 0, options: ['quick-feet', 'big-bass'] },
+      { playerId: 0, options: ['quick-feet', 'big-bass'], rarities: ['common', 'common'] },
     ]);
     expect(simulation.state.status).toBe('choosingUpgrade');
   });
@@ -97,7 +131,7 @@ describe('upgrade choice', () => {
     expect(player.upgrades).toEqual(['wide-nova', 'wide-nova']);
     expect(simulation.state.events).toEqual([]);
     expect(simulation.state.pendingUpgrades).toEqual([
-      { playerId: 0, options: ['wide-nova', 'quick-feet'] },
+      { playerId: 0, options: ['wide-nova', 'quick-feet'], rarities: ['common', 'common'] },
     ]);
   });
 
@@ -110,8 +144,8 @@ describe('upgrade choice', () => {
       ],
     });
     simulation.state.pendingUpgrades.push(
-      { playerId: 0, options: ['quick-feet'] },
-      { playerId: 1, options: ['big-bass'] },
+      { playerId: 0, options: ['quick-feet'], rarities: ['common'] },
+      { playerId: 1, options: ['big-bass'], rarities: ['common'] },
     );
     simulation.step([]);
 

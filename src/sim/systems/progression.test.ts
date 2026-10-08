@@ -194,7 +194,9 @@ describe('progression', () => {
 
     simulation.step([]);
 
-    expect(simulation.state.pendingUpgrades).toEqual([{ playerId: 0, options: ['big-bass'] }]);
+    expect(simulation.state.pendingUpgrades).toEqual([
+      { playerId: 0, options: ['big-bass'], rarities: ['common'] },
+    ]);
   });
 
   it('levels up without an offer nor a pause when no upgrade is eligible', () => {
