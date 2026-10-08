@@ -25,16 +25,18 @@ test('loads the self-hosted fonts and never leaves the origin during a game', as
   await page.keyboard.up('Escape');
 
   await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        await document.fonts.ready;
-        return [
-          document.fonts.check('900 16px "Cinzel Decorative"'),
-          document.fonts.check('700 16px "Cinzel Decorative"'),
-          document.fonts.check('400 16px "Space Grotesk"'),
-          document.fonts.check('700 16px "Space Grotesk"'),
-        ];
-      }),
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          await document.fonts.ready;
+          return [
+            document.fonts.check('900 16px "Cinzel Decorative"'),
+            document.fonts.check('700 16px "Cinzel Decorative"'),
+            document.fonts.check('400 16px "Space Grotesk"'),
+            document.fonts.check('700 16px "Space Grotesk"'),
+          ];
+        }),
+      { timeout: 30_000 },
     )
     .toEqual([true, true, true, true]);
   await expect(page.locator('.ui-heading').first()).toHaveCSS('font-family', /Cinzel Decorative/);

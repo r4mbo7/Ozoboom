@@ -1,6 +1,6 @@
 import { CanvasSource, Texture } from 'pixi.js';
 
-const FONT_PX = 13;
+export const LABEL_FONT_PX = 13;
 const SCALE = 2;
 const EDGE = 1.5;
 const FAMILY = '"Space Grotesk", system-ui, sans-serif';
@@ -19,17 +19,20 @@ export interface NameTextures {
 // Textures are painted at SCALE times the size they are shown at, so the label stays crisp on a dense screen.
 export const NAME_TEXTURE_SCALE = SCALE;
 
-function draw(name: string, edge: boolean): Texture {
+// Plain letters around which the texture keeps this many logical pixels of room on each side.
+export const LABEL_PAD = EDGE + 2;
+
+function draw(name: string, edge: boolean, weight = 700): Texture {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (ctx === null) {
     throw new Error('Canvas 2D context is unavailable');
   }
-  const font = `700 ${String(FONT_PX * SCALE)}px ${FAMILY}`;
+  const font = `${String(weight)} ${String(LABEL_FONT_PX * SCALE)}px ${FAMILY}`;
   ctx.font = font;
-  const pad = (EDGE + 2) * SCALE;
+  const pad = LABEL_PAD * SCALE;
   canvas.width = Math.ceil(ctx.measureText(name).width) + 2 * pad;
-  canvas.height = Math.ceil(FONT_PX * 1.4 * SCALE) + 2 * pad;
+  canvas.height = Math.ceil(LABEL_FONT_PX * 1.4 * SCALE) + 2 * pad;
   ctx.font = font;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -61,6 +64,33 @@ export function createNameTextures(): NameTextures {
         label.edge.destroy(true);
       }
       labels.clear();
+    },
+  };
+}
+
+// White lines of text at the size of the names, without the edge, for a panel that gives them a backing.
+export interface LineTextures {
+  get(text: string, weight: number): Texture;
+  destroy(): void;
+}
+
+export function createLineTextures(): LineTextures {
+  const lines = new Map<string, Texture>();
+  return {
+    get(text: string, weight: number): Texture {
+      const key = `${String(weight)} ${text}`;
+      let line = lines.get(key);
+      if (line === undefined) {
+        line = draw(text, false, weight);
+        lines.set(key, line);
+      }
+      return line;
+    },
+    destroy(): void {
+      for (const line of lines.values()) {
+        line.destroy(true);
+      }
+      lines.clear();
     },
   };
 }

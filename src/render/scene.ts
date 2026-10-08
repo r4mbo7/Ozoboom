@@ -29,6 +29,7 @@ import { createStageMarker } from './stage-marker';
 import { createPlayers } from './players';
 import { createProjectiles } from './projectiles';
 import { createSpecials } from './specials';
+import { createSpeakerCards } from './speaker-card';
 import { createSpeakers } from './speakers';
 import { createTextures, destroyTextures } from './textures';
 import { createTraps } from './traps';
@@ -127,6 +128,7 @@ export class Scene implements Renderer {
       createProjectiles(ctx),
       createWeapons(ctx),
       createPlayers(ctx),
+      createSpeakerCards(ctx),
       createMarkers(ctx),
       createStageMarker(ctx),
       createEffects(ctx, (id) => traps.reachOf(id)),

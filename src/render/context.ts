@@ -18,7 +18,10 @@ import type { Layers } from './layers';
 import type { Textures } from './textures';
 import type { RenderOptions } from './types';
 
-export type WeaponLook = Pick<WeaponDefinition, 'classAffinity' | 'effect' | 'evolvedFrom'>;
+export type WeaponLook = Pick<
+  WeaponDefinition,
+  'name' | 'classAffinity' | 'effect' | 'evolvedFrom'
+>;
 
 export interface RenderContent {
   readonly classes: readonly (Pick<ClassDefinition, 'id'> & {
@@ -33,7 +36,10 @@ export interface RenderContent {
 
 export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect' | 'maxLevel'>;
 
-export type SpeakerLook = Pick<SpeakerDefinition, 'aura' | 'plugBars'>;
+export type SpeakerLook = Pick<
+  SpeakerDefinition,
+  'name' | 'description' | 'aura' | 'plugBars' | 'unlocksWeaponId'
+>;
 
 export interface RenderContext {
   readonly textures: Textures;
