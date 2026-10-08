@@ -79,7 +79,7 @@ describe('cling', () => {
     simulation.step([]);
     expect(clinger.clingingTo).toBe(player.id);
 
-    hurtEnemy(simulation.state, clinger, 8, 1, player.id);
+    hurtEnemy(simulation.state, clinger, 8, 1, player.id, null);
     simulation.step([]);
 
     expect(clinger.clingingTo).toBeUndefined();
@@ -101,7 +101,7 @@ describe('cling', () => {
     );
     simulation.step([]);
 
-    hurtEnemy(simulation.state, clinger, 3, 1, player.id);
+    hurtEnemy(simulation.state, clinger, 3, 1, player.id, null);
     simulation.step([]);
 
     expect(clinger.clingingTo).toBe(player.id);

@@ -16,7 +16,7 @@ export const hoop: WeaponModule = {
     const markedMul = markedDamageMul(content);
     for (const enemy of state.enemies) {
       if (enemy.hp > 0 && touches(enemy, player, radius)) {
-        hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id);
+        hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id, player);
         knockBack(enemy, player, effect.knockback);
       }
     }

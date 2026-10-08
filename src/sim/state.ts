@@ -134,6 +134,8 @@ export interface EnemyState extends Positioned {
   clingCooldown?: number;
   // Collant: hp as of the previous tick's check, to size the latest hit for detaching.
   hpWatermark?: number;
+  // Mâle alpha: its last step, which faces the hits it takes at `damageMul`.
+  front?: { x: number; y: number; damageMul: number };
 }
 
 export type ProjectileOwner =
@@ -235,7 +237,7 @@ export type SimEvent =
   | { type: 'phrase'; phrase: number }
   | { type: 'segment'; segment: SetSegment; tier: number }
   | { type: 'enemySpawned'; id: EntityId; kind: string; x: number; y: number }
-  | { type: 'enemyHit'; id: EntityId; damage: number; x: number; y: number }
+  | { type: 'enemyHit'; id: EntityId; damage: number; x: number; y: number; front?: true }
   | {
       type: 'enemyDied';
       id: EntityId;

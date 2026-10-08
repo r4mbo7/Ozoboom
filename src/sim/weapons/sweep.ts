@@ -22,7 +22,7 @@ export const sweep: WeaponModule = {
       const along = dx * direction.x + dy * direction.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       if (along >= cosHalfArc * distance * aimLength) {
-        hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id);
+        hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id, player);
       }
     }
   },

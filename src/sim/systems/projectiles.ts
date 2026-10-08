@@ -77,7 +77,7 @@ function land(
     if (enemy === undefined || enemy.hp <= 0) {
       continue;
     }
-    hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer);
+    hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer, projectile);
     knockBack(enemy, projectile, projectile.radius * LANDING_KNOCKBACK_PER_RADIUS);
   }
 }
@@ -130,7 +130,10 @@ function hitEnemies(
     if (enemy === undefined || enemy.hp <= 0 || projectile.hitIds?.includes(enemy.id) === true) {
       continue;
     }
-    hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer);
+    hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer, {
+      x: projectile.prevX,
+      y: projectile.prevY,
+    });
     if (projectile.owner.kind === 'weapon' && projectile.damage > 0) {
       const { playerId, weaponId } = projectile.owner;
       state.events.push({

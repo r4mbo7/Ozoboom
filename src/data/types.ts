@@ -71,7 +71,8 @@ export type SpecialEffect =
   | { kind: 'yawn'; radius: number; slowFactor: number; awakeBars: number; sleepBars: number }
   | { kind: 'revive'; times: number; hpRatio: number; downBars: number }
   | { kind: 'dazzle'; radius: number }
-  | { kind: 'babble'; everyBars: number };
+  | { kind: 'babble'; everyBars: number }
+  | { kind: 'frontGuard'; frontDamageMul: number };
 
 export interface EnemyDefinition {
   id: string;

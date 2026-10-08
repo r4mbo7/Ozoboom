@@ -578,7 +578,7 @@ describe('V0.1 scope', () => {
       ['random', undefined],
       ['desagreable', 'shove'],
       ['meprisant', 'sigh'],
-      ['male-alpha', undefined],
+      ['male-alpha', 'frontGuard'],
       ['collant', 'cling'],
       ['intolerant', 'suppress'],
       ['arnaqueur', 'steal'],

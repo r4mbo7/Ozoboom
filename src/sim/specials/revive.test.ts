@@ -63,7 +63,7 @@ describe('revive', () => {
     enemy.hp = 0;
     simulation.step([]);
 
-    hurtEnemy(simulation.state, enemy, 50, 1, null);
+    hurtEnemy(simulation.state, enemy, 50, 1, null, null);
 
     expect(enemy.hp).toBe(0);
   });

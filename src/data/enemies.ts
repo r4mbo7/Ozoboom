@@ -56,7 +56,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   {
     id: 'male-alpha',
     name: 'Le Mâle alpha',
-    description: 'Lourd et sûr de lui, il pousse ton matériel pour se frayer un chemin.',
+    description:
+      'Lourd et sûr de lui, il pousse ton matériel et encaisse moitié moins de face : prends-le à revers.',
     behaviour: 'heavy',
     maxHp: 140,
     speed: 1.1,
@@ -67,6 +68,7 @@ export const ENEMIES: readonly EnemyDefinition[] = [
     vibesDrop: 5,
     wattsDrop: 3,
     scalingPerPhrase: GROWING,
+    special: { kind: 'frontGuard', frontDamageMul: 0.5 },
   },
   {
     id: 'collant',

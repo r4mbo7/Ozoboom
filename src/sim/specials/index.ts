@@ -2,6 +2,7 @@ import type { SpecialEffect } from '../../data/types';
 import { babble } from './babble';
 import { cling, clingSteering } from './cling';
 import { dazzle } from './dazzle';
+import { frontGuard } from './front-guard';
 import { revive } from './revive';
 import { shove } from './shove';
 import { sigh } from './sigh';
@@ -20,6 +21,7 @@ export const SPECIALS: Record<SpecialEffect['kind'], SpecialModule> = {
   revive,
   dazzle,
   babble,
+  frontGuard,
 };
 
 // Extension point for enemy-steering: a special supplies its own steering target and speed

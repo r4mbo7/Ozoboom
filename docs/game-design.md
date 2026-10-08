@@ -41,7 +41,7 @@ Des masques sombres de mauvaises humeurs : les relous que l'on croise en festiva
 | le Random          | nuée        | aucun : faible, mais partout                                                   | palier 1        |
 | le Désagréable     | rapide      | bouscule : repousse le joueur qu'il touche                                     | palier 1        |
 | le Méprisant       | à distance  | ses soupirs ralentissent le joueur touché                                      | palier 1        |
-| le Mâle alpha      | lourd       | pousse les pièges (le lourd de base)                                           | palier 1        |
+| le Mâle alpha      | lourd       | pousse les pièges ; encaisse moitié moins de face, à prendre à revers          | palier 1        |
 | le Collant         | rapide      | s'accroche à un joueur et le ralentit jusqu'à ce qu'on le décroche             | palier 1        |
 | l'Intolérant       | nuée lente  | éteint les bonus des joueurs dans sa zone ; à viser en priorité                | palier 2        |
 | l'Arnaqueur        | rapide      | file vers les vibes au sol, les vole et s'enfuit ; les rend quand on le chasse | palier 2        |

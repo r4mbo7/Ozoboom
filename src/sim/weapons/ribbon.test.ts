@@ -43,7 +43,7 @@ function firedTicks(simulation: Simulation, until: number): number[] {
 
 function damageTaken(simulation: Simulation, enemy: EnemyState): number {
   const before = enemy.hp;
-  hurtEnemy(simulation.state, enemy, 10, LURE_MUL, 0);
+  hurtEnemy(simulation.state, enemy, 10, LURE_MUL, 0, null);
   const dealt = before - enemy.hp;
   enemy.hp = before;
   return dealt;

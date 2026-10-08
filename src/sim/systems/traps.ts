@@ -236,7 +236,7 @@ export function fire(firing: Firing): void {
     case 'beam':
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && inBeam(enemy, at, effect.length * radiusMul, effect.width / 2)) {
-          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, by);
+          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, by, at);
         }
       }
       return;

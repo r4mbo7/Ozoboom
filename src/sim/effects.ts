@@ -53,23 +53,37 @@ export function markedDamageMul(content: ResolvedContent): number {
 }
 
 // `by` is the player credited with the hit: the shooter, the owner of the trap or the caster.
+// `from` is where the hit comes from, null when it has no position.
 export function hurtEnemy(
   state: SimState,
   enemy: EnemyState,
   damage: number,
   markedMul: number,
   by: PlayerId | null,
+  from: Point | null,
 ): void {
   if (enemy.hp <= 0) {
     return;
   }
-  const dealt = enemy.marked ? damage * markedMul : damage;
+  const marked = enemy.marked ? damage * markedMul : damage;
+  const frontMul = from === null ? 1 : frontDamageMul(enemy, from);
+  const dealt = marked * frontMul;
   enemy.hp -= dealt;
   if (by !== null) {
     enemy.lastHitBy = by;
   }
   state.stats.damageDealt += dealt;
-  state.events.push({ type: 'enemyHit', id: enemy.id, damage: dealt, x: enemy.x, y: enemy.y });
+  const hit = { type: 'enemyHit', id: enemy.id, damage: dealt, x: enemy.x, y: enemy.y } as const;
+  state.events.push(frontMul === 1 ? hit : { ...hit, front: true });
+}
+
+function frontDamageMul(enemy: EnemyState, from: Point): number {
+  const { front } = enemy;
+  if (front === undefined) {
+    return 1;
+  }
+  const facing = (from.x - enemy.x) * front.x + (from.y - enemy.y) * front.y;
+  return facing > 0 ? front.damageMul : 1;
 }
 
 export function compound(factor: number, times: number): number {
@@ -135,7 +149,7 @@ export function shockwave(
 ): void {
   for (const enemy of state.enemies) {
     if (enemy.hp > 0 && touches(enemy, at, radius)) {
-      hurtEnemy(state, enemy, damage, markedMul, by);
+      hurtEnemy(state, enemy, damage, markedMul, by, at);
       knockBack(enemy, at, knockback);
     }
   }
