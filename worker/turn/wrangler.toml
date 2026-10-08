@@ -7,11 +7,9 @@ crons = ["*/10 * * * *"]
 
 [[kv_namespaces]]
 binding = "USAGE"
-# A remplir par Constantin : `wrangler kv namespace create USAGE`
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "04d30881c5c24ce7bba0d23f1a4eb2a2"
 
 [[ratelimits]]
 name = "RATE_LIMIT"
-# A remplir par Constantin : un entier unique dans le compte
 namespace_id = "1001"
 simple = { limit = 20, period = 60 }
