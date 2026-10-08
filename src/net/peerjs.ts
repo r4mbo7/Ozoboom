@@ -1,5 +1,6 @@
 import type { DataConnection, Peer, PeerOptions } from 'peerjs';
 import { hostPeerId } from './code';
+import { resolveIceServers } from './ice';
 import { decodeMessage, encodeMessage } from './wire';
 import { roundTripFromStats, type StatEntry } from './stats';
 import type { NetMessage, PeerId, Transport } from './types';
@@ -53,6 +54,11 @@ export interface PeerTransport extends Transport {
 export async function createPeerTransport(options: PeerTransportOptions): Promise<PeerTransport> {
   const { Peer: PeerClass } = await import('peerjs');
   const peerOptions = parsePeerServer(options.server ?? import.meta.env.VITE_PEER_SERVER);
+  if (peerOptions.config === undefined) {
+    peerOptions.config = {
+      iceServers: await resolveIceServers(import.meta.env.VITE_TURN_URL, fetch),
+    };
+  }
   const timeoutMs = options.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
 
   const connections = new Map<PeerId, DataConnection>();
