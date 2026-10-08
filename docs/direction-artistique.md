@@ -66,6 +66,7 @@ Tout ce qui bouge est calé dessus : le noyau pulse sur le kick, les pièges tir
 ## Interface
 
 - Style « galets doux » : panneaux arrondis et translucides, jauges en dégradé or et turquoise, couleurs qui suivent l'heure.
+- Les menus par-dessus la partie (amélioration, pause, fin) n'éblouissent pas : de jour, leur fond plafonne sa clarté et vire au sable chaud.
 - Diégétique quand c'est possible : la vie du noyau est le VU-mètre de la scène, le déroulé des vagues est le line-up du soir, la classe est le bracelet du festivalier.
 - Peu d'éléments, grands et lisibles à distance : en coop on lit l'écran d'un ami.
 - Entièrement navigable à la manette et au tactile, pas seulement à la souris.

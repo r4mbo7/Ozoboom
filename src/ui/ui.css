@@ -1,16 +1,27 @@
-.ui {
+.ui,
+.ui-overlay {
   --ui-panel: color-mix(in srgb, var(--sol-clair) 92%, transparent);
-  --ui-line: color-mix(in srgb, var(--texte) 16%, transparent);
   --ui-muted: color-mix(in srgb, var(--texte) 82%, var(--sol-clair));
+  --ui-lift:
+    0 10px 30px color-mix(in srgb, var(--sol) 45%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--texte) 12%, transparent);
+  --ui-focus: 0 0 0 3px var(--sol), 0 0 0 7px var(--turquoise);
+}
+
+.ui {
+  --ui-voile: oklch(
+    from var(--sol) min(l, 0.83) calc(c + max(0, l - 0.83) * 0.12) calc(h - max(0, l - 0.83) * 80)
+  );
+  --ui-voile-clair: oklch(
+    from var(--sol-clair) min(l, 0.88) calc(c + max(0, l - 0.88) * 0.12)
+      calc(h - max(0, l - 0.88) * 80)
+  );
+  --ui-line: color-mix(in srgb, var(--texte) 16%, transparent);
   --ui-turquoise: color-mix(in srgb, var(--turquoise) 60%, var(--texte));
   --ui-or: color-mix(in srgb, var(--or) 50%, var(--texte));
   --ui-noyau: color-mix(in srgb, var(--noyau) 45%, var(--texte));
   --ui-mage: color-mix(in srgb, var(--mage) 60%, var(--texte));
   --ui-tank: color-mix(in srgb, var(--tank) 80%, var(--texte));
-  --ui-lift:
-    0 10px 30px color-mix(in srgb, var(--sol) 45%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--texte) 12%, transparent);
-  --ui-focus: 0 0 0 3px var(--sol), 0 0 0 7px var(--turquoise);
   --ui-halo: 1;
   --ui-radius: 26px;
   --ui-gap: 16px;
@@ -1704,8 +1715,12 @@
     0 0 calc(14px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 40%, transparent);
 }
 
-.ui-trap[data-unaffordable] {
+.ui-trap[data-unaffordable] :is(.ui-trap__icon, .ui-trap__bolt) {
   opacity: 0.5;
+}
+
+.ui-trap[data-unaffordable] .ui-trap__cost {
+  color: var(--ui-muted);
 }
 
 .ui-trap__key {
@@ -1781,7 +1796,7 @@
 }
 
 .ui-trap[data-reinforce] {
-  padding-bottom: 9px;
+  padding-bottom: 11px;
 }
 
 .ui-trap[data-reinforce] .ui-trap__reinforce {
@@ -1921,12 +1936,16 @@
 
 /* Overlays */
 
+/* A menu over a light sky caps its lightness and warms to sand: it must not dazzle after the night. */
 .ui-overlay {
+  --sol: var(--ui-voile);
+  --sol-clair: var(--ui-voile-clair);
+
   display: grid;
   place-items: center;
   overflow-y: auto;
   padding: 32px var(--ui-gap);
-  background: color-mix(in srgb, var(--sol) 80%, transparent);
+  background: color-mix(in srgb, var(--sol) 90%, transparent);
   backdrop-filter: blur(6px);
   pointer-events: auto;
 }

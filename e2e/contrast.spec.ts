@@ -119,8 +119,11 @@ async function measure(
       }
       return false;
     };
-    // Under a modal dialog, the screen behind is covered and not read: only the dialog counts.
-    const modal = document.querySelector('[aria-modal="true"]') ?? document.body;
+    // Under a modal dialog or a menu overlay, the screen behind is covered and not read.
+    const modal =
+      document.querySelector('[aria-modal="true"]') ??
+      [...document.querySelectorAll('.ui-overlay')].find((overlay) => overlay.checkVisibility()) ??
+      document.body;
     const walker = document.createTreeWalker(modal, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
       const parent = node.parentElement;
