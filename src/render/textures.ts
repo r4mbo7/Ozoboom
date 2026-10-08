@@ -33,6 +33,7 @@ export type TrapLook = TrapEffect['kind'];
 export interface Textures {
   readonly halo: Shape;
   readonly ring: Shape;
+  readonly guard: Shape;
   readonly shard: Shape;
   readonly streak: Shape;
   readonly vibes: Shape;
@@ -81,6 +82,15 @@ export function createTextures(): Textures {
       ctx.lineWidth = 5;
       ctx.strokeStyle = WHITE;
       circle(ctx, 54);
+      ctx.stroke();
+    }),
+    guard: paint(128, 128, 54, (ctx) => {
+      glow(ctx, WHITE, 4);
+      ctx.lineWidth = 9;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = WHITE;
+      ctx.beginPath();
+      ctx.arc(0, 0, 54, -0.7, 0.7);
       ctx.stroke();
     }),
     shard: paint(24, 24, 10, (ctx) => {

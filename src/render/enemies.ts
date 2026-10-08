@@ -6,6 +6,7 @@ import type { Family, RenderContext } from './context';
 import { Farewells, type FarewellHooks } from './enemy-deaths';
 import { Particles } from './effects';
 import { picker } from './faces';
+import { frontGlintOf, glintAlpha, glintStart, placeGlint } from './front-glint';
 import { type Frame, createFrame } from './frame';
 import { blinkLit, lerp } from './motion';
 import type { PixiPalette } from './palette';
@@ -23,6 +24,8 @@ const DOWN_MIX = 0.55;
 const ZS = 3;
 const Z_LOOP_TICKS = TICKS_PER_BAR;
 const BLINK_MIX = { normal: 0.65, calm: 0.35 };
+const GLINT_SIZE = 1.2;
+const GUARD_GRAY = 0.4;
 const COLORS: readonly PaletteToken[] = ['mage', 'tank', 'healer', 'or', 'turquoise'];
 
 interface EnemyView {
@@ -32,6 +35,8 @@ interface EnemyView {
   radius: number;
   boss: boolean;
   blinkUntil: number;
+  glint: Sprite | null;
+  glintStart: number;
 }
 
 export interface EnemiesFamily extends Family {
@@ -56,9 +61,10 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
   const maskOf = picker(masks.masks, masks.neutral, warnUnknown);
 
   const bodies = new Container();
+  const guards = new Container();
   const smiles = new Container();
   const sleepers = new Container();
-  layers.enemies.addChild(bodies, smiles, sleepers);
+  layers.enemies.addChild(bodies, guards, smiles, sleepers);
 
   const views = new ViewPool<EnemyView>(
     () => ({
@@ -68,10 +74,16 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       radius: 1,
       boss: false,
       blinkUntil: Number.NEGATIVE_INFINITY,
+      glint: null,
+      glintStart: Number.NEGATIVE_INFINITY,
     }),
     (view) => {
       view.blinkUntil = Number.NEGATIVE_INFINITY;
+      view.glintStart = Number.NEGATIVE_INFINITY;
       hide(view.sprite, ...(view.zs ?? []));
+      if (view.glint !== null) {
+        view.glint.visible = false;
+      }
     },
   );
   const farewells = new Farewells<Sprite>(128, () => {
@@ -132,6 +144,16 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
     });
   }
 
+  function guard(view: EnemyView, x: number, y: number, strength: number, tint: number): void {
+    const glint = (view.glint ??= add(guards, textures.guard));
+    glint.visible = true;
+    setTint(glint, tint);
+    placeGlint(glint, x, y, view.heading, view.radius);
+    const size = (view.radius * GLINT_SIZE) / textures.guard.radius;
+    glint.scale.set(size);
+    glint.alpha = strength;
+  }
+
   function lower(view: EnemyView): void {
     for (const z of view.zs ?? []) {
       z.visible = false;
@@ -175,6 +197,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, calm } = frame;
       const downTint = mixColor(palette.badVibeRim, DOWN_GRAY, DOWN_MIX);
+      const guardTint = mixColor(palette.texte, DOWN_GRAY, GUARD_GRAY);
       views.begin();
       for (const enemy of state.enemies) {
         const mask = maskOf(enemy.kind);
@@ -214,6 +237,12 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         sprite.rotation = down ? 0 : LEAN * Math.cos(view.heading);
         view.radius = enemy.radius;
         view.boss = enemy.isBoss;
+        const shine = down ? 0 : glintAlpha(frame.now, view.glintStart, calm);
+        if (shine > 0) {
+          guard(view, x, y, shine, guardTint);
+        } else if (view.glint !== null) {
+          view.glint.visible = false;
+        }
         if (asleep) {
           dreams(view, x, y, 1, frame);
         } else if (mask.face.drowsy === true && !down) {
@@ -229,7 +258,15 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       shards.update(frame.now);
       puffs.update(frame.now);
     },
-    onEvent(event: SimEvent, state: SimState): void {
+    onEvent(event: SimEvent, state: SimState, frame: Frame): void {
+      const guarded = frontGlintOf(event);
+      if (guarded !== undefined) {
+        const view = views.peek(guarded);
+        if (view !== undefined) {
+          view.glintStart = glintStart(state.tick, view.glintStart, frame.calm);
+        }
+        return;
+      }
       if (event.type !== 'enemyDied') {
         return;
       }

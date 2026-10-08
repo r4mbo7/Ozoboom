@@ -7,6 +7,11 @@ const CYCLE = TICKS_PER_BAR * 4;
 const HELP_FROM = 20;
 const LOST_AT = 120;
 const REVIVE_AT = 40;
+const ALPHAS = [
+  { id: 12, x: 1230, y: 330, front: true },
+  { id: 13, x: 1230, y: 450, front: false },
+];
+const ALPHA_STEP = 0.4;
 const BABBLES = [
   { id: 6, at: 10 },
   { id: 7, at: 22 },
@@ -95,6 +100,7 @@ export function createSpecialsState(): SimState {
     enemy(9, 'collant', 690, 640, { clingingTo: 0 }),
     enemy(10, 'arnaqueur', 910, 640, { carrying: 3, fleeing: true }),
     enemy(11, 'zombie', 1010, 640, { radius: 20, hp: 0, downTicks: 99999 }),
+    ...ALPHAS.map(({ id, x, y }) => enemy(id, 'male-alpha', x, y, { radius: 20 })),
   ];
   return state;
 }
@@ -109,6 +115,24 @@ export function advanceSpecials(state: SimState): void {
     entity.prevY = entity.y;
   }
 
+  // Two Mâle alpha walk left, hit on each beat: the upper one on its front, the lower one from behind.
+  for (const alpha of ALPHAS) {
+    const walker = state.enemies.find((candidate) => candidate.id === alpha.id);
+    if (walker !== undefined) {
+      walker.x = alpha.x - ALPHA_STEP * at;
+      walker.prevX = walker.x + ALPHA_STEP;
+      if (at % TICKS_PER_BEAT === 0) {
+        const hit = {
+          type: 'enemyHit',
+          id: alpha.id,
+          damage: 1,
+          x: walker.x,
+          y: walker.y,
+        } as const;
+        events.push(alpha.front ? { ...hit, front: true } : hit);
+      }
+    }
+  }
   if (at === 1) {
     state.bystanders = [bystander(900, 620, 700), bystander(901, 980, 720)];
     const zombie = state.enemies.find((candidate) => candidate.kind === 'zombie');
