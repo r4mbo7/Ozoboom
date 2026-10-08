@@ -1,6 +1,8 @@
 import type { Graphics, Sprite } from 'pixi.js';
 import type { CoreState } from '../sim/state';
 import type { Frame } from './frame';
+import { mixColor } from './ground-sun';
+import type { PixiPalette } from './palette';
 import type { Textures } from './textures';
 import { NAME_TEXTURE_SCALE } from './textures-names';
 import { setTint } from './util';
@@ -10,7 +12,6 @@ const RING_START = -Math.PI / 2;
 const SEGMENT_GAP = 0.28;
 
 export const SEGMENTS = 24;
-export const LOW_SHARE = 0.25;
 
 export interface Label {
   readonly edge: Sprite;
@@ -19,6 +20,15 @@ export interface Label {
 
 export function litShare(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
   return core.maxHp > 0 ? Math.min(1, Math.max(0, core.hp / core.maxHp)) : 0;
+}
+
+export function stageColor(
+  palette: Pick<PixiPalette, 'healer' | 'or' | 'rouge'>,
+  share: number,
+): number {
+  return share >= 0.5
+    ? mixColor(palette.or, palette.healer, (share - 0.5) / 0.5)
+    : mixColor(palette.rouge, palette.or, share / 0.5);
 }
 
 // A segment stays lit until its last hit point is gone: the ring is empty only once the scene is.

@@ -5,13 +5,13 @@ import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { add, placeOutline, setTint } from './util';
 import {
-  LOW_SHARE,
   SEGMENTS,
   drawSegments,
   litSegments,
   litShare,
   percentText,
   placeLabel,
+  stageColor,
 } from './vu-meter';
 
 const INSET = 34;
@@ -57,8 +57,7 @@ export function createStageMarker(ctx: RenderContext): Family {
         drawSegments(lit, RING_RADIUS, 0, segments, SEGMENT_WIDTH);
         drawSegments(rim, RING_RADIUS, 0, segments, SEGMENT_WIDTH + RIM_GROW);
       }
-      const low = litShare(core) < LOW_SHARE;
-      const color = low ? palette.mage : palette.noyau;
+      const color = stageColor(palette, litShare(core));
 
       setTint(arrow, color);
       arrow.position.set(marker.x, marker.y);

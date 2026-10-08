@@ -5,7 +5,7 @@ import { lightAt, paletteAt } from '../shared/palette';
 import type { RenderContext } from './context';
 import { createCore, lostSegmentShown } from './core';
 import { createFixtureState, FIXTURE_CONTENT } from './fixture';
-import { contrast } from './ground-sun';
+import { contrast, mixColor } from './ground-sun';
 import { type Frame, createFrame } from './frame';
 import { createLayers } from './layers';
 import { writePixiPalette } from './palette';
@@ -13,7 +13,7 @@ import { createPickups } from './pickups';
 import type { Shape } from './textures';
 import { TRAP_TOKENS } from './textures';
 import { createTraps } from './traps';
-import { LOW_SHARE, SEGMENTS, litSegments, litShare, percentOf } from './vu-meter';
+import { SEGMENTS, litSegments, litShare, percentOf, stageColor } from './vu-meter';
 
 const MOMENTS = [0, 0.4, 0.85, 1] as const;
 
@@ -84,7 +84,17 @@ describe('core ring', () => {
     expect(family.lit).toBe(SEGMENTS);
   });
 
-  it('turns pink and warns that the scene weakens under a quarter of its life', () => {
+  it.each(MOMENTS)('colors the scene by its life from healer to or to rouge at %f', (fraction) => {
+    const { palette } = frameAt(fraction);
+
+    expect(stageColor(palette, 1)).toBe(palette.healer);
+    expect(stageColor(palette, 0.75)).toBe(mixColor(palette.or, palette.healer, 0.5));
+    expect(stageColor(palette, 0.5)).toBe(palette.or);
+    expect(stageColor(palette, 0.25)).toBe(mixColor(palette.rouge, palette.or, 0.5));
+    expect(stageColor(palette, 0)).toBe(palette.rouge);
+  });
+
+  it('tints the whole scene in the color of its life, without a warning under a quarter', () => {
     const ctx = context();
     const family = createCore(ctx);
     const state = createFixtureState({ enemies: 0, projectiles: 0 });
@@ -92,17 +102,20 @@ describe('core ring', () => {
     const tintsWith = (share: number) => {
       state.core.hp = state.core.maxHp * share;
       family.update(state, 0, frame);
-      return ctx.layers.core.children
+      return [...ctx.layers.core.children, ...ctx.layers.glow.children]
         .filter((child) => child.visible)
         .map((child) => (child as unknown as { tint: number }).tint);
     };
 
-    const healthy = tintsWith(LOW_SHARE);
-    const weak = tintsWith(LOW_SHARE - 0.01);
+    const weak = tintsWith(0.15);
+    const healthy = tintsWith(1);
+    const count = (tints: number[], color: number) => tints.filter((tint) => tint === color).length;
 
-    expect(weak).toHaveLength(healthy.length + 2);
-    expect(healthy).not.toContain(frame.palette.mage);
-    expect(weak).toContain(frame.palette.mage);
+    expect(weak).toHaveLength(healthy.length);
+    expect(count(healthy, frame.palette.healer)).toBeGreaterThan(10);
+    expect(count(weak, stageColor(frame.palette, 0.15))).toBe(count(healthy, frame.palette.healer));
+    expect([...healthy, ...weak]).not.toContain(frame.palette.mage);
+    expect([...healthy, ...weak]).not.toContain(frame.palette.noyau);
   });
 
   it('blinks the lost segment twice per beat for two beats, never in calm mode', () => {
@@ -120,7 +133,6 @@ describe('core ring', () => {
     const { palette } = frameAt(fraction);
 
     expect(contrast(palette.texte, palette.sol)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(palette.mage, palette.sol)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('wears dark outlines on the ring and the star only by day', () => {

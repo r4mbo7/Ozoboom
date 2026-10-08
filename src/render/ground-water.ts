@@ -7,6 +7,7 @@ import { LAKE_SKY_MIX, type Layout, shoreAt } from './ground-layout';
 import { mixColor } from './ground-sun';
 import { lerp } from './motion';
 import { add, lookup, setTint } from './util';
+import { litShare, stageColor } from './vu-meter';
 
 const WHITE = 0xffffff;
 const REFLECT_REACH = 240;
@@ -73,7 +74,7 @@ export function createWater(ctx: RenderContext, parent: Container) {
       const { core } = state;
       const heart = core.radius / t.core.radius;
       coreReflection.visible = true;
-      setTint(coreReflection, frame.palette.noyau);
+      setTint(coreReflection, stageColor(frame.palette, litShare(core)));
       coreReflection.position.set(
         shoreAt(layout, core.y) * 0.5,
         core.y + (quiet ? 0 : Math.sin(frame.now * 0.05) * 3),

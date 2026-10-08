@@ -6,13 +6,13 @@ import type { Frame } from './frame';
 import { DOME_FACETS, type Facet } from './textures';
 import { add, placeOutline, setTint } from './util';
 import {
-  LOW_SHARE,
   SEGMENTS,
   drawSegments,
   litSegments,
   litShare,
   percentText,
   placeLabel,
+  stageColor,
 } from './vu-meter';
 
 const TAU = Math.PI * 2;
@@ -56,8 +56,6 @@ function drawFacets(facets: Graphics, beat: number): void {
   facets.fill(0xffffff);
 }
 
-export const LOW_WARNING = 'La scène faiblit';
-
 export interface CoreFamily extends Family {
   readonly lit: number;
 }
@@ -87,7 +85,6 @@ export function createCore(ctx: RenderContext): CoreFamily {
   layers.core.addChild(track, rim, lit, lost);
   const rings = [track, rim, lit, lost];
   const percent = { edge: add(layers.core, t.halo), fill: add(layers.core, t.halo) };
-  const warning = { edge: add(layers.core, t.halo), fill: add(layers.core, t.halo) };
   const flash = add(layers.fx, t.ring);
   flash.visible = false;
   outline.visible = false;
@@ -130,8 +127,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
         drawSegments(rim, ringRadius, 0, segments, SEGMENT_WIDTH + RIM_GROW);
         drawSegments(lost, ringRadius, loss.from, loss.to, SEGMENT_WIDTH);
       }
-      const low = litShare(core) < LOW_SHARE;
-      const color = low ? palette.mage : palette.or;
+      const color = stageColor(palette, litShare(core));
       const swell = 1 + (MAX_SWELL - 1) * pulse;
       for (const ring of rings) {
         ring.position.set(core.x, core.y);
@@ -148,7 +144,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
 
       const below = core.y + ringRadius * MAX_SWELL + (SEGMENT_WIDTH + RIM_GROW) / 2;
       const size = 1 / frame.camera.scale;
-      const next = placeLabel(
+      placeLabel(
         t,
         percent,
         percentText(core),
@@ -158,11 +154,10 @@ export function createCore(ctx: RenderContext): CoreFamily {
         PERCENT_SIZE * size,
         frame,
       );
-      placeLabel(t, warning, low ? LOW_WARNING : null, palette.mage, core.x, next, size, frame);
 
       body.position.set(core.x, core.y);
       body.scale.set((core.radius / t.core.radius) * swell);
-      setTint(body, palette.noyau);
+      setTint(body, color);
       placeOutline(outline, body, t.core.texture, t.core.radius, frame);
 
       facets.visible = !frame.calm;
@@ -172,17 +167,17 @@ export function createCore(ctx: RenderContext): CoreFamily {
       }
       facets.position.copyFrom(body.position);
       facets.scale.copyFrom(body.scale);
-      setTint(facets, palette.noyau);
+      setTint(facets, color);
       facets.alpha = 0.25 + 0.35 * pulse;
 
-      setTint(halo, palette.noyau);
+      setTint(halo, color);
       halo.position.set(core.x, core.y);
       halo.scale.set(((core.radius * 3.4) / t.halo.radius) * (1 + 0.3 * pulse));
       halo.alpha = (0.55 + 0.45 * pulse) * light.haloAlpha;
 
       let turn = frame.calm ? 0 : (frame.now / RAY_TURN_TICKS) * TAU;
       for (const ray of rays) {
-        setTint(ray, palette.noyau);
+        setTint(ray, color);
         ray.position.set(core.x, core.y);
         ray.rotation = turn;
         ray.scale.set((core.radius * 9) / 256, (core.radius * 1.1) / 32);

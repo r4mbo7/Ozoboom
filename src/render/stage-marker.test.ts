@@ -9,7 +9,7 @@ import { createLayers } from './layers';
 import { writePixiPalette } from './palette';
 import { createStageMarker } from './stage-marker';
 import type { Shape } from './textures';
-import { LOW_SHARE } from './vu-meter';
+import { stageColor } from './vu-meter';
 
 function context(): RenderContext {
   const shape: Shape = { texture: Texture.EMPTY, radius: 32 };
@@ -54,7 +54,7 @@ describe('stage marker', () => {
     expect(tintsShown(ctx)).toHaveLength(0);
   });
 
-  it('points to the scene out of view on a phone in its color, and in pink once it weakens', () => {
+  it('points to the scene out of view on a phone in the color of its life', () => {
     const ctx = context();
     const state = createFixtureState({ enemies: 0, projectiles: 0 });
     const family = createStageMarker(ctx);
@@ -62,13 +62,13 @@ describe('stage marker', () => {
 
     family.update(state, 0, frame);
     const healthy = tintsShown(ctx);
-    state.core.hp = state.core.maxHp * (LOW_SHARE - 0.01);
+    state.core.hp = state.core.maxHp * 0.15;
     family.update(state, 0, frame);
     const weak = tintsShown(ctx);
 
-    expect(healthy).toContain(frame.palette.noyau);
-    expect(healthy).not.toContain(frame.palette.mage);
-    expect(weak).toContain(frame.palette.mage);
-    expect(weak).not.toContain(frame.palette.noyau);
+    expect(healthy).toContain(frame.palette.healer);
+    expect(weak).toContain(stageColor(frame.palette, 0.15));
+    expect(weak).not.toContain(frame.palette.healer);
+    expect([...healthy, ...weak]).not.toContain(frame.palette.mage);
   });
 });
