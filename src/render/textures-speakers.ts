@@ -3,7 +3,11 @@ import { SHADE_DEEP, WHITE, circle, doubleStroke, glow, paint, type Shape } from
 export interface SpeakerShapes {
   readonly stack: Shape;
   readonly zone: Shape;
+  readonly sweep: Shape;
 }
+
+const SWEEP_LENGTH = 128;
+const SWEEP_HALF_ANGLE = 0.13;
 
 function cabinet(ctx: CanvasRenderingContext2D, top: number, half: number, height: number): void {
   ctx.beginPath();
@@ -40,6 +44,18 @@ export function createSpeakerShapes(): SpeakerShapes {
       ctx.setLineDash([2, 11]);
       circle(ctx, 56);
       ctx.stroke();
+    }),
+    sweep: paint(SWEEP_LENGTH, 40, SWEEP_LENGTH, (ctx) => {
+      ctx.translate(-SWEEP_LENGTH / 2, 0);
+      const fade = ctx.createRadialGradient(0, 0, 0, 0, 0, SWEEP_LENGTH);
+      fade.addColorStop(0, WHITE);
+      fade.addColorStop(1, 'rgb(255 255 255 / 0)');
+      ctx.fillStyle = fade;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, SWEEP_LENGTH, -SWEEP_HALF_ANGLE, SWEEP_HALF_ANGLE);
+      ctx.closePath();
+      ctx.fill();
     }),
   };
 }

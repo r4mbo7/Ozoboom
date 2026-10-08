@@ -48,6 +48,7 @@ export interface Textures {
   readonly enemyShot: Shape;
   readonly stack: Shape;
   readonly zone: Shape;
+  readonly sweep: Shape;
   readonly masks: MaskSet;
   readonly traps: Readonly<Record<TrapLook, Shape>>;
   readonly specials: SpecialTextures;

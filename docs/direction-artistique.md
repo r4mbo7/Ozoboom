@@ -44,7 +44,7 @@ Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distingue
 - Pièges, couleur de leur effet : caisson `turquoise`, laser `mage`, brumisateur `healer`, déco UV `or`, stroboscope `texte`. Le niveau se lit à son nombre de traits sous la silhouette ; un joueur posé dessus voit, en pâle, le trait du niveau suivant. Ramassables : vibes `or`, watts `turquoise`. Noyau : la part allumée de l'anneau extérieur `or` est la vie restante.
 - Effets du Nounours et de l'Hygie, dans la couleur de leur classe : la charge laisse une comète derrière le Nounours et un anneau qui se resserre sur les bad vibes attirées, qui clignotent un temps (en couleur `or`, au plus un clignotement par temps) ; le soin est un anneau qui s'élargit, un reflet `healer` sur chaque allié soigné et un halo sur le noyau réparé ; une gerbe sur chaque allié relevé. En mode calme : pas de clignotement (la bad vibe garde un éclairage fixe), intensité réduite de moitié, durées allongées, moins d'éclats.
 - Agrès de cirque : une silhouette par agrès, faite de traits et de cercles, la couleur de sa classe en renfort. Le ruban arc-en-ciel est le seul objet arc-en-ciel permanent du jeu.
-- Enceintes annexes : un stack gris et son câble, éteint ; un anneau qui se remplit sur le temps pendant le branchement ; une fois branchée, l'enceinte émet comme le noyau, dans sa couleur (Dôme chill `healer`, Forêt `turquoise`, Sub `or`, Cercle acid `mage`).
+- Enceintes annexes : un stack gris et son câble, éteint ; un anneau qui se remplit sur le temps pendant le branchement ; une fois branchée, l'enceinte émet comme le noyau, dans sa couleur (Dôme chill `healer`, Forêt `turquoise`, Sub `or`, Cercle acid `mage`), et trois faisceaux balaient son aura, un tour en 8 mesures.
 
 ## Rythme
 

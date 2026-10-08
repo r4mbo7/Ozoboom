@@ -2,6 +2,7 @@ import { Container, type Graphics, Texture } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
 import { lightAt, paletteAt } from '../shared/palette';
 import { TICKS_PER_BAR } from '../shared/tempo';
+import type { Sprite } from 'pixi.js';
 import type { RenderContext } from './context';
 import { FIXTURE_CONTENT, createFixtureState } from './fixture';
 import { layStacks } from './fixture-speakers';
@@ -13,6 +14,8 @@ import { createSpeakers } from './speakers';
 import type { Shape } from './textures';
 
 const FIXTURE_SPEAKERS = FIXTURE_CONTENT.sets[0]?.speakers ?? [];
+const BEAMS = 3;
+const PER_SPEAKER = BEAMS + 11;
 
 function frameAt(fraction: number, calm = false): Frame {
   const frame = createFrame();
@@ -32,6 +35,7 @@ function context() {
       ring: shape,
       stack: shape,
       zone: shape,
+      sweep: shape,
       traps: { shockwave: shape, beam: shape, mist: shape, lure: shape, strobe: shape },
     },
     layers: createLayers(new Container()),
@@ -51,15 +55,25 @@ function stateWith(poses: Parameters<typeof layStacks>[1]) {
 }
 
 function bodyOf(ctx: RenderContext, index: number) {
-  const body = ctx.layers.speakers.children[index * 11 + 3];
+  const body = ctx.layers.speakers.children[index * PER_SPEAKER + BEAMS + 3];
   if (body === undefined) {
     throw new Error('Missing speaker body');
   }
   return body;
 }
 
+function glowOf(ctx: RenderContext, index: number) {
+  const halo = ctx.layers.glow.children[index * 2 + 1] as Sprite | undefined;
+  if (halo === undefined) {
+    throw new Error('Missing speaker halo');
+  }
+  const first = index * PER_SPEAKER;
+  const beams = ctx.layers.speakers.children.slice(first, first + BEAMS) as Sprite[];
+  return { halo, beams };
+}
+
 function arcOf(ctx: RenderContext, index: number) {
-  return ctx.layers.speakers.children[index * 11 + 5] as Graphics;
+  return ctx.layers.speakers.children[index * PER_SPEAKER + BEAMS + 5] as Graphics;
 }
 
 function area(arc: Graphics): number {
@@ -161,7 +175,7 @@ describe('light rule and calm mode', () => {
 
     createSpeakers(ctx).update(stateWith(['off', 'off', 'off', 'off']), 0, frameAt(fraction));
 
-    expect(ctx.layers.speakers.children[2]?.visible).toBe(outlined);
+    expect(ctx.layers.speakers.children[BEAMS + 2]?.visible).toBe(outlined);
   });
 
   it('shivers while plugging, and holds still in calm mode', () => {
@@ -211,12 +225,71 @@ describe('speakerPlugged flash', () => {
 
     frame.now = 100.5;
     family.update(state, 0, frame);
-    const flash = ctx.layers.fx.children[2];
+    const flash = ctx.layers.fx.children[1];
     expect(flash?.visible).toBe(true);
     expect((flash?.scale.x ?? 0) * 32).toBeLessThanOrEqual((FIXTURE_SPEAKERS[0]?.radius ?? 0) * 3);
 
     frame.now = 130;
     family.update(state, 0, frame);
     expect(flash?.visible).toBe(false);
+  });
+});
+
+describe('plugged speaker beams', () => {
+  const radius = 160;
+  const plugged = () => stateWith(['plugged', 'off', 'off', 'off']);
+
+  function beamsAt(now: number, fraction = 0.4, calm = false) {
+    const ctx = context();
+    const frame = frameAt(fraction, calm);
+    frame.now = now;
+    createSpeakers(ctx).update(plugged(), 0, frame);
+    return glowOf(ctx, 0);
+  }
+
+  it('sweeps the aura with three beams a third of a turn apart, longer than the aura', () => {
+    const { beams } = beamsAt(0);
+
+    expect(beams).toHaveLength(3);
+    expect(beams.every((beam) => beam.visible)).toBe(true);
+    expect(beams.map((beam) => beam.scale.x * 32)).toEqual([
+      radius * 1.15,
+      radius * 1.15,
+      radius * 1.15,
+    ]);
+    expect((beams[1]?.rotation ?? 0) - (beams[0]?.rotation ?? 0)).toBeCloseTo(Math.PI * (2 / 3));
+    expect((beams[2]?.rotation ?? 0) - (beams[1]?.rotation ?? 0)).toBeCloseTo(Math.PI * (2 / 3));
+  });
+
+  it('turns the beams once in eight bars', () => {
+    const start = beamsAt(0).beams[0]?.rotation ?? 0;
+
+    expect((beamsAt(TICKS_PER_BAR).beams[0]?.rotation ?? 0) - start).toBeCloseTo(Math.PI / 4);
+    expect((beamsAt(TICKS_PER_BAR * 8).beams[0]?.rotation ?? 0) - start).toBeCloseTo(Math.PI * 2);
+  });
+
+  it('shrinks the full halo to 62 % of the aura', () => {
+    expect(beamsAt(0).halo.scale.x * 32).toBeCloseTo(radius * 0.62);
+  });
+
+  it('halves the beams by day', () => {
+    const night = beamsAt(0, 0.4).beams[0]?.alpha ?? 0;
+
+    expect(beamsAt(0, 1).beams[0]?.alpha).toBeCloseTo(night / 2);
+  });
+
+  it('holds the beams still at half intensity in calm mode', () => {
+    const moving = beamsAt(0).beams[0]?.alpha ?? 0;
+    const calm = beamsAt(TICKS_PER_BAR * 3, 0.4, true).beams[0];
+
+    expect(calm?.rotation).toBe(beamsAt(0, 0.4, true).beams[0]?.rotation);
+    expect(calm?.alpha).toBeCloseTo(moving / 2);
+  });
+
+  it('shows no beam on an unplugged speaker', () => {
+    const ctx = context();
+    createSpeakers(ctx).update(plugged(), 0, frameAt(0.4));
+
+    expect(glowOf(ctx, 1).beams.some((beam) => beam.visible)).toBe(false);
   });
 });

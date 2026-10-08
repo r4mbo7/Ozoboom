@@ -16,6 +16,11 @@ const SHOCK_TICKS = TICKS_PER_BEAT / 2;
 const DRIFT_TICKS = TICKS_PER_BAR * 2;
 const STACK_SCALE = 0.8 / 32;
 const OFF_LIFT = 0.35;
+const BEAMS = 3;
+const SWEEP_TICKS = TICKS_PER_BAR * 8;
+const BEAM_REACH = 1.15;
+const BEAM_ALPHA = 0.55;
+const HALO_REACH = 0.62;
 
 interface SpeakerView {
   readonly zone: Sprite;
@@ -26,7 +31,7 @@ interface SpeakerView {
   readonly track: Graphics;
   readonly arc: Graphics;
   readonly halo: Sprite;
-  readonly rim: Sprite;
+  readonly beams: readonly Sprite[];
   readonly shock: Sprite;
   readonly flash: Sprite;
   readonly marks: readonly Sprite[];
@@ -41,6 +46,7 @@ export function createSpeakers(ctx: RenderContext): Family {
 
   const views = new ViewPool<SpeakerView>(
     () => {
+      const beams = Array.from({ length: BEAMS }, () => add(layers.speakers, t.sweep, 0));
       const zone = add(layers.speakers, t.zone);
       const cable = new Graphics();
       layers.speakers.addChild(cable);
@@ -61,7 +67,7 @@ export function createSpeakers(ctx: RenderContext): Family {
         track,
         arc,
         halo: add(layers.glow, t.halo),
-        rim: add(layers.fx, t.zone),
+        beams,
         shock: add(layers.fx, t.ring),
         flash: add(layers.fx, t.ring),
         marks,
@@ -75,9 +81,9 @@ export function createSpeakers(ctx: RenderContext): Family {
         view.outline,
         view.body,
         view.halo,
-        view.rim,
         view.shock,
         view.flash,
+        ...view.beams,
         ...view.marks,
       );
       view.cable.clear();
@@ -106,14 +112,19 @@ export function createSpeakers(ctx: RenderContext): Family {
     setTint(view.halo, color);
     view.halo.visible = true;
     view.halo.position.set(x, y);
-    view.halo.scale.set(radius / t.halo.radius);
+    view.halo.scale.set((radius * HALO_REACH) / t.halo.radius);
     view.halo.alpha = glowShare * (0.7 + 0.3 * pulse) * light.haloAlpha;
 
-    setTint(view.rim, color);
-    view.rim.visible = true;
-    view.rim.position.set(x, y);
-    view.rim.scale.set(radius / t.zone.radius);
-    view.rim.alpha = 0.55;
+    const sweep = calm ? 0 : (now / SWEEP_TICKS) * TAU;
+    for (const [index, beam] of view.beams.entries()) {
+      setTint(beam, color);
+      beam.visible = true;
+      beam.position.set(x, y);
+      beam.rotation = sweep + (index / BEAMS) * TAU;
+      beam.scale.set((radius * BEAM_REACH) / t.sweep.radius);
+      beam.alpha = BEAM_ALPHA * (calm ? 0.5 : 1) * light.haloAlpha;
+      beam.blendMode = light.additive ? 'add' : 'normal';
+    }
 
     const shape = aura.kind === 'lure' ? t.traps.lure : t.traps.mist;
     const count = aura.kind === 'mist' ? CLOUDS : aura.kind === 'lure' ? MARKS : 0;
@@ -242,7 +253,7 @@ export function createSpeakers(ctx: RenderContext): Family {
           drawAura(view, speaker, look, color, frame);
           drawFlash(view, speaker, color, frame);
         } else {
-          hide(view.halo, view.rim, view.shock, view.flash, ...view.marks);
+          hide(view.halo, view.shock, view.flash, ...view.beams, ...view.marks);
         }
       }
       views.end();
