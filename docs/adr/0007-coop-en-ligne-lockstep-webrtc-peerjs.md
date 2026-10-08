@@ -1,6 +1,6 @@
 # 0007 - Coop en ligne en lockstep séquencé par l'hôte, sur WebRTC via PeerJS
 
-- **Statut :** accepté
+- **Statut :** accepté, complété par [0010](0010-relais-turn-cloudflare-plafonne.md) (relais TURN en secours)
 - **Date :** 2026-10-05
 
 ## Contexte
