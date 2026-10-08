@@ -4,8 +4,6 @@ import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import type { SimState, SpeakerState } from '../sim/state';
 import { setTint } from './util';
 
-const TAU = Math.PI * 2;
-const RING_START = -Math.PI / 2;
 const CABLE_BEND = 0.12;
 const CABLE_REACH = 1.25;
 const WAVES = 3;
@@ -69,19 +67,6 @@ export function mixColor(from: number, to: number, share: number): number {
     return Math.round(a + (b - a) * share);
   };
   return (channel(16) << 16) | (channel(8) << 8) | channel(0);
-}
-
-export function strokeCircle(ring: Graphics, radius: number, share: number, width: number): void {
-  if (share <= 0) {
-    return;
-  }
-  ring.moveTo(Math.cos(RING_START) * radius, Math.sin(RING_START) * radius);
-  if (share >= 1) {
-    ring.circle(0, 0, radius);
-  } else {
-    ring.arc(0, 0, radius, RING_START, RING_START + share * TAU);
-  }
-  ring.stroke({ width, color: 0xffffff, cap: 'round' });
 }
 
 export function drawCable(

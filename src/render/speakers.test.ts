@@ -1,20 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR } from '../shared/tempo';
+import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import { SPEAKER_TOKENS, mixColor, plugShare, speakerToken } from './speaker-kit';
+import { SPEAKER_EXTENTS } from './speaker-leds';
 import { createSpeakers } from './speakers';
 import {
   BEAMS,
   FIXTURE_SPEAKERS,
-  area,
-  arcOf,
   bodyOf,
   context,
   frameAt,
   glowOf,
+  ledsOf,
+  standbyOf,
   stateWith,
+  zoneOf,
 } from './speakers.test-support';
 
-describe('plug ring share', () => {
+describe('plug share', () => {
   it.each([
     [0, 2, 0],
     [12, 2, 0.125],
@@ -25,37 +27,42 @@ describe('plug ring share', () => {
   ])('reads %i ticks of %i bars as %f', (plugTicks, plugBars, share) => {
     expect(plugShare(plugTicks, plugBars)).toBeCloseTo(share);
   });
+});
 
-  it('follows plugTicks over plugBars bars on the ring that is drawn', () => {
+describe('LED column and standby', () => {
+  it('stands the LED column right of every drawing, plugged or not', () => {
     const ctx = context();
-    const family = createSpeakers(ctx);
-    const state = stateWith(['plugging', 'off', 'off', 'off']);
-    const speaker = state.speakers?.[0];
-    if (speaker === undefined) {
-      throw new Error('Missing speaker');
+
+    createSpeakers(ctx).update(stateWith(['off', 'plugging', 'plugged', 'off']), 0, frameAt(0.4));
+
+    for (const [index, def] of FIXTURE_SPEAKERS.entries()) {
+      const leds = ledsOf(ctx, index);
+      expect(leds.visible).toBe(true);
+      expect(leds.position).toMatchObject({ x: def.x, y: def.y });
+      expect(leds.getLocalBounds().minX).toBeGreaterThan(SPEAKER_EXTENTS[def.id] ?? Infinity);
     }
-
-    speaker.plugTicks = TICKS_PER_BAR / 2;
-    family.update(state, 0, frameAt(0.4));
-    const quarter = area(arcOf(ctx, 0));
-    speaker.plugTicks = TICKS_PER_BAR;
-    family.update(state, 0, frameAt(0.4));
-    const half = area(arcOf(ctx, 0));
-    speaker.plugTicks = TICKS_PER_BAR * 2 - 1;
-    family.update(state, 0, frameAt(0.4));
-    const nearlyFull = area(arcOf(ctx, 0));
-
-    expect(arcOf(ctx, 0).visible).toBe(true);
-    expect(quarter).toBeLessThan(half);
-    expect(half).toBeLessThan(nearlyFull);
   });
 
-  it('shows no ring on an unplugged speaker nobody stands at, nor on a plugged one', () => {
-    const ctx = context();
-    createSpeakers(ctx).update(stateWith(['off', 'plugged', 'off', 'off']), 0, frameAt(0.4));
+  it('blinks a standby LED in its color on each unplugged speaker, steady in calm mode', () => {
+    const state = stateWith(['off', 'plugging', 'plugged', 'off']);
+    const standbyAt = (now: number, calm = false) => {
+      const ctx = context();
+      const frame = frameAt(0.4, calm);
+      frame.now = now;
+      createSpeakers(ctx).update(state, 0, frame);
+      return [0, 1, 2].map((index) => {
+        const standby = standbyOf(ctx, index);
+        if (!standby.visible) {
+          return 0;
+        }
+        expect(standby.tint).toBe(frame.palette[speakerToken(FIXTURE_SPEAKERS[index]?.id ?? '')]);
+        return standby.alpha;
+      });
+    };
 
-    expect(arcOf(ctx, 0).visible).toBe(false);
-    expect(arcOf(ctx, 1).visible).toBe(false);
+    expect(standbyAt(TICKS_PER_BAR)).toEqual([1, 1, 0]);
+    expect(standbyAt(TICKS_PER_BAR + TICKS_PER_BEAT)).toEqual([0.25, 0.25, 0]);
+    expect(standbyAt(TICKS_PER_BAR + TICKS_PER_BEAT, true)).toEqual([1, 1, 0]);
   });
 });
 
@@ -85,16 +92,17 @@ describe('speaker colors', () => {
     ).toEqual(FIXTURE_SPEAKERS.map((def) => [def.id, frame.palette[speakerToken(def.id)]]));
   });
 
-  it('keeps an unplugged stack gray, lighter than a bad vibe, whatever its identifier', () => {
+  it('tints an unplugged stack gray with a touch of its color, its zone a little more', () => {
     const ctx = context();
     const frame = frameAt(0.4);
+    const gray = mixColor(frame.palette.badVibe, frame.palette.texte, 0.35);
 
     createSpeakers(ctx).update(stateWith(['off', 'off', 'off', 'off']), 0, frame);
 
-    for (const [index] of FIXTURE_SPEAKERS.entries()) {
-      expect(bodyOf(ctx, index).tint).toBe(
-        mixColor(frame.palette.badVibe, frame.palette.texte, 0.35),
-      );
+    for (const [index, def] of FIXTURE_SPEAKERS.entries()) {
+      const color = frame.palette[speakerToken(def.id)];
+      expect(bodyOf(ctx, index).tint).toBe(mixColor(gray, color, 0.28));
+      expect(zoneOf(ctx, index).tint).toBe(mixColor(gray, color, 0.3));
     }
   });
 });

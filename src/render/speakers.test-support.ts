@@ -71,15 +71,18 @@ export function glowOf(ctx: RenderContext, index: number) {
   return { halo, beams };
 }
 
-export function arcOf(ctx: RenderContext, index: number) {
-  return ctx.layers.speakers.children[index * PER_SPEAKER + BEAMS + 5] as Graphics;
+export function zoneOf(ctx: RenderContext, index: number) {
+  return ctx.layers.speakers.children[index * PER_SPEAKER + BEAMS] as Sprite;
 }
 
-export function wavesOf(ctx: RenderContext, index: number) {
+export function standbyOf(ctx: RenderContext, index: number) {
+  return ctx.layers.speakers.children[index * PER_SPEAKER + BEAMS + 10] as Graphics;
+}
+
+export function ledsOf(ctx: RenderContext, index: number) {
   return ctx.layers.speakers.children[index * PER_SPEAKER + BEAMS + 11] as Graphics;
 }
 
-export function area(arc: Graphics): number {
-  const { width, height } = arc.getLocalBounds();
-  return width * height;
+export function wavesOf(ctx: RenderContext, index: number) {
+  return ctx.layers.speakers.children[index * PER_SPEAKER + BEAMS + 9] as Graphics;
 }

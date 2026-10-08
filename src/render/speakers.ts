@@ -8,11 +8,10 @@ import {
   drawWaves,
   mixColor,
   ofSpeaker,
-  plugShare,
   speakerToken,
   speakerTurn,
-  strokeCircle,
 } from './speaker-kit';
+import { type LedView, createLedViews, drawLeds } from './speaker-leds';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
@@ -24,20 +23,20 @@ const FLASH_TICKS = TICKS_PER_BEAT;
 const SHOCK_TICKS = TICKS_PER_BEAT / 2;
 const DRIFT_TICKS = TICKS_PER_BAR * 2;
 const OFF_LIFT = 0.35;
+const STANDBY_BODY = 0.28;
+const STANDBY_ZONE = 0.3;
 const BEAMS = 3;
 const SWEEP_TICKS = TICKS_PER_BAR * 8;
 const BEAM_REACH = 1.15;
 const BEAM_ALPHA = 0.55;
 const HALO_REACH = 0.62;
 
-interface SpeakerView {
+interface SpeakerView extends LedView {
   readonly zone: Sprite;
   readonly cable: Graphics;
   readonly cableGlow: Graphics;
   readonly outline: Sprite;
   readonly body: Sprite;
-  readonly track: Graphics;
-  readonly arc: Graphics;
   readonly halo: Sprite;
   readonly beams: readonly Sprite[];
   readonly shock: Sprite;
@@ -45,7 +44,6 @@ interface SpeakerView {
   readonly marks: readonly Sprite[];
   readonly waves: Graphics;
   cableKey: string;
-  arcShare: number;
   wavePhase: number;
 }
 
@@ -65,20 +63,18 @@ export function createSpeakers(ctx: RenderContext): Family {
       const outline = new Sprite({ texture: Texture.EMPTY, anchor: 0.5 });
       const body = new Sprite({ texture: Texture.EMPTY, anchor: 0.5 });
       layers.speakers.addChild(outline, body);
-      const track = new Graphics();
-      const arc = new Graphics();
-      layers.speakers.addChild(track, arc);
       const marks = Array.from({ length: MARKS }, () => add(layers.speakers, t.traps.mist));
       const waves = new Graphics();
-      layers.speakers.addChild(waves);
+      const { standby, leds } = createLedViews();
+      layers.speakers.addChild(waves, standby, leds);
       return {
         zone,
         cable,
         cableGlow,
         outline,
         body,
-        track,
-        arc,
+        standby,
+        leds,
         halo: add(layers.glow, t.halo),
         beams,
         shock: add(layers.fx, t.ring),
@@ -86,7 +82,7 @@ export function createSpeakers(ctx: RenderContext): Family {
         marks,
         waves,
         cableKey: '',
-        arcShare: Number.NaN,
+        ledKey: '',
         wavePhase: Number.NaN,
       };
     },
@@ -103,11 +99,10 @@ export function createSpeakers(ctx: RenderContext): Family {
       );
       view.cable.clear();
       view.cableGlow.clear();
-      view.track.clear();
-      view.arc.clear();
+      view.leds.visible = view.standby.visible = false;
+      view.ledKey = '';
       view.waves.clear();
       view.cableKey = '';
-      view.arcShare = Number.NaN;
       view.wavePhase = Number.NaN;
     },
   );
@@ -216,26 +211,24 @@ export function createSpeakers(ctx: RenderContext): Family {
         const { palette, light, pulse, calm } = frame;
         const color = palette[speakerToken(speaker.id)];
         const lit = speaker.plugged;
-        const share = lit ? 1 : plugShare(speaker.plugTicks, look.plugBars);
         const plugging = !lit && speaker.plugTicks > 0;
         const off = mixColor(
           palette.badVibe,
           light.additive ? palette.texte : palette.sol,
           OFF_LIFT,
         );
-        const tint = lit ? color : off;
         const shiver = plugging && !calm;
         const x = speaker.x + (shiver ? Math.sin(frame.now * 2.3) * 1.6 : 0);
         const y = speaker.y + (shiver ? Math.cos(frame.now * 3.1) * 1.1 : 0);
 
         drawCable(view, speaker, state);
-        setTint(view.cable, tint);
+        setTint(view.cable, lit ? color : off);
         view.cable.alpha = lit ? 0.85 + 0.15 * pulse : 0.55;
         setTint(view.cableGlow, color);
         view.cableGlow.visible = lit;
         view.cableGlow.alpha = (0.18 + 0.2 * pulse) * light.haloAlpha;
 
-        setTint(view.zone, tint);
+        setTint(view.zone, lit ? color : mixColor(off, color, STANDBY_ZONE));
         view.zone.visible = true;
         view.zone.position.set(speaker.x, speaker.y);
         view.zone.scale.set(speaker.radius / t.zone.radius);
@@ -244,7 +237,7 @@ export function createSpeakers(ctx: RenderContext): Family {
         const { body } = view;
         const shape = ofSpeaker(t.speakers, speaker.id, 'drawing');
         body.texture = shape.texture;
-        setTint(body, tint);
+        setTint(body, lit ? color : mixColor(off, color, STANDBY_BODY));
         body.visible = true;
         body.position.set(x, y);
         body.rotation = speakerTurn(speaker, state.core);
@@ -252,23 +245,7 @@ export function createSpeakers(ctx: RenderContext): Family {
         body.scale.set((speaker.radius * swell) / shape.radius);
         placeOutline(view.outline, body, shape.texture, shape.radius, frame);
 
-        const ringRadius = speaker.radius + 9;
-        view.track.visible = view.arc.visible = !lit && (plugging || share > 0);
-        if (view.arc.visible) {
-          if (view.arcShare !== share) {
-            view.arcShare = share;
-            view.track.clear();
-            view.arc.clear();
-            strokeCircle(view.track, ringRadius, 1, 2);
-            strokeCircle(view.arc, ringRadius, share, 5);
-          }
-          view.track.position.set(speaker.x, speaker.y);
-          view.arc.position.set(speaker.x, speaker.y);
-          setTint(view.track, color);
-          setTint(view.arc, color);
-          view.track.alpha = 0.25;
-          view.arc.alpha = 0.9;
-        }
+        drawLeds(view, speaker, look.plugBars, color, off, frame);
 
         if (lit) {
           drawAura(view, speaker, look, color, frame);
