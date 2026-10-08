@@ -18,6 +18,14 @@ describe('paletteAt', () => {
     expect(paletteAt(0.925).texte).toBe('#2c1f14');
   });
 
+  it('gives a red for the scene in danger at every moment, blended like the others', () => {
+    expect(paletteAt(0).rouge).toBe('#ff5a52');
+    expect(paletteAt(0.4).rouge).toBe('#ff5a52');
+    expect(paletteAt(0.725).rouge).toBe('#d94038');
+    expect(paletteAt(0.85).rouge).toBe('#b3261e');
+    expect(paletteAt(1).rouge).toBe('#be281d');
+  });
+
   it('changes continuously between the moments', () => {
     for (const [from, to] of [
       [0, 0.25],

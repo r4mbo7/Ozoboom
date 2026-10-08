@@ -10,6 +10,7 @@ export const PALETTE_TOKENS = [
   'badVibe',
   'badVibeRim',
   'texte',
+  'rouge',
 ] as const;
 
 export type PaletteToken = (typeof PALETTE_TOKENS)[number];
@@ -36,6 +37,7 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     badVibe: '#5a4c64',
     badVibeRim: '#f2c4a0',
     texte: '#fbeee0',
+    rouge: '#ff5a52',
   },
   nuit: {
     sol: '#060a1c',
@@ -49,6 +51,7 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     badVibe: '#4b4762',
     badVibeRim: '#b8c4ee',
     texte: '#f6ecd2',
+    rouge: '#ff5a52',
   },
   aube: {
     sol: '#e9c9b6',
@@ -62,6 +65,7 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     badVibe: '#6c6276',
     badVibeRim: '#fff0e4',
     texte: '#2c1e18',
+    rouge: '#b3261e',
   },
   jour: {
     sol: '#efe2c2',
@@ -75,6 +79,7 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     badVibe: '#66606e',
     badVibeRim: '#fffaf0',
     texte: '#2b2010',
+    rouge: '#be281d',
   },
 };
 

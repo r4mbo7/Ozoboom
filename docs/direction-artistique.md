@@ -27,6 +27,7 @@ La palette suit la progression du set et s'interpole en continu entre quatre mom
 | `bad-vibe`     | `#5a4c64`  | `#4b4762` | `#6c6276` | `#66606e`  | zones des ennemis               |
 | `bad-vibe-rim` | `#f2c4a0`  | `#b8c4ee` | `#fff0e4` | `#fffaf0`  | liseré des masques et des tirs  |
 | `texte`        | `#fbeee0`  | `#f6ecd2` | `#2c1e18` | `#2b2010`  | texte courant, toujours lisible |
+| `rouge`        | `#ff5a52`  | `#ff5a52` | `#b3261e` | `#be281d`  | la scène en danger              |
 
 Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distinguer les classes et les pièges à la forme seule. La couleur renforce, elle ne porte jamais seule une information.
 
