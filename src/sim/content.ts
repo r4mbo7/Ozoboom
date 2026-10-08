@@ -84,6 +84,9 @@ export function resolveContent(content: GameContent): ResolvedContent {
       for (const spawn of tier.spawns) {
         lookup(resolved.enemies, spawn.enemyId, `spawned enemy of ${where}`);
       }
+      for (const spawn of tier.dropSpawns ?? []) {
+        lookup(resolved.enemies, spawn.enemyId, `drop escort enemy of ${where}`);
+      }
       for (const spawn of tier.bystanderSpawns ?? []) {
         lookup(resolved.bystanders, spawn.bystanderId, `spawned bystander of ${where}`);
       }

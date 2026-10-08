@@ -137,6 +137,16 @@ describe('resolveContent', () => {
     );
   });
 
+  it('rejects a drop spawn rule whose enemy is unknown', () => {
+    const content = withTiers({
+      dropSpawns: [{ enemyId: 'ghost', everyBars: 1, count: 1, fromPhrase: 0 }],
+    });
+
+    expect(() => resolveContent(content)).toThrow(
+      'unknown drop escort enemy of tier 0 of set "fixture-set": "ghost"',
+    );
+  });
+
   it('rejects a bystander spawn rule whose bystander is unknown', () => {
     const content = withTiers({
       bystanderSpawns: [{ bystanderId: 'ghost', everyBars: 1, count: 1, fromPhrase: 0 }],
