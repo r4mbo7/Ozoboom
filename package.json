@@ -13,7 +13,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "prepare": "cp .githooks/post-checkout \"$(git rev-parse --git-common-dir)/hooks/\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p worker/turn",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

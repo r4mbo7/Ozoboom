@@ -1,0 +1,17 @@
+name = "ozoboom-turn"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[[kv_namespaces]]
+binding = "USAGE"
+# A remplir par Constantin : `wrangler kv namespace create USAGE`
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[[ratelimits]]
+name = "RATE_LIMIT"
+# A remplir par Constantin : un entier unique dans le compte
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }

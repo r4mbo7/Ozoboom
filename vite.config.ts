@@ -19,7 +19,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'worker/turn/src/**/*.test.ts'],
     environment: 'node',
   },
 });

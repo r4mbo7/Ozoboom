@@ -1,0 +1,5 @@
+packages:
+  - worker/turn
+allowBuilds:
+  esbuild: true
+  workerd: true
