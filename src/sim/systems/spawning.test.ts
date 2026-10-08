@@ -223,3 +223,85 @@ describe('spawning for a team', () => {
     expect(bossOf(trio)?.maxHp).toBe(500 * 1.2 * 1.5);
   });
 });
+
+describe('sided waves', () => {
+  const withSides = (
+    sidedWaves: NonNullable<SetDefinition['sidedWaves']>,
+    spawns = FIXTURE_SET.tiers[0]?.spawns ?? [],
+  ): SimulationOptions => ({
+    ...FIXTURE_OPTIONS,
+    content: {
+      ...FIXTURE_CONTENT,
+      sets: [
+        {
+          ...FIXTURE_SET,
+          sidedWaves,
+          tiers: [{ buildupPhrases: 1, breakBars: 2, bossId: 'curfew', spawns }],
+        },
+      ],
+    },
+  });
+  const spawnsOf = (recorded: readonly TimedEvent[]) =>
+    recorded.flatMap(({ event }) => (event.type === 'enemySpawned' ? [event] : []));
+
+  it('keeps the spawns of a set without sided waves where they were', () => {
+    const simulation = createSimulation({ ...FIXTURE_OPTIONS, seed: 7 });
+
+    const recorded = stepAndRecord(simulation, 2 * TICKS_PER_BAR);
+
+    expect(spawnsOf(recorded).map(({ x, y }) => ({ x, y }))).toEqual([
+      { x: 1588, y: 534.6028964277357 },
+      { x: 1588, y: 833.5138090103865 },
+      { x: 1521.1259090844542, y: 12 },
+      { x: 1588, y: 793.435795051977 },
+    ]);
+    expect(simulation.state.spawnWindow).toBeUndefined();
+  });
+
+  it('sends about four bad vibes in five from the side of a one-sided window', () => {
+    const simulation = peaceful(
+      createSimulation(
+        withSides({ everyBars: 8, chance: 1, randomShare: 0.2 }, [
+          { enemyId: 'grump', everyBars: 1, count: 60, fromPhrase: 0 },
+        ]),
+      ),
+    );
+    simulation.state.spawnWindow = { index: 0, sides: ['left'] };
+
+    const spawns = spawnsOf(stepAndRecord(simulation, 7 * TICKS_PER_BAR));
+
+    const radius = 12;
+    const onLeft = spawns.filter(({ x }) => x === radius).length;
+    expect(spawns).toHaveLength(420);
+    expect(onLeft / spawns.length).toBeGreaterThan(0.78);
+    expect(onLeft / spawns.length).toBeLessThan(0.9);
+    expect(spawns.length - onLeft).toBeGreaterThan(40);
+  });
+
+  it('draws one or two distinct sides for some windows, from the seed', () => {
+    const windows = (seed: number) => {
+      const simulation = peaceful(
+        createSimulation({ ...withSides({ everyBars: 2, chance: 0.5, randomShare: 0.2 }), seed }),
+      );
+      const seen: { index: number; sides: string[] }[] = [];
+      for (let window = 0; window < 7; window++) {
+        stepAndRecord(simulation, 2 * TICKS_PER_BAR);
+        const current = simulation.state.spawnWindow;
+        seen.push({ index: current?.index ?? -1, sides: [...(current?.sides ?? [])] });
+      }
+      return seen;
+    };
+
+    const first = windows(7);
+
+    expect(windows(7)).toEqual(first);
+    expect(windows(8)).not.toEqual(first);
+    expect(first.map(({ index }) => index)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(first.some(({ sides }) => sides.length === 0)).toBe(true);
+    expect(first.some(({ sides }) => sides.length > 0)).toBe(true);
+    for (const { sides } of first) {
+      expect(sides.length).toBeLessThanOrEqual(2);
+      expect(new Set(sides).size).toBe(sides.length);
+    }
+  });
+});

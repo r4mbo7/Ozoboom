@@ -16,6 +16,7 @@ export const SETS: readonly SetDefinition[] = [
     reviveBars: 1,
     coreRepairPerBar: 85,
     perPlayer: { spawnMul: 0.72, enemyHpMul: 0.44 },
+    sidedWaves: { everyBars: 8, chance: 0.4, randomShare: 0.2 },
     speakers: [
       {
         id: 'dome-chill',

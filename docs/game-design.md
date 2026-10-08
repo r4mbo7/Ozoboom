@@ -21,6 +21,8 @@ Deux manières de tuer, **tranchées** : tirer directement sur les ennemis, et p
 
 Une partie dure 15 à 25 minutes et suit le set : des phrases de 16 mesures (26,5 s à 145 BPM) forment la montée, puis un break et un drop closent chaque palier, avec un boss sur le drop. Le déroulé du set est visible à l'écran comme un line-up : les joueurs savent quand le drop tombe.
 
+Les bad vibes arrivent de partout sur le bord de la piste. Par moments, une vague de 8 mesures arrive d'un ou deux côtés : 8 bad vibes sur 10 en viennent, les autres de partout.
+
 Moment à moment :
 
 1. Se déplacer, viser, tirer. Les ennemis convergent vers le noyau et attaquent les joueurs qui les gênent.

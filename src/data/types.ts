@@ -276,6 +276,9 @@ export interface SetDefinition {
   // Most the core can be repaired per bar, all sources together. Absent means no cap.
   coreRepairPerBar?: number;
   perPlayer?: { spawnMul: number; enemyHpMul: number };
+  // Each window of `everyBars` bars comes from one or two sides with `chance`; `randomShare` of its
+  // rule spawns still come from anywhere on the edge. Absent means every spawn comes from anywhere.
+  sidedWaves?: { everyBars: number; chance: number; randomShare: number };
 }
 
 export interface GameContent {

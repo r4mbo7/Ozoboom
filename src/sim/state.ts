@@ -39,6 +39,8 @@ export interface Arena {
   height: number;
 }
 
+export type EdgeSide = 'top' | 'right' | 'bottom' | 'left';
+
 export interface CoreState {
   x: number;
   y: number;
@@ -316,6 +318,9 @@ export interface SimState {
   volume?: number;
   speakers?: SpeakerState[];
   placed?: PlacedState[];
+  // The sides of the current window of `SetDefinition.sidedWaves`, drawn at its first rule spawn;
+  // no sides means a window from anywhere.
+  spawnWindow?: { index: number; sides: EdgeSide[] };
   pendingUpgrades: UpgradeOffer[];
   nextEntityId: EntityId;
   stats: SimStats;

@@ -1,10 +1,10 @@
 import type { EnemyDefinition, SetDefinition } from '../../data/types';
-import { nextFloat } from '../../shared/prng';
-import { BARS_PER_PHRASE, TICKS_PER_BAR, isBarTick } from '../../shared/tempo';
+import { nextFloat, nextInt, pick } from '../../shared/prng';
+import { BARS_PER_PHRASE, TICKS_PER_BAR, barOfTick, isBarTick } from '../../shared/tempo';
 import { lookup } from '../content';
 import { compound } from '../effects';
 import { volumeMul } from '../volume';
-import type { Arena, EnemyState, SimState, Vec2 } from '../state';
+import type { Arena, EdgeSide, EnemyState, SimState, Vec2 } from '../state';
 import type { StepContext } from './types';
 
 export function spawning({ state, content, set }: StepContext): void {
@@ -79,7 +79,9 @@ function spawnAtEdge(
   definition: EnemyDefinition,
   isBoss: boolean,
 ): void {
-  const { x, y } = edgePosition(state.rng, state.arena, definition.radius);
+  const { x, y } = isBoss
+    ? edgePosition(state.rng, state.arena, definition.radius)
+    : ruleSpawnPosition(state, set, definition.radius);
   spawnEnemy(state, definition, x, y, isBoss, perPlayerMul(state, set.perPlayer?.enemyHpMul));
 }
 
@@ -93,12 +95,62 @@ function scaledCount(state: SimState, set: SetDefinition, count: number): number
   return Math.max(count, scaled);
 }
 
+function ruleSpawnPosition(state: SimState, set: SetDefinition, radius: number): Vec2 {
+  const sided = set.sidedWaves;
+  if (sided === undefined) {
+    return edgePosition(state.rng, state.arena, radius);
+  }
+  const index = Math.floor(barOfTick(state.tick) / sided.everyBars);
+  if (state.spawnWindow?.index !== index) {
+    state.spawnWindow = { index, sides: drawSides(state.rng, sided.chance) };
+  }
+  const { sides } = state.spawnWindow;
+  if (sides.length === 0 || nextFloat(state.rng) < sided.randomShare) {
+    return edgePosition(state.rng, state.arena, radius);
+  }
+  return sidePosition(state.rng, state.arena, radius, pick(state.rng, sides));
+}
+
+const SIDES: readonly EdgeSide[] = ['top', 'right', 'bottom', 'left'];
+
+function drawSides(rng: SimState['rng'], chance: number): EdgeSide[] {
+  if (nextFloat(rng) >= chance) {
+    return [];
+  }
+  const first = pick(rng, SIDES);
+  const sides = [first];
+  if (nextInt(rng, 2) === 1) {
+    sides.push(
+      pick(
+        rng,
+        SIDES.filter((side) => side !== first),
+      ),
+    );
+  }
+  return sides;
+}
+
 // A point on the edge of the arena, drawn uniformly along its perimeter, as bad vibes spawn.
 export function edgePosition(rng: SimState['rng'], arena: Arena, radius: number): Vec2 {
+  const [spanX, spanY] = spans(arena, radius);
+  return pointAlong(arena, radius, nextFloat(rng) * 2 * (spanX + spanY));
+}
+
+function sidePosition(rng: SimState['rng'], arena: Arena, radius: number, side: EdgeSide): Vec2 {
+  const [spanX, spanY] = spans(arena, radius);
+  const start = { top: 0, right: spanX, bottom: spanX + spanY, left: 2 * spanX + spanY }[side];
+  const length = side === 'top' || side === 'bottom' ? spanX : spanY;
+  return pointAlong(arena, radius, start + nextFloat(rng) * length);
+}
+
+function spans({ width, height }: Arena, radius: number): [number, number] {
+  return [width - 2 * radius, height - 2 * radius];
+}
+
+// The point `along` the perimeter, clockwise from the top left corner.
+function pointAlong(arena: Arena, radius: number, along: number): Vec2 {
   const { width, height } = arena;
-  const spanX = width - 2 * radius;
-  const spanY = height - 2 * radius;
-  let along = nextFloat(rng) * 2 * (spanX + spanY);
+  const [spanX, spanY] = spans(arena, radius);
   if (along < spanX) {
     return { x: radius + along, y: radius };
   }
