@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
-import { cardLines, cardOrigin, isNear, plugStep } from './speaker-card';
+import { cardLines, cardOrigin, cardScale, isNear, plugStep } from './speaker-card';
 
 const DOME = {
   name: 'Le Dôme chill',
@@ -80,5 +80,15 @@ describe('speaker card placement', () => {
   it('keeps the whole card on screen near an edge', () => {
     expect(cardOrigin(20, 30, 200, 80, 1280, 720)).toEqual({ x: 12, y: 12 });
     expect(cardOrigin(1270, 900, 200, 80, 1280, 720)).toEqual({ x: 1068, y: 628 });
+  });
+});
+
+describe('speaker card on a narrow screen', () => {
+  it('keeps its size when it fits', () => {
+    expect(cardScale(376, 1280)).toBe(1);
+  });
+
+  it('shrinks to fit a phone screen with its margins', () => {
+    expect(cardScale(376, 360)).toBeCloseTo(336 / 376);
   });
 });

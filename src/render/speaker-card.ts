@@ -73,6 +73,10 @@ export function isNear(speaker: Vec2, players: readonly Vec2[]): boolean {
   );
 }
 
+export function cardScale(width: number, screenWidth: number): number {
+  return Math.min(1, (screenWidth - 2 * MARGIN) / width);
+}
+
 // Top left corner of a card centered above its anchor, kept whole on the screen.
 export function cardOrigin(
   anchorX: number,
@@ -185,15 +189,17 @@ export function createSpeakerCards(ctx: RenderContext): Family {
           x: speaker.x,
           y: speaker.y - speaker.radius * LIFT,
         });
+        const scale = cardScale(view.width, camera.screenWidth);
         const origin = cardOrigin(
           anchor.x,
           anchor.y,
-          view.width,
-          view.height,
+          view.width * scale,
+          view.height * scale,
           camera.screenWidth,
           camera.screenHeight,
         );
         view.root.visible = true;
+        view.root.scale.set(scale);
         view.root.position.set(origin.x, origin.y);
       }
       views.end();
