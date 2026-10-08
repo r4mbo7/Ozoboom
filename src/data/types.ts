@@ -255,6 +255,8 @@ export interface TierDefinition {
   breakBars: number;
   bossId: string;
   spawns: readonly SpawnRule[];
+  // Read during the drop, bars counted from its start. Absent means the boss comes alone.
+  dropSpawns?: readonly SpawnRule[];
   bystanderSpawns?: readonly BystanderSpawnRule[];
 }
 

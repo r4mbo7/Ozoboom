@@ -163,6 +163,60 @@ describe('spawning', () => {
   });
 });
 
+describe('spawning during the drop', () => {
+  const ESCORTED: SetDefinition = {
+    ...FIXTURE_SET,
+    tiers: [
+      {
+        buildupPhrases: 1,
+        breakBars: 2,
+        bossId: 'curfew',
+        spawns: [],
+        dropSpawns: [{ enemyId: 'grump', everyBars: 2, count: 3, fromPhrase: 0 }],
+      },
+    ],
+  };
+  const escorted = (): Simulation =>
+    createSimulation({ ...FIXTURE_OPTIONS, content: { ...FIXTURE_CONTENT, sets: [ESCORTED] } });
+
+  it('spawns nothing during the break, even with an escort', () => {
+    const simulation = escorted();
+    stepAndRecord(simulation, BUILDUP);
+
+    const recorded = stepAndRecord(simulation, BREAK - 1);
+
+    expect(simulation.state.set.segment).toBe('break');
+    expect(spawnsByTick(recorded)).toEqual(new Map());
+  });
+
+  it('spawns the escort of the tier with its boss, on the bars of the drop', () => {
+    const simulation = escorted();
+    stepAndRecord(simulation, BUILDUP + BREAK - 1);
+
+    const recorded = stepAndRecord(simulation, 4 * TICKS_PER_BAR + 1);
+
+    const drop = BUILDUP + BREAK;
+    expect(simulation.state.set.segment).toBe('drop');
+    expect(spawnsByTick(recorded)).toEqual(
+      new Map([
+        [drop, ['curfew', 'grump', 'grump', 'grump']],
+        [drop + 2 * TICKS_PER_BAR, ['grump', 'grump', 'grump']],
+        [drop + 4 * TICKS_PER_BAR, ['grump', 'grump', 'grump']],
+      ]),
+    );
+  });
+
+  it('keeps the boss alone on the drop of a tier without an escort', () => {
+    const simulation = createSimulation(FIXTURE_OPTIONS);
+    stepAndRecord(peaceful(simulation), BUILDUP + BREAK - 1);
+
+    const recorded = stepAndRecord(simulation, 4 * TICKS_PER_BAR + 1);
+
+    expect(simulation.state.set.segment).toBe('drop');
+    expect(spawnsByTick(recorded)).toEqual(new Map([[BUILDUP + BREAK, ['curfew']]]));
+  });
+});
+
 describe('spawning for a team', () => {
   const SCALED: SetDefinition = {
     ...FIXTURE_SET,

@@ -19,7 +19,7 @@ Deux manières de tuer, **tranchées** : tirer directement sur les ennemis, et p
 
 ## Boucle de jeu
 
-Une partie dure 15 à 25 minutes et suit le set : des phrases de 16 mesures (26,5 s à 145 BPM) forment la montée, puis un break et un drop closent chaque palier, avec un boss sur le drop. Le déroulé du set est visible à l'écran comme un line-up : les joueurs savent quand le drop tombe.
+Une partie dure 15 à 25 minutes et suit le set : des phrases de 16 mesures (26,5 s à 145 BPM) forment la montée, puis un break et un drop closent chaque palier, avec un boss sur le drop. Le boss arrive avec une escorte : les bad vibes du palier continuent d'arriver, un peu plus denses qu'à la fin de la montée ; le break reste calme. Le déroulé du set est visible à l'écran comme un line-up : les joueurs savent quand le drop tombe.
 
 Les bad vibes arrivent de partout sur le bord de la piste. Par moments, une vague de 8 mesures arrive d'un ou deux côtés : 8 bad vibes sur 10 en viennent, les autres de partout.
 

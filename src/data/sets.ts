@@ -15,7 +15,7 @@ export const SETS: readonly SetDefinition[] = [
     weaponSlots: 3,
     reviveBars: 1,
     coreRepairPerBar: 85,
-    perPlayer: { spawnMul: 0.72, enemyHpMul: 0.44 },
+    perPlayer: { spawnMul: 0.8, enemyHpMul: 0.5 },
     sidedWaves: { everyBars: 8, chance: 0.4, randomShare: 0.2 },
     speakers: [
       {
@@ -78,6 +78,13 @@ export const SETS: readonly SetDefinition[] = [
           { enemyId: 'desagreable', everyBars: 1, count: 1, fromPhrase: 3 },
           { enemyId: 'collant', everyBars: 4, count: 1, fromPhrase: 3 },
         ],
+        dropSpawns: [
+          { enemyId: 'random', everyBars: 4, count: 7, fromPhrase: 0 },
+          { enemyId: 'desagreable', everyBars: 1, count: 3, fromPhrase: 0 },
+          { enemyId: 'meprisant', everyBars: 8, count: 1, fromPhrase: 0 },
+          { enemyId: 'male-alpha', everyBars: 8, count: 1, fromPhrase: 0 },
+          { enemyId: 'collant', everyBars: 4, count: 1, fromPhrase: 0 },
+        ],
       },
       {
         buildupPhrases: 4,
@@ -97,6 +104,15 @@ export const SETS: readonly SetDefinition[] = [
           { enemyId: 'desagreable', everyBars: 1, count: 2, fromPhrase: 3 },
           { enemyId: 'male-alpha', everyBars: 4, count: 1, fromPhrase: 3 },
           { enemyId: 'zombie', everyBars: 8, count: 1, fromPhrase: 3 },
+        ],
+        dropSpawns: [
+          { enemyId: 'desagreable', everyBars: 1, count: 5, fromPhrase: 0 },
+          { enemyId: 'random', everyBars: 2, count: 9, fromPhrase: 0 },
+          { enemyId: 'intolerant', everyBars: 8, count: 1, fromPhrase: 0 },
+          { enemyId: 'meprisant', everyBars: 4, count: 1, fromPhrase: 0 },
+          { enemyId: 'male-alpha', everyBars: 4, count: 2, fromPhrase: 0 },
+          { enemyId: 'filmeur', everyBars: 8, count: 1, fromPhrase: 0 },
+          { enemyId: 'zombie', everyBars: 8, count: 1, fromPhrase: 0 },
         ],
         bystanderSpawns: [
           { bystanderId: 'festivalier-en-detresse', everyBars: 4, count: 1, fromPhrase: 0 },

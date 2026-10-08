@@ -18,12 +18,13 @@ export function spawning({ state, content, set }: StepContext): void {
   }
 
   const tier = set.tiers[state.set.tier];
-  if (tier === undefined || state.set.segment !== 'buildup' || !isBarTick(state.tick)) {
+  if (tier === undefined || !isBarTick(state.tick)) {
     return;
   }
+  const rules = { buildup: tier.spawns, break: [], drop: tier.dropSpawns ?? [] }[state.set.segment];
   const bar = (state.tick - state.set.segmentStartTick) / TICKS_PER_BAR;
   const phrase = Math.floor(bar / BARS_PER_PHRASE);
-  for (const rule of tier.spawns) {
+  for (const rule of rules) {
     const active =
       phrase >= rule.fromPhrase && (rule.toPhrase === undefined || phrase <= rule.toPhrase);
     if (!active || bar % rule.everyBars !== 0) {
