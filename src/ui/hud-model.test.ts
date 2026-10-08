@@ -14,7 +14,6 @@ import {
   plugHelp,
   rosterOf,
   sunPosition,
-  trapCapacity,
   volumeCrans,
 } from './hud-model';
 
@@ -98,13 +97,6 @@ describe('volumeCrans', () => {
     const bare = { ...SET, speakers: [] };
 
     expect(volumeCrans(bare, fixtureState())).toEqual([]);
-  });
-});
-
-describe('trapCapacity', () => {
-  it('adds one slot per Volume level to the set maximum', () => {
-    expect([0, 1, 2, 4].map((volume) => trapCapacity(SET, { volume }))).toEqual([6, 7, 8, 10]);
-    expect(trapCapacity(SET, {})).toBe(6);
   });
 });
 

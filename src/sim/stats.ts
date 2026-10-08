@@ -1,6 +1,12 @@
-import type { ClassDefinition, SkillDefinition, StatKey, StatModifier } from '../data/types';
+import type {
+  ClassDefinition,
+  SetDefinition,
+  SkillDefinition,
+  StatKey,
+  StatModifier,
+} from '../data/types';
 import { wholeTicks } from './effects';
-import type { PlayerState } from './state';
+import type { PlayerState, SimState } from './state';
 
 const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   maxHpAdd: true,
@@ -16,6 +22,7 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   trapDamageMul: false,
   trapCostMul: false,
   trapRadiusMul: false,
+  trapSlotsAdd: true,
   wattsPerBarAdd: true,
 };
 
@@ -39,6 +46,17 @@ export function skillCooldownTicks(
   skill: Pick<SkillDefinition, 'cooldownTicks'>,
 ): number {
   return wholeTicks(statValue(player, 'skillCooldownMul', skill.cooldownTicks));
+}
+
+export function trapCapacity(
+  set: Pick<SetDefinition, 'maxTraps'>,
+  state: Pick<SimState, 'volume' | 'players'>,
+): number {
+  let capacity = set.maxTraps + (state.volume ?? 0);
+  for (const player of state.players) {
+    capacity = statValue(player, 'trapSlotsAdd', capacity);
+  }
+  return capacity;
 }
 
 export function applyModifiers(

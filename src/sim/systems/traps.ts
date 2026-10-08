@@ -16,7 +16,7 @@ import {
   wholeTicks,
 } from '../effects';
 import type { EnemyState, PlayerId, PlayerState, SimState, TrapState, Vec2 } from '../state';
-import { statValue } from '../stats';
+import { statValue, trapCapacity } from '../stats';
 import type { StepContext } from './types';
 
 // Marks the lure does not renew lapse after the next tick, whose earlier systems still see it.
@@ -125,7 +125,7 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     y <= arena.height - radius &&
     !overlaps(footprint, core, core.radius) &&
     !state.traps.some((trap) => overlaps(footprint, trap, trapDefinition(content, trap).radius)) &&
-    state.traps.length < set.maxTraps + (state.volume ?? 0);
+    state.traps.length < trapCapacity(set, state);
   if (!fits) {
     return;
   }

@@ -186,6 +186,19 @@ describe('trap placement', () => {
     expect(state.core.watts).toBe(1000 - 6 * 20);
   });
 
+  it('places one more trap for each trap slot the player gained', () => {
+    const { simulation, state, player } = game();
+    state.core.watts = 1000;
+    player.modifiers.trapSlotsAdd = 1;
+    const placements = Array.from({ length: 8 }, (_, i) =>
+      placeAction('mister', 100 + i * 50, 100),
+    );
+
+    simulation.step([actionsFor(0, ...placements)]);
+
+    expect(state.traps).toHaveLength(7);
+  });
+
   it('levels up a trap placed on a trap of the same kind, up to its max level', () => {
     const { simulation, state } = game();
     state.core.watts = 1000;

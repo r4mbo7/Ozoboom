@@ -93,10 +93,6 @@ export function volumeCrans(set: SetDefinition, state: SimState): Cran[] {
   });
 }
 
-export function trapCapacity(set: SetDefinition, state: Pick<SimState, 'volume'>): number {
-  return set.maxTraps + (state.volume ?? 0);
-}
-
 const COUNT_WORDS = ['zéro', 'une', 'deux', 'trois', 'quatre'];
 
 export function plugHelp(bars: number): string {

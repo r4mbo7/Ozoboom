@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { UPGRADES } from '../data/upgrades';
-import { FIXTURE_OPTIONS } from './fixtures';
+import { FIXTURE_OPTIONS, FIXTURE_SET } from './fixtures';
 import { createSimulation } from './index';
 import type { PlayerState } from './state';
-import { applyModifiers, refreshDerivedStats, skillCooldownTicks, statValue } from './stats';
+import {
+  applyModifiers,
+  refreshDerivedStats,
+  skillCooldownTicks,
+  statValue,
+  trapCapacity,
+} from './stats';
 
 function freshPlayer(): PlayerState {
   const player = createSimulation(FIXTURE_OPTIONS).state.players[0];
@@ -132,6 +138,26 @@ describe('skillCooldownTicks', () => {
     const ticks = skillCooldownTicks(player, { cooldownTicks: 192 });
 
     expect(ticks).toBe(192);
+  });
+});
+
+describe('trapCapacity', () => {
+  it('adds one slot per Volume level to the set maximum', () => {
+    const players = [freshPlayer()];
+
+    const capacities = [0, 1, 2, 4].map((volume) => trapCapacity(FIXTURE_SET, { volume, players }));
+
+    expect(capacities).toEqual([6, 7, 8, 10]);
+    expect(trapCapacity(FIXTURE_SET, { players })).toBe(6);
+  });
+
+  it('adds the trap slots of every player of the team', () => {
+    const first = freshPlayer();
+    const second = freshPlayer();
+    applyModifiers(first, [{ stat: 'trapSlotsAdd', add: 1 }]);
+    applyModifiers(second, [{ stat: 'trapSlotsAdd', add: 2 }]);
+
+    expect(trapCapacity(FIXTURE_SET, { volume: 1, players: [first, second] })).toBe(10);
   });
 });
 

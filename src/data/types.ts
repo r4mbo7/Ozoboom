@@ -12,6 +12,7 @@ export type StatKey =
   | 'trapDamageMul'
   | 'trapCostMul'
   | 'trapRadiusMul'
+  | 'trapSlotsAdd'
   | 'wattsPerBarAdd';
 
 export interface StatModifier {

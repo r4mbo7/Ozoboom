@@ -3,7 +3,7 @@ import { setFraction } from '../sim/lineup';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
 import type { PlayerState, SimState } from '../sim/state';
-import { statValue } from '../sim/stats';
+import { statValue, trapCapacity } from '../sim/stats';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
@@ -18,7 +18,6 @@ import {
   rosterOf,
   skillCharge,
   sunPosition,
-  trapCapacity,
   volumeCrans,
 } from './hud-model';
 import { BOLT, HEART, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';

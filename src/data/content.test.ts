@@ -228,7 +228,7 @@ describe('CONTENT circus weapons, rarities and relics', () => {
   it('gives every common upgrade a rare and a legendary variant', () => {
     const commons = upgrades.filter((upgrade) => upgrade.rarity === 'common');
 
-    expect(commons).toHaveLength(12);
+    expect(commons).toHaveLength(13);
     for (const common of commons) {
       expect(upgradeIds.has(`${common.id}-rare`), common.id).toBe(true);
       expect(upgradeIds.has(`${common.id}-legendaire`), common.id).toBe(true);

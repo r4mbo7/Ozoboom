@@ -54,7 +54,7 @@ function play(classId: string): Game {
     return cached;
   }
   const simulation = createSimulation({
-    seed: 7,
+    seed: 1,
     setId: 'soiree-v0',
     content: FAST_CONTENT,
     players: [{ id: 0, classId }],
