@@ -2,6 +2,7 @@ import type { SetDefinition } from '../../data/types';
 import type { ResolvedContent } from '../content';
 import { drawOffer } from '../draw';
 import type { PlayerState, SimState } from '../state';
+import { isLastBossDown } from './set-progress';
 import type { StepContext } from './types';
 
 export function progression({ state, content, set }: StepContext): void {
@@ -25,7 +26,10 @@ export function presentNextOffer(
   set: SetDefinition,
   player: PlayerState,
 ): void {
-  if (state.pendingUpgrades.some((offer) => offer.playerId === player.id)) {
+  if (
+    isLastBossDown(state, set) ||
+    state.pendingUpgrades.some((offer) => offer.playerId === player.id)
+  ) {
     return;
   }
   while ((player.pendingLevelUps ?? 0) > 0) {

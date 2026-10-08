@@ -2,6 +2,7 @@ import { lookup } from '../content';
 import { drawRelics } from '../draw';
 import { SPECIALS } from '../specials';
 import type { PickupKind, SimState } from '../state';
+import { isLastTier } from './set-progress';
 import type { StepContext } from './types';
 
 export function deaths(ctx: StepContext): void {
@@ -43,7 +44,7 @@ export function deaths(ctx: StepContext): void {
       byPlayer: enemy.lastHitBy ?? null,
     });
     state.stats.kills += 1;
-    if (enemy.isBoss) {
+    if (enemy.isBoss && !isLastTier(state.set, set)) {
       offerRelics(ctx);
     }
     const spread = vibesDrop > 0 && wattsDrop > 0 ? enemy.radius / 2 : 0;

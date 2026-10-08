@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { UpgradeDefinition } from '../../data/types';
+import { TICKS_PER_BAR } from '../../shared/tempo';
 import { resolveContent } from '../content';
 import { drawOffer } from '../draw';
 import { COMBAT_CONTENT, COMBAT_OPTIONS, actionsFor, placeEnemy } from '../fixtures';
@@ -149,6 +150,26 @@ describe('boss relics', () => {
     simulation.step([actionsFor(0, { type: 'chooseUpgrade', upgradeId: 'quick-feet' })]);
     expect(simulation.state.pendingUpgrades[0]?.kind).toBe('relic');
     expect(simulation.state.status).toBe('choosingUpgrade');
+  });
+
+  it('give way to victory when the last boss falls, with no offer at all', () => {
+    const simulation = game();
+    const [player] = simulation.state.players;
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    simulation.state.set.tier = 1;
+    simulation.state.set.segment = 'drop';
+    simulation.state.set.segmentStartTick = simulation.state.tick - TICKS_PER_BAR;
+    player.vibes = player.vibesToNextLevel;
+    killBoss(simulation);
+
+    for (let tick = 0; tick < 2 * TICKS_PER_BAR && simulation.state.status === 'running'; tick++) {
+      simulation.step([]);
+    }
+
+    expect(simulation.state.pendingUpgrades).toEqual([]);
+    expect(simulation.state.status).toBe('won');
   });
 });
 

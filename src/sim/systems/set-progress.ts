@@ -20,6 +20,18 @@ export function isSetFinished(progress: SetProgress, set: SetDefinition): boolea
   return progress.tier >= set.tiers.length;
 }
 
+export function isLastTier(progress: SetProgress, set: SetDefinition): boolean {
+  return progress.tier >= set.tiers.length - 1;
+}
+
+export function isLastBossDown(state: SimState, set: SetDefinition): boolean {
+  return (
+    isLastTier(state.set, set) &&
+    state.set.segment === 'drop' &&
+    !state.enemies.some((enemy) => enemy.isBoss)
+  );
+}
+
 function currentTier(progress: SetProgress, set: SetDefinition): TierDefinition | undefined {
   return set.tiers[progress.tier];
 }
