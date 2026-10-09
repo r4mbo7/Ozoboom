@@ -56,3 +56,17 @@ test.describe('a phone held sideways', () => {
     });
   }
 });
+
+test.describe('a short and narrow window', () => {
+  test.use({ viewport: { width: 360, height: 500 } });
+
+  test('keeps a four-card offer in one column, never wider than the window', async ({ page }) => {
+    await page.goto('/dev/ui.html?screen=relics');
+    const menu = page.locator('.ui-upgrade');
+    await expect(menu.locator('button').first()).toBeVisible();
+
+    const overflow = await menu.evaluate((node) => node.scrollWidth - node.clientWidth);
+
+    expect(overflow).toBe(0);
+  });
+});

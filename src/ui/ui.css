@@ -2948,7 +2948,7 @@
 
 /* Short screens, a phone held sideways: a menu fits the screen, it never scrolls. */
 
-@media (max-height: 520px) {
+@media (max-height: 520px) and (min-width: 600px) {
   .ui-overlay {
     padding-block: 12px;
   }
