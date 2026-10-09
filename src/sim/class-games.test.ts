@@ -112,20 +112,6 @@ describe.each(['mage', 'tank', 'healer'])('a short set played to the end with %s
   });
 });
 
-describe('the roadie and the care in a short set', () => {
-  it('draw bad vibes with the charge', () => {
-    const { events } = play('tank');
-
-    expect(events.some((event) => event.type === 'taunted' && event.count > 0)).toBe(true);
-  });
-
-  it('heal with the pulse', () => {
-    const { events } = play('healer');
-
-    expect(events.some((event) => event.type === 'coreRepaired')).toBe(true);
-  });
-});
-
 describe('the roadie charge', () => {
   function crowdedGame() {
     const desagreable = CONTENT.enemies.find((enemy) => enemy.id === 'desagreable');
@@ -155,5 +141,29 @@ describe('the roadie charge', () => {
     simulation.step([commandFor(0, { skill: true, aim: { x: 0, y: 1 } })]);
 
     expect(crowd.map((enemy) => enemy.target)).toEqual([player.id, player.id, player.id]);
+  });
+});
+
+describe('the care pulse', () => {
+  it('repairs the wounded scene the care stands on', () => {
+    const simulation = createSimulation({
+      seed: 1,
+      setId: 'soiree-v0',
+      content: CONTENT,
+      players: [{ id: 0, classId: 'healer' }],
+    });
+    const { state } = simulation;
+    const player = state.players[0];
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    player.x = state.core.x;
+    player.y = state.core.y;
+    state.core.hp = state.core.maxHp / 2;
+
+    simulation.step([commandFor(0, { skill: true })]);
+
+    expect(state.events.some((event) => event.type === 'coreRepaired')).toBe(true);
+    expect(state.core.hp).toBeGreaterThan(state.core.maxHp / 2);
   });
 });
