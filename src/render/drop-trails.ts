@@ -8,6 +8,7 @@ import {
   Sprite,
   extensions,
 } from 'pixi.js';
+import { echoAlpha } from './drop-filter';
 import type { Frame } from './frame';
 import type { Layers } from './layers';
 
@@ -17,7 +18,6 @@ const BUFFER_SCALE = 0.5;
 const KEEP_PER_TICK = { low: 0.55, high: 0.88 };
 const MAX_STEP_TICKS = 4;
 const HUE_TURN_TICKS = 192;
-const ECHO_ALPHA = { night: 0.9, day: 0.45 };
 
 function hueChannel(turn: number, offset: number): number {
   return 0.5 + 0.5 * Math.cos(2 * Math.PI * (turn + offset));
@@ -114,7 +114,7 @@ export function createDropTrails(pixi: Renderer, layers: Layers) {
       const keep = KEEP_PER_TICK.low + (KEEP_PER_TICK.high - KEEP_PER_TICK.low) * frame.dropFilter;
       previous.alpha = keep ** step;
       echo.texture = shot;
-      echo.alpha = night ? ECHO_ALPHA.night : ECHO_ALPHA.day;
+      echo.alpha = echoAlpha(frame.dropFilter, night);
       echo.blendMode = night ? 'add' : 'normal';
       const turn = frame.now / HUE_TURN_TICKS;
       flat[4] = hueChannel(turn, 0);

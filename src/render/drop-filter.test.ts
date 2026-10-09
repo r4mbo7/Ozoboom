@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
-import { type DropClock, dropFilterIntensity } from './drop-filter';
+import { type DropClock, dropFilterIntensity, echoAlpha } from './drop-filter';
 
 const START = 1000;
 
@@ -40,5 +40,14 @@ describe('dropFilterIntensity', () => {
     expect(dropFilterIntensity(second, fallStart + 2 * TICKS_PER_BAR)).toBeCloseTo(0.5);
     expect(dropFilterIntensity(second, fallStart + 4 * TICKS_PER_BAR)).toBe(0);
     expect(dropFilterIntensity(second, fallStart + 40 * TICKS_PER_BAR)).toBe(0);
+  });
+});
+
+describe('echoAlpha', () => {
+  it('adds fresh echoes in proportion to the intensity, by night and by day', () => {
+    expect(echoAlpha(0, true)).toBe(0);
+    expect(echoAlpha(0.5, true)).toBeCloseTo(echoAlpha(1, true) / 2);
+    expect(echoAlpha(0.5, false)).toBeCloseTo(echoAlpha(1, false) / 2);
+    expect(echoAlpha(1, false)).toBeLessThan(echoAlpha(1, true));
   });
 });
