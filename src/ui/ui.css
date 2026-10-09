@@ -2104,13 +2104,18 @@
 
 .ui-card__family {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: calc(8 * var(--card-unit));
+  gap: calc(6 * var(--card-unit)) calc(8 * var(--card-unit));
   color: color-mix(in srgb, var(--family) 50%, var(--texte));
   font-size: calc(13 * var(--card-unit));
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.ui-card__label {
+  white-space: nowrap;
 }
 
 .ui-card__glyph {
@@ -2505,8 +2510,11 @@
 }
 
 .ui-offers__panels[data-multi] .ui-card__family {
-  flex-wrap: wrap;
   row-gap: 4px;
+}
+
+.ui-offers__panels[data-multi] .ui-card__label {
+  white-space: normal;
 }
 
 .ui-offers__panels[data-multi] .ui-card__name {
