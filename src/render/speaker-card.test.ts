@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
-import { cardLines, cardOrigin, cardScale, isNear, plugStep } from './speaker-card';
+import { cardLines, cardOrigin, cardScale, isNear, opensBelow, plugStep } from './speaker-card';
 
 const DOME = {
   name: 'Le Dôme chill',
@@ -74,12 +74,22 @@ describe('speaker card trigger', () => {
 
 describe('speaker card placement', () => {
   it('centers the card above its anchor', () => {
-    expect(cardOrigin(500, 300, 200, 80, 1280, 720)).toEqual({ x: 400, y: 220 });
+    expect(cardOrigin(500, 300, 200, 80, 1280, 720, false)).toEqual({ x: 400, y: 220 });
+  });
+
+  it('hangs the card below its anchor when asked', () => {
+    expect(cardOrigin(500, 300, 200, 80, 1280, 720, true)).toEqual({ x: 400, y: 300 });
+  });
+
+  it('opens below a speaker in the upper half of the arena, clear of the top bar', () => {
+    expect(opensBelow(120, 1000)).toBe(true);
+    expect(opensBelow(500, 1000)).toBe(false);
+    expect(opensBelow(880, 1000)).toBe(false);
   });
 
   it('keeps the whole card on screen near an edge', () => {
-    expect(cardOrigin(20, 30, 200, 80, 1280, 720)).toEqual({ x: 12, y: 12 });
-    expect(cardOrigin(1270, 900, 200, 80, 1280, 720)).toEqual({ x: 1068, y: 628 });
+    expect(cardOrigin(20, 30, 200, 80, 1280, 720, false)).toEqual({ x: 12, y: 12 });
+    expect(cardOrigin(1270, 900, 200, 80, 1280, 720, true)).toEqual({ x: 1068, y: 628 });
   });
 });
 

@@ -21,6 +21,7 @@ const LINE_HEIGHT = LABEL_FONT_PX * 1.35;
 const CORNER = 12;
 const RIM_WIDTH = 1.5;
 const LIFT = 1.9;
+const DROP = 1.6;
 const LINES = [
   { weight: 700, alpha: 1 },
   { weight: 500, alpha: 0.8 },
@@ -77,7 +78,12 @@ export function cardScale(width: number, screenWidth: number): number {
   return Math.min(1, (screenWidth - 2 * MARGIN) / width);
 }
 
-// Top left corner of a card centered above its anchor, kept whole on the screen.
+// Above the top speaker, the card would hide under the HUD's top bar.
+export function opensBelow(speakerY: number, arenaHeight: number): boolean {
+  return speakerY < arenaHeight / 2;
+}
+
+// Top left corner of a card centered above or below its anchor, kept whole on the screen.
 export function cardOrigin(
   anchorX: number,
   anchorY: number,
@@ -85,10 +91,12 @@ export function cardOrigin(
   height: number,
   screenWidth: number,
   screenHeight: number,
+  below: boolean,
 ): Vec2 {
+  const top = below ? anchorY : anchorY - height;
   return {
     x: Math.max(MARGIN, Math.min(screenWidth - MARGIN - width, Math.round(anchorX - width / 2))),
-    y: Math.max(MARGIN, Math.min(screenHeight - MARGIN - height, Math.round(anchorY - height))),
+    y: Math.max(MARGIN, Math.min(screenHeight - MARGIN - height, Math.round(top))),
   };
 }
 
@@ -103,7 +111,7 @@ interface CardView {
   height: number;
 }
 
-// Screen space: above a side speaker a player comes near, what it is, gives and asks for.
+// Screen space: next to a speaker a player comes near, what it is, gives and asks for.
 export function createSpeakerCards(ctx: RenderContext): Family {
   const root = ctx.layers.screen.addChild(new Container());
   const texts = createLineTextures();
@@ -185,9 +193,10 @@ export function createSpeakerCards(ctx: RenderContext): Family {
           setTint(sprite, line === 0 ? color : palette.texte);
           sprite.alpha = LINES[line]?.alpha ?? 1;
         }
+        const below = opensBelow(speaker.y, state.arena.height);
         const anchor = worldToScreen(camera, {
           x: speaker.x,
-          y: speaker.y - speaker.radius * LIFT,
+          y: speaker.y + speaker.radius * (below ? DROP : -LIFT),
         });
         const scale = cardScale(view.width, camera.screenWidth);
         const origin = cardOrigin(
@@ -197,6 +206,7 @@ export function createSpeakerCards(ctx: RenderContext): Family {
           view.height * scale,
           camera.screenWidth,
           camera.screenHeight,
+          below,
         );
         view.root.visible = true;
         view.root.scale.set(scale);
