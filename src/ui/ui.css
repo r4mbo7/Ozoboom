@@ -2946,6 +2946,135 @@
   }
 }
 
+/* Short screens, a phone held sideways: a menu fits the screen, it never scrolls. */
+
+@media (max-height: 520px) {
+  .ui-overlay {
+    padding-block: 12px;
+  }
+
+  .ui-upgrade__body {
+    gap: 2px;
+  }
+
+  .ui-kicker {
+    font-size: 12px;
+  }
+
+  .ui-heading {
+    font-size: 22px;
+  }
+
+  .ui-hint {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+  }
+
+  .ui-hint__part {
+    display: inline-flex;
+  }
+
+  .ui-hint__part--narrow {
+    display: none;
+  }
+
+  .ui-cards,
+  .ui-cards[data-count] {
+    --card-unit: 1px;
+
+    grid-template-columns: none;
+    grid-auto-columns: minmax(0, 260px);
+    grid-auto-flow: column;
+    gap: 10px;
+    width: 100%;
+    margin: 8px 0;
+    justify-content: center;
+  }
+
+  .ui-card {
+    min-height: 0;
+    padding: 12px 14px;
+    gap: 6px;
+    border-radius: 24px;
+  }
+
+  .ui-card[aria-current] {
+    transform: none;
+  }
+
+  .ui-card__family {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .ui-card__name {
+    font-size: 18px;
+  }
+
+  .ui-card__desc {
+    font-size: 14px;
+  }
+
+  .ui-end__body {
+    gap: 6px;
+  }
+
+  .ui-end__emblem,
+  .ui-action__hint {
+    display: none;
+  }
+
+  .ui-end__title {
+    font-size: 36px;
+  }
+
+  .ui-end__text {
+    font-size: 15px;
+  }
+
+  .ui-stats {
+    gap: 8px;
+    margin: 4px 0;
+  }
+
+  .ui-stats__item {
+    flex-basis: 0;
+    gap: 2px;
+    padding: 8px 10px;
+  }
+
+  .ui-team {
+    gap: 8px;
+    margin: 0;
+  }
+
+  .ui-team__member {
+    gap: 0;
+    padding: 6px 12px;
+  }
+
+  .ui-stats__value {
+    font-size: 22px;
+  }
+
+  .ui-stats__label {
+    font-size: 11px;
+  }
+
+  .ui-end__actions {
+    flex-flow: row wrap;
+    justify-content: center;
+    gap: 8px 24px;
+  }
+
+  .ui-end .ui-button {
+    width: auto;
+    min-width: 180px;
+    min-height: 48px;
+  }
+}
+
 /* Touch screens: menus are touched, no key is shown, the HUD gets a pause button, and the game
    always fires and aims by itself, so its switches do not show. */
 

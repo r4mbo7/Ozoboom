@@ -40,4 +40,19 @@ test.describe('a phone held sideways', () => {
     await expect(page.locator('.ui-skill__status')).toHaveText('Prête');
     await expectWholeIn(page.locator('.ui-skill__name, .ui-skill__status'), '.ui-hud__bar');
   });
+
+  for (const screen of ['upgrade', 'fusion', 'relics', 'won']) {
+    test(`shows the whole ${screen} screen without scrolling`, async ({ page }) => {
+      await page.goto(`/dev/ui.html?screen=${screen}`);
+      const menu = page.locator('.ui-upgrade:not([hidden]), .ui-end:not([hidden])');
+      await expect(menu.locator('button').first()).toBeVisible();
+
+      const overflow = await menu.evaluate((node) => ({
+        x: node.scrollWidth - node.clientWidth,
+        y: node.scrollHeight - node.clientHeight,
+      }));
+
+      expect(overflow).toEqual({ x: 0, y: 0 });
+    });
+  }
 });
