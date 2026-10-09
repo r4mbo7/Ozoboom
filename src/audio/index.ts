@@ -65,7 +65,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const repeat = options.repeat ?? everyPump;
   let track = options.track ?? SOIREE_OUVERTURE;
   let running: Running | null = null;
-  let starting: Promise<void> | null = null;
   let muted = false;
   let volume = 1;
   let latest: SimState | null = null;
@@ -123,10 +122,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     applyMood();
   };
 
-  const begin = async () => {
+  const open = (): Running => {
     const context = (options.createContext ?? (() => new AudioContext()))();
     const master = createMasterChain(context, muted, volume);
-    running = {
+    return {
       context,
       master,
       music: createMusic(master.music, {
@@ -137,16 +136,19 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       sfx: createSfx(master.sfx, trapEffectOf, options.sfxLookups, track),
       ambience: createAmbience(master.music),
     };
-    applyMood();
-    if (context instanceof AudioContext) {
-      await context.resume();
-    }
   };
 
   return {
     start() {
-      starting ??= begin();
-      return starting;
+      if (running === null) {
+        running = open();
+        applyMood();
+      }
+      // A context opened before any gesture stays suspended: the next start, from a gesture, resumes it.
+      const { context } = running;
+      return context instanceof AudioContext && context.state !== 'running'
+        ? context.resume()
+        : Promise.resolve();
     },
     update(state) {
       if (running === null || isRealtimeStalled(running.context)) {
@@ -194,7 +196,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         void running.context.close();
       }
       running = null;
-      starting = null;
       latest = null;
     },
   };
