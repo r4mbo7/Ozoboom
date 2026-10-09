@@ -15,15 +15,17 @@ export interface GroundWave {
   phase: number;
   hue: number;
   saturation: number;
+  blend: number;
 }
 
-// The waves and the saturation follow the filter; the hue cycles, except in the calm mode where it holds still.
+// The waves, the saturation and the share of shifted hue follow the filter; the hue cycles, except in the calm mode where it holds still.
 export function groundWave(intensity: number, calm: boolean, now: number): GroundWave {
   return {
     amplitude: AMPLITUDE_PX * intensity,
     phase: now * WAVE_RADIANS_PER_TICK * (calm ? CALM.waveSpeed : 1),
     hue: calm ? CALM.hue * intensity : now * HUE_RADIANS_PER_TICK,
     saturation: 1 + SATURATION_BOOST * intensity,
+    blend: intensity,
   };
 }
 
@@ -63,7 +65,8 @@ void main(void) {
   float i = dot(rgb, vec3(0.596, -0.274, -0.322));
   float q = dot(rgb, vec3(0.211, -0.523, 0.312));
   vec2 chroma = vec2(i * turn.x - q * turn.y, i * turn.y + q * turn.x) * uWave.z;
-  rgb = clamp(vec3(y + 0.956 * chroma.x + 0.621 * chroma.y, y - 0.272 * chroma.x - 0.647 * chroma.y, y - 1.106 * chroma.x + 1.703 * chroma.y), 0.0, 1.0);
+  vec3 shifted = clamp(vec3(y + 0.956 * chroma.x + 0.621 * chroma.y, y - 0.272 * chroma.x - 0.647 * chroma.y, y - 1.106 * chroma.x + 1.703 * chroma.y), 0.0, 1.0);
+  rgb = mix(rgb, shifted, uWave.w);
   finalColor = vec4(rgb * color.a, color.a);
 }
 `;
@@ -100,6 +103,7 @@ export function createGroundWaves(ctx: RenderContext): Family {
       wave[0] = params.amplitude;
       wave[1] = params.phase;
       wave[2] = params.saturation;
+      wave[3] = params.blend;
       hue[0] = params.hue;
       filter.padding = params.amplitude;
       const scale = world.scale.x;

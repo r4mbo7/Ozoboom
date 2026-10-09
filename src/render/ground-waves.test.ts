@@ -17,6 +17,12 @@ describe('groundWave', () => {
     expect(half.saturation).toBeLessThan(full.saturation);
   });
 
+  it('blends the hue shift in with the intensity, so it rises and falls with the drop', () => {
+    expect(groundWave(0, false, 100).blend).toBe(0);
+    expect(groundWave(0.25, false, 100).blend).toBe(0.25);
+    expect(groundWave(1, true, 100).blend).toBe(1);
+  });
+
   it('cycles the hue over time', () => {
     expect(groundWave(1, false, 200).hue).not.toBe(groundWave(1, false, 100).hue);
   });
