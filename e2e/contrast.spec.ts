@@ -11,7 +11,8 @@ import { LOBBY_FIXTURES } from '../src/ui/lobby-fixtures';
 
 const MOMENTS = Object.keys(SUN_PALETTES) as SunMoment[];
 // The set blends one moment into the next: the dawn and the dusk are where a blend can dip.
-const BLENDS = [0.125, 0.43, 0.725, 0.925];
+// 0.885 is the peak of the second drop, whose ground waves in saturation and hue at constant lightness.
+const BLENDS = [0.125, 0.43, 0.725, 0.885, 0.925];
 const SKIES: { label: string; param: string; fraction: number | null }[] = [
   ...MOMENTS.map((moment) => ({ label: moment, param: moment, fraction: null })),
   ...BLENDS.map((fraction) => ({

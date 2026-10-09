@@ -53,7 +53,7 @@ export function createDropTrails(pixi: Renderer, layers: Layers) {
 
   function allocate(width: number, height: number): void {
     release();
-    const options = { width, height, resolution: pixi.resolution * BUFFER_SCALE };
+    const options = { width, height, resolution: BUFFER_SCALE };
     buffers = [RenderTexture.create(options), RenderTexture.create(options)];
     capture = RenderTexture.create(options);
     size = { width, height };
@@ -63,15 +63,18 @@ export function createDropTrails(pixi: Renderer, layers: Layers) {
     pixi.render({ container: new Container(), target, clear: true });
   }
 
+  const shown: boolean[] = [];
+
   function drawSources(world: Container, target: RenderTexture): void {
-    const shown = world.children.map((child) => child.visible);
-    world.children.forEach((child) => {
+    const { children } = world;
+    for (const [index, child] of children.entries()) {
+      shown[index] = child.visible;
       child.visible = child.visible && sources.has(child);
-    });
+    }
     pixi.render({ container: world, target, clear: true });
-    world.children.forEach((child, index) => {
+    for (const [index, child] of children.entries()) {
       child.visible = shown[index] ?? true;
-    });
+    }
   }
 
   return {

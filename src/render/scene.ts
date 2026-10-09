@@ -21,6 +21,7 @@ import { createEffects } from './effects';
 import { createEnemies } from './enemies';
 import { type Frame, advanceFrame, createFrame } from './frame';
 import { createGround } from './ground';
+import { createGroundWaves } from './ground-waves';
 import { type Layers, applyLight, createLayers } from './layers';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { isPaletteToken } from './palette';
@@ -121,6 +122,7 @@ export class Scene implements Renderer {
     const enemies = createEnemies(ctx);
     this.families = [
       createGround(ctx),
+      createGroundWaves(ctx),
       createSpeakers(ctx),
       createCore(ctx),
       traps,
