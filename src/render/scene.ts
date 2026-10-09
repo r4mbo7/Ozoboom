@@ -16,6 +16,7 @@ import { createBystanders } from './bystanders';
 import type { Family, RenderContent, RenderContext } from './context';
 import { createCore } from './core';
 import { createClassEffects } from './class-effects';
+import { createDropTrails } from './drop-trails';
 import { createEffects } from './effects';
 import { createEnemies } from './enemies';
 import { type Frame, advanceFrame, createFrame } from './frame';
@@ -66,6 +67,7 @@ export class Scene implements Renderer {
   private readonly layers: Layers;
   private readonly frame: Frame = createFrame();
   private readonly families: readonly Family[];
+  private readonly dropTrails: ReturnType<typeof createDropTrails>;
 
   private lastState: SimState | null = null;
   private lastTick = -1;
@@ -91,6 +93,7 @@ export class Scene implements Renderer {
     this.sets = new Map(content.sets.map((set) => [set.id, set]));
     this.camera = frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, width, height);
     this.layers = createLayers(this.stage);
+    this.dropTrails = createDropTrails(pixi, this.layers);
 
     const ctx: RenderContext = {
       textures: this.textures,
@@ -170,6 +173,7 @@ export class Scene implements Renderer {
     for (const family of this.families) {
       family.update(state, alpha, frame);
     }
+    this.dropTrails.update(frame, this.camera.screenWidth, this.camera.screenHeight);
     this.pixi.render(this.stage);
   }
 
@@ -190,6 +194,7 @@ export class Scene implements Renderer {
     for (const family of this.families) {
       family.destroy();
     }
+    this.dropTrails.destroy();
     this.stage.destroy({ children: true });
     destroyTextures(this.textures);
     this.pixi.destroy({ removeView: true, releaseGlobalResources: true });

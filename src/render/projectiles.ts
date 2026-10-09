@@ -22,8 +22,8 @@ export function createProjectiles(ctx: RenderContext): Family {
   );
   const lightShots = new ViewPool<ShotView>(
     () => ({
-      outline: add(layers.fx, t.streak, STREAK_HEAD),
-      trail: add(layers.fx, t.streak, STREAK_HEAD),
+      outline: add(layers.shots, t.streak, STREAK_HEAD),
+      trail: add(layers.shots, t.streak, STREAK_HEAD),
     }),
     (view) => {
       hide(view.trail, view.outline);

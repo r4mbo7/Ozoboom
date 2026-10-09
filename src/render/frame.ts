@@ -2,6 +2,7 @@ import { type Light, lightAt, paletteAt } from '../shared/palette';
 import type { SetDefinition } from '../data/types';
 import { setFraction } from '../sim/lineup';
 import type { SimState } from '../sim/state';
+import { dropFilterIntensity } from './drop-filter';
 import { type Camera, frameCamera } from './camera';
 import { type PixiPalette, createPixiPalette, writePixiPalette } from './palette';
 
@@ -14,6 +15,7 @@ export interface Frame {
   calm: boolean;
   pulse: number;
   flashTick: number;
+  dropFilter: number;
   camera: Camera;
 }
 
@@ -26,12 +28,14 @@ export function createFrame(): Frame {
     calm: false,
     pulse: 0,
     flashTick: Number.NEGATIVE_INFINITY,
+    dropFilter: 0,
     camera: frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, 0, 0),
   };
 }
 
 export function advanceFrame(frame: Frame, set: SetDefinition, state: SimState, alpha: number) {
   frame.now = state.tick + alpha;
+  frame.dropFilter = dropFilterIntensity(state, frame.now);
   const fraction = setFraction(set, state);
   if (fraction !== frame.fraction) {
     frame.fraction = fraction;
