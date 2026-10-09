@@ -97,7 +97,7 @@ test('Space does nothing in any menu, even after a click on a button', async ({ 
   await expect(attach).toHaveAttribute('aria-checked', 'false');
   await expectSpaceIgnored(page);
   const field = form.getByRole('textbox', { name: 'Ton avis' });
-  await field.click();
+  await clickAndLeave(page, field);
   await page.keyboard.type('deux mots');
   await expect(field).toHaveValue('deux mots');
   await press(page, 'Escape');

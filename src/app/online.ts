@@ -99,8 +99,11 @@ function refusalText(reason: RefusalReason): string {
   }
 }
 
-function connectionText(error: unknown): string {
+export function connectionText(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
+  if (message.includes('networks cannot reach each other')) {
+    return 'Le salon existe, mais vos réseaux n’arrivent pas à se joindre';
+  }
   if (message.includes('no room with the code')) {
     return 'Aucun salon ne porte ce code';
   }

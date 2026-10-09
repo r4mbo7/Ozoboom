@@ -112,8 +112,18 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
     }
   };
 
+  const unreachable = (cause?: unknown): Error =>
+    new Error(`the room ${options.code} exists but the networks cannot reach each other`, {
+      cause,
+    });
+  let iceStarted = false;
+
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
+      if (iceStarted) {
+        reject(unreachable());
+        return;
+      }
       reject(
         new Error(
           options.role === 'host'
@@ -169,8 +179,18 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
           connections.set(connection.peer, connection);
           settle();
         });
+        // The host answered once ICE starts checking: a failure past that point is the network path.
+        connection.on('iceStateChanged', (state) => {
+          if (state !== 'new') {
+            iceStarted = true;
+          }
+        });
         connection.on('error', (error) => {
-          settle(describeError(`room ${options.code}`, error));
+          settle(
+            error.type === 'negotiation-failed'
+              ? unreachable(error)
+              : describeError(`room ${options.code}`, error),
+          );
         });
         connection.on('close', () => {
           settle(new Error(`the room ${options.code} closed the connection`));
