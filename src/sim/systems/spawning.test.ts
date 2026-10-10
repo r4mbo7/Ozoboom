@@ -359,3 +359,44 @@ describe('sided waves', () => {
     }
   });
 });
+
+describe('spawning with obstacles', () => {
+  const OBSTACLES = [
+    { x: 800, y: 150, radius: 150 },
+    { x: 150, y: 450, radius: 150 },
+    { x: 1450, y: 450, radius: 150 },
+    { x: 800, y: 750, radius: 150 },
+  ];
+  const options: SimulationOptions = {
+    ...FIXTURE_OPTIONS,
+    content: { ...FIXTURE_CONTENT, sets: [{ ...WAVES, obstacles: OBSTACLES }] },
+  };
+
+  it('keeps every spawn out of the obstacles', () => {
+    const simulation = peaceful(createSimulation(options));
+
+    const recorded = stepAndRecord(simulation, 3 * TICKS_PER_PHRASE - 1);
+
+    const spawns = recorded.flatMap(({ event }) => (event.type === 'enemySpawned' ? [event] : []));
+    expect(spawns.length).toBeGreaterThan(30);
+    for (const spawn of spawns) {
+      for (const obstacle of OBSTACLES) {
+        const gap =
+          Math.sqrt(
+            (spawn.x - obstacle.x) * (spawn.x - obstacle.x) +
+              (spawn.y - obstacle.y) * (spawn.y - obstacle.y),
+          ) - obstacle.radius;
+        expect(gap).toBeGreaterThanOrEqual(10);
+      }
+    }
+  });
+
+  it('places the same spawns for the same seed', () => {
+    const run = () =>
+      stepAndRecord(peaceful(createSimulation(options)), TICKS_PER_PHRASE).filter(
+        ({ event }) => event.type === 'enemySpawned',
+      );
+
+    expect(run()).toEqual(run());
+  });
+});

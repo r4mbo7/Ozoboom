@@ -91,6 +91,26 @@ export function resolveContent(content: GameContent): ResolvedContent {
         lookup(resolved.bystanders, spawn.bystanderId, `spawned bystander of ${where}`);
       }
     });
+    for (const obstacle of set.obstacles ?? []) {
+      const where = `obstacle (${String(obstacle.x)}, ${String(obstacle.y)}) of set "${set.id}"`;
+      const { width, height } = set.arena;
+      if (
+        obstacle.x - obstacle.radius < 0 ||
+        obstacle.y - obstacle.radius < 0 ||
+        obstacle.x + obstacle.radius > width ||
+        obstacle.y + obstacle.radius > height
+      ) {
+        throw new Error(`${where} leaves the arena`);
+      }
+      if (circlesOverlap(obstacle, { x: width / 2, y: height / 2, radius: set.core.radius })) {
+        throw new Error(`${where} overlaps the core`);
+      }
+      for (const speaker of set.speakers ?? []) {
+        if (circlesOverlap(obstacle, speaker)) {
+          throw new Error(`${where} overlaps speaker "${speaker.id}"`);
+        }
+      }
+    }
     for (const speaker of set.speakers ?? []) {
       if (speaker.unlocksWeaponId !== undefined) {
         lookup(
@@ -111,6 +131,16 @@ export function lookup<T>(table: ReadonlyMap<string, T>, id: string, what: strin
     throw new Error(`unknown ${what}: "${id}"`);
   }
   return entry;
+}
+
+function circlesOverlap(
+  a: { x: number; y: number; radius: number },
+  b: { x: number; y: number; radius: number },
+): boolean {
+  const reach = a.radius + b.radius;
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return dx * dx + dy * dy < reach * reach;
 }
 
 function requirePositive(value: number | undefined, what: string): void {

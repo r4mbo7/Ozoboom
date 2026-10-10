@@ -3,6 +3,7 @@ import { nextFloat, nextInt, pick } from '../../shared/prng';
 import { BARS_PER_PHRASE, barOfTick, isBarTick, type Tempo } from '../../shared/tempo';
 import { lookup } from '../content';
 import { compound } from '../effects';
+import { clearOfObstacles } from '../obstacles';
 import { volumeMul } from '../volume';
 import type { Arena, EdgeSide, EnemyState, SimState, Vec2 } from '../state';
 import type { StepContext } from './types';
@@ -81,9 +82,10 @@ function spawnAtEdge(
   definition: EnemyDefinition,
   isBoss: boolean,
 ): void {
-  const { x, y } = isBoss
+  const edge = isBoss
     ? edgePosition(state.rng, state.arena, definition.radius)
     : ruleSpawnPosition(state, set, tempo, definition.radius);
+  const { x, y } = clearOfObstacles(edge, definition.radius, set.obstacles ?? []);
   spawnEnemy(state, definition, x, y, isBoss, perPlayerMul(state, set.perPlayer?.enemyHpMul));
 }
 

@@ -322,3 +322,29 @@ describe('replay', () => {
     expect(play()).toBe(play());
   });
 });
+
+describe('placed weapons and obstacles', () => {
+  const POLE = { x: 400, y: 450, radius: 60 };
+  const options: SimulationOptions = {
+    ...BYSTANDER_QUIET_OPTIONS,
+    content: {
+      ...BYSTANDER_QUIET_OPTIONS.content,
+      sets: BYSTANDER_QUIET_OPTIONS.content.sets.map((set) => ({ ...set, obstacles: [POLE] })),
+    },
+  };
+
+  it('plants a totem reaching into an obstacle on its edge', () => {
+    const { simulation, player } = armed('totem', options);
+    player.x = 400;
+    player.y = 360;
+    player.aim = { x: 0, y: 1 };
+
+    stepTo(simulation, TICKS_PER_BAR);
+
+    const [placed] = simulation.state.placed ?? [];
+    expect(placed).toBeDefined();
+    const dx = (placed?.x ?? 0) - POLE.x;
+    const dy = (placed?.y ?? 0) - POLE.y;
+    expect(Math.sqrt(dx * dx + dy * dy)).toBeGreaterThanOrEqual(POLE.radius - 1e-3);
+  });
+});

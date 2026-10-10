@@ -24,7 +24,7 @@ function onlyPlayer(simulation: Simulation): PlayerState {
 
 function walkUp(simulation: Simulation, player: PlayerState, ticks: number): void {
   player.x = 800;
-  player.y = 600;
+  player.y = 800;
   for (let i = 0; i < ticks; i++) {
     simulation.step([commandFor(0, { move: { x: 0, y: -1 } })]);
   }
@@ -35,7 +35,7 @@ const distance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
 
 describe('obstacles', () => {
   it('stop a player walking into a pole', () => {
-    const pole = { x: 800, y: 400, radius: 30 };
+    const pole = { x: 800, y: 600, radius: 30 };
     const simulation = withObstacles([pole]);
     const player = onlyPlayer(simulation);
 
@@ -50,14 +50,14 @@ describe('obstacles', () => {
     const radius = onlyPlayer(simulation).radius;
     const gap = 2 * radius + 20;
     const passing = withObstacles([
-      { x: 800 - gap / 2 - 30, y: 400, radius: 30 },
-      { x: 800 + gap / 2 + 30, y: 400, radius: 30 },
+      { x: 800 - gap / 2 - 30, y: 600, radius: 30 },
+      { x: 800 + gap / 2 + 30, y: 600, radius: 30 },
     ]);
     const player = onlyPlayer(passing);
 
     walkUp(passing, player, 100);
 
-    expect(player.y).toBeLessThan(400);
+    expect(player.y).toBeLessThan(600);
   });
 
   it('hold a bad vibe wider than the gap', () => {
@@ -66,12 +66,13 @@ describe('obstacles', () => {
     const radius = placeEnemy(probe.state, 'grump', 0, 0).radius;
     const gap = radius * 2 - 4;
     const wall: ObstacleDefinition[] = [];
-    for (let x = 30; x < 1600; x += 60) {
+    for (let x = 30; x < 1570; x += 60) {
       if (Math.abs(x - core.x) > gap / 2 + 30) {
         wall.push({ x, y: core.y - 150, radius: 30 });
       }
     }
     wall.push(
+      { x: 1570, y: core.y - 150, radius: 30 },
       { x: core.x - gap / 2 - 30, y: core.y - 150, radius: 30 },
       { x: core.x + gap / 2 + 30, y: core.y - 150, radius: 30 },
     );

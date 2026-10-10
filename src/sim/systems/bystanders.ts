@@ -1,9 +1,10 @@
-import type { BystanderDefinition } from '../../data/types';
+import type { BystanderDefinition, ObstacleDefinition } from '../../data/types';
 import { nextFloat } from '../../shared/prng';
 import { BARS_PER_PHRASE, isBarTick, type Tempo } from '../../shared/tempo';
 import { playerById } from '../damage';
 import { lookup, type ResolvedContent } from '../content';
 import { touches } from '../effects';
+import { clearOfObstacles } from '../obstacles';
 import type { BystanderState, SimState } from '../state';
 import { reviveMulOf } from './revive';
 import { edgePosition } from './spawning';
@@ -33,13 +34,19 @@ function spawnBystanders({ state, content, set, tempo }: StepContext): void {
     }
     const definition = lookup(content.bystanders, rule.bystanderId, 'bystander');
     for (let i = 0; i < rule.count; i++) {
-      spawnBystander(state, definition, tempo);
+      spawnBystander(state, definition, tempo, set.obstacles ?? []);
     }
   }
 }
 
-function spawnBystander(state: SimState, definition: BystanderDefinition, tempo: Tempo): void {
-  const { x, y } = edgePosition(state.rng, state.arena, definition.radius);
+function spawnBystander(
+  state: SimState,
+  definition: BystanderDefinition,
+  tempo: Tempo,
+  obstacles: readonly ObstacleDefinition[],
+): void {
+  const edge = edgePosition(state.rng, state.arena, definition.radius);
+  const { x, y } = clearOfObstacles(edge, definition.radius, obstacles);
   const { core } = state;
   const fraction = WANDER_FRACTION_MIN + nextFloat(state.rng) * WANDER_FRACTION_SPAN;
   const bystander: BystanderState = {

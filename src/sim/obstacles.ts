@@ -49,6 +49,18 @@ export function resolveObstacles(
   }
 }
 
+// The point itself moved out of every obstacle, to the edge of the nearest one: nothing is
+// drawn from the rng, so the same state always gives the same spot.
+export function clearOfObstacles(
+  point: { x: number; y: number },
+  radius: number,
+  obstacles: readonly ObstacleDefinition[],
+): { x: number; y: number } {
+  const circle = { x: point.x, y: point.y, radius };
+  resolveObstacles(circle, point.x, point.y, obstacles);
+  return { x: circle.x, y: circle.y };
+}
+
 export function touchesObstacle(circle: Circle, obstacles: readonly ObstacleDefinition[]): boolean {
   return overlaps(circle.x, circle.y, circle.radius, obstacles, 0);
 }

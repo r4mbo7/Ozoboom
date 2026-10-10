@@ -5,7 +5,7 @@ import type { WeaponModule } from './types';
 const PLANT_GAP = 40;
 
 export const totem: WeaponModule = {
-  fire({ state, tempo }, player, slot, { effect }, { direction }) {
+  fire({ state, set, tempo }, player, slot, { effect }, { direction }) {
     if (effect.kind !== 'totem') {
       return;
     }
@@ -22,6 +22,7 @@ export const totem: WeaponModule = {
       effect.radius,
       effect.durationBars * tempo.ticksPerBar,
       1,
+      set.obstacles,
     );
   },
 };

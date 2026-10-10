@@ -3,6 +3,7 @@ import type { GameContent, SetDefinition } from '../../data/types';
 import { TICKS_PER_BAR } from '../../shared/tempo';
 import {
   BYSTANDER_CONTENT,
+  BYSTANDER_SET,
   BYSTANDER_OPTIONS,
   BYSTANDER_QUIET_CONTENT,
   FIXTURE_CARER,
@@ -314,5 +315,37 @@ describe('bystanders and reviveMul', () => {
     simulation.step([]);
 
     expect(state.bystanders).toEqual([]);
+  });
+});
+
+describe('bystanders with obstacles', () => {
+  it('never spawn inside an obstacle', () => {
+    const obstacles = [
+      { x: 800, y: 150, radius: 150 },
+      { x: 150, y: 450, radius: 150 },
+      { x: 1450, y: 450, radius: 150 },
+      { x: 800, y: 750, radius: 150 },
+    ];
+    const simulation = createSimulation({
+      ...BYSTANDER_OPTIONS,
+      content: { ...BYSTANDER_CONTENT, sets: [{ ...BYSTANDER_SET, obstacles }] },
+    });
+
+    const recorded = stepAndRecord(simulation, 4 * TICKS_PER_BAR * 16);
+
+    const spawns = recorded.flatMap(({ event }) =>
+      event.type === 'bystanderSpawned' ? [event] : [],
+    );
+    expect(spawns.length).toBeGreaterThan(5);
+    for (const spawn of spawns) {
+      for (const obstacle of obstacles) {
+        const gap =
+          Math.sqrt(
+            (spawn.x - obstacle.x) * (spawn.x - obstacle.x) +
+              (spawn.y - obstacle.y) * (spawn.y - obstacle.y),
+          ) - obstacle.radius;
+        expect(gap).toBeGreaterThanOrEqual(FIXTURE_BYSTANDER.radius - 1e-3);
+      }
+    }
   });
 });

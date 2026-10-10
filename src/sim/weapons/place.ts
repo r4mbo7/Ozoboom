@@ -1,4 +1,6 @@
+import { clearOfObstacles } from '../obstacles';
 import type { PlayerState, SimState } from '../state';
+import type { ObstacleDefinition } from '../../data/types';
 
 // The oldest of the player's placed weapons of this kind makes room when `limit` is reached.
 export function place(
@@ -9,7 +11,9 @@ export function place(
   radius: number,
   ticksLeft: number,
   limit: number,
+  obstacles: readonly ObstacleDefinition[] = [],
 ): void {
+  const spot = clearOfObstacles(at, 0, obstacles);
   const placed = (state.placed ??= []);
   let mine = 0;
   for (const other of placed) {
@@ -39,13 +43,13 @@ export function place(
     id,
     weaponId,
     playerId: player.id,
-    x: at.x,
-    y: at.y,
-    prevX: at.x,
-    prevY: at.y,
+    x: spot.x,
+    y: spot.y,
+    prevX: spot.x,
+    prevY: spot.y,
     radius,
     ticksLeft,
     cooldown: 0,
   });
-  state.events.push({ type: 'placedSpawned', id, weaponId, x: at.x, y: at.y });
+  state.events.push({ type: 'placedSpawned', id, weaponId, x: spot.x, y: spot.y });
 }

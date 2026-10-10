@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { GameContent, SpecialEffect, TierDefinition, WeaponEffect } from '../data/types';
+import type {
+  GameContent,
+  SetDefinition,
+  SpecialEffect,
+  TierDefinition,
+  WeaponEffect,
+} from '../data/types';
 import { resolveContent } from './content';
 import { FIXTURE_CONTENT, FIXTURE_SET } from './fixtures';
 
@@ -253,5 +259,49 @@ describe('resolveContent co-op fields', () => {
 
     expect(() => resolveContent(withClass({ reviveMul: 2 }))).not.toThrow();
     expect(() => resolveContent(content)).not.toThrow();
+  });
+});
+
+describe('resolveContent obstacles', () => {
+  const withObstacles = (
+    obstacles: { x: number; y: number; radius: number }[],
+    speakers: NonNullable<SetDefinition['speakers']> = FIXTURE_SET.speakers ?? [],
+  ): GameContent => ({
+    ...FIXTURE_CONTENT,
+    sets: [{ ...FIXTURE_SET, obstacles, speakers }],
+  });
+
+  it('accepts obstacles clear of the core and the speakers', () => {
+    expect(() => resolveContent(withObstacles([{ x: 200, y: 200, radius: 50 }]))).not.toThrow();
+  });
+
+  it('rejects an obstacle leaving the arena', () => {
+    expect(() => resolveContent(withObstacles([{ x: 20, y: 200, radius: 50 }]))).toThrow(
+      /leaves the arena/,
+    );
+  });
+
+  it('rejects an obstacle overlapping the core', () => {
+    const { width, height } = FIXTURE_SET.arena;
+    expect(() =>
+      resolveContent(withObstacles([{ x: width / 2 + 60, y: height / 2, radius: 50 }])),
+    ).toThrow(/overlaps the core/);
+  });
+
+  it('rejects an obstacle overlapping a speaker', () => {
+    const speaker = {
+      id: 'wall',
+      name: 'Wall',
+      description: 'Wall',
+      x: 300,
+      y: 300,
+      radius: 40,
+      plugBars: 1,
+      aura: { kind: 'slow', radius: 100, factor: 0.5 },
+    } as unknown as NonNullable<SetDefinition['speakers']>[number];
+
+    expect(() =>
+      resolveContent(withObstacles([{ x: 330, y: 300, radius: 50 }], [speaker])),
+    ).toThrow(/overlaps speaker/);
   });
 });
