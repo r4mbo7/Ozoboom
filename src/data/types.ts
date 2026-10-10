@@ -11,7 +11,9 @@ export type StatKey =
   | 'skillPowerMul'
   | 'trapDamageMul'
   | 'trapRadiusMul'
-  | 'trapSlotsAdd';
+  | 'trapSlotsAdd'
+  | 'lootIntervalMul'
+  | 'lootRadiusMul';
 
 export interface StatModifier {
   stat: StatKey;

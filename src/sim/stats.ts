@@ -25,6 +25,8 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   trapDamageMul: false,
   trapRadiusMul: false,
   trapSlotsAdd: true,
+  lootIntervalMul: false,
+  lootRadiusMul: false,
 };
 
 export function statValue(

@@ -100,6 +100,28 @@ describe('loot carriers', () => {
   });
 });
 
+describe('loot upgrades', () => {
+  it('bring carriers sooner when any player has the talkie-walkie', () => {
+    const { simulation, player } = game(2);
+    player.modifiers.lootIntervalMul = 0.5;
+
+    until(simulation, 2 * TICKS_PER_BAR);
+
+    expect(simulation.state.enemies.filter((enemy) => enemy.carriesLoot === true)).toHaveLength(2);
+  });
+
+  it('let the player with the banane pick loots up from further', () => {
+    const { simulation, player } = game();
+    player.hand = [];
+    player.modifiers.lootRadiusMul = 2;
+    lootAt(simulation, player.x + player.radius + 2 * 16 - 1, player.y);
+
+    stepAndRecord(simulation, 1);
+
+    expect(player.hand).toEqual([{ trapId: 'beam' }]);
+  });
+});
+
 describe('loots', () => {
   it('go to the hand of the first player who touches them with a free hand', () => {
     const { simulation, player } = game();
@@ -177,7 +199,7 @@ describe('loot replay', () => {
 
     expect(types).toContain('lootDropped');
     expect(types).toContain('lootCollected');
-    expect(hashState(simulation.state)).toBe('8b06094d');
+    expect(hashState(simulation.state)).toBe('78c79e60');
   });
 });
 

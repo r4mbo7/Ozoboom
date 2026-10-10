@@ -341,7 +341,8 @@ export interface SimState {
   loots?: LootState[];
   // Loots dropped so far: the first one holds `LootRules.first`.
   lootsDropped?: number;
-  // A loot bar went by and no bad vibe carries its loot yet.
+  // The bar a loot falls due next, then whether no bad vibe carries it yet.
+  nextLootBar?: number;
   lootDue?: boolean;
   volume?: number;
   speakers?: SpeakerState[];

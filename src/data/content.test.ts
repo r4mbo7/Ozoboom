@@ -229,10 +229,10 @@ describe('CONTENT circus weapons, rarities and relics', () => {
     },
   );
 
-  it('keeps a single entry per upgrade, eleven of them besides the relics', () => {
+  it('keeps a single entry per upgrade, thirteen of them besides the relics', () => {
     const ids = upgrades.map((upgrade) => upgrade.id);
 
-    expect(upgrades.filter((upgrade) => upgrade.family !== 'relic')).toHaveLength(11);
+    expect(upgrades.filter((upgrade) => upgrade.family !== 'relic')).toHaveLength(13);
     expect(ids.filter((id) => /-(rare|legendaire)$/.test(id))).toEqual([]);
     expect(upgrades.filter((upgrade) => upgrade.family === 'relic' && upgrade.rarities)).toEqual(
       [],
@@ -635,7 +635,7 @@ describe('V0.1 scope', () => {
       family('class').filter((upgrade) => upgrade.classId === 'mage').length,
     ).toBeGreaterThanOrEqual(4);
     expect(family('generic').length).toBeGreaterThanOrEqual(5);
-    expect(family('defense').length).toBeGreaterThanOrEqual(2);
+    expect(family('defense').length).toBeGreaterThanOrEqual(3);
   });
 
   it('has the soiree-v0 set at 145 BPM with two tiers of four phrases and a four bar break', () => {

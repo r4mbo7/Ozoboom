@@ -194,6 +194,42 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
     maxStacks: 4,
   },
   {
+    id: 'talkie-walkie',
+    name: 'Talkie-walkie',
+    description: 'Tu fais venir les porteurs de loot plus souvent.',
+    family: 'defense',
+    modifiers: [{ stat: 'lootIntervalMul', mul: 0.85 }],
+    rarities: {
+      rare: {
+        description: 'Tu fais venir les porteurs de loot bien plus souvent.',
+        modifiers: [{ stat: 'lootIntervalMul', mul: 0.7 }],
+      },
+      legendary: {
+        description: 'Tu fais venir les porteurs de loot deux fois plus souvent.',
+        modifiers: [{ stat: 'lootIntervalMul', mul: 0.55 }],
+      },
+    },
+    maxStacks: 3,
+  },
+  {
+    id: 'banane',
+    name: 'Banane',
+    description: 'Tu ramasses les loots de plus loin.',
+    family: 'defense',
+    modifiers: [{ stat: 'lootRadiusMul', mul: 1.5 }],
+    rarities: {
+      rare: {
+        description: 'Tu ramasses les loots de bien plus loin.',
+        modifiers: [{ stat: 'lootRadiusMul', mul: 2 }],
+      },
+      legendary: {
+        description: 'Tu ramasses les loots de très loin.',
+        modifiers: [{ stat: 'lootRadiusMul', mul: 3 }],
+      },
+    },
+    maxStacks: 3,
+  },
+  {
     id: 'rallonge',
     name: 'Rallonge',
     description: 'Tu peux poser un piège de plus.',
@@ -237,11 +273,12 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'cable-d-or',
     name: "Câble d'or",
-    description: 'Tes pièges frappent plus fort et plus loin.',
+    description: 'Tes pièges frappent fort et loin, et tes loots abondent.',
     family: 'relic',
     modifiers: [
       { stat: 'trapDamageMul', mul: 1.3 },
       { stat: 'trapRadiusMul', mul: 1.2 },
+      { stat: 'lootIntervalMul', mul: 0.8 },
     ],
     maxStacks: 1,
   },

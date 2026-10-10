@@ -2,18 +2,29 @@ import type { TrapDefinition } from '../../data/types';
 import { type RngState, nextFloat } from '../../shared/prng';
 import { barOfTick, isBarTick } from '../../shared/tempo';
 import { touches } from '../effects';
+import { statValue } from '../stats';
 import type { StepContext } from './types';
 
-// Every `everyBars` bars a loot falls due; the first bad vibe to spawn from then on, boss aside,
-// carries it.
+// Every `everyBars` bars, fewer with the talkie-walkie of any player, a loot falls due; the first
+// bad vibe to spawn from then on, boss aside, carries it.
 export function lootCarriers({ state, set, tempo }: StepContext): void {
   const rules = set.loot;
   if (rules === undefined) {
     return;
   }
   const bar = barOfTick(state.tick, tempo);
-  if (isBarTick(state.tick, tempo) && bar > 0 && bar % rules.everyBars === 0) {
+  const interval = Math.max(
+    1,
+    Math.ceil(
+      state.players.reduce(
+        (bars, player) => statValue(player, 'lootIntervalMul', bars),
+        rules.everyBars,
+      ),
+    ),
+  );
+  if (isBarTick(state.tick, tempo) && bar >= (state.nextLootBar ?? interval)) {
     state.lootDue = true;
+    state.nextLootBar = bar + interval;
   }
   if (state.lootDue !== true) {
     return;
@@ -76,7 +87,7 @@ export function loots({ state, set }: StepContext): void {
       (player) =>
         !player.downed &&
         (player.hand?.length ?? 0) < set.handSize &&
-        touches(player, loot, rules.radius),
+        touches(player, loot, statValue(player, 'lootRadiusMul', rules.radius)),
     );
     if (taker !== undefined) {
       (taker.hand ??= []).push({ trapId: loot.trapId });
