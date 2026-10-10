@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   BARS_PER_PHRASE,
-  DEFAULT_BPM,
   TICKS_PER_BAR,
+  TICKS_PER_BEAT,
   TICKS_PER_PHRASE,
   TICK_RATE_HZ,
+  tempoOf,
 } from '../shared/tempo';
 import { CONTENT } from './content';
 import type { TierDefinition } from './types';
@@ -373,7 +374,7 @@ describe('CONTENT numbers', () => {
 
 describe.each(sets)('set $id', (set) => {
   it('runs on the tick grid tempo', () => {
-    expect(set.bpm).toBe(DEFAULT_BPM);
+    expect(set.bpm).toBeCloseTo(tempoOf(set.ticksPerBeat ?? TICKS_PER_BEAT).bpm, 9);
   });
 
   it('has positive dimensions, core, economy and level curve', () => {

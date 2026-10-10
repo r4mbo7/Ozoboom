@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SETS } from '../data/sets';
 import type { SetDefinition } from '../data/types';
-import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
+import { MAIN_TEMPO, TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
 import { FIXTURE_CONTENT, FIXTURE_OPTIONS, FIXTURE_SET, peaceful } from './fixtures';
 import { createSimulation } from './index';
 import {
@@ -10,6 +10,7 @@ import {
   lineupSlots,
   setFraction,
   setOf,
+  setTempo,
   ticksToDrop,
 } from './lineup';
 import type { GameStatus, SetSegment } from './state';
@@ -51,6 +52,18 @@ describe('setOf', () => {
 
   it('rejects a set the content does not have', () => {
     expect(() => setOf(FIXTURE_CONTENT, 'nope')).toThrow('unknown set "nope"');
+  });
+});
+
+describe('setTempo', () => {
+  it('plays a set without its own beat at the main stage tempo', () => {
+    expect(setTempo(set)).toEqual(MAIN_TEMPO);
+  });
+
+  it('plays a set at the beat length it gives', () => {
+    const dome: SetDefinition = { ...set, ticksPerBeat: 18 };
+
+    expect(setTempo(dome).ticksPerBar).toBe(72);
   });
 });
 

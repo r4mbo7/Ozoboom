@@ -265,10 +265,29 @@ export interface LootRules {
   first: string;
 }
 
+// How a stage is drawn. Absent means 'lake', the main stage.
+export type DecorId = 'lake' | 'dome';
+
+// A round obstacle of the stage: it blocks players, bad vibes and shots.
+export interface ObstacleDefinition {
+  x: number;
+  y: number;
+  radius: number;
+}
+
 export interface SetDefinition {
   id: string;
   name: string;
+  // Must equal the tempo of `ticksPerBeat` (`tempoOf`).
   bpm: number;
+  // Length of the stage's beat in ticks, the tick rate staying the same (ADR 0012). Absent means 12.
+  ticksPerBeat?: number;
+  decor?: DecorId;
+  obstacles?: readonly ObstacleDefinition[];
+  // The tracks this stage draws from. Absent means every track.
+  trackIds?: readonly string[];
+  // The stage's room reverb. Absent means a dry stage.
+  acoustics?: { reverbSeconds: number; wet: number };
   arena: { width: number; height: number };
   core: { radius: number; maxHp: number };
   // Traps a player carries at most, and those each player starts the game with.
@@ -358,6 +377,19 @@ export interface MusicPart {
   slides?: readonly number[];
 }
 
+export type DrumVoiceId =
+  'kick' | 'snare' | 'rim' | 'clap' | 'hat' | 'shaker' | 'doum' | 'tek' | 'frame-drum' | 'rattle';
+
+// One drum of a track's own kit: [sixteenth within the loop, gain] hits, gated by its layer.
+export interface DrumPart {
+  voice: DrumVoiceId;
+  layer: MusicLayer;
+  loopSteps: number;
+  hits: readonly (readonly [step: number, gain: number])[];
+  // From -1 (left) to 1 (right). Absent means centred.
+  pan?: number;
+}
+
 // A background track. Every track plays at the set's tempo and follows its buildups, breaks and
 // drops; the effects and the speaker layers play in its key.
 export interface MusicTrack {
@@ -373,4 +405,6 @@ export interface MusicTrack {
   // Hz the pad's filter opens by at each bar of the break.
   padOpens?: number;
   parts: readonly MusicPart[];
+  // Replaces the engine's kick and hats. Absent means the current kit.
+  drums?: readonly DrumPart[];
 }

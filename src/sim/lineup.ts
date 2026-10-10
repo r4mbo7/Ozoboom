@@ -1,5 +1,11 @@
 import type { GameContent, SetDefinition, TierDefinition } from '../data/types';
-import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
+import {
+  TICKS_PER_BAR,
+  TICKS_PER_BEAT,
+  TICKS_PER_PHRASE,
+  tempoOf,
+  type Tempo,
+} from '../shared/tempo';
 import type { GameStatus, SetProgress } from './state';
 
 const DROP_RAMP_TICKS = 4 * TICKS_PER_BAR;
@@ -29,6 +35,10 @@ export function setOf(content: GameContent, setId: string): SetDefinition {
     throw new Error(`unknown set "${setId}"`);
   }
   return set;
+}
+
+export function setTempo(set: SetDefinition): Tempo {
+  return tempoOf(set.ticksPerBeat ?? TICKS_PER_BEAT);
 }
 
 export function lineupSlots(set: SetDefinition): LineupSlot[] {

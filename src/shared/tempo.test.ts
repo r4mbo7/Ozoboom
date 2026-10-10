@@ -13,7 +13,9 @@ import {
   isBarTick,
   isBeatTick,
   isPhraseTick,
+  MAIN_TEMPO,
   phraseOfTick,
+  tempoOf,
 } from './tempo';
 
 describe('beatPeriodMs', () => {
@@ -58,5 +60,45 @@ describe('tick grid', () => {
     expect(isPhraseTick(TICKS_PER_BAR)).toBe(false);
     expect(isPhraseTick(TICKS_PER_PHRASE - 1)).toBe(false);
     expect(isPhraseTick(TICKS_PER_PHRASE)).toBe(true);
+  });
+});
+
+describe('tempoOf', () => {
+  it('keeps the main stage on the default grid', () => {
+    expect(MAIN_TEMPO).toEqual({
+      ticksPerBeat: TICKS_PER_BEAT,
+      ticksPerBar: TICKS_PER_BAR,
+      ticksPerPhrase: TICKS_PER_PHRASE,
+      bpm: DEFAULT_BPM,
+    });
+  });
+
+  it('slows the Dome to two thirds of the main stage on the same tick', () => {
+    const dome = tempoOf(18);
+
+    expect(dome.ticksPerBar).toBe(72);
+    expect(dome.ticksPerPhrase).toBe(1152);
+    expect(dome.bpm).toBeCloseTo(96.67, 2);
+    expect(dome.bpm / DEFAULT_BPM).toBeCloseTo(2 / 3, 9);
+  });
+
+  it('counts beats, bars and phrases on the given tempo', () => {
+    const dome = tempoOf(18);
+    const tick = 1152 + 72 * 2 + 18 + 3;
+
+    expect([beatOfTick(tick, dome), barOfTick(tick, dome), phraseOfTick(tick, dome)]).toEqual([
+      73, 18, 1,
+    ]);
+    expect([isBeatTick(36, dome), isBarTick(72, dome), isPhraseTick(1152, dome)]).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect([isBeatTick(24, dome), isBarTick(48, dome)]).toEqual([false, false]);
+  });
+
+  it('rejects a beat that is not a whole number of ticks', () => {
+    expect(() => tempoOf(0)).toThrow(RangeError);
+    expect(() => tempoOf(12.5)).toThrow(RangeError);
   });
 });

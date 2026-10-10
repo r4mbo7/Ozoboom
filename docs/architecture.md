@@ -8,12 +8,12 @@ Les choix ci-dessous découlent des piliers de `vision.md`. Les décisions coût
 2. **Le rendu lit l'état, il ne l'écrit jamais.** Il interpole entre deux ticks pour rester fluide à n'importe quelle fréquence d'écran.
 3. **Les entrées sont abstraites.** Clavier, souris, manette et tactile produisent les mêmes intentions (déplacement, visée, tirer, poser, choisir, naviguer), transformées en commandes par tick. L'interface se pilote avec ces mêmes intentions.
 4. **Le contenu est de la donnée.** Classes, ennemis, pièges, améliorations, sets et courbes vivent dans `src/data/` sous forme d'objets TypeScript typés, pas dans la logique. Équilibrer, c'est éditer une table.
-5. **Un seul temps musical.** `src/shared/tempo.ts` convertit ticks, temps, mesures et phrases. Les événements rythmiques dérivent du compteur de ticks, l'audio se cale dessus par le planificateur de la Web Audio API.
+5. **Un seul pas, un tempo par scène.** `src/shared/tempo.ts` convertit ticks, temps, mesures et phrases selon le `Tempo` du set joué (`setTempo`, ADR 0012). Les événements rythmiques dérivent du compteur de ticks, l'audio se cale dessus par le planificateur de la Web Audio API.
 6. **Le budget de performance est une exigence.** Plusieurs centaines d'entités à 60 images par seconde sur un portable sans carte dédiée et un téléphone de milieu de gamme. Chargement initial sous 2 Mo compressés. Mesurer avant d'optimiser, et garder la boucle chaude sans allocation inutile.
 
 ## Le tick est une subdivision du temps musical
 
-Un temps à 145 BPM vaut 12 ticks, donc la simulation tourne à **29 Hz** (`TICK_RATE_HZ`), une mesure vaut 48 ticks et une phrase 768. Temps, mesures, phrases et drops tombent sur des ticks entiers : aucune dérive, aucun flottant dans le rythme. Le rendu, lui, tourne à la fréquence de l'écran et interpole. Les constantes sont dans `src/shared/tempo.ts`.
+Un temps à 145 BPM vaut 12 ticks, donc la simulation tourne à **29 Hz** (`TICK_RATE_HZ`), une mesure vaut 48 ticks et une phrase 768. Chaque set peut allonger son temps (`SetDefinition.ticksPerBeat`) : le Dome en compte 18, soit 96,7 BPM, au même pas de 29 Hz. Temps, mesures, phrases et drops tombent sur des ticks entiers : aucune dérive, aucun flottant dans le rythme. Les durées écrites en ticks dans les données restent en temps réel. Le rendu, lui, tourne à la fréquence de l'écran et interpole. Les constantes et `tempoOf` sont dans `src/shared/tempo.ts`.
 
 ## Organisation du code
 
@@ -47,18 +47,18 @@ Ces fichiers sont l'interface entre les couches, donc entre les tâches menées 
 
 Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick, les durées en ticks.
 
-| Fichier                 | Contenu                                                                                                                                                                                     |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/sim/state.ts`      | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas                               |
-| `src/sim/commands.ts`   | `PlayerCommand` : par joueur et par tick, une entrée continue (`PlayerInput`) et des actions discrètes (`PlayerAction`)                                                                     |
-| `src/sim/lineup.ts`     | le line-up du set et l'heure : `lineupSlots`, `lineupCursor`, `ticksToDrop`, `setFraction` (position dans le set, dans [0, 1], jamais en arrière, 1 une fois gagné)                         |
-| `src/shared/palette.ts` | la palette du Cycle du soleil : `paletteAt(fraction)` (jetons en `#rrggbb`) et `lightAt(fraction)` (`additive`, `haloAlpha`)                                                                |
-| `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`, `MusicTrack`                                          |
-| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource` (vue fusionnée), `DeviceId` et `InputHub` (un instantané par périphérique, pour la coop locale)                              |
-| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme et le cadrage (`CameraFocus` : suivre un joueur, ou cadrer tout le monde)                                  |
-| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setVolume`, `setMood('set' \| 'menu')`, `setTrack(track)` au lancement d'une partie                                                  |
-| `src/ui/types.ts`       | `Ui` et `UiCallbacks` : écrans (titre, choix de la scène, salon, jeu, fin, avis), `StageCard`, `UiFrame` (les joueurs de cet écran et leurs instantanés), `LobbyModel` rendu par le salon   |
-| `src/net/types.ts`      | `Transport` (envoyer, diffuser, couper un pair, écouter), `NetMessage` (salon et scène choisie, lancement, commande, trame, empreinte, divergence), `CommandSource` consommée par la boucle |
+| Fichier                 | Contenu                                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/sim/state.ts`      | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas                                                             |
+| `src/sim/commands.ts`   | `PlayerCommand` : par joueur et par tick, une entrée continue (`PlayerInput`) et des actions discrètes (`PlayerAction`)                                                                                                   |
+| `src/sim/lineup.ts`     | le line-up du set, son tempo et l'heure : `setTempo`, `lineupSlots`, `lineupCursor`, `ticksToDrop`, `setFraction` (position dans le set, dans [0, 1], jamais en arrière, 1 une fois gagné)                                |
+| `src/shared/palette.ts` | la palette du Cycle du soleil : `paletteAt(fraction)` (jetons en `#rrggbb`) et `lightAt(fraction)` (`additive`, `haloAlpha`)                                                                                              |
+| `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition` (tempo, décor, obstacles, morceaux, acoustique), `GameContent`, `MusicTrack` (batterie optionnelle) |
+| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource` (vue fusionnée), `DeviceId` et `InputHub` (un instantané par périphérique, pour la coop locale)                                                            |
+| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme et le cadrage (`CameraFocus` : suivre un joueur, ou cadrer tout le monde)                                                                |
+| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setVolume`, `setMood('set' \| 'menu')`, `setTrack(track)` au lancement d'une partie                                                                                |
+| `src/ui/types.ts`       | `Ui` et `UiCallbacks` : écrans (titre, choix de la scène, salon, jeu, fin, avis), `StageCard`, `UiFrame` (les joueurs de cet écran et leurs instantanés), `LobbyModel` rendu par le salon                                 |
+| `src/net/types.ts`      | `Transport` (envoyer, diffuser, couper un pair, écouter), `NetMessage` (salon et scène choisie, lancement, commande, trame, empreinte, divergence), `CommandSource` consommée par la boucle                               |
 
 Conventions de la simulation :
 
