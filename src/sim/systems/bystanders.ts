@@ -1,6 +1,6 @@
 import type { BystanderDefinition } from '../../data/types';
 import { nextFloat } from '../../shared/prng';
-import { BARS_PER_PHRASE, TICKS_PER_BAR, isBarTick } from '../../shared/tempo';
+import { BARS_PER_PHRASE, isBarTick, type Tempo } from '../../shared/tempo';
 import { playerById } from '../damage';
 import { lookup, type ResolvedContent } from '../content';
 import { touches } from '../effects';
@@ -18,12 +18,12 @@ export function bystanders(ctx: StepContext): void {
   updateBystanders(ctx);
 }
 
-function spawnBystanders({ state, content, set }: StepContext): void {
+function spawnBystanders({ state, content, set, tempo }: StepContext): void {
   const tier = set.tiers[state.set.tier];
-  if (tier === undefined || state.set.segment !== 'buildup' || !isBarTick(state.tick)) {
+  if (tier === undefined || state.set.segment !== 'buildup' || !isBarTick(state.tick, tempo)) {
     return;
   }
-  const bar = (state.tick - state.set.segmentStartTick) / TICKS_PER_BAR;
+  const bar = (state.tick - state.set.segmentStartTick) / tempo.ticksPerBar;
   const phrase = Math.floor(bar / BARS_PER_PHRASE);
   for (const rule of tier.bystanderSpawns ?? []) {
     const active =
@@ -33,12 +33,12 @@ function spawnBystanders({ state, content, set }: StepContext): void {
     }
     const definition = lookup(content.bystanders, rule.bystanderId, 'bystander');
     for (let i = 0; i < rule.count; i++) {
-      spawnBystander(state, definition);
+      spawnBystander(state, definition, tempo);
     }
   }
 }
 
-function spawnBystander(state: SimState, definition: BystanderDefinition): void {
+function spawnBystander(state: SimState, definition: BystanderDefinition, tempo: Tempo): void {
   const { x, y } = edgePosition(state.rng, state.arena, definition.radius);
   const { core } = state;
   const fraction = WANDER_FRACTION_MIN + nextFloat(state.rng) * WANDER_FRACTION_SPAN;
@@ -53,7 +53,7 @@ function spawnBystander(state: SimState, definition: BystanderDefinition): void 
     targetX: x + (core.x - x) * fraction,
     targetY: y + (core.y - y) * fraction,
     helpTicks: 0,
-    ticksLeft: definition.lifetimeBars * TICKS_PER_BAR,
+    ticksLeft: definition.lifetimeBars * tempo.ticksPerBar,
   };
   state.nextEntityId += 1;
   (state.bystanders ??= []).push(bystander);

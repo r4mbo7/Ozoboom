@@ -1,14 +1,6 @@
 import type { GameContent, SetDefinition, TierDefinition } from '../data/types';
-import {
-  TICKS_PER_BAR,
-  TICKS_PER_BEAT,
-  TICKS_PER_PHRASE,
-  tempoOf,
-  type Tempo,
-} from '../shared/tempo';
+import { TICKS_PER_BEAT, tempoOf, type Tempo } from '../shared/tempo';
 import type { GameStatus, SetProgress } from './state';
-
-const DROP_RAMP_TICKS = 4 * TICKS_PER_BAR;
 
 export type LineupSlotKind = 'phrase' | 'break' | 'drop' | 'sunrise';
 
@@ -37,8 +29,15 @@ export function setOf(content: GameContent, setId: string): SetDefinition {
   return set;
 }
 
+const TEMPOS = new WeakMap<SetDefinition, Tempo>();
+
 export function setTempo(set: SetDefinition): Tempo {
-  return tempoOf(set.ticksPerBeat ?? TICKS_PER_BEAT);
+  let tempo = TEMPOS.get(set);
+  if (tempo === undefined) {
+    tempo = tempoOf(set.ticksPerBeat ?? TICKS_PER_BEAT);
+    TEMPOS.set(set, tempo);
+  }
+  return tempo;
 }
 
 export function lineupSlots(set: SetDefinition): LineupSlot[] {
@@ -56,6 +55,7 @@ export function lineupSlots(set: SetDefinition): LineupSlot[] {
 
 export function lineupCursor(set: SetDefinition, state: LineupInput): LineupCursor {
   const tier = set.tiers[state.set.tier];
+  const { ticksPerBar, ticksPerPhrase } = setTempo(set);
   if (state.status === 'won' || tier === undefined) {
     return { slot: slotCount(set.tiers) - 1, fraction: 1 };
   }
@@ -63,12 +63,12 @@ export function lineupCursor(set: SetDefinition, state: LineupInput): LineupCurs
   const elapsed = elapsedInSegment(state);
   switch (state.set.segment) {
     case 'buildup': {
-      const phrase = Math.min(Math.floor(elapsed / TICKS_PER_PHRASE), tier.buildupPhrases - 1);
-      const fraction = (elapsed - phrase * TICKS_PER_PHRASE) / TICKS_PER_PHRASE;
+      const phrase = Math.min(Math.floor(elapsed / ticksPerPhrase), tier.buildupPhrases - 1);
+      const fraction = (elapsed - phrase * ticksPerPhrase) / ticksPerPhrase;
       return { slot: base + phrase, fraction: Math.min(1, fraction) };
     }
     case 'break': {
-      const length = tier.breakBars * TICKS_PER_BAR;
+      const length = tier.breakBars * ticksPerBar;
       return {
         slot: base + tier.buildupPhrases,
         fraction: length === 0 ? 1 : Math.min(1, elapsed / length),
@@ -81,7 +81,7 @@ export function lineupCursor(set: SetDefinition, state: LineupInput): LineupCurs
 
 export function setFraction(set: SetDefinition, state: LineupInput): number {
   const { slot, fraction } = lineupCursor(set, state);
-  const inSlot = fraction ?? Math.min(1, elapsedInSegment(state) / DROP_RAMP_TICKS);
+  const inSlot = fraction ?? Math.min(1, elapsedInSegment(state) / (4 * setTempo(set).ticksPerBar));
   return (slot + inSlot) / slotCount(set.tiers);
 }
 
@@ -90,10 +90,11 @@ export function ticksToDrop(set: SetDefinition, state: LineupInput): number | nu
   if (state.status === 'won' || tier === undefined || state.set.segment === 'drop') {
     return null;
   }
-  const breakTicks = tier.breakBars * TICKS_PER_BAR;
+  const { ticksPerBar, ticksPerPhrase } = setTempo(set);
+  const breakTicks = tier.breakBars * ticksPerBar;
   const segmentTicks =
     state.set.segment === 'buildup'
-      ? tier.buildupPhrases * TICKS_PER_PHRASE + breakTicks
+      ? tier.buildupPhrases * ticksPerPhrase + breakTicks
       : breakTicks;
   return Math.max(0, segmentTicks - elapsedInSegment(state));
 }

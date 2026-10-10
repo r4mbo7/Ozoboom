@@ -1,5 +1,5 @@
 import type { WeaponEffect, WeaponRhythm } from '../../data/types';
-import { TICKS_PER_BAR } from '../../shared/tempo';
+import { MAIN_TEMPO, type Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
 import { compound } from '../effects';
 import type { EnemyState, PlayerState } from '../state';
@@ -17,7 +17,6 @@ import { trail } from '../weapons/trail';
 import type { WeaponModule } from '../weapons/types';
 import type { StepContext } from './types';
 
-const TICKS_PER_SIXTEENTH = 3;
 const INITIAL_REACH = 128;
 
 // One module per effect kind; an issue replaces its own module and touches this registry only on
@@ -35,14 +34,17 @@ export const WEAPONS: Readonly<Record<WeaponEffect['kind'], WeaponModule>> = {
   ribbon,
 };
 
-export function firesOnTick(rhythm: WeaponRhythm, tick: number): boolean {
+export function firesOnTick(
+  rhythm: WeaponRhythm,
+  tick: number,
+  tempo: Tempo = MAIN_TEMPO,
+): boolean {
   if (rhythm === 'continuous') {
     return true;
   }
-  const inPeriod = tick % (rhythm.everyBars * TICKS_PER_BAR);
-  return (
-    inPeriod % TICKS_PER_SIXTEENTH === 0 && rhythm.steps.includes(inPeriod / TICKS_PER_SIXTEENTH)
-  );
+  const inPeriod = tick % (rhythm.everyBars * tempo.ticksPerBar);
+  const sixteenth = tempo.ticksPerBeat / 4;
+  return inPeriod % sixteenth === 0 && rhythm.steps.includes(inPeriod / sixteenth);
 }
 
 export function weapons(ctx: StepContext): void {
@@ -53,7 +55,7 @@ export function weapons(ctx: StepContext): void {
     }
     for (const slot of player.weapons ?? []) {
       const definition = content.weapons.get(slot.id);
-      if (definition === undefined || !firesOnTick(definition.rhythm, state.tick)) {
+      if (definition === undefined || !firesOnTick(definition.rhythm, state.tick, ctx.tempo)) {
         continue;
       }
       const target = closestEnemy(ctx, player);

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE } from '../../shared/tempo';
-import { FIXTURE_OPTIONS, eventsOf, peaceful, stepAndRecord } from '../fixtures';
+import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE, tempoOf } from '../../shared/tempo';
+import {
+  FIXTURE_CONTENT,
+  FIXTURE_OPTIONS,
+  FIXTURE_SET,
+  eventsOf,
+  peaceful,
+  stepAndRecord,
+} from '../fixtures';
 import { createSimulation } from '../index';
 
 const TWO_PHRASES = 2 * TICKS_PER_PHRASE;
@@ -54,5 +61,56 @@ describe('tempo', () => {
 
     expect(beforeFirstEnd).toBe(0);
     expect(simulation.state.stats.phrasesHeld).toBe(2);
+  });
+
+  describe('at 18 ticks per beat', () => {
+    const DOME_BEAT = 18;
+    const DOME_BAR = 4 * DOME_BEAT;
+    const DOME_PHRASE = 16 * DOME_BAR;
+    const domeSet = {
+      ...FIXTURE_SET,
+      id: 'dome-fixture',
+      bpm: tempoOf(DOME_BEAT).bpm,
+      ticksPerBeat: DOME_BEAT,
+    };
+    const domeOptions = {
+      ...FIXTURE_OPTIONS,
+      setId: 'dome-fixture',
+      content: { ...FIXTURE_CONTENT, sets: [domeSet] },
+    };
+
+    it('emits a beat every 18 ticks, a bar every 72 and a phrase every 1152', () => {
+      const simulation = peaceful(createSimulation(domeOptions));
+
+      const recorded = [
+        ...eventsOf(simulation.state),
+        ...stepAndRecord(simulation, 2 * DOME_PHRASE),
+      ];
+
+      const ticksOf = (type: string): number[] =>
+        recorded.filter(({ event }) => event.type === type).map(({ tick }) => tick);
+      expect(ticksOf('beat')).toEqual(Array.from({ length: 2 * 64 + 1 }, (_, i) => i * DOME_BEAT));
+      expect(ticksOf('bar')).toEqual(Array.from({ length: 2 * 16 + 1 }, (_, i) => i * DOME_BAR));
+      expect(ticksOf('phrase')).toEqual([0, DOME_PHRASE, 2 * DOME_PHRASE]);
+    });
+
+    it('lasts the segments of the set in bars of the stage', () => {
+      const simulation = peaceful(createSimulation(domeOptions));
+
+      const recorded = [
+        ...eventsOf(simulation.state),
+        ...stepAndRecord(simulation, DOME_PHRASE + 4 * DOME_BAR),
+      ];
+
+      const segments = recorded.flatMap(({ tick, event }) =>
+        event.type === 'segment' ? [[tick, event.segment]] : [],
+      );
+      expect(segments).toEqual([
+        [0, 'buildup'],
+        [DOME_PHRASE, 'break'],
+        [DOME_PHRASE + 2 * DOME_BAR, 'drop'],
+        [DOME_PHRASE + 3 * DOME_BAR, 'buildup'],
+      ]);
+    });
   });
 });

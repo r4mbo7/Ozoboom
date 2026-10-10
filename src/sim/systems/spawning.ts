@@ -1,28 +1,28 @@
 import type { EnemyDefinition, SetDefinition } from '../../data/types';
 import { nextFloat, nextInt, pick } from '../../shared/prng';
-import { BARS_PER_PHRASE, TICKS_PER_BAR, barOfTick, isBarTick } from '../../shared/tempo';
+import { BARS_PER_PHRASE, barOfTick, isBarTick, type Tempo } from '../../shared/tempo';
 import { lookup } from '../content';
 import { compound } from '../effects';
 import { volumeMul } from '../volume';
 import type { Arena, EdgeSide, EnemyState, SimState, Vec2 } from '../state';
 import type { StepContext } from './types';
 
-export function spawning({ state, content, set }: StepContext): void {
+export function spawning({ state, content, set, tempo }: StepContext): void {
   for (const event of state.events) {
     if (event.type === 'segment' && event.segment === 'drop') {
       const tier = set.tiers[event.tier];
       if (tier !== undefined) {
-        spawnAtEdge(state, set, lookup(content.enemies, tier.bossId, 'enemy'), true);
+        spawnAtEdge(state, set, tempo, lookup(content.enemies, tier.bossId, 'enemy'), true);
       }
     }
   }
 
   const tier = set.tiers[state.set.tier];
-  if (tier === undefined || !isBarTick(state.tick)) {
+  if (tier === undefined || !isBarTick(state.tick, tempo)) {
     return;
   }
   const rules = { buildup: tier.spawns, break: [], drop: tier.dropSpawns ?? [] }[state.set.segment];
-  const bar = (state.tick - state.set.segmentStartTick) / TICKS_PER_BAR;
+  const bar = (state.tick - state.set.segmentStartTick) / tempo.ticksPerBar;
   const phrase = Math.floor(bar / BARS_PER_PHRASE);
   for (const rule of rules) {
     const active =
@@ -33,7 +33,7 @@ export function spawning({ state, content, set }: StepContext): void {
     const definition = lookup(content.enemies, rule.enemyId, 'enemy');
     const count = Math.ceil(scaledCount(state, set, rule.count) * volumeMul(state));
     for (let i = 0; i < count; i++) {
-      spawnAtEdge(state, set, definition, false);
+      spawnAtEdge(state, set, tempo, definition, false);
     }
   }
 }
@@ -77,12 +77,13 @@ export function spawnEnemy(
 function spawnAtEdge(
   state: SimState,
   set: SetDefinition,
+  tempo: Tempo,
   definition: EnemyDefinition,
   isBoss: boolean,
 ): void {
   const { x, y } = isBoss
     ? edgePosition(state.rng, state.arena, definition.radius)
-    : ruleSpawnPosition(state, set, definition.radius);
+    : ruleSpawnPosition(state, set, tempo, definition.radius);
   spawnEnemy(state, definition, x, y, isBoss, perPlayerMul(state, set.perPlayer?.enemyHpMul));
 }
 
@@ -96,12 +97,17 @@ function scaledCount(state: SimState, set: SetDefinition, count: number): number
   return Math.max(count, scaled);
 }
 
-function ruleSpawnPosition(state: SimState, set: SetDefinition, radius: number): Vec2 {
+function ruleSpawnPosition(
+  state: SimState,
+  set: SetDefinition,
+  tempo: Tempo,
+  radius: number,
+): Vec2 {
   const sided = set.sidedWaves;
   if (sided === undefined) {
     return edgePosition(state.rng, state.arena, radius);
   }
-  const index = Math.floor(barOfTick(state.tick) / sided.everyBars);
+  const index = Math.floor(barOfTick(state.tick, tempo) / sided.everyBars);
   if (state.spawnWindow?.index !== index) {
     state.spawnWindow = { index, sides: drawSides(state.rng, sided.chance) };
   }

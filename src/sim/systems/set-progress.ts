@@ -1,16 +1,16 @@
 import type { SetDefinition, TierDefinition } from '../../data/types';
-import { BARS_PER_PHRASE, TICKS_PER_BAR, isBarTick } from '../../shared/tempo';
+import { BARS_PER_PHRASE, isBarTick, type Tempo } from '../../shared/tempo';
 import type { SetProgress, SetSegment, SimState } from '../state';
 import type { StepContext } from './types';
 
 const MIN_DROP_BARS = 1;
 
-export function setProgress({ state, set }: StepContext): void {
-  if (!isBarTick(state.tick)) {
+export function setProgress({ state, set, tempo }: StepContext): void {
+  if (!isBarTick(state.tick, tempo)) {
     return;
   }
   let tier = currentTier(state.set, set);
-  while (tier !== undefined && isSegmentOver(state, tier)) {
+  while (tier !== undefined && isSegmentOver(state, tier, tempo)) {
     advance(state, set);
     tier = currentTier(state.set, set);
   }
@@ -36,8 +36,8 @@ function currentTier(progress: SetProgress, set: SetDefinition): TierDefinition 
   return set.tiers[progress.tier];
 }
 
-function isSegmentOver(state: SimState, tier: TierDefinition): boolean {
-  const bars = (state.tick - state.set.segmentStartTick) / TICKS_PER_BAR;
+function isSegmentOver(state: SimState, tier: TierDefinition, tempo: Tempo): boolean {
+  const bars = (state.tick - state.set.segmentStartTick) / tempo.ticksPerBar;
   switch (state.set.segment) {
     case 'buildup':
       return bars >= tier.buildupPhrases * BARS_PER_PHRASE;

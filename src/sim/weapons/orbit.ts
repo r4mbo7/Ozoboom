@@ -1,11 +1,9 @@
 import { unitFromAngle } from '../../shared/angle';
-import { TICKS_PER_BAR } from '../../shared/tempo';
 import { keepWhere } from '../effects';
 import type { PlayerState, ProjectileState } from '../state';
 import type { WeaponModule } from './types';
 
 const TWO_PI = 2 * Math.PI;
-const HALF_BAR_TICKS = TICKS_PER_BAR / 2;
 // Bodies outlive their last repositioning by one tick, so they vanish once the weapon stops firing.
 const BODY_TICKS = 2;
 // A body hits every enemy it meets; it forgets them each half bar.
@@ -23,7 +21,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export const orbit: WeaponModule = {
-  fire({ state }, player, slot, definition, { power }) {
+  fire({ state, tempo }, player, slot, definition, { power }) {
     const { effect } = definition;
     if (effect.kind !== 'orbit') {
       throw new Error(`orbit fired for a "${effect.kind}" weapon`);
@@ -53,8 +51,8 @@ export const orbit: WeaponModule = {
         bodies.push(body);
       }
     }
-    slot.phase = (slot.phase + (TWO_PI * effect.turnsPerBar) / TICKS_PER_BAR) % TWO_PI;
-    const forgets = state.tick % HALF_BAR_TICKS === 0;
+    slot.phase = (slot.phase + (TWO_PI * effect.turnsPerBar) / tempo.ticksPerBar) % TWO_PI;
+    const forgets = state.tick % (tempo.ticksPerBar / 2) === 0;
     const { width, height } = state.arena;
     bodies.forEach((body, i) => {
       const direction = unitFromAngle(slot.phase + (i * TWO_PI) / effect.count);

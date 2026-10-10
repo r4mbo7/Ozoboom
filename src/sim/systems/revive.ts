@@ -1,13 +1,11 @@
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../../shared/tempo';
 import { lookup, type ResolvedContent } from '../content';
 import { touches } from '../effects';
 import type { PlayerState, SimState } from '../state';
 import type { StepContext } from './types';
 
-const REVIVED_INVULNERABLE_TICKS = 4 * TICKS_PER_BEAT;
-
-export function revive({ state, content, set }: StepContext): void {
-  const needed = (set.reviveBars ?? 1) * TICKS_PER_BAR;
+export function revive({ state, content, set, tempo }: StepContext): void {
+  const needed = (set.reviveBars ?? 1) * tempo.ticksPerBar;
+  const invulnerableTicks = 4 * tempo.ticksPerBeat;
   for (const player of state.players) {
     if (!player.downed) {
       if ((player.reviveTicks ?? 0) > 0) {
@@ -26,7 +24,7 @@ export function revive({ state, content, set }: StepContext): void {
     if (reviveTicks >= needed) {
       player.downed = false;
       player.hp = player.maxHp / 2;
-      player.invulnerableTicks = REVIVED_INVULNERABLE_TICKS;
+      player.invulnerableTicks = invulnerableTicks;
       player.reviveTicks = 0;
       state.events.push({ type: 'playerRevived', playerId: player.id });
       continue;

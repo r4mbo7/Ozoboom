@@ -1,4 +1,5 @@
 import type { SetDefinition } from '../../data/types';
+import type { Tempo } from '../../shared/tempo';
 import type { PlayerCommand } from '../commands';
 import type { ResolvedContent } from '../content';
 import type { SpatialHash } from '../spatial-hash';
@@ -8,6 +9,7 @@ export interface StepContext {
   state: SimState;
   content: ResolvedContent;
   set: SetDefinition;
+  tempo: Tempo;
   commands: ReadonlyMap<PlayerId, PlayerCommand>;
   enemyGrid: SpatialHash;
 }

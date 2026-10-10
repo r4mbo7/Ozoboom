@@ -29,7 +29,7 @@ export function placedZones(ctx: StepContext): void {
     const power = powerOf(ctx, zone);
     if (effect.kind === 'plate') {
       slowEnemies(state, zone, zone.radius, effect.slowFactor);
-      healPlayersOnBar(state, zone, zone.radius, effect.healPerBar * power);
+      healPlayersOnBar(state, ctx.tempo, zone, zone.radius, effect.healPerBar * power);
     }
     zone.ticksLeft -= 1;
   }
@@ -51,7 +51,7 @@ export function placedTotems(ctx: StepContext): void {
         drawTo(enemy, zone, TOTEM_BODY_RADIUS + enemy.radius);
       }
     }
-    if (isBarTick(state.tick)) {
+    if (isBarTick(state.tick, ctx.tempo)) {
       shockwave(
         state,
         zone,

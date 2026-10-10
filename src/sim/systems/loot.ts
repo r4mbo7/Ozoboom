@@ -1,18 +1,18 @@
 import type { TrapDefinition } from '../../data/types';
 import { type RngState, nextFloat } from '../../shared/prng';
-import { TICKS_PER_BAR, barOfTick, isBarTick } from '../../shared/tempo';
+import { barOfTick, isBarTick } from '../../shared/tempo';
 import { touches } from '../effects';
 import type { StepContext } from './types';
 
 // Every `everyBars` bars a loot falls due; the first bad vibe to spawn from then on, boss aside,
 // carries it.
-export function lootCarriers({ state, set }: StepContext): void {
+export function lootCarriers({ state, set, tempo }: StepContext): void {
   const rules = set.loot;
   if (rules === undefined) {
     return;
   }
-  const bar = barOfTick(state.tick);
-  if (isBarTick(state.tick) && bar > 0 && bar % rules.everyBars === 0) {
+  const bar = barOfTick(state.tick, tempo);
+  if (isBarTick(state.tick, tempo) && bar > 0 && bar % rules.everyBars === 0) {
     state.lootDue = true;
   }
   if (state.lootDue !== true) {
@@ -29,7 +29,7 @@ export function lootCarriers({ state, set }: StepContext): void {
   }
 }
 
-export function dropLoot({ state, content, set }: StepContext, x: number, y: number): void {
+export function dropLoot({ state, content, set, tempo }: StepContext, x: number, y: number): void {
   const rules = set.loot;
   if (rules === undefined) {
     return;
@@ -38,7 +38,7 @@ export function dropLoot({ state, content, set }: StepContext, x: number, y: num
   const trapId = dropped === 0 ? rules.first : drawLootTrap(state.rng, [...content.traps.values()]);
   const id = state.nextEntityId;
   state.nextEntityId += 1;
-  const ticksLeft = rules.lifetimeBars * TICKS_PER_BAR;
+  const ticksLeft = rules.lifetimeBars * tempo.ticksPerBar;
   (state.loots ??= []).push({ id, trapId, ticksLeft, x, y, prevX: x, prevY: y });
   state.lootsDropped = dropped + 1;
   state.events.push({ type: 'lootDropped', id, trapId, x, y });

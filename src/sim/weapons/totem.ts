@@ -1,4 +1,3 @@
-import { TICKS_PER_BAR } from '../../shared/tempo';
 import { place } from './place';
 import type { WeaponModule } from './types';
 
@@ -6,7 +5,7 @@ import type { WeaponModule } from './types';
 const PLANT_GAP = 40;
 
 export const totem: WeaponModule = {
-  fire({ state }, player, slot, { effect }, { direction }) {
+  fire({ state, tempo }, player, slot, { effect }, { direction }) {
     if (effect.kind !== 'totem') {
       return;
     }
@@ -21,7 +20,7 @@ export const totem: WeaponModule = {
         y: Math.min(Math.max(player.y + direction.y * reach, 0), height),
       },
       effect.radius,
-      effect.durationBars * TICKS_PER_BAR,
+      effect.durationBars * tempo.ticksPerBar,
       1,
     );
   },

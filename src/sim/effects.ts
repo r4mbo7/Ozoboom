@@ -1,4 +1,4 @@
-import { isBarTick } from '../shared/tempo';
+import { isBarTick, type Tempo } from '../shared/tempo';
 import type { ResolvedContent } from './content';
 import type { EnemyState, PlayerId, PlayerState, SimState } from './state';
 
@@ -127,8 +127,14 @@ export function healPlayer(state: SimState, player: PlayerState, amount: number)
 }
 
 // Heals once per bar, on the bar tick.
-export function healPlayersOnBar(state: SimState, at: Point, radius: number, amount: number): void {
-  if (!isBarTick(state.tick)) {
+export function healPlayersOnBar(
+  state: SimState,
+  tempo: Tempo,
+  at: Point,
+  radius: number,
+  amount: number,
+): void {
+  if (!isBarTick(state.tick, tempo)) {
     return;
   }
   for (const player of state.players) {

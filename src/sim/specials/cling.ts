@@ -1,4 +1,3 @@
-import { TICKS_PER_BAR } from '../../shared/tempo';
 import { touches } from '../effects';
 import { playerById } from '../damage';
 import type { EnemyState, PlayerState, SimState } from '../state';
@@ -16,7 +15,7 @@ export const cling: SpecialModule = (ctx, enemy, effect) => {
     const hit = (enemy.hpWatermark ?? enemy.hp) - enemy.hp;
     const player = playerById(state, enemy.clingingTo);
     if (hit >= effect.detachDamage || player === undefined || player.downed) {
-      detach(enemy);
+      detach(enemy, ctx.tempo.ticksPerBar);
     } else {
       slow(player, effect.slowFactor);
     }
@@ -57,7 +56,7 @@ function slow(player: PlayerState, slowFactor: number): void {
   player.slowFactor = Math.min(player.slowFactor ?? 1, slowFactor);
 }
 
-function detach(enemy: EnemyState): void {
+function detach(enemy: EnemyState, cooldown: number): void {
   delete enemy.clingingTo;
-  enemy.clingCooldown = TICKS_PER_BAR;
+  enemy.clingCooldown = cooldown;
 }

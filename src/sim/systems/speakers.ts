@@ -1,11 +1,10 @@
 import type { TrapCadence, TrapEffect } from '../../data/types';
-import { TICKS_PER_BAR } from '../../shared/tempo';
 import { markedDamageMul, touches } from '../effects';
 import type { SimState, SpeakerState } from '../state';
 import { fire } from './traps';
 import type { StepContext } from './types';
 
-export function speakers({ state, content, set }: StepContext): void {
+export function speakers({ state, content, set, tempo }: StepContext): void {
   const definitions = set.speakers ?? [];
   const beat = state.events.some((event) => event.type === 'beat');
   const markedMul = markedDamageMul(content);
@@ -19,6 +18,7 @@ export function speakers({ state, content, set }: StepContext): void {
       if (cadence(definition.aura) === 'continuous' || beat) {
         fire({
           state,
+          tempo,
           at: { x: speaker.x, y: speaker.y, direction: { x: 1, y: 0 } },
           effect: definition.aura,
           contact: 0,
@@ -31,7 +31,7 @@ export function speakers({ state, content, set }: StepContext): void {
       }
       continue;
     }
-    const needed = definition.plugBars * TICKS_PER_BAR;
+    const needed = definition.plugBars * tempo.ticksPerBar;
     if (!someoneStands(state, speaker)) {
       speaker.plugTicks = 0;
       continue;

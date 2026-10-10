@@ -2,6 +2,7 @@ import type { GameContent } from '../data/types';
 import type { PlayerCommand } from './commands';
 import { lookup, resolveContent } from './content';
 import { createInitialState, type PlayerSlot } from './initial-state';
+import { setTempo } from './lineup';
 import { SpatialHash } from './spatial-hash';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
@@ -82,7 +83,7 @@ export function createSimulation(options: SimulationOptions): Simulation {
   const state = createInitialState(options.seed, options.players, content, set);
   const commands = new Map<PlayerId, PlayerCommand>();
   const enemyGrid = new SpatialHash(set.arena.width, set.arena.height, ENEMY_GRID_CELL_SIZE);
-  const ctx: StepContext = { state, content, set, commands, enemyGrid };
+  const ctx: StepContext = { state, content, set, tempo: setTempo(set), commands, enemyGrid };
 
   tempo(ctx);
   state.events.push({ type: 'segment', segment: state.set.segment, tier: state.set.tier });

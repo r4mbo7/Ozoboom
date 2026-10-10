@@ -1,4 +1,3 @@
-import { TICKS_PER_BAR } from '../../shared/tempo';
 import type { SpecialModule } from './types';
 
 // Called by `specials` every tick while alive (a no-op there) and by `deaths` once an enemy's hp
@@ -13,7 +12,7 @@ export const revive: SpecialModule = (ctx, enemy, effect) => {
       return;
     }
     enemy.revivesLeft = revivesLeft - 1;
-    enemy.downTicks = effect.downBars * TICKS_PER_BAR;
+    enemy.downTicks = effect.downBars * ctx.tempo.ticksPerBar;
     return;
   }
   enemy.downTicks -= 1;

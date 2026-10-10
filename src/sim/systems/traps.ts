@@ -1,4 +1,5 @@
 import type { TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
+import type { Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
 import type { PlayerAction } from '../commands';
 import { lookup, type ResolvedContent } from '../content';
@@ -30,6 +31,7 @@ export interface Emitter extends Vec2 {
 
 export interface Firing {
   state: SimState;
+  tempo: Tempo;
   at: Emitter;
   effect: TrapEffect;
   // Half-width of the emitter body: the lure stops its prey there.
@@ -67,6 +69,7 @@ export function traps(ctx: StepContext): void {
         });
         fire({
           state,
+          tempo: ctx.tempo,
           at: trap,
           effect: definition.effect,
           contact: definition.radius,
@@ -196,7 +199,7 @@ function cadencesFiring(state: SimState): Readonly<Record<TrapCadence, boolean>>
 }
 
 export function fire(firing: Firing): void {
-  const { state, at, effect, contact, by, power, damageMul, radiusMul, markedMul } = firing;
+  const { state, tempo, at, effect, contact, by, power, damageMul, radiusMul, markedMul } = firing;
   switch (effect.kind) {
     case 'shockwave':
       shockwave(
@@ -219,7 +222,7 @@ export function fire(firing: Firing): void {
     case 'mist': {
       const radius = effect.radius * radiusMul;
       slowEnemies(state, at, radius, effect.slowFactor);
-      healPlayersOnBar(state, at, radius, effect.healPerBar * power);
+      healPlayersOnBar(state, tempo, at, radius, effect.healPerBar * power);
       return;
     }
     case 'lure':

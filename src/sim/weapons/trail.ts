@@ -7,7 +7,7 @@ import type { WeaponModule } from './types';
 const point = { x: 0, y: 0 };
 
 export const trail: WeaponModule = {
-  fire({ state, content }, player, slot, { effect }, { power }) {
+  fire({ state, content, tempo }, player, slot, { effect }, { power }) {
     if (effect.kind !== 'trail') {
       return;
     }
@@ -27,7 +27,7 @@ export const trail: WeaponModule = {
         enemy.slowFactor = Math.min(enemy.slowFactor, effect.slowFactor);
       }
     }
-    if (isBarTick(state.tick)) {
+    if (isBarTick(state.tick, tempo)) {
       for (const ally of state.players) {
         if (!ally.downed && onTrail(ally, ring, state.tick, slot.phase, player.radius)) {
           healPlayer(state, ally, effect.healPerBar * power);
