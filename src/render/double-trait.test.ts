@@ -172,22 +172,6 @@ describe('traps', () => {
       }
     }
   });
-
-  it('shows the level as that many pips on the outline', () => {
-    const ctx = context();
-    const state = createFixtureState({ enemies: 0, projectiles: 0 });
-    const [first] = state.traps;
-    if (first === undefined) {
-      throw new Error('Fixture has no trap');
-    }
-    first.level = 3;
-    state.traps = [first];
-
-    createTraps(ctx).update(state, 0, frameAt(0.4));
-
-    const pips = ctx.layers.traps.children.slice(-5);
-    expect(pips.filter((pip) => pip.visible)).toHaveLength(3);
-  });
 });
 
 describe('pickups', () => {

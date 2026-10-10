@@ -65,7 +65,6 @@ describe('trap placement', () => {
         id: 1,
         kind: 'subwoofer',
         ownerId: 0,
-        level: 1,
         x: 400,
         y: 450,
         prevX: 400,
@@ -199,55 +198,17 @@ describe('trap placement', () => {
     expect(state.traps).toHaveLength(7);
   });
 
-  it('levels up a trap placed on a trap of the same kind, up to its max level', () => {
+  it('ignores a trap placed on a trap of the same kind', () => {
     const { simulation, state } = game();
     state.core.watts = 1000;
-    const placements = Array.from({ length: 6 }, (_, i) =>
-      placeAction('mister', 100 + i * 50, 100),
-    );
-    simulation.step([actionsFor(0, ...placements)]);
-
-    simulation.step([
-      actionsFor(
-        0,
-        placeAction('mister', 105, 95),
-        placeAction('mister', 100, 100),
-        placeAction('mister', 100, 100),
-      ),
-    ]);
-
-    expect(state.traps.map((trap) => trap.level)).toEqual([3, 1, 1, 1, 1, 1]);
-    expect(state.core.watts).toBe(1000 - 6 * 20 - 2 * 20 - 3 * 20);
-    expect(state.stats.wattsSpent).toBe(6 * 20 + 2 * 20 + 3 * 20);
-    expect(state.events.filter((event) => event.type === 'trapUpgraded')).toEqual([
-      { type: 'trapUpgraded', id: 1, kind: 'mister', level: 2, x: 100, y: 100 },
-      { type: 'trapUpgraded', id: 1, kind: 'mister', level: 3, x: 100, y: 100 },
-    ]);
-  });
-
-  it('costs the base cost times the level reached, with the trap cost multiplier', () => {
-    const { simulation, state, player } = game();
-    player.modifiers.trapCostMul = 0.5;
-    state.core.watts = 1000;
-
-    for (let i = 0; i < 3; i += 1) {
-      simulation.step([place('subwoofer', 400, 450)]);
-    }
-
-    expect(state.traps.map((trap) => trap.level)).toEqual([3]);
-    expect(state.stats.wattsSpent).toBe(15 + 30 + 45);
-  });
-
-  it('refuses an upgrade the watts cannot pay, without touching the trap', () => {
-    const { simulation, state } = game();
     simulation.step([place('subwoofer', 400, 450)]);
-    state.core.watts = 59;
+    const before = structuredClone(state.traps);
 
-    simulation.step([place('subwoofer', 400, 450)]);
+    simulation.step([place('subwoofer', 405, 445)]);
 
-    expect(state.traps.map((trap) => trap.level)).toEqual([1]);
-    expect(state.core.watts).toBe(59);
-    expect(state.events.filter((event) => event.type === 'trapUpgraded')).toEqual([]);
+    expect(state.traps).toEqual(before);
+    expect(state.core.watts).toBe(1000 - 30);
+    expect(state.events.filter((event) => event.type === 'trapPlaced')).toEqual([]);
   });
 
   it('refuses a trap placed on a trap of another kind', () => {
@@ -258,7 +219,7 @@ describe('trap placement', () => {
       actionsFor(0, placeAction('subwoofer', 400, 450), placeAction('mister', 400, 450)),
     ]);
 
-    expect(state.traps.map((trap) => [trap.kind, trap.level])).toEqual([['subwoofer', 1]]);
+    expect(state.traps.map((trap) => trap.kind)).toEqual(['subwoofer']);
     expect(state.core.watts).toBe(1000 - 30);
   });
 });
@@ -331,19 +292,16 @@ describe('trap effects', () => {
     expect(state.stats.damageDealt).toBe(8);
   });
 
-  it('shockwave: scales with the trap level and the owner damage and radius multipliers', () => {
+  it('shockwave: scales with the owner damage and radius multipliers', () => {
     const { simulation, state, player } = game();
-    state.core.watts = 1000;
-    simulation.step([
-      actionsFor(0, placeAction('subwoofer', 400, 450), placeAction('subwoofer', 400, 450)),
-    ]);
+    simulation.step([place('subwoofer', 400, 450)]);
     player.modifiers.trapDamageMul = 1.25;
     player.modifiers.trapRadiusMul = 2;
     const reachedOnlyWithBiggerRadius = frozen(placeEnemy(state, 'grump', 400, 450 + 150));
 
     stepAndRecord(simulation, 11);
 
-    expect(reachedOnlyWithBiggerRadius.hp).toBe(20 - 8 * 1.5 * 1.25);
+    expect(reachedOnlyWithBiggerRadius.hp).toBe(20 - 8 * 1.25);
   });
 
   it('beam: hurts every tick the enemies in the rectangle it draws along its direction', () => {
@@ -546,20 +504,15 @@ describe('heavy enemies against traps', () => {
 describe('trapActionCost', () => {
   const definitions = new Map(EFFECTS_OPTIONS.content.traps.map((trap) => [trap.id, trap]));
 
-  it.each<[string, number, number, string, Vec2, number | null]>([
-    ['placing on free ground', 1, 1, 'mister', { x: 100, y: 100 }, 20],
-    ['upgrading to level 2', 1, 1, 'subwoofer', { x: 405, y: 450 }, 60],
-    ['upgrading to level 3', 2, 1, 'subwoofer', { x: 400, y: 450 }, 90],
-    ['upgrading with a cheaper trap cost', 1, 0.5, 'subwoofer', { x: 400, y: 450 }, 30],
-    ['upgrading past the max level', 3, 1, 'subwoofer', { x: 400, y: 450 }, null],
-    ['placing on a trap of another kind', 1, 1, 'mister', { x: 400, y: 450 }, null],
-    ['an unknown trap', 1, 1, 'flamethrower', { x: 100, y: 100 }, null],
-  ])('prices %s', (_, level, trapCostMul, trapId, at, expected) => {
+  it.each<[string, number, string, Vec2, number | null]>([
+    ['placing on free ground', 1, 'mister', { x: 100, y: 100 }, 20],
+    ['placing with a cheaper trap cost', 0.5, 'mister', { x: 100, y: 100 }, 10],
+    ['placing on a trap of the same kind', 1, 'subwoofer', { x: 405, y: 450 }, null],
+    ['placing on a trap of another kind', 1, 'mister', { x: 400, y: 450 }, null],
+    ['an unknown trap', 1, 'flamethrower', { x: 100, y: 100 }, null],
+  ])('prices %s', (_, trapCostMul, trapId, at, expected) => {
     const { simulation, state, player } = game();
     simulation.step([place('subwoofer', 400, 450)]);
-    state.traps.forEach((trap) => {
-      trap.level = level;
-    });
     player.modifiers.trapCostMul = trapCostMul;
 
     const cost = trapActionCost(definitions, state.traps, player, trapId, at);

@@ -10,7 +10,7 @@ import { TICKS_PER_BAR } from '../shared/tempo';
 import { ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
 import { skillCooldownTicks, statValue } from '../sim/stats';
-import { trapActionCost, trapAt } from '../sim/systems/traps';
+import { trapActionCost } from '../sim/systems/traps';
 import { formatDuration, ratio } from './format';
 import type { UiFrame } from './types';
 
@@ -101,13 +101,10 @@ export function volumeCrans(set: SetDefinition, state: SimState): Cran[] {
 }
 
 export interface TrapTile {
-  reinforce: boolean;
   cost: number;
   available: boolean;
 }
 
-// What the trap key does where the player stands: a new placement, or a reinforcement of the trap
-// of that kind underfoot, which needs no free slot.
 export function trapTile(
   definitions: ReadonlyMap<string, TrapDefinition>,
   state: Pick<SimState, 'traps' | 'core'>,
@@ -116,13 +113,9 @@ export function trapTile(
   capacity: number,
 ): TrapTile {
   const cost = trapActionCost(definitions, state.traps, player, trapId, player);
-  const reinforce = cost !== null && trapAt(definitions, state.traps, player)?.kind === trapId;
-  const placement = statValue(player, 'trapCostMul', definitions.get(trapId)?.cost ?? 0);
   return {
-    reinforce,
-    cost: cost ?? placement,
-    available:
-      cost !== null && cost <= state.core.watts && (reinforce || state.traps.length < capacity),
+    cost: cost ?? statValue(player, 'trapCostMul', definitions.get(trapId)?.cost ?? 0),
+    available: cost !== null && cost <= state.core.watts && state.traps.length < capacity,
   };
 }
 

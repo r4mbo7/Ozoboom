@@ -116,8 +116,6 @@ export interface TrapDefinition {
   hp: number;
   cadence: TrapCadence;
   effect: TrapEffect;
-  maxLevel: number;
-  levelMul: number;
 }
 
 export type UpgradeFamily = 'class' | 'generic' | 'defense' | 'relic';

@@ -154,7 +154,6 @@ describe('bystanders', () => {
       id: state.nextEntityId,
       kind: FIXTURE_MIST.id,
       ownerId: 0,
-      level: 1,
       x: trapX,
       y: trapY,
       prevX: trapX,

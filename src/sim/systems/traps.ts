@@ -3,7 +3,6 @@ import { normalize } from '../../shared/vec';
 import type { PlayerAction } from '../commands';
 import { lookup, type ResolvedContent } from '../content';
 import {
-  compound,
   drawTo,
   healPlayersOnBar,
   hurtEnemy,
@@ -58,7 +57,6 @@ export function traps(ctx: StepContext): void {
       const definition = trapDefinition(content, trap);
       if (firing[definition.cadence] && (definition.effect.kind === 'lure') === lures) {
         const owner = ownerOf(state, trap);
-        const power = compound(definition.levelMul, trap.level - 1);
         state.events.push({
           type: 'trapFired',
           id: trap.id,
@@ -72,8 +70,8 @@ export function traps(ctx: StepContext): void {
           effect: definition.effect,
           contact: definition.radius,
           by: trap.ownerId,
-          power,
-          damageMul: power * statValue(owner, 'trapDamageMul', 1),
+          power: 1,
+          damageMul: statValue(owner, 'trapDamageMul', 1),
           radiusMul: statValue(owner, 'trapRadiusMul', 1),
           markedMul,
         });
@@ -99,17 +97,8 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
   if (definition === undefined || player.downed) {
     return;
   }
-  const under = trapAt(content.traps, state.traps, action);
-  const cost = actionCost(definition, under, player);
+  const cost = actionCost(definition, trapAt(content.traps, state.traps, action), player);
   if (cost === null || state.core.watts < cost) {
-    return;
-  }
-
-  if (under !== undefined) {
-    under.level += 1;
-    pay(state, cost);
-    const { id, kind, level } = under;
-    state.events.push({ type: 'trapUpgraded', id, kind, level, x: under.x, y: under.y });
     return;
   }
 
@@ -136,7 +125,6 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     id,
     kind: definition.id,
     ownerId: player.id,
-    level: 1,
     x,
     y,
     prevX: x,
@@ -167,13 +155,7 @@ function actionCost(
   under: TrapState | undefined,
   player: Pick<PlayerState, 'modifiers' | 'suppressedTicks'>,
 ): number | null {
-  if (under === undefined) {
-    return statValue(player, 'trapCostMul', definition.cost);
-  }
-  if (under.kind !== definition.id || under.level >= definition.maxLevel) {
-    return null;
-  }
-  return statValue(player, 'trapCostMul', definition.cost * (under.level + 1));
+  return under === undefined ? statValue(player, 'trapCostMul', definition.cost) : null;
 }
 
 export function trapAt(

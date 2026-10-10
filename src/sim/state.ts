@@ -172,7 +172,6 @@ export interface TrapState extends Positioned {
   id: EntityId;
   kind: string;
   ownerId: PlayerId;
-  level: number;
   direction: Vec2;
   hp: number;
   cooldown: number;
@@ -259,7 +258,6 @@ export type SimEvent =
   | { type: 'coreHit'; damage: number }
   | { type: 'coreRepaired'; amount: number }
   | { type: 'trapPlaced'; id: EntityId; kind: string; x: number; y: number }
-  | { type: 'trapUpgraded'; id: EntityId; kind: string; level: number; x: number; y: number }
   | { type: 'trapFired'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapDestroyed'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'pickupCollected'; playerId: PlayerId; kind: PickupKind; amount: number }

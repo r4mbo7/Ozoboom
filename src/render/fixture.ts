@@ -34,7 +34,7 @@ export const FIXTURE_CONTENT: RenderContent = {
   sets: SETS,
   enemies: ENEMIES,
   bystanders: BYSTANDERS,
-  traps: [...TRAPS, ...OTHER_TRAPS.map((trap) => ({ ...trap, maxLevel: 3 }))],
+  traps: [...TRAPS, ...OTHER_TRAPS],
 };
 
 export interface FixtureOptions {
@@ -180,27 +180,26 @@ export function spawnPickup(state: SimState): PickupState {
 
 function createTraps(state: SimState, showcase: boolean): TrapState[] {
   const layout = [
-    { kind: 'caisson-de-basse', angle: -Math.PI / 2, distance: 150, level: 1 },
-    { kind: 'caisson-de-basse', angle: Math.PI / 6, distance: 150, level: 2 },
-    { kind: 'caisson-de-basse', angle: (5 * Math.PI) / 6, distance: 150, level: 3 },
-    { kind: 'laser', angle: Math.PI / 2, distance: 120, level: 2 },
-    { kind: 'laser', angle: -Math.PI / 6, distance: 330, level: 1 },
+    { kind: 'caisson-de-basse', angle: -Math.PI / 2, distance: 150 },
+    { kind: 'caisson-de-basse', angle: Math.PI / 6, distance: 150 },
+    { kind: 'caisson-de-basse', angle: (5 * Math.PI) / 6, distance: 150 },
+    { kind: 'laser', angle: Math.PI / 2, distance: 120 },
+    { kind: 'laser', angle: -Math.PI / 6, distance: 330 },
   ];
   if (showcase) {
     layout.push(
-      { kind: 'brumisateur', angle: -Math.PI / 4, distance: 200, level: 1 },
-      { kind: 'deco-uv', angle: (3 * Math.PI) / 4, distance: 230, level: 2 },
-      { kind: 'stroboscope', angle: (-3 * Math.PI) / 4, distance: 210, level: 3 },
+      { kind: 'brumisateur', angle: -Math.PI / 4, distance: 200 },
+      { kind: 'deco-uv', angle: (3 * Math.PI) / 4, distance: 230 },
+      { kind: 'stroboscope', angle: (-3 * Math.PI) / 4, distance: 210 },
     );
   }
-  return layout.map(({ kind, angle, distance, level }) => {
+  return layout.map(({ kind, angle, distance }) => {
     state.nextEntityId += 1;
     return at(
       {
         id: state.nextEntityId,
         kind,
         ownerId: 0,
-        level,
         direction: { x: Math.cos(angle), y: Math.sin(angle) },
         hp: 100,
         cooldown: 0,

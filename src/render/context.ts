@@ -28,13 +28,13 @@ export interface RenderContent {
     readonly skill: Pick<SkillDefinition, 'effect'>;
   })[];
   readonly enemies: readonly Pick<EnemyDefinition, 'id' | 'behaviour' | 'special'>[];
-  readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect' | 'maxLevel'>[];
+  readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect'>[];
   readonly sets: readonly SetDefinition[];
   readonly bystanders?: readonly Pick<BystanderDefinition, 'id' | 'helpTicks'>[];
   readonly weapons?: readonly (WeaponLook & Pick<WeaponDefinition, 'id'>)[];
 }
 
-export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect' | 'maxLevel'>;
+export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect'>;
 
 export type SpeakerLook = Pick<
   SpeakerDefinition,

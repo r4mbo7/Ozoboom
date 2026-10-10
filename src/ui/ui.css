@@ -1778,32 +1778,6 @@
   color: var(--ui-turquoise);
 }
 
-.ui-trap__reinforce {
-  position: absolute;
-  bottom: -7px;
-  left: 50%;
-  display: none;
-  padding: 0 6px;
-  border: 1px solid var(--turquoise);
-  border-radius: 999px;
-  background: var(--sol-clair);
-  box-shadow: 0 0 0 2px var(--sol);
-  color: var(--texte);
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 14px;
-  white-space: nowrap;
-  translate: -50% 0;
-}
-
-.ui-trap[data-reinforce] {
-  padding-bottom: 11px;
-}
-
-.ui-trap[data-reinforce] .ui-trap__reinforce {
-  display: block;
-}
-
 .ui-traps__name {
   position: absolute;
   bottom: calc(100% + 14px);

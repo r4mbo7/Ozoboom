@@ -213,7 +213,6 @@ export function createHud(): Hud {
         el('span', 'ui-trap__key', String(index + 1)),
         icon('ui-trap__icon', trapIcon(trap.effect)),
         cost,
-        el('span', 'ui-trap__reinforce', 'Renforcer'),
       );
       return tile;
     });
@@ -445,7 +444,6 @@ export function createHud(): Hud {
       const view = trapTile(trapDefinitions, state, player, trap.id, maxTraps);
       setFlag(tile, 'selected', index === selectedTrap);
       setFlag(tile, 'unaffordable', !view.available);
-      setFlag(tile, 'reinforce', view.reinforce);
       const amount = tileCosts[index];
       if (amount !== undefined) {
         setText(amount, formatNumber(view.cost));

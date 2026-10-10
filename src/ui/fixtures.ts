@@ -99,8 +99,6 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       hp: 100,
       cadence: 'beat',
       effect: { kind: 'shockwave', damage: 12, radius: 120, knockback: 20 },
-      maxLevel: 3,
-      levelMul: 1.5,
     },
     {
       id: 'laser',
@@ -111,8 +109,6 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       hp: 80,
       cadence: 'continuous',
       effect: { kind: 'beam', damagePerTick: 1, length: 320, width: 8 },
-      maxLevel: 3,
-      levelMul: 1.5,
     },
   ],
   weapons: [
@@ -344,7 +340,6 @@ export function fixtureTrap(id: number, kind: string): TrapState {
     id,
     kind,
     ownerId: 0,
-    level: 1,
     direction: { x: 1, y: 0 },
     hp: 100,
     cooldown: 0,

@@ -339,8 +339,6 @@ describe('CONTENT numbers', () => {
         cost: [trap.cost, positive],
         radius: [trap.radius, positive],
         hp: [trap.hp, positive],
-        maxLevel: [trap.maxLevel, wholePositive],
-        levelMul: [trap.levelMul, atLeastOne],
         ...effectFields(trap.effect),
       }),
     ).toEqual([]);

@@ -125,12 +125,13 @@ describe('trapTile', () => {
     });
   }
 
-  it('offers to reinforce the trap of the same kind under the player when all slots are taken', () => {
-    const state = fullField({ x: 760, y: 500, level: 1 });
+  it('offers a placement on free ground when a slot is left and the watts cover it', () => {
+    const state = fullField(null);
+    state.traps.pop();
 
     const tile = trapTile(definitions, state, player, 'caisson-de-basse', 6);
 
-    expect(tile).toEqual({ reinforce: true, cost: 60, available: true });
+    expect(tile).toEqual({ cost: 30, available: true });
   });
 
   it('greys a new placement out when all slots are taken', () => {
@@ -138,27 +139,19 @@ describe('trapTile', () => {
 
     const tile = trapTile(definitions, state, player, 'caisson-de-basse', 6);
 
-    expect(tile).toEqual({ reinforce: false, cost: 30, available: false });
+    expect(tile).toEqual({ cost: 30, available: false });
   });
 
-  it('greys a reinforcement out when the watts do not cover it', () => {
-    const state = fullField({ x: 760, y: 500, level: 2 }, 80);
-
-    const tile = trapTile(definitions, state, player, 'caisson-de-basse', 6);
-
-    expect(tile).toEqual({ reinforce: true, cost: 90, available: false });
-  });
-
-  it('greys out a trap at its last level and a kind that differs from the one underfoot', () => {
-    const state = fullField({ x: 760, y: 500, level: 3 });
+  it('greys every trap out over a placed trap, whatever its kind', () => {
+    const state = fullField({ x: 760, y: 500 });
 
     const tiles = ['caisson-de-basse', 'laser'].map((id) =>
-      trapTile(definitions, state, player, id, 6),
+      trapTile(definitions, state, player, id, 7),
     );
 
     expect(tiles).toEqual([
-      { reinforce: false, cost: 30, available: false },
-      { reinforce: false, cost: 50, available: false },
+      { cost: 30, available: false },
+      { cost: 50, available: false },
     ]);
   });
 });
