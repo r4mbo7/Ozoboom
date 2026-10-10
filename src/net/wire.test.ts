@@ -27,6 +27,8 @@ function randomCommand(rng: RngState, playerId: PlayerId): PlayerCommand {
     });
   } else if (roll < 0.25) {
     actions.push({ type: 'chooseUpgrade', upgradeId: 'écho-profond' });
+  } else if (roll < 0.3) {
+    actions.push({ type: 'takeTrap', x: nextFloat(rng) * 1000, y: nextFloat(rng) * 1000 });
   }
   return {
     playerId,

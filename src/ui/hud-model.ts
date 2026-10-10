@@ -105,6 +105,17 @@ export interface HandTile {
   available: boolean;
 }
 
+// The kind of the trap the trap key would take back where the player stands, if a hand is free.
+export function trapToTake(
+  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
+  state: Pick<SimState, 'traps'>,
+  player: Pick<PlayerState, 'x' | 'y' | 'hand'>,
+  handSize: number,
+): string | null {
+  const under = trapAt(definitions, state.traps, player);
+  return under === undefined || (player.hand?.length ?? 0) >= handSize ? null : under.kind;
+}
+
 // One tile per hand slot. A held trap is available unless the field is full or a trap stands where
 // it would go.
 export function handTiles(
@@ -117,7 +128,7 @@ export function handTiles(
   const free =
     state.traps.length < capacity && trapAt(definitions, state.traps, player) === undefined;
   return Array.from({ length: handSize }, (_, index) => {
-    const trapId = player.hand?.[index] ?? null;
+    const trapId = player.hand?.[index]?.trapId ?? null;
     return { trapId, available: trapId !== null && free };
   });
 }

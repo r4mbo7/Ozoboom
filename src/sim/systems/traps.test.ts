@@ -23,7 +23,7 @@ function game(setId = 'fixture-set'): {
     throw new Error('expected one player');
   }
   player.hand = EFFECTS_OPTIONS.content.traps.flatMap(({ id }) =>
-    Array.from({ length: 8 }, () => id),
+    Array.from({ length: 8 }, () => ({ trapId: id })),
   );
   return { simulation, state: simulation.state, player };
 }
@@ -59,7 +59,7 @@ function firedTicks(recorded: readonly TimedEvent[]): number[] {
 describe('trap placement', () => {
   it('places a trap from the hand and announces it', () => {
     const { simulation, state, player } = game();
-    player.hand = ['mister', 'subwoofer'];
+    player.hand = [{ trapId: 'mister' }, { trapId: 'subwoofer' }];
 
     simulation.step([place('subwoofer', 400, 450)]);
 
@@ -77,7 +77,7 @@ describe('trap placement', () => {
         cooldown: 0,
       },
     ]);
-    expect(player.hand).toEqual(['mister']);
+    expect(player.hand).toEqual([{ trapId: 'mister' }]);
     expect(state.events).toContainEqual({
       type: 'trapPlaced',
       id: 1,
@@ -107,7 +107,7 @@ describe('trap placement', () => {
     [
       'the player does not hold',
       (_, player) => {
-        player.hand = ['mister'];
+        player.hand = [{ trapId: 'mister' }];
         return placeAction('subwoofer', 400, 450);
       },
     ],
@@ -125,7 +125,7 @@ describe('trap placement', () => {
   ])('refuses a trap %s', (_, prepare) => {
     const { simulation, state, player } = game();
     const action = prepare(state, player);
-    const hand = [...(player.hand ?? [])];
+    const hand = structuredClone(player.hand);
 
     simulation.step([actionsFor(0, action)]);
 
@@ -201,6 +201,89 @@ describe('trap placement', () => {
     ]);
 
     expect(state.traps.map((trap) => trap.kind)).toEqual(['subwoofer']);
+  });
+});
+
+describe('taking a trap back', () => {
+  const take = (x: number, y: number): PlayerAction => ({ type: 'takeTrap', x, y });
+
+  it('takes the trap under the spot back into the hand, with the life it has left', () => {
+    const { simulation, state, player } = game();
+    player.hand = [{ trapId: 'subwoofer' }];
+    simulation.step([place('subwoofer', 400, 450)]);
+    const [placed] = state.traps;
+    if (placed === undefined) {
+      throw new Error('expected a placed trap');
+    }
+    placed.hp = 40;
+
+    simulation.step([actionsFor(0, take(405, 445))]);
+
+    expect(state.traps).toEqual([]);
+    expect(player.hand).toEqual([{ trapId: 'subwoofer', hp: 40 }]);
+    expect(state.events).toContainEqual({
+      type: 'trapTaken',
+      id: placed.id,
+      kind: 'subwoofer',
+      playerId: 0,
+      x: 400,
+      y: 450,
+    });
+  });
+
+  it('places a trap taken back with the life it had', () => {
+    const { simulation, state, player } = game();
+    player.hand = [{ trapId: 'subwoofer', hp: 40 }];
+
+    simulation.step([place('subwoofer', 400, 450)]);
+
+    expect(state.traps.map((trap) => trap.hp)).toEqual([40]);
+  });
+
+  it('takes the trap back when a placement lands on it', () => {
+    const { simulation, state, player } = game();
+    player.hand = [{ trapId: 'subwoofer' }, { trapId: 'beam' }];
+    simulation.step([place('subwoofer', 400, 450)]);
+
+    simulation.step([place('beam', 400, 450)]);
+
+    expect(state.traps).toEqual([]);
+    expect(player.hand).toEqual([{ trapId: 'beam' }, { trapId: 'subwoofer', hp: 100 }]);
+  });
+
+  it('leaves the trap in place when both hands are full or the player is down', () => {
+    const { simulation, state, player } = game();
+    player.hand = [{ trapId: 'subwoofer' }, { trapId: 'beam' }, { trapId: 'beam' }];
+    simulation.step([place('subwoofer', 400, 450)]);
+    simulation.step([actionsFor(0, take(400, 450))]);
+    player.hand = [];
+    player.downed = true;
+    simulation.step([actionsFor(0, take(400, 450))]);
+
+    expect(state.traps).toHaveLength(1);
+    expect(player.hand).toEqual([]);
+  });
+
+  it('lets any player take back a trap another one placed', () => {
+    const simulation = createSimulation({
+      ...EFFECTS_OPTIONS,
+      players: [
+        { id: 0, classId: 'raver' },
+        { id: 1, classId: 'raver' },
+      ],
+    });
+    const { state } = simulation;
+    simulation.step([place('subwoofer', 400, 450)]);
+    const other = state.players[1];
+    if (other === undefined) {
+      throw new Error('expected two players');
+    }
+    other.hand = [];
+
+    simulation.step([actionsFor(1, take(400, 450))]);
+
+    expect(state.traps).toEqual([]);
+    expect(other.hand).toEqual([{ trapId: 'subwoofer', hp: 100 }]);
   });
 });
 
@@ -332,7 +415,7 @@ describe('trap effects', () => {
     if (first === undefined || second === undefined) {
       throw new Error('expected two players');
     }
-    first.hand = ['mister'];
+    first.hand = [{ trapId: 'mister' }];
     first.hp = 95;
     second.hp = 0;
     second.downed = true;

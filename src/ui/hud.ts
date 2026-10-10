@@ -19,6 +19,7 @@ import {
   rosterOf,
   skillCharge,
   sunPosition,
+  trapToTake,
   volumeCrans,
 } from './hud-model';
 import { HEART, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
@@ -450,9 +451,12 @@ export function createHud(): Hud {
       setFlag(tile, 'selected', index === selected);
       setFlag(tile, 'blocked', view.trapId !== null && !view.available);
     });
-    const held = player.hand?.[selected];
-    setText(trapName, held === undefined ? '' : (trapDefinitions.get(held)?.name ?? ''));
-    trapName.hidden = held === undefined;
+    const taken = trapToTake(trapDefinitions, state, player, tiles.length);
+    const held = player.hand?.[selected]?.trapId;
+    const name = (id: string | null | undefined) =>
+      id === null || id === undefined ? '' : (trapDefinitions.get(id)?.name ?? '');
+    setText(trapName, taken === null ? name(held) : `Reprendre : ${name(taken)}`);
+    trapName.hidden = taken === null && held === undefined;
   }
 
   if (typeof ResizeObserver !== 'undefined') {

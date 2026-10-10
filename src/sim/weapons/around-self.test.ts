@@ -378,10 +378,10 @@ describe('a game with the three weapons', () => {
   }
 
   it('keeps the fingerprint at level 1', () => {
-    expect(play(1)).toBe('cc632c02');
+    expect(play(1)).toBe('db5c38f2');
   });
 
   it('keeps the fingerprint at the maximum level', () => {
-    expect(play(5)).toBe('07b04d90');
+    expect(play(5)).toBe('73be2560');
   });
 });

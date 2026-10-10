@@ -6,7 +6,7 @@ import { hashState } from '../replay';
 import type { SimEvent } from '../state';
 import { thrownWeapon } from './thrown.test-support';
 
-const REFERENCE_HASH = 'fef0289f';
+const REFERENCE_HASH = '26a4571f';
 const SCRIPT_TICKS = 900;
 const FUSE_AT_TICK = 200;
 

@@ -94,7 +94,7 @@ describe('Volume', () => {
   it('opens a seventh trap slot at Volume 1', () => {
     const place = (simulation: Simulation, state: SimState) => {
       for (const player of state.players) {
-        player.hand = Array.from({ length: 7 }, () => 'mister');
+        player.hand = Array.from({ length: 7 }, () => ({ trapId: 'mister' }));
       }
       for (let i = 0; i < 7; i++) {
         simulation.step([

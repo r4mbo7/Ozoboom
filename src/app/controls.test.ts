@@ -10,7 +10,7 @@ const HAND_SIZE = 2;
 const OUTWARD = { x: -1, y: 0 };
 const REACH = 300;
 const [CAISSON, LASER] = CONTENT.traps as [TrapDefinition, TrapDefinition];
-const HOLDING = { ...PLAYER, hand: [CAISSON.id, LASER.id] };
+const HOLDING = { ...PLAYER, hand: [{ trapId: CAISSON.id }, { trapId: LASER.id }] };
 
 // A camera whose screen origin is the world point (100, 50), at zoom 1.
 const toWorld = (point: Vec2): Vec2 => ({ x: point.x + 100, y: point.y + 50 });
@@ -121,7 +121,7 @@ describe('buildCommand', () => {
     ]);
   });
 
-  it('places nothing when no trap is selected', () => {
+  it('takes a trap back instead when no trap is held', () => {
     const command = buildCommand({
       snapshot: snapshot(),
       player: PLAYER,
@@ -135,7 +135,7 @@ describe('buildCommand', () => {
       trapScreen: null,
     });
 
-    expect(command.actions).toEqual([]);
+    expect(command.actions).toEqual([{ type: 'takeTrap', x: PLAYER.x, y: PLAYER.y }]);
   });
 });
 
@@ -202,18 +202,23 @@ describe('Controls', () => {
     const controls = new Controls(HAND_SIZE, OUTWARD);
     controls.frame(snapshot({ selectTrap: 1, placeTrap: true }));
 
-    const command = controls.command({ ...PLAYER, hand: [LASER.id] }, toWorld, [], REACH);
+    const command = controls.command(
+      { ...PLAYER, hand: [{ trapId: LASER.id }] },
+      toWorld,
+      [],
+      REACH,
+    );
 
     expect(command.actions).toEqual([expect.objectContaining({ trapId: LASER.id })]);
   });
 
-  it('places nothing with empty hands', () => {
+  it('asks to take a trap back under the player with empty hands', () => {
     const controls = new Controls(HAND_SIZE, OUTWARD);
     controls.frame(snapshot({ placeTrap: true }));
 
     const command = controls.command({ ...PLAYER, hand: [] }, toWorld, [], REACH);
 
-    expect(command.actions).toEqual([]);
+    expect(command.actions).toEqual([{ type: 'takeTrap', x: PLAYER.x, y: PLAYER.y }]);
   });
 
   it('sends the chosen upgrade with the next step, once', () => {

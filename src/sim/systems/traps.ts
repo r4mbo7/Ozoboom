@@ -22,6 +22,7 @@ import type { StepContext } from './types';
 const LURE_MARK_TICKS = 2;
 
 type PlaceTrap = Extract<PlayerAction, { type: 'placeTrap' }>;
+type TakeTrap = Extract<PlayerAction, { type: 'takeTrap' }>;
 
 export interface Emitter extends Vec2 {
   direction: Vec2;
@@ -44,8 +45,8 @@ export function traps(ctx: StepContext): void {
   const { state, content, commands } = ctx;
   for (const player of state.players) {
     for (const action of commands.get(player.id)?.actions ?? []) {
-      if (action.type === 'placeTrap') {
-        placeTrap(ctx, player, action);
+      if (action.type === 'placeTrap' || action.type === 'takeTrap') {
+        useTrapSpot(ctx, player, action);
       }
     }
   }
@@ -92,10 +93,32 @@ export function traps(ctx: StepContext): void {
   removeBrokenTraps(state);
 }
 
+// A trap on the spot is taken back when a hand is free; free ground takes the trap placed.
+function useTrapSpot(ctx: StepContext, player: PlayerState, action: PlaceTrap | TakeTrap): void {
+  if (player.downed) {
+    return;
+  }
+  const { state, content, set } = ctx;
+  const under = trapAt(content.traps, state.traps, action);
+  if (under !== undefined) {
+    if ((player.hand?.length ?? 0) < set.handSize) {
+      state.traps.splice(state.traps.indexOf(under), 1);
+      (player.hand ??= []).push({ trapId: under.kind, hp: under.hp });
+      const { id, kind, x, y } = under;
+      state.events.push({ type: 'trapTaken', id, kind, playerId: player.id, x, y });
+    }
+    return;
+  }
+  if (action.type === 'placeTrap') {
+    placeTrap(ctx, player, action);
+  }
+}
+
 function placeTrap({ state, content, set }: StepContext, player: PlayerState, action: PlaceTrap) {
   const definition = content.traps.get(action.trapId);
-  const held = player.hand?.indexOf(action.trapId) ?? -1;
-  if (definition === undefined || player.downed || held < 0) {
+  const held = player.hand?.findIndex(({ trapId }) => trapId === action.trapId) ?? -1;
+  const trap = player.hand?.[held];
+  if (definition === undefined || trap === undefined) {
     return;
   }
 
@@ -127,7 +150,7 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     prevX: x,
     prevY: y,
     direction: facing(action, player),
-    hp: definition.hp,
+    hp: trap.hp ?? definition.hp,
     cooldown: 0,
   });
   player.hand?.splice(held, 1);

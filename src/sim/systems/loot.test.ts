@@ -103,12 +103,12 @@ describe('loot carriers', () => {
 describe('loots', () => {
   it('go to the hand of the first player who touches them with a free hand', () => {
     const { simulation, player } = game();
-    player.hand = ['subwoofer'];
+    player.hand = [{ trapId: 'subwoofer' }];
     const loot = lootAt(simulation, player.x + player.radius + 10, player.y);
 
     const recorded = stepAndRecord(simulation, 1);
 
-    expect(player.hand).toEqual(['subwoofer', 'beam']);
+    expect(player.hand).toEqual([{ trapId: 'subwoofer' }, { trapId: 'beam' }]);
     expect(simulation.state.loots).toEqual([]);
     expect(recorded.map(({ event }) => event)).toContainEqual({
       type: 'lootCollected',
@@ -122,12 +122,12 @@ describe('loots', () => {
 
   it('stay on the ground when the hands are full', () => {
     const { simulation, player } = game();
-    player.hand = ['subwoofer', 'subwoofer'];
+    player.hand = [{ trapId: 'subwoofer' }, { trapId: 'subwoofer' }];
     lootAt(simulation, player.x, player.y);
 
     stepAndRecord(simulation, 1);
 
-    expect(player.hand).toEqual(['subwoofer', 'subwoofer']);
+    expect(player.hand).toEqual([{ trapId: 'subwoofer' }, { trapId: 'subwoofer' }]);
     expect(simulation.state.loots).toHaveLength(1);
   });
 
@@ -177,7 +177,7 @@ describe('loot replay', () => {
 
     expect(types).toContain('lootDropped');
     expect(types).toContain('lootCollected');
-    expect(hashState(simulation.state)).toBe('d105b2bf');
+    expect(hashState(simulation.state)).toBe('8b06094d');
   });
 });
 

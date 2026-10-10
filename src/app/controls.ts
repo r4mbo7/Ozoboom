@@ -72,16 +72,13 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
       ? normalize(toTarget)
       : aimOf(snapshot, player, toWorld, heldAim);
   const actions: PlayerAction[] = [];
-  if (request.placeTrap && trapId !== undefined) {
-    const spot = request.trapScreen === null ? player : toWorld(request.trapScreen);
-    actions.push({
-      type: 'placeTrap',
-      trapId,
-      x: spot.x,
-      y: spot.y,
-      dx: aim.x,
-      dy: aim.y,
-    });
+  if (request.placeTrap) {
+    const { x, y } = request.trapScreen === null ? player : toWorld(request.trapScreen);
+    actions.push(
+      trapId === undefined
+        ? { type: 'takeTrap', x, y }
+        : { type: 'placeTrap', trapId, x, y, dx: aim.x, dy: aim.y },
+    );
   }
   if (request.upgradeId !== null) {
     actions.push({ type: 'chooseUpgrade', upgradeId: request.upgradeId });
@@ -171,7 +168,7 @@ export class Controls {
       player,
       toWorld,
       heldAim: this.heldAim,
-      trapId: player.hand?.[heldSlot(this.trapIndex, player.hand.length)],
+      trapId: player.hand?.[heldSlot(this.trapIndex, player.hand.length)]?.trapId,
       placeTrap: this.placeTrap,
       upgradeId: this.upgradeId,
       assist,

@@ -315,7 +315,7 @@ describe('replay', () => {
   }
 
   it('fixes the fingerprint of a scripted game with the three weapons', () => {
-    expect(play()).toBe('95ec7036');
+    expect(play()).toBe('603cab26');
   });
 
   it('plays the same game twice', () => {

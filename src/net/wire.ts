@@ -11,6 +11,7 @@ import type { NetMessage } from './types';
 //            | actions, only when the flag is set: count (u8) | action...
 //   flags    bit 0 fire, bit 1 skill, bit 2 has actions
 //   action   0x00 placeTrap: id | x, y, dx, dy (f32)   0x01 chooseUpgrade: id
+//            0x02 takeTrap: x, y (f32)
 //   id       length (u8) | UTF-8
 
 const COMMAND = 1;
@@ -20,6 +21,7 @@ const SKILL = 2;
 const ACTIONS = 4;
 const PLACE_TRAP = 0;
 const CHOOSE_UPGRADE = 1;
+const TAKE_TRAP = 2;
 const AXIS_SCALE = 32767;
 const MAX_COUNT = 255;
 const MAX_PLAYER_ID = 3;
@@ -158,6 +160,10 @@ function writeAction(writer: Writer, action: PlayerAction): void {
     writer.f32(action.y);
     writer.f32(action.dx);
     writer.f32(action.dy);
+  } else if (action.type === 'takeTrap') {
+    writer.u8(TAKE_TRAP);
+    writer.f32(action.x);
+    writer.f32(action.y);
   } else {
     writer.u8(CHOOSE_UPGRADE);
     writer.id(action.upgradeId);
@@ -179,6 +185,9 @@ function readAction(reader: Reader): PlayerAction {
   }
   if (type === CHOOSE_UPGRADE) {
     return { type: 'chooseUpgrade', upgradeId: reader.id() };
+  }
+  if (type === TAKE_TRAP) {
+    return { type: 'takeTrap', x: reader.f32(), y: reader.f32() };
   }
   throw new RangeError(`unknown action ${String(type)}`);
 }

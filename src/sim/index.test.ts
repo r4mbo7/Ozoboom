@@ -24,8 +24,8 @@ describe('createSimulation', () => {
     });
 
     expect(state.players.map((player) => player.hand)).toEqual([
-      ['subwoofer', 'subwoofer'],
-      ['subwoofer', 'subwoofer'],
+      [{ trapId: 'subwoofer' }, { trapId: 'subwoofer' }],
+      [{ trapId: 'subwoofer' }, { trapId: 'subwoofer' }],
     ]);
   });
 

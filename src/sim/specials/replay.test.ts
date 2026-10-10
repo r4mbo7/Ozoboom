@@ -7,7 +7,7 @@ import { createSimulation, type SimulationOptions } from '../index';
 import { hashState } from '../replay';
 import type { Vec2 } from '../state';
 
-const REFERENCE_HASH = '34b2e135';
+const REFERENCE_HASH = 'ee98d4f5';
 
 const INTOLERANT: EnemyDefinition = {
   id: 'intolerant',
