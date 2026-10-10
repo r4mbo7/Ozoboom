@@ -105,6 +105,8 @@ const soundingEvents: readonly [SimEvent, SfxName][] = [
   [{ type: 'vibesStolen', id: 1, kind: 'arnaqueur', x: 0, y: 0 }, 'vibesStolen'],
   [{ type: 'playerShoved', id: 1, kind: 'desagreable', playerId: 0, x: 0, y: 0 }, 'playerShoved'],
   [{ type: 'bystanderHelped', id: 1, kind: 'festivalier', x: 0, y: 0 }, 'bystanderHelped'],
+  [{ type: 'lootDropped', id: 1, trapId: 'laser', x: 0, y: 0 }, 'lootDropped'],
+  [{ type: 'lootCollected', id: 1, playerId: 0, trapId: 'laser', x: 0, y: 0 }, 'lootCollected'],
   [{ type: 'bystanderLost', id: 1, kind: 'festivalier', x: 0, y: 0 }, 'bystanderLost'],
   [{ type: 'volumeChanged', volume: 2 }, 'volumeUp'],
 ];

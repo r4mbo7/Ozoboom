@@ -37,6 +37,7 @@ function context(): RenderContext {
       beam: shape,
       pip: shape,
       vibes: shape,
+      crate: shape,
       traps: { shockwave: shape, beam: shape, mist: shape, lure: shape, strobe: shape },
       names: { get: () => ({ fill: Texture.EMPTY, edge: Texture.EMPTY }) },
     },
@@ -191,29 +192,48 @@ describe('pickups', () => {
 });
 
 describe('loots', () => {
-  it.each(MOMENTS)('show their trap in its color inside a turquoise ring at %f', (fraction) => {
-    const ctx = context();
-    const frame = frameAt(fraction);
+  function lootState(ticksLeft = 1000) {
     const state = createFixtureState({ enemies: 1, projectiles: 0 });
     const [carrier] = state.enemies;
     if (carrier === undefined) {
       throw new Error('Fixture has no enemy');
     }
     carrier.carriesLoot = true;
-    state.loots = [
-      { id: 900, trapId: 'laser', ticksLeft: 100, x: 300, y: 300, prevX: 300, prevY: 300 },
-    ];
+    state.loots = [{ id: 900, trapId: 'laser', ticksLeft, x: 300, y: 300, prevX: 300, prevY: 300 }];
+    return state;
+  }
 
-    createLoots(ctx).update(state, 0, frame);
+  const shown = (layer: Container) => layer.children.filter((sprite) => sprite.visible);
+  const tints = (layer: Container) =>
+    shown(layer).map((sprite) => (sprite as unknown as { tint: number }).tint);
 
-    const tints = (layer: Container) =>
-      layer.children
-        .filter((sprite) => sprite.visible)
-        .map((sprite) => (sprite as unknown as { tint: number }).tint);
-    expect(tints(ctx.layers.pickups)).toContain(frame.palette[TRAP_TOKENS.beam]);
-    expect(tints(ctx.layers.pickups)).toContain(frame.palette.turquoise);
-    expect(
-      tints(ctx.layers.pickups).filter((tint) => tint === frame.palette.turquoise),
-    ).toHaveLength(2);
+  it.each(MOMENTS)(
+    'lie as a turquoise case with the icon of their trap, carried above their bad vibe at %f',
+    (fraction) => {
+      const ctx = context();
+      const frame = frameAt(fraction);
+
+      createLoots(ctx).update(lootState(), 0, frame);
+
+      expect(tints(ctx.layers.pickups)).toContain(frame.palette[TRAP_TOKENS.beam]);
+      expect(tints(ctx.layers.pickups)).toContain(frame.palette.turquoise);
+      expect(tints(ctx.layers.glow)).toEqual([frame.palette.turquoise, frame.palette.turquoise]);
+      expect(tints(ctx.layers.bubbles)).toContain(frame.palette.turquoise);
+    },
+  );
+
+  it('blink over their last bars, but never in calm mode', () => {
+    const blinking = context();
+    const calm = context();
+    const frame = frameAt(0.4);
+    frame.pulse = 0;
+
+    const alone = () => ({ ...lootState(10), enemies: [] });
+    createLoots(blinking).update(alone(), 0, frame);
+    createLoots(calm).update(alone(), 0, { ...frame, calm: true });
+
+    const alphas = (layer: Container) => shown(layer).map((sprite) => sprite.alpha);
+    expect(Math.min(...alphas(blinking.layers.pickups))).toBeLessThan(1);
+    expect(alphas(calm.layers.pickups).every((value) => value === 1)).toBe(true);
   });
 });

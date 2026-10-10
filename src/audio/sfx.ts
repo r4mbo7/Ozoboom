@@ -37,6 +37,8 @@ export type SfxName =
   | 'playerShoved'
   | 'bystanderHelped'
   | 'bystanderLost'
+  | 'lootDropped'
+  | 'lootCollected'
   | 'volumeUp'
   | 'skillCharge'
   | 'skillHeal'
@@ -153,6 +155,8 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
     bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+    lootDropped: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    lootCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.3 },
     skillHeal: { perFrame: 1, concurrent: 2, seconds: 0.7 },
@@ -195,6 +199,8 @@ export function sfxOf(
     case 'playerDowned':
     case 'playerRevived':
     case 'playerReviving':
+    case 'lootDropped':
+    case 'lootCollected':
       return event.type;
     case 'skillUsed': {
       const classId = players.find((player) => player.id === event.playerId)?.classId;
@@ -551,6 +557,38 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       hold: 0.2,
       release: 0.1,
       vibrato: { hz: 8, cents: 30, delay: 0.04 },
+    });
+  },
+  // A flight case lands: a soft wooden knock, then a short shimmer from the trap inside.
+  lootDropped: (out, at, _variant, key) => {
+    playNoise(out, at, {
+      gain: 0.22,
+      attack: 0.002,
+      hold: 0.02,
+      release: 0.12,
+      filter: { type: 'lowpass', hz: 600, q: 1.5 },
+    });
+    playTone(out, at + 0.05, {
+      wave: 'triangle',
+      hz: keyHz(key, 4, 5),
+      gain: 0.08,
+      attack: 0.004,
+      hold: 0.04,
+      release: 0.22,
+    });
+  },
+  // A trap in hand: two quick rising notes, brighter than the vibes.
+  lootCollected: (out, at, _variant, key) => {
+    [0, 4].forEach((degree, index) => {
+      playTone(out, at + index * 0.06, {
+        wave: 'square',
+        hz: keyHz(key, degree, 5),
+        gain: 0.07,
+        attack: 0.003,
+        hold: 0.04,
+        release: 0.16,
+        filter: { type: 'lowpass', hz: 2400 },
+      });
     });
   },
   weaponGained: (out, at, _variant, key) => {
