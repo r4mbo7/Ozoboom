@@ -45,6 +45,23 @@ const LAKE_PLUCK_VOICES: readonly (readonly [
   ['triangle', -6, 0.06],
   ['square', 6, 0.03],
 ];
+const BOWL_PARTIALS: readonly (readonly [
+  ratio: number,
+  gain: number,
+  release: number,
+  pan: number,
+])[] = [
+  [1, 0.045, 5, -0.2],
+  [1.004, 0.035, 5, 0.2],
+  [2.76, 0.02, 3, -0.35],
+  [5.4, 0.008, 1.6, 0.35],
+];
+// The vowel "aah": [formant hz, q, gain].
+const CHOIR_FORMANTS: readonly (readonly [hz: number, q: number, gain: number])[] = [
+  [780, 5, 1],
+  [1180, 7, 0.55],
+  [2500, 9, 0.15],
+];
 const TOM_HZ = [190, 160, 130, 105];
 const GATE_TOP_HZ = 2200;
 
@@ -381,5 +398,73 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       release: 0.05,
       pan: position < 12 ? -0.5 : 0.5,
     });
+  },
+  kalimba: ({ send, at, hz, position }) => {
+    const pan = position % 2 === 0 ? -0.4 : 0.4;
+    playTone(send, at, {
+      wave: 'sine',
+      hz,
+      gain: 0.065,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.75,
+      pan,
+    });
+    playTone(send, at, {
+      wave: 'sine',
+      hz: hz * 5.9,
+      gain: 0.012,
+      attack: 0.001,
+      hold: 0.002,
+      release: 0.08,
+      pan,
+    });
+  },
+  choir: ({ send, at, hz, steps, until }) => {
+    const release = 0.8;
+    const hold = Math.max(0, Math.min(steps * SIXTEENTH, until - at - 0.5 - release));
+    for (const detune of [-9, 0, 9]) {
+      for (const [formant, q, gain] of CHOIR_FORMANTS) {
+        playTone(send, at, {
+          wave: 'sawtooth',
+          hz,
+          detune,
+          gain: 0.03 * gain,
+          attack: 0.5,
+          hold,
+          release,
+          ...(steps >= 4 ? { vibrato: { hz: 5, cents: 14, delay: 0.3 } } : {}),
+          filter: { type: 'bandpass', hz: formant, q },
+        });
+      }
+    }
+  },
+  siren: ({ send, at, hz, steps, until }) => {
+    const seconds = Math.max(0.5, Math.min(steps * SIXTEENTH, until - at));
+    playTone(send, at, {
+      wave: 'sine',
+      hz,
+      toHz: hz * 1.8,
+      glide: seconds,
+      gain: 0.045,
+      attack: 0.15,
+      hold: seconds * 0.7,
+      release: seconds * 0.3,
+      pan: -0.2,
+      vibrato: { hz: 3.5, cents: 500, delay: 0 },
+    });
+  },
+  bowl: ({ send, at, hz }) => {
+    for (const [ratio, gain, release, pan] of BOWL_PARTIALS) {
+      playTone(send, at, {
+        wave: 'sine',
+        hz: hz * ratio,
+        gain,
+        attack: 0.008,
+        hold: 0.05,
+        release,
+        pan,
+      });
+    }
   },
 };
