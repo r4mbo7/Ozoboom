@@ -12,7 +12,7 @@ import { writePixiPalette } from './palette';
 import { createProjectiles } from './projectiles';
 import type { Shape } from './textures';
 import { WEAPON_KINDS } from './textures-weapons';
-import { arcLook, arcProgress } from './weapon-looks';
+import { arcLook, arcProgress, styleOf } from './weapon-looks';
 import { createWeapons } from './weapons';
 
 function frameAt(fraction: number): Frame {
@@ -180,7 +180,7 @@ describe('weapons on the grid', () => {
       family.update(state, 0.5, frameAt(0.4));
     }
 
-    expect(ctx.layers.weapons.children.filter((child) => child.visible).length).toBeGreaterThan(20);
+    expect(ctx.layers.weapons.children.filter((child) => child.visible).length).toBeGreaterThan(1);
     expect(family.transients + family.ribbons).toBeGreaterThan(0);
   });
 
@@ -203,41 +203,29 @@ describe('light rule of the weapons', () => {
   ])('wears a dark outline by day only, at %f', (fraction, outlined) => {
     const ctx = context();
     const state = createFixtureState({ enemies: 0, projectiles: 0 });
-    giveWeapons(state, ['totem']);
+    giveWeapons(state, ['monocycle']);
     const frame = frameAt(fraction);
 
     createWeapons(ctx).update(state, 0, frame);
 
     const [outline, body] = ctx.layers.weapons.children;
     expect(outline?.visible).toBe(outlined);
-    expect(body?.tint).toBe(frame.palette.tank);
+    expect(body?.tint).toBe(frame.palette.healer);
   });
 
   it('tints a weapon without a class in gold', () => {
-    const ctx = context();
-    const state = createFixtureState({ enemies: 0, projectiles: 0 });
-    giveWeapons(state, ['ruban-arc-en-ciel']);
-    const frame = frameAt(0.4);
-
-    createWeapons(ctx).update(state, 0, frame);
-
-    expect(ctx.layers.weapons.children[1]?.tint).toBe(frame.palette.or);
+    expect(styleOf(context(), 'ruban-arc-en-ciel').token).toBe('or');
   });
+});
 
-  it.each([
-    ['baton-de-feu', 1],
-    ['double-baton', 2],
-    ['cerceaux', 1],
-    ['anneaux-solaires', 3],
-  ])('shows %s as %i held silhouettes', (id, copies) => {
+describe('carried weapons', () => {
+  it('leave no silhouette around the festivalier, the action bar shows them', () => {
     const ctx = context();
     const state = createFixtureState({ enemies: 0, projectiles: 0 });
-    giveWeapons(state, [id]);
+    giveWeapons(state, ['baton-de-feu', 'cerceaux', 'totem']);
 
     createWeapons(ctx).update(state, 0, frameAt(0.4));
 
-    expect(
-      ctx.layers.weapons.children.filter((child, index) => child.visible && index % 2 === 1),
-    ).toHaveLength(copies);
+    expect(ctx.layers.weapons.children.filter((child) => child.visible)).toHaveLength(0);
   });
 });

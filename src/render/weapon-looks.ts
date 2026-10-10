@@ -1,5 +1,4 @@
 import type { PaletteToken } from '../shared/palette';
-import type { PlayerState } from '../sim/state';
 import type { RenderContext, WeaponLook } from './context';
 import type { WeaponKind } from './textures-weapons';
 import { lookup } from './util';
@@ -42,29 +41,6 @@ export function styleOf(ctx: RenderContext, weaponId: string): WeaponStyle {
     copies: evolved ? (EVOLVED_COPIES[kind] ?? 1) : 1,
     scale: evolved ? EVOLVED_SCALE : 1,
   };
-}
-
-// Held silhouettes sit in a ring behind the aim, a little bigger than the festivalier's hand.
-export const HELD_SIZE = 1.1;
-const HELD_SPACING = 1.35;
-const HELD_RING = 0.9;
-
-export interface HeldSlot {
-  readonly x: number;
-  readonly y: number;
-  readonly size: number;
-}
-
-export function heldSlot(
-  player: Pick<PlayerState, 'radius' | 'aim'>,
-  index: number,
-  count: number,
-): HeldSlot {
-  const size = player.radius * HELD_SIZE;
-  const distance = player.radius + size * HELD_RING;
-  const step = Math.min((HELD_SPACING * size) / distance, (2 * Math.PI) / Math.max(count, 1));
-  const angle = Math.atan2(player.aim.y, player.aim.x) + Math.PI + (index - (count - 1) / 2) * step;
-  return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance, size };
 }
 
 // The diabolo's arc: 0 at launch, 1 on landing; `alpha` is how far the render is into the tick.
