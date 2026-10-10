@@ -43,8 +43,13 @@ export function firesOnTick(
     return true;
   }
   const inPeriod = tick % (rhythm.everyBars * tempo.ticksPerBar);
-  const sixteenth = tempo.ticksPerBeat / 4;
-  return inPeriod % sixteenth === 0 && rhythm.steps.includes(inPeriod / sixteenth);
+  // A sixteenth is not a whole number of ticks on every stage: each step fires on its tick, rounded down.
+  for (const step of rhythm.steps) {
+    if (Math.floor((step * tempo.ticksPerBeat) / 4) === inPeriod) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function weapons(ctx: StepContext): void {

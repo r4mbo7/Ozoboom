@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { GameContent, WeaponDefinition } from '../../data/types';
-import { TICKS_PER_BAR } from '../../shared/tempo';
+import { TICKS_PER_BAR, tempoOf } from '../../shared/tempo';
 import { FIXTURE_CONTENT, FIXTURE_OPTIONS, actionsFor } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import { spawnEnemy } from './spawning';
@@ -57,6 +57,17 @@ describe('firesOnTick', () => {
     const rhythm = { everyBars: 2, steps: [1] };
 
     expect([3, 51, 99].map((tick) => firesOnTick(rhythm, tick))).toEqual([true, false, true]);
+  });
+
+  it('fires every sixteenth of a bar on the Dome, where a sixteenth is not a whole tick', () => {
+    const dome = tempoOf(18);
+    const rhythm = { everyBars: 1, steps: [1, 2, 3, 5] };
+
+    const ticks = Array.from({ length: dome.ticksPerBar }, (_, tick) => tick).filter((tick) =>
+      firesOnTick(rhythm, tick, dome),
+    );
+
+    expect(ticks).toEqual([4, 9, 13, 22]);
   });
 });
 
