@@ -80,19 +80,20 @@ Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fai
 
 Du matériel de festival, trouvé dans les loots, qui agit sur le temps musical. **Tranché le 2026-10-10** : plus de watts ni de niveaux de piège.
 
-| Piège            | Effet                                               | Classe   |
-| ---------------- | --------------------------------------------------- | -------- |
-| Caisson de basse | onde de choc sur le kick, repousse                  | Nounours |
-| Laser            | ligne de dégâts continue, orientable                | Luxiole  |
-| Brumisateur      | zone qui ralentit les ennemis et soigne les joueurs | Hygie    |
-| Déco UV          | attire les ennemis, les marque (dégâts bonus)       | Nounours |
-| Stroboscope      | étourdit sur le drop                                | Hygie    |
+| Piège            | Effet                                               |
+| ---------------- | --------------------------------------------------- |
+| Caisson de basse | onde de choc sur le kick, repousse                  |
+| Laser            | ligne de dégâts continue, orientable                |
+| Brumisateur      | zone qui ralentit les ennemis et soigne les joueurs |
+| Déco UV          | attire les ennemis, les marque (dégâts bonus)       |
+| Stroboscope      | étourdit sur le drop                                |
 
 - Toutes les 12 mesures (environ 20 s), une bad vibe qui entre sur la piste porte un loot et se voit de loin. Tuée, elle le lâche. Un boss lâche un loot par joueur. Un loot au sol disparaît au bout de 16 mesures.
-- Le loot contient un piège tiré au sort quand on le ramasse, deux fois plus souvent un piège de sa classe.
+- Le piège du loot est tiré au sort quand il tombe, et son icône se voit sur la caisse. Les chances sont les mêmes pour toutes les classes ; le Caisson est le plus courant, et le premier loot de la partie est toujours un Caisson.
 - Celui qui ramasse le loot porte le piège, deux au plus : les mains pleines, les loots restent au sol. Chaque joueur commence avec un Caisson de basse en main.
 - La touche de pose pose le piège choisi devant soi. Devant un piège posé, elle le reprend en main, avec la vie qui lui reste : n'importe quel joueur peut ainsi déplacer n'importe quel piège.
 - Nombre d'emplacements limité, un de plus par niveau de Volume, et autant de plus que la Rallonge en donne à chaque joueur de l'équipe. Les lourds peuvent pousser ou casser un piège.
+- La barre du bas montre les deux pièges en main, sans autre compteur.
 
 ## Progression dans la partie
 
