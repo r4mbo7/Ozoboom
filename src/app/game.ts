@@ -103,6 +103,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   );
   const hub = createInputHub(stage);
   const audio = createAudioEngine({
+    setOf: (setId) => content.sets.find((candidate) => candidate.id === setId),
     breakBars: (tier) => set.tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,
     trapEffectOf: (id) => content.traps.find((trap) => trap.id === id)?.effect.kind ?? id,
     sfxLookups: {

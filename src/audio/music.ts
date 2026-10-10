@@ -1,9 +1,9 @@
-import { TICKS_PER_BAR, TICKS_PER_BEAT, barOfTick, phraseOfTick } from '../shared/tempo';
+import { MAIN_TEMPO, barOfTick, phraseOfTick, type Tempo } from '../shared/tempo';
+import { setTempo } from '../sim/lineup';
 import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state';
 import {
   LATE_TOLERANCE_SECONDS,
   LOOKAHEAD_SECONDS,
-  STEP_TICKS,
   TICK_SECONDS,
   firstStepAtOrAfter,
   follow,
@@ -13,7 +13,9 @@ import {
   type Anchor,
 } from './clock';
 import { CROSSFADE_SECONDS, createFader } from './fade';
-import type { MusicLayer, MusicPart, MusicTrack } from '../data/types';
+import type { MusicLayer, MusicPart, MusicTrack, SetDefinition } from '../data/types';
+import { DRUM_VOICES } from './drums';
+import { createReverb, type Acoustics, type Reverb } from './reverb';
 import { SUNRISE_SEMITONES, chordRootOfBar, keyHz, midiToHz, type MusicKey } from './scale';
 import {
   SPEAKER_LAYER_IDS,
@@ -53,6 +55,8 @@ export interface BreakCue {
 export interface MusicOptions {
   track: MusicTrack;
   breakBars: (tier: number) => number;
+  // The set a game plays: its beat length and its room. Absent means the main stage.
+  setOf?: ((setId: string) => SetDefinition | undefined) | undefined;
   onKickScheduled: ((tick: number, time: number) => void) | undefined;
 }
 
@@ -79,15 +83,14 @@ interface Bus {
   lead: GainNode;
   echoFeedback: GainNode;
   echoReturn: GainNode;
+  reverb: Reverb | null;
 }
 
 export const THEME_TIER = 1;
-export const CUT_TICKS = TICKS_PER_BEAT;
 export const ROLL_BARS = 3;
 export const PULSE: Threshold = { below: 0.25, offAt: 0.27 };
 export const CHOKE: Threshold = { below: 0.1, offAt: 0.12 };
 
-const SIXTEENTH = STEP_TICKS * TICK_SECONDS;
 const CUT_SECONDS = 0.02;
 const WON_FADE_SECONDS = 1.5;
 const SUNRISE_ATTACK = 4;
@@ -99,7 +102,6 @@ const RISER_HIGH_HZ = 7000;
 const PAD_HZ = 900;
 const PAD_RELEASE = 0.6;
 const PAD_CUT_RELEASE = 0.05;
-const ECHO_SECONDS = 3 * SIXTEENTH;
 const ECHO_FEEDBACK = 0.38;
 const ECHO_RETURN = 0.32;
 const CRASH_EVERY_BARS = 8;
@@ -141,13 +143,22 @@ export function modeOf(status: GameStatus): MusicMode {
   return 'playing';
 }
 
-export function phraseAt(progress: SetProgress, fromTick: number, tick: number): number {
-  return progress.phrase + phraseOfTick(tick) - phraseOfTick(fromTick);
+export function phraseAt(
+  progress: SetProgress,
+  fromTick: number,
+  tick: number,
+  tempo: Tempo = MAIN_TEMPO,
+): number {
+  return progress.phrase + phraseOfTick(tick, tempo) - phraseOfTick(fromTick, tempo);
 }
 
-export function dropTickOf(progress: SetProgress, breakBars: number): number | null {
+export function dropTickOf(
+  progress: SetProgress,
+  breakBars: number,
+  tempo: Tempo = MAIN_TEMPO,
+): number | null {
   return progress.segment === 'break'
-    ? progress.segmentStartTick + breakBars * TICKS_PER_BAR
+    ? progress.segmentStartTick + breakBars * tempo.ticksPerBar
     : null;
 }
 
@@ -155,21 +166,27 @@ export function segmentAt(segment: SetSegment, dropTick: number | null, tick: nu
   return segment === 'break' && dropTick !== null && tick >= dropTick ? 'drop' : segment;
 }
 
-export function breakCueAt(dropTick: number | null, tick: number): BreakCue {
+export function breakCueAt(
+  dropTick: number | null,
+  tick: number,
+  tempo: Tempo = MAIN_TEMPO,
+): BreakCue {
   const left = dropTick === null ? 0 : dropTick - tick;
-  if (left <= 0 || left > ROLL_BARS * TICKS_PER_BAR) {
+  const { ticksPerBeat, ticksPerBar } = tempo;
+  const stepTicks = ticksPerBeat / 4;
+  if (left <= 0 || left > ROLL_BARS * ticksPerBar) {
     return NO_CUE;
   }
-  if (left <= CUT_TICKS) {
+  if (left <= ticksPerBeat) {
     return { roll: null, cut: true };
   }
-  if (left <= 2 * TICKS_PER_BEAT) {
-    return { roll: STEP_TICKS / 2, cut: false };
+  if (left <= 2 * ticksPerBeat) {
+    return { roll: stepTicks / 2, cut: false };
   }
-  if (left <= TICKS_PER_BAR) {
-    return { roll: STEP_TICKS, cut: false };
+  if (left <= ticksPerBar) {
+    return { roll: stepTicks, cut: false };
   }
-  return { roll: left <= 2 * TICKS_PER_BAR ? 2 * STEP_TICKS : TICKS_PER_BEAT, cut: false };
+  return { roll: left <= 2 * ticksPerBar ? 2 * stepTicks : ticksPerBeat, cut: false };
 }
 
 export function layersFor(
@@ -462,9 +479,10 @@ export function padCutoff(
   segment: SetSegment,
   progress: SetProgress,
   bar: number,
+  tempo: Tempo = MAIN_TEMPO,
 ) {
   return segment === 'break'
-    ? PAD_HZ + (track.padOpens ?? 0) * (bar - barOfTick(progress.segmentStartTick))
+    ? PAD_HZ + (track.padOpens ?? 0) * (bar - barOfTick(progress.segmentStartTick, tempo))
     : PAD_HZ;
 }
 
@@ -487,6 +505,9 @@ function powerDown(out: AudioNode, at: number, key: MusicKey) {
 
 export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let { track } = options;
+  let tempo = MAIN_TEMPO;
+  let acoustics: Acoustics | undefined;
+  let setId: string | null = null;
   const context = out.context;
   const level = context.createGain();
   const fader = createFader(level.gain, context, 1);
@@ -504,6 +525,8 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let pulsing = false;
   let choking = false;
   const entries = new Map<SpeakerLayerId, number>();
+  const stepTicks = () => tempo.ticksPerBeat / 4;
+  const sixteenthSeconds = () => stepTicks() * TICK_SECONDS;
   const plugging = new Set<SpeakerLayerId>();
 
   function openBus(cutoff = OPEN_HZ): Bus {
@@ -516,7 +539,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     output.connect(level);
     const lead = context.createGain();
     const echo = context.createDelay(1);
-    echo.delayTime.value = ECHO_SECONDS;
+    echo.delayTime.value = 3 * sixteenthSeconds();
     const echoTone = context.createBiquadFilter();
     echoTone.type = 'lowpass';
     echoTone.frequency.value = 2600;
@@ -531,7 +554,11 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     echoFeedback.connect(echo);
     echoTone.connect(echoReturn);
     echoReturn.connect(input);
-    bus = { input, cutoff, output, lead, echoFeedback, echoReturn };
+    const reverb = acoustics === undefined ? null : createReverb(output, acoustics);
+    if (reverb !== null) {
+      input.connect(reverb.input);
+    }
+    bus = { input, cutoff, output, lead, echoFeedback, echoReturn, reverb };
     return bus;
   }
 
@@ -544,6 +571,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       () => {
         old.output.disconnect();
         old.echoFeedback.disconnect();
+        old.reverb?.disconnect();
       },
       (fadeSeconds + LOOKAHEAD_SECONDS + BUS_TAIL_SECONDS) * 1000,
     );
@@ -564,16 +592,16 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   }
 
   function cutTime(clock: Anchor): number {
-    return dropTick === null ? Infinity : tickToTime(clock, dropTick - CUT_TICKS);
+    return dropTick === null ? Infinity : tickToTime(clock, dropTick - tempo.ticksPerBeat);
   }
 
   function sustain(target: Bus, state: SimState, from: number, clock: Anchor) {
     const { set, tick } = state;
     const layers = layersFor(set.segment, set.tier, set.phrase);
-    const bar = barOfTick(tick);
-    const barEnd = tickToTime(clock, (bar + 1) * TICKS_PER_BAR);
+    const bar = barOfTick(tick, tempo);
+    const barEnd = tickToTime(clock, (bar + 1) * tempo.ticksPerBar);
     const end = Math.min(barEnd, cutTime(clock));
-    if (layers.pad && tick % TICKS_PER_BAR !== 0 && end > from) {
+    if (layers.pad && tick % tempo.ticksPerBar !== 0 && end > from) {
       const release = end < barEnd ? PAD_CUT_RELEASE : PAD_RELEASE;
       pad(
         target.input,
@@ -583,13 +611,13 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         CUT_SECONDS,
         release,
         keyOf(track, layers),
-        padCutoff(track, set.segment, set, bar),
+        padCutoff(track, set.segment, set, bar, tempo),
       );
     }
     if (dropTick !== null) {
       const start = tickToTime(clock, set.segmentStartTick);
       const cut = cutTime(clock);
-      if (cut - from > SIXTEENTH) {
+      if (cut - from > sixteenthSeconds()) {
         riser(target.input, from, cut, (from - start) / (cut - start), track);
       }
     }
@@ -632,50 +660,75 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       impact(input, at);
       setEcho(target, at, true);
     }
-    const cue = current === 'break' ? breakCueAt(dropTick, step) : NO_CUE;
+    const cue = current === 'break' ? breakCueAt(dropTick, step, tempo) : NO_CUE;
     if (cue.cut) {
-      if (dropTick !== null && step === dropTick - CUT_TICKS) {
+      if (dropTick !== null && step === dropTick - tempo.ticksPerBeat) {
         setEcho(target, at, false);
       }
       return;
     }
-    const layers = layersFor(current, tier, phraseAt(state.set, state.tick, step), [
+    const layers = layersFor(current, tier, phraseAt(state.set, state.tick, step, tempo), [
       ...entries.keys(),
       ...plugging,
     ]);
     const key = keyOf(track, layers);
-    const sixteenth = (step % TICKS_PER_BAR) / STEP_TICKS;
+    const bar = barOfTick(step, tempo);
+    const sixteenth = Math.round((step % tempo.ticksPerBar) / stepTicks());
     const thump = pulseGain(sixteenth, pulsing, choking);
     if (thump > 0) {
       pulse(input, at, thump, track);
     }
     const inBeat = sixteenth % 4;
-    const bar = barOfTick(step);
     const chord = chordRootOfBar(track.chords, bar);
     const light = current === 'break';
     const until = light ? cutTime(clock) : Infinity;
-    if (inBeat === 0 && layers.kick) {
-      kick(input, at, track);
-      options.onKickScheduled?.(step, at);
-    }
-    if (layers.hats && inBeat === 2) {
-      hat(input, at, true, 0);
-    } else if (layers.hats16 && inBeat !== 0) {
-      hat(input, at, false, inBeat === 1 ? -0.25 : 0.25);
-    }
-    if (layers.clap && (sixteenth === 4 || sixteenth === 12)) {
-      clap(input, at);
+    if (track.drums === undefined) {
+      if (inBeat === 0 && layers.kick) {
+        kick(input, at, track);
+        options.onKickScheduled?.(step, at);
+      }
+      if (layers.hats && inBeat === 2) {
+        hat(input, at, true, 0);
+      } else if (layers.hats16 && inBeat !== 0) {
+        hat(input, at, false, inBeat === 1 ? -0.25 : 0.25);
+      }
+      if (layers.clap && (sixteenth === 4 || sixteenth === 12)) {
+        clap(input, at);
+      }
+    } else {
+      for (const drum of track.drums) {
+        const position = (sixteenth + 16 * bar) % drum.loopSteps;
+        const hit = drum.hits.find(([hitStep]) => hitStep === position);
+        if (hit === undefined || !isOn(layers, drum.layer)) {
+          continue;
+        }
+        DRUM_VOICES[drum.voice]({
+          out: input,
+          at,
+          gain: hit[1],
+          pan: drum.pan,
+          kick: {
+            fromHz: track.kick.fromHz,
+            toHz: keyHz(track, 0, 0),
+            release: track.kick.release,
+          },
+        });
+        if (drum.voice === 'kick') {
+          options.onKickScheduled?.(step, at);
+        }
+      }
     }
     if (layers.kick && sixteenth === 0 && bar % CRASH_EVERY_BARS === 0 && step !== dropTick) {
       crash(input, at, 0.07);
     }
     if (cue.roll !== null && dropTick !== null) {
       const left = dropTick - step;
-      if (left % Math.max(cue.roll, STEP_TICKS) === 0) {
-        const progress = 1 - (left - CUT_TICKS) / (ROLL_BARS * TICKS_PER_BAR - CUT_TICKS);
-        const hits = Math.max(1, STEP_TICKS / cue.roll);
+      if (left % Math.max(cue.roll, stepTicks()) === 0) {
+        const { ticksPerBeat, ticksPerBar } = tempo;
+        const progress = 1 - (left - ticksPerBeat) / (ROLL_BARS * ticksPerBar - ticksPerBeat);
+        const hits = Math.max(1, stepTicks() / cue.roll);
         for (let hit = 0; hit < hits; hit += 1) {
-          snare(input, at + (hit * SIXTEENTH) / hits, progress, track);
+          snare(input, at + (hit * sixteenthSeconds()) / hits, progress, track);
         }
       }
     }
@@ -721,10 +774,19 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       });
     }
     if (layers.pad && sixteenth === 0) {
-      const barEnd = tickToTime(clock, (bar + 1) * TICKS_PER_BAR);
+      const barEnd = tickToTime(clock, (bar + 1) * tempo.ticksPerBar);
       const end = Math.min(barEnd, until);
       const release = end < barEnd ? PAD_CUT_RELEASE : PAD_RELEASE;
-      pad(input, at, chord, end - at, 0.3, release, key, padCutoff(track, current, state.set, bar));
+      pad(
+        input,
+        at,
+        chord,
+        end - at,
+        0.3,
+        release,
+        key,
+        padCutoff(track, current, state.set, bar, tempo),
+      );
     }
   }
 
@@ -734,6 +796,14 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     },
     update(state, now, currentTime) {
       last = state;
+      if (state.setId !== setId) {
+        setId = state.setId;
+        const set = options.setOf?.(setId);
+        tempo = set === undefined ? MAIN_TEMPO : setTempo(set);
+        acoustics = set?.acoustics;
+        anchor = null;
+        followedTick = -1;
+      }
       const nextMode = modeOf(state.status);
       if (nextMode !== mode) {
         mode = nextMode;
@@ -766,7 +836,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       const entered = !foreseen && (set.segment !== previous || set.tier !== tier);
       segment = set.segment;
       tier = set.tier;
-      dropTick = dropTickOf(set, set.segment === 'break' ? options.breakBars(set.tier) : 0);
+      dropTick = dropTickOf(set, set.segment === 'break' ? options.breakBars(set.tier) : 0, tempo);
       const { core } = state;
       const life = core.maxHp > 0 ? core.hp / core.maxHp : 1;
       pulsing = latched(pulsing, life, PULSE);
@@ -778,6 +848,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         target = openBus(cutoff);
         cursor = firstStepAtOrAfter(
           followed.resynced ? state.tick : Math.max(state.tick, timeToTick(clock, currentTime)),
+          stepTicks(),
         );
         const at = Math.max(tickToTime(clock, state.tick), currentTime);
         if (entered && previous !== null && set.segment === 'drop') {
@@ -798,8 +869,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         cursor,
         currentTime - LATE_TOLERANCE_SECONDS,
         currentTime + LOOKAHEAD_SECONDS,
+        stepTicks(),
       );
-      for (let step = range.from; step < range.until; step += STEP_TICKS) {
+      for (let step = range.from; step < range.until; step += stepTicks()) {
         playStep(target, step, state, clock, currentTime);
       }
       cursor = range.until;
@@ -818,14 +890,16 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         cursor,
         currentTime - LATE_TOLERANCE_SECONDS,
         currentTime + CROSSFADE_SECONDS,
+        stepTicks(),
       );
       const until = Math.min(range.until, dropTick ?? Infinity);
-      for (let step = range.from; step < until; step += STEP_TICKS) {
+      for (let step = range.from; step < until; step += stepTicks()) {
         playStep(bus, step, last, clock, currentTime);
       }
       cursor = Math.max(cursor, until);
       anchor = null;
-      const beat = Math.ceil(timeToTick(clock, currentTime) / TICKS_PER_BEAT) * TICKS_PER_BEAT;
+      const beat =
+        Math.ceil(timeToTick(clock, currentTime) / tempo.ticksPerBeat) * tempo.ticksPerBeat;
       return Math.max(currentTime, tickToTime(clock, beat));
     },
     fadeIn() {

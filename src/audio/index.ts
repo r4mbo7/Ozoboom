@@ -1,5 +1,5 @@
 import { SOIREE_OUVERTURE } from '../data/tracks';
-import type { MusicTrack } from '../data/types';
+import type { MusicTrack, SetDefinition } from '../data/types';
 import type { SimState } from '../sim/state';
 import { createAmbience, type Ambience } from './ambience';
 import { createMasterChain, type MasterChain } from './master';
@@ -10,6 +10,8 @@ import type { AudioEngine, Mood } from './types';
 export interface AudioEngineOptions {
   readonly track?: MusicTrack;
   readonly breakBars?: (tier: number) => number;
+  // The set a game plays, by id: its beat length and its room. Absent means the main stage.
+  readonly setOf?: (setId: string) => SetDefinition | undefined;
   readonly trapEffectOf?: TrapEffectOf;
   readonly sfxLookups?: SfxLookups;
   readonly createContext?: () => BaseAudioContext;
@@ -131,6 +133,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       music: createMusic(master.music, {
         track,
         breakBars,
+        setOf: options.setOf,
         onKickScheduled: options.onKickScheduled,
       }),
       sfx: createSfx(master.sfx, trapEffectOf, options.sfxLookups, track),

@@ -3,7 +3,7 @@ export interface Envelope {
   attack: number;
   hold: number;
   release: number;
-  pan?: number;
+  pan?: number | undefined;
 }
 
 export interface Vibrato {
