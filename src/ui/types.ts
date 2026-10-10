@@ -14,6 +14,22 @@ export interface UiFrame {
   devices?: readonly { device: DeviceId; snapshot: InputSnapshot }[];
 }
 
+// The id of a set's backdrop, drawn by the stage picker's preview.
+export type DecorId = string;
+
+export interface StageCard {
+  setId: string;
+  name: string;
+  style: string;
+  bpm: number;
+  decor: DecorId;
+}
+
+export interface StagePickerModel {
+  stages: readonly StageCard[];
+  stageId: string;
+}
+
 export interface LobbySeat {
   playerId: PlayerId;
   name: string;
@@ -31,6 +47,9 @@ export interface LobbyModel {
   seats: readonly LobbySeat[];
   canLaunch: boolean;
   error: string | null;
+  // The scenes to pick from and the one picked; only the host can change it.
+  stages?: readonly StageCard[];
+  stageId?: string;
 }
 
 export type Notice = 'desync' | 'hostLeft' | 'connectionLost';
@@ -61,6 +80,11 @@ export interface UiCallbacks {
   onGoOnline?(): void;
   onCreateRoom(): void;
   onJoinRoom(code: string): void;
+  // Picks a scene, in the picker or in the lobby.
+  onChooseStage(setId: string): void;
+  // Solo: validates the picked scene.
+  onConfirmStage(): void;
+  onLeaveStagePicker(): void;
   onLaunch(): void;
   onLeaveLobby(): void;
   onLeaveNotice(): void;
@@ -80,6 +104,7 @@ export interface Ui {
     classId: string;
   }): void;
   showVisits(count: number): void;
+  showStagePicker(model: StagePickerModel): void;
   showLobby(model: LobbyModel): void;
   updateLobby(model: LobbyModel): void;
   showNotice(notice: Notice, details: string): void;

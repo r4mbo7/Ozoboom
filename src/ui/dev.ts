@@ -206,6 +206,15 @@ const ui = createUi(
       console.info('[ui] onLaunch');
       open('game');
     },
+    onChooseStage: (setId) => {
+      console.info('[ui] onChooseStage', setId);
+    },
+    onConfirmStage: () => {
+      console.info('[ui] onConfirmStage');
+    },
+    onLeaveStagePicker: () => {
+      console.info('[ui] onLeaveStagePicker');
+    },
     onLeaveLobby() {
       console.info('[ui] onLeaveLobby');
       open('title');

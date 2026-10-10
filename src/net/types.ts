@@ -15,7 +15,7 @@ export interface Seat {
 export type NetMessage =
   | { type: 'hello'; version: string; name: string; classId: string }
   | { type: 'refused'; reason: 'version' | 'full' | 'started'; version: string }
-  | { type: 'lobby'; seats: readonly Seat[] }
+  | { type: 'lobby'; seats: readonly Seat[]; setId?: string }
   | { type: 'seat'; name?: string; classId?: string }
   | {
       type: 'start';

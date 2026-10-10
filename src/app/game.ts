@@ -235,6 +235,9 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         launch(seats.launch());
       }
     },
+    onChooseStage: () => undefined,
+    onConfirmStage: () => undefined,
+    onLeaveStagePicker: () => undefined,
     onLeaveLobby: toTitle,
     onLeaveNotice: quit,
   });

@@ -47,18 +47,18 @@ Ces fichiers sont l'interface entre les couches, donc entre les tâches menées 
 
 Unités : 1 unité vaut 1 pixel à zoom 1, les vitesses sont en unités par tick, les durées en ticks.
 
-| Fichier                 | Contenu                                                                                                                                                                    |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/sim/state.ts`      | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas              |
-| `src/sim/commands.ts`   | `PlayerCommand` : par joueur et par tick, une entrée continue (`PlayerInput`) et des actions discrètes (`PlayerAction`)                                                    |
-| `src/sim/lineup.ts`     | le line-up du set et l'heure : `lineupSlots`, `lineupCursor`, `ticksToDrop`, `setFraction` (position dans le set, dans [0, 1], jamais en arrière, 1 une fois gagné)        |
-| `src/shared/palette.ts` | la palette du Cycle du soleil : `paletteAt(fraction)` (jetons en `#rrggbb`) et `lightAt(fraction)` (`additive`, `haloAlpha`)                                               |
-| `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`, `MusicTrack`                         |
-| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource` (vue fusionnée), `DeviceId` et `InputHub` (un instantané par périphérique, pour la coop locale)             |
-| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme et le cadrage (`CameraFocus` : suivre un joueur, ou cadrer tout le monde)                 |
-| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setVolume`, `setMood('set' \| 'menu')`, `setTrack(track)` au lancement d'une partie                                 |
-| `src/ui/types.ts`       | `Ui` et `UiCallbacks` : écrans (titre, salon, jeu, fin, avis), `UiFrame` (les joueurs de cet écran et leurs instantanés), `LobbyModel` rendu par le salon                  |
-| `src/net/types.ts`      | `Transport` (envoyer, diffuser, couper un pair, écouter), `NetMessage` (salon, lancement, commande, trame, empreinte, divergence), `CommandSource` consommée par la boucle |
+| Fichier                 | Contenu                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/sim/state.ts`      | `SimState` et tout ce qu'il contient : noyau, joueurs, ennemis, projectiles, pièges, ramassables, progression du set, statistiques, événements du dernier pas                               |
+| `src/sim/commands.ts`   | `PlayerCommand` : par joueur et par tick, une entrée continue (`PlayerInput`) et des actions discrètes (`PlayerAction`)                                                                     |
+| `src/sim/lineup.ts`     | le line-up du set et l'heure : `lineupSlots`, `lineupCursor`, `ticksToDrop`, `setFraction` (position dans le set, dans [0, 1], jamais en arrière, 1 une fois gagné)                         |
+| `src/shared/palette.ts` | la palette du Cycle du soleil : `paletteAt(fraction)` (jetons en `#rrggbb`) et `lightAt(fraction)` (`additive`, `haloAlpha`)                                                                |
+| `src/data/types.ts`     | définitions de contenu : `ClassDefinition`, `EnemyDefinition`, `TrapDefinition`, `UpgradeDefinition`, `SetDefinition`, `GameContent`, `MusicTrack`                                          |
+| `src/input/intents.ts`  | `InputSnapshot` produit par chaque périphérique, `InputSource` (vue fusionnée), `DeviceId` et `InputHub` (un instantané par périphérique, pour la coop locale)                              |
+| `src/render/types.ts`   | `Renderer` : `render(state, alpha)`, `screenToWorld`, options dont le mode calme et le cadrage (`CameraFocus` : suivre un joueur, ou cadrer tout le monde)                                  |
+| `src/audio/types.ts`    | `AudioEngine` : `start`, `update(state)`, `setMuted`, `setVolume`, `setMood('set' \| 'menu')`, `setTrack(track)` au lancement d'une partie                                                  |
+| `src/ui/types.ts`       | `Ui` et `UiCallbacks` : écrans (titre, choix de la scène, salon, jeu, fin, avis), `StageCard`, `UiFrame` (les joueurs de cet écran et leurs instantanés), `LobbyModel` rendu par le salon   |
+| `src/net/types.ts`      | `Transport` (envoyer, diffuser, couper un pair, écouter), `NetMessage` (salon et scène choisie, lancement, commande, trame, empreinte, divergence), `CommandSource` consommée par la boucle |
 
 Conventions de la simulation :
 

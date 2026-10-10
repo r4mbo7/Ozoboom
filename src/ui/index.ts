@@ -273,6 +273,7 @@ export function createUi(
     showVisits(count) {
       title.setVisits(count);
     },
+    showStagePicker: () => undefined,
     showLobby(model) {
       sun.fix('nuit');
       show('lobby');
