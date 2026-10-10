@@ -57,7 +57,6 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       attackCooldownTicks: 24,
       aggroRadius: 120,
       vibesDrop: 1,
-      wattsDrop: 0,
       scalingPerPhrase: { hp: 0.1, speed: 0.02 },
     },
     {
@@ -71,7 +70,6 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       attackCooldownTicks: 48,
       aggroRadius: 200,
       vibesDrop: 50,
-      wattsDrop: 40,
       scalingPerPhrase: { hp: 0, speed: 0 },
     },
     {
@@ -85,7 +83,6 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       attackCooldownTicks: 48,
       aggroRadius: 200,
       vibesDrop: 80,
-      wattsDrop: 60,
       scalingPerPhrase: { hp: 0, speed: 0 },
     },
   ],
@@ -94,7 +91,6 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       id: 'caisson-de-basse',
       name: 'Caisson de basse',
       description: 'Une onde de choc sur chaque kick.',
-      cost: 30,
       radius: 120,
       hp: 100,
       cadence: 'beat',
@@ -104,7 +100,6 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       id: 'laser',
       name: 'Laser',
       description: 'Une ligne de lumière qui brûle les bad vibes.',
-      cost: 50,
       radius: 20,
       hp: 80,
       cadence: 'continuous',
@@ -240,8 +235,9 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       name: 'Soirée fixture',
       bpm: 145,
       arena: { width: 1600, height: 1000 },
-      core: { radius: 60, maxHp: 1000, wattsPerBar: 5 },
-      startingWatts: 60,
+      core: { radius: 60, maxHp: 1000 },
+      handSize: 2,
+      startingHand: ['caisson-de-basse'],
       maxTraps: 6,
       speakers: [
         fixtureSpeaker('dome-chill', 'Le Dôme chill', 800, 80, {
@@ -360,7 +356,7 @@ export function fixtureState(overrides: Partial<SimState> = {}): SimState {
     rng: { a: 1, b: 2, c: 3, d: 4 },
     arena: { width: 1600, height: 1000 },
     set: { tier: 0, segment: 'buildup', phrase: 2, bar: 37, beat: 149, segmentStartTick: 0 },
-    core: { x: 800, y: 500, radius: 60, hp: 640, maxHp: 1000, watts: 85 },
+    core: { x: 800, y: 500, radius: 60, hp: 640, maxHp: 1000 },
     players: [fixturePlayer()],
     enemies: fixtureEnemies(124),
     projectiles: [],
@@ -368,7 +364,7 @@ export function fixtureState(overrides: Partial<SimState> = {}): SimState {
     pickups: [],
     pendingUpgrades: [],
     nextEntityId: 300,
-    stats: { kills: 312, phrasesHeld: 2, damageDealt: 8450, vibesCollected: 180, wattsSpent: 80 },
+    stats: { kills: 312, phrasesHeld: 2, damageDealt: 8450, vibesCollected: 180 },
     events: [],
     ...overrides,
   };
@@ -613,14 +609,13 @@ export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimStat
         status: 'won',
         tick: 9 * TICKS_PER_PHRASE + 13 * TICKS_PER_BAR + 7,
         set: { tier: 2, segment: 'drop', phrase: 9, bar: 157, beat: 630, segmentStartTick: 7344 },
-        core: { x: 800, y: 500, radius: 60, hp: 410, maxHp: 1000, watts: 140 },
+        core: { x: 800, y: 500, radius: 60, hp: 410, maxHp: 1000 },
         enemies: [],
         stats: {
           kills: 1873,
           phrasesHeld: 8,
           damageDealt: 61200,
           vibesCollected: 1210,
-          wattsSpent: 540,
         },
       });
     case 'lost':
@@ -628,13 +623,12 @@ export function fixtureForScreen(screen: UiFixtureScreen, late = false): SimStat
         status: 'lost',
         tick: 6 * TICKS_PER_PHRASE + 3 * TICKS_PER_BAR + 30,
         set: { tier: 1, segment: 'buildup', phrase: 6, bar: 99, beat: 398, segmentStartTick: 3888 },
-        core: { x: 800, y: 500, radius: 60, hp: 0, maxHp: 1000, watts: 20 },
+        core: { x: 800, y: 500, radius: 60, hp: 0, maxHp: 1000 },
         stats: {
           kills: 1042,
           phrasesHeld: 6,
           damageDealt: 30500,
           vibesCollected: 700,
-          wattsSpent: 320,
         },
       });
   }

@@ -10,10 +10,8 @@ export type StatKey =
   | 'skillCooldownMul'
   | 'skillPowerMul'
   | 'trapDamageMul'
-  | 'trapCostMul'
   | 'trapRadiusMul'
-  | 'trapSlotsAdd'
-  | 'wattsPerBarAdd';
+  | 'trapSlotsAdd';
 
 export interface StatModifier {
   stat: StatKey;
@@ -86,7 +84,6 @@ export interface EnemyDefinition {
   attackCooldownTicks: number;
   aggroRadius: number;
   vibesDrop: number;
-  wattsDrop: number;
   // Compounded per phrase since the start of the set: value = base * factor ** phrase.
   scalingPerPhrase: { hp: number; speed: number };
   ranged?: {
@@ -111,7 +108,6 @@ export interface TrapDefinition {
   id: string;
   name: string;
   description: string;
-  cost: number;
   radius: number;
   hp: number;
   cadence: TrapCadence;
@@ -263,8 +259,10 @@ export interface SetDefinition {
   name: string;
   bpm: number;
   arena: { width: number; height: number };
-  core: { radius: number; maxHp: number; wattsPerBar: number };
-  startingWatts: number;
+  core: { radius: number; maxHp: number };
+  // Traps a player carries at most, and those each player starts the game with.
+  handSize: number;
+  startingHand: readonly string[];
   maxTraps: number;
   levelCurve: { baseVibes: number; vibesPerLevel: number };
   pickups: { lifetimeTicks: number; speed: number };

@@ -39,8 +39,9 @@ export const FIXTURE_SET: SetDefinition = {
   name: 'Set de test',
   bpm: 145,
   arena: { width: 1600, height: 900 },
-  core: { radius: 48, maxHp: 1000, wattsPerBar: 5 },
-  startingWatts: 50,
+  core: { radius: 48, maxHp: 1000 },
+  handSize: 2,
+  startingHand: ['subwoofer', 'subwoofer'],
   maxTraps: 6,
   levelCurve: { baseVibes: 10, vibesPerLevel: 5 },
   pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
@@ -102,7 +103,6 @@ export const FIXTURE_CONTENT: GameContent = {
       attackCooldownTicks: 24,
       aggroRadius: 120,
       vibesDrop: 1,
-      wattsDrop: 0,
       scalingPerPhrase: { hp: 1.1, speed: 1.02 },
     },
     {
@@ -116,7 +116,6 @@ export const FIXTURE_CONTENT: GameContent = {
       attackCooldownTicks: 48,
       aggroRadius: 200,
       vibesDrop: 20,
-      wattsDrop: 25,
       scalingPerPhrase: { hp: 1.2, speed: 1 },
     },
   ],
@@ -125,7 +124,6 @@ export const FIXTURE_CONTENT: GameContent = {
       id: 'subwoofer',
       name: 'Caisson de basse',
       description: 'Une onde de choc sur chaque temps.',
-      cost: 30,
       radius: 24,
       hp: 100,
       cadence: 'beat',
@@ -177,7 +175,6 @@ const trap = (
   id,
   name: id,
   description: id,
-  cost: 20,
   radius: 16,
   hp: 50,
   cadence,
@@ -219,7 +216,6 @@ export const FIXTURE_BOUNCER: EnemyDefinition = {
   attackCooldownTicks: 36,
   aggroRadius: 100,
   vibesDrop: 5,
-  wattsDrop: 3,
   scalingPerPhrase: { hp: 1.1, speed: 1 },
 };
 
@@ -286,7 +282,6 @@ export const FIXTURE_HORDE: EnemyDefinition = {
   attackCooldownTicks: 24,
   aggroRadius: 80,
   vibesDrop: 1,
-  wattsDrop: 0,
   scalingPerPhrase: { hp: 1, speed: 1 },
 };
 
@@ -301,7 +296,6 @@ export const FIXTURE_HEAVY: EnemyDefinition = {
   attackCooldownTicks: 36,
   aggroRadius: 100,
   vibesDrop: 5,
-  wattsDrop: 3,
   scalingPerPhrase: { hp: 1, speed: 1 },
 };
 
@@ -316,7 +310,6 @@ export const FIXTURE_SHOOTER: EnemyDefinition = {
   attackCooldownTicks: 48,
   aggroRadius: 220,
   vibesDrop: 2,
-  wattsDrop: 1,
   scalingPerPhrase: { hp: 1, speed: 1 },
   ranged: { projectileSpeed: 7, projectileRadius: 6, rangeTicks: 50, keepDistance: 200 },
 };
@@ -332,7 +325,6 @@ export const FIXTURE_THIEF: EnemyDefinition = {
   attackCooldownTicks: 24,
   aggroRadius: 120,
   vibesDrop: 1,
-  wattsDrop: 0,
   scalingPerPhrase: { hp: 1, speed: 1 },
   special: { kind: 'steal', fleeSpeedMul: 1.5 },
 };
@@ -348,7 +340,6 @@ export const FIXTURE_CLINGER: EnemyDefinition = {
   attackCooldownTicks: 24,
   aggroRadius: 120,
   vibesDrop: 1,
-  wattsDrop: 0,
   scalingPerPhrase: { hp: 1, speed: 1 },
   special: { kind: 'cling', slowFactor: 0.5, detachDamage: 8 },
 };
@@ -357,7 +348,6 @@ export const FIXTURE_LURE: TrapDefinition = {
   id: 'uv-deco',
   name: 'Déco UV',
   description: 'Attire et marque.',
-  cost: 20,
   radius: 16,
   hp: 50,
   cadence: 'continuous',
@@ -368,7 +358,6 @@ export const FIXTURE_PROP: TrapDefinition = {
   id: 'speaker-stack',
   name: "Pile d'enceintes",
   description: 'Un obstacle sans effet.',
-  cost: 20,
   radius: 24,
   hp: 1000,
   cadence: 'bar',

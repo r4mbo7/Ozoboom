@@ -5,7 +5,7 @@ import { FIXTURE_OPTIONS, stepAndRecord } from '../fixtures';
 import { createSimulation, type SimulationOptions } from '../index';
 import { hashState } from '../replay';
 
-const REFERENCE_HASH = 'b32b19e7';
+const REFERENCE_HASH = 'cdd38bf0';
 const SCRIPT_TICKS = 500;
 
 const BOUNCER_SHOVE: EnemyDefinition = {
@@ -19,7 +19,6 @@ const BOUNCER_SHOVE: EnemyDefinition = {
   attackCooldownTicks: 24,
   aggroRadius: 400,
   vibesDrop: 1,
-  wattsDrop: 0,
   scalingPerPhrase: { hp: 1, speed: 1 },
   special: { kind: 'shove', knockback: 30 },
 };
@@ -35,7 +34,6 @@ const WHINER_SIGH: EnemyDefinition = {
   attackCooldownTicks: 36,
   aggroRadius: 400,
   vibesDrop: 2,
-  wattsDrop: 1,
   scalingPerPhrase: { hp: 1, speed: 1 },
   ranged: { projectileSpeed: 7, projectileRadius: 6, rangeTicks: 50, keepDistance: 40 },
   special: { kind: 'sigh', slowFactor: 0.5, durationTicks: 20 },
@@ -46,8 +44,9 @@ const SHOVE_SIGH_SET: SetDefinition = {
   name: 'Set de test',
   bpm: 145,
   arena: { width: 240, height: 240 },
-  core: { radius: 20, maxHp: 1000, wattsPerBar: 5 },
-  startingWatts: 50,
+  core: { radius: 20, maxHp: 1000 },
+  handSize: 2,
+  startingHand: [],
   maxTraps: 6,
   levelCurve: { baseVibes: 10, vibesPerLevel: 5 },
   pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },

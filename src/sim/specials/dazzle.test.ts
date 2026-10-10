@@ -15,7 +15,6 @@ const CAMCORDER: EnemyDefinition = {
   attackCooldownTicks: 24,
   aggroRadius: 0,
   vibesDrop: 0,
-  wattsDrop: 0,
   scalingPerPhrase: { hp: 1, speed: 1 },
   special: { kind: 'dazzle', radius: 80 },
 };

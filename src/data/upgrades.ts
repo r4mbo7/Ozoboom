@@ -194,42 +194,6 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
     maxStacks: 4,
   },
   {
-    id: 'plan-de-scene',
-    name: 'Plan de scène',
-    description: 'Tes pièges te coûtent moins de watts.',
-    family: 'defense',
-    modifiers: [{ stat: 'trapCostMul', mul: 0.85 }],
-    rarities: {
-      rare: {
-        description: 'Tes pièges te coûtent bien moins de watts.',
-        modifiers: [{ stat: 'trapCostMul', mul: 0.7 }],
-      },
-      legendary: {
-        description: 'Tes pièges te coûtent presque rien.',
-        modifiers: [{ stat: 'trapCostMul', mul: 0.55 }],
-      },
-    },
-    maxStacks: 3,
-  },
-  {
-    id: 'groupe-electrogene',
-    name: 'Groupe électrogène',
-    description: 'Ta scène produit 2 watts de plus à chaque mesure.',
-    family: 'defense',
-    modifiers: [{ stat: 'wattsPerBarAdd', add: 2 }],
-    rarities: {
-      rare: {
-        description: 'Ta scène produit 4 watts de plus par mesure.',
-        modifiers: [{ stat: 'wattsPerBarAdd', add: 4 }],
-      },
-      legendary: {
-        description: 'Ta scène produit 6 watts de plus par mesure.',
-        modifiers: [{ stat: 'wattsPerBarAdd', add: 6 }],
-      },
-    },
-    maxStacks: 3,
-  },
-  {
     id: 'rallonge',
     name: 'Rallonge',
     description: 'Tu peux poser un piège de plus.',
@@ -273,12 +237,11 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'cable-d-or',
     name: "Câble d'or",
-    description: 'Ta scène produit plus de watts et tes pièges coûtent moins.',
+    description: 'Tes pièges frappent plus fort et plus loin.',
     family: 'relic',
     modifiers: [
-      { stat: 'wattsPerBarAdd', add: 4 },
-      { stat: 'trapCostMul', mul: 0.75 },
       { stat: 'trapDamageMul', mul: 1.3 },
+      { stat: 'trapRadiusMul', mul: 1.2 },
     ],
     maxStacks: 1,
   },

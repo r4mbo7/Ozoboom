@@ -47,7 +47,6 @@ export interface CoreState {
   radius: number;
   hp: number;
   maxHp: number;
-  watts: number;
   // Repaired so far in the current bar: present only under `SetDefinition.coreRepairPerBar`, once something was repaired.
   repairedThisBar?: number;
 }
@@ -94,6 +93,8 @@ export interface PlayerState extends Positioned {
   // Set by dazzle, decremented by `specials`.
   dazzledTicks?: number;
   weapons?: WeaponSlot[];
+  // Trap ids carried, oldest first, at most `SetDefinition.handSize`.
+  hand?: string[];
   // Fused forms already taken: a recipe serves once per player.
   fused?: string[];
   name?: string;
@@ -195,7 +196,7 @@ export interface PlacedState extends Positioned {
   cooldown: number;
 }
 
-export type PickupKind = 'vibes' | 'watts';
+export type PickupKind = 'vibes';
 
 export interface PickupState extends Positioned {
   id: EntityId;
@@ -229,7 +230,6 @@ export interface SimStats {
   phrasesHeld: number;
   damageDealt: number;
   vibesCollected: number;
-  wattsSpent: number;
 }
 
 export type SimEvent =

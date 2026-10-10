@@ -53,15 +53,8 @@ describe('starting values of soiree-v0', () => {
     expect(seconds(fromFarthestEdge / desagreable.speed)).toBeLessThanOrEqual(12);
   });
 
-  it('price a bass bin at two to four bars of watts', () => {
-    const bars = caisson.cost / set.core.wattsPerBar;
-
-    expect(bars).toBeGreaterThanOrEqual(2);
-    expect(bars).toBeLessThanOrEqual(4);
-  });
-
-  it('let the first bass bin be placed right away', () => {
-    expect(set.startingWatts).toBeGreaterThanOrEqual(caisson.cost);
+  it('put a bass bin in every hand from the start', () => {
+    expect(set.startingHand).toEqual([caisson.id]);
   });
 
   it('let the méprisant reach its target from where it stands', () => {

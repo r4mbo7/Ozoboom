@@ -11,7 +11,6 @@ import {
 } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { EnemyState, PlayerState, SimState, Vec2 } from '../state';
-import { trapActionCost } from './traps';
 
 function game(setId = 'fixture-set'): {
   simulation: Simulation;
@@ -23,6 +22,9 @@ function game(setId = 'fixture-set'): {
   if (player === undefined) {
     throw new Error('expected one player');
   }
+  player.hand = EFFECTS_OPTIONS.content.traps.flatMap(({ id }) =>
+    Array.from({ length: 8 }, () => id),
+  );
   return { simulation, state: simulation.state, player };
 }
 
@@ -55,8 +57,9 @@ function firedTicks(recorded: readonly TimedEvent[]): number[] {
 }
 
 describe('trap placement', () => {
-  it('places a trap, debits its watts and announces it', () => {
-    const { simulation, state } = game();
+  it('places a trap from the hand and announces it', () => {
+    const { simulation, state, player } = game();
+    player.hand = ['mister', 'subwoofer'];
 
     simulation.step([place('subwoofer', 400, 450)]);
 
@@ -74,8 +77,7 @@ describe('trap placement', () => {
         cooldown: 0,
       },
     ]);
-    expect(state.core.watts).toBe(20);
-    expect(state.stats.wattsSpent).toBe(30);
+    expect(player.hand).toEqual(['mister']);
     expect(state.events).toContainEqual({
       type: 'trapPlaced',
       id: 1,
@@ -101,23 +103,11 @@ describe('trap placement', () => {
     expect(state.traps[0]?.direction).toEqual({ x: -1, y: 0 });
   });
 
-  it('applies the trap cost multiplier of the player, down to the last watt', () => {
-    const { simulation, state, player } = game();
-    player.modifiers.trapCostMul = 0.5;
-    state.core.watts = 15;
-
-    simulation.step([place('subwoofer', 400, 450)]);
-
-    expect(state.traps).toHaveLength(1);
-    expect(state.core.watts).toBe(0);
-    expect(state.stats.wattsSpent).toBe(15);
-  });
-
   it.each<[string, (state: SimState, player: PlayerState) => PlayerAction]>([
     [
-      'without enough watts',
-      (state) => {
-        state.core.watts = 29;
+      'the player does not hold',
+      (_, player) => {
+        player.hand = ['mister'];
         return placeAction('subwoofer', 400, 450);
       },
     ],
@@ -135,19 +125,17 @@ describe('trap placement', () => {
   ])('refuses a trap %s', (_, prepare) => {
     const { simulation, state, player } = game();
     const action = prepare(state, player);
-    const watts = state.core.watts;
+    const hand = [...(player.hand ?? [])];
 
     simulation.step([actionsFor(0, action)]);
 
     expect(state.traps).toEqual([]);
-    expect(state.core.watts).toBe(watts);
-    expect(state.stats.wattsSpent).toBe(0);
+    expect(player.hand).toEqual(hand);
     expect(state.events.filter((event) => event.type === 'trapPlaced')).toEqual([]);
   });
 
   it('accepts a trap that just touches the arena edge, the core or another trap', () => {
     const { simulation, state } = game();
-    state.core.watts = 1000;
 
     simulation.step([
       actionsFor(
@@ -163,7 +151,6 @@ describe('trap placement', () => {
 
   it('refuses a trap that overlaps another one', () => {
     const { simulation, state } = game();
-    state.core.watts = 1000;
 
     simulation.step([
       actionsFor(0, placeAction('subwoofer', 400, 450), placeAction('mister', 400 + 39, 450)),
@@ -174,7 +161,6 @@ describe('trap placement', () => {
 
   it('refuses a new trap once the set limit is reached', () => {
     const { simulation, state } = game();
-    state.core.watts = 1000;
     const placements = Array.from({ length: 7 }, (_, i) =>
       placeAction('mister', 100 + i * 50, 100),
     );
@@ -182,12 +168,10 @@ describe('trap placement', () => {
     simulation.step([actionsFor(0, ...placements)]);
 
     expect(state.traps).toHaveLength(6);
-    expect(state.core.watts).toBe(1000 - 6 * 20);
   });
 
   it('places one more trap for each trap slot the player gained', () => {
     const { simulation, state, player } = game();
-    state.core.watts = 1000;
     player.modifiers.trapSlotsAdd = 1;
     const placements = Array.from({ length: 8 }, (_, i) =>
       placeAction('mister', 100 + i * 50, 100),
@@ -199,28 +183,24 @@ describe('trap placement', () => {
   });
 
   it('ignores a trap placed on a trap of the same kind', () => {
-    const { simulation, state } = game();
-    state.core.watts = 1000;
+    const { simulation, state, player } = game();
     simulation.step([place('subwoofer', 400, 450)]);
-    const before = structuredClone(state.traps);
+    const before = structuredClone({ traps: state.traps, hand: player.hand });
 
     simulation.step([place('subwoofer', 405, 445)]);
 
-    expect(state.traps).toEqual(before);
-    expect(state.core.watts).toBe(1000 - 30);
+    expect({ traps: state.traps, hand: player.hand }).toEqual(before);
     expect(state.events.filter((event) => event.type === 'trapPlaced')).toEqual([]);
   });
 
   it('refuses a trap placed on a trap of another kind', () => {
     const { simulation, state } = game();
-    state.core.watts = 1000;
 
     simulation.step([
       actionsFor(0, placeAction('subwoofer', 400, 450), placeAction('mister', 400, 450)),
     ]);
 
     expect(state.traps.map((trap) => trap.kind)).toEqual(['subwoofer']);
-    expect(state.core.watts).toBe(1000 - 30);
   });
 });
 
@@ -352,6 +332,7 @@ describe('trap effects', () => {
     if (first === undefined || second === undefined) {
       throw new Error('expected two players');
     }
+    first.hand = ['mister'];
     first.hp = 95;
     second.hp = 0;
     second.downed = true;
@@ -383,7 +364,6 @@ describe('trap effects', () => {
 
   it('lure: marked enemies take the bonus damage of the lure from the other traps', () => {
     const { simulation, state } = game();
-    state.core.watts = 1000;
     const marked = frozen(placeEnemy(state, 'grump', 450, 500));
     const unmarked = frozen(placeEnemy(state, 'grump', 330, 420));
     simulation.step([
@@ -419,7 +399,6 @@ describe('trap effects', () => {
 describe('bosses against traps', () => {
   it('a boss keeps closing in on the core through a subwoofer and a lure', () => {
     const { simulation, state, player } = game();
-    state.core.watts = 1000;
     player.x = 100;
     player.y = 100;
     const boss = placeEnemy(state, 'curfew', 1400, 450);
@@ -487,7 +466,6 @@ describe('heavy enemies against traps', () => {
 
   it('a boss hits the trap, a rusher does not', () => {
     const { simulation, state } = game();
-    state.core.watts = 1000;
     const boss = placeEnemy(state, 'curfew', 400 + 16 + 40 - 1, 450);
     boss.speed = 0;
     const rusher = placeEnemy(state, 'grump', 1000, 200 + 16 + 12 - 1);
@@ -498,25 +476,5 @@ describe('heavy enemies against traps', () => {
     ]);
 
     expect(state.traps.map((trap) => trap.hp)).toEqual([20, 50]);
-  });
-});
-
-describe('trapActionCost', () => {
-  const definitions = new Map(EFFECTS_OPTIONS.content.traps.map((trap) => [trap.id, trap]));
-
-  it.each<[string, number, string, Vec2, number | null]>([
-    ['placing on free ground', 1, 'mister', { x: 100, y: 100 }, 20],
-    ['placing with a cheaper trap cost', 0.5, 'mister', { x: 100, y: 100 }, 10],
-    ['placing on a trap of the same kind', 1, 'subwoofer', { x: 405, y: 450 }, null],
-    ['placing on a trap of another kind', 1, 'mister', { x: 400, y: 450 }, null],
-    ['an unknown trap', 1, 'flamethrower', { x: 100, y: 100 }, null],
-  ])('prices %s', (_, trapCostMul, trapId, at, expected) => {
-    const { simulation, state, player } = game();
-    simulation.step([place('subwoofer', 400, 450)]);
-    player.modifiers.trapCostMul = trapCostMul;
-
-    const cost = trapActionCost(definitions, state.traps, player, trapId, at);
-
-    expect(cost).toBe(expected);
   });
 });

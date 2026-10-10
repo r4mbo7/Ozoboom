@@ -1,12 +1,11 @@
-import type { TrapDefinition } from '../data/types';
 import type { GameplayIntents, InputSnapshot } from '../input/intents';
-import { selectTrap } from '../ui';
+import { heldSlot, selectTrap } from '../ui';
 import { distanceSquared, length, normalize } from '../shared/vec';
 import { IDLE_INPUT, type PlayerAction, type PlayerCommand } from '../sim/commands';
 import type { EnemyState, PlayerState, Vec2 } from '../sim/state';
 
 export type ScreenToWorld = (point: Vec2) => Vec2;
-type Body = Pick<PlayerState, 'id' | 'x' | 'y' | 'radius' | 'aim'>;
+type Body = Pick<PlayerState, 'id' | 'x' | 'y' | 'radius' | 'aim' | 'hand'>;
 export type Target = Pick<EnemyState, 'x' | 'y' | 'radius' | 'hp'>;
 
 // What the game does by itself for the player, on the nearest bad vibe in reach. A touch screen
@@ -24,7 +23,7 @@ export interface CommandRequest {
   readonly player: Body;
   readonly toWorld: ScreenToWorld;
   readonly heldAim: Vec2;
-  readonly trap: TrapDefinition | undefined;
+  readonly trapId: string | undefined;
   readonly placeTrap: boolean;
   readonly upgradeId: string | null;
   readonly assist: Assist;
@@ -64,7 +63,7 @@ export function aimOf(
 }
 
 export function buildCommand(request: CommandRequest): PlayerCommand {
-  const { snapshot, player, toWorld, heldAim, trap, assist, target } = request;
+  const { snapshot, player, toWorld, heldAim, trapId, assist, target } = request;
   const { gameplay } = snapshot;
   const toTarget =
     target === null || !assist.autoAim ? null : { x: target.x - player.x, y: target.y - player.y };
@@ -73,11 +72,11 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
       ? normalize(toTarget)
       : aimOf(snapshot, player, toWorld, heldAim);
   const actions: PlayerAction[] = [];
-  if (request.placeTrap && trap !== undefined) {
+  if (request.placeTrap && trapId !== undefined) {
     const spot = request.trapScreen === null ? player : toWorld(request.trapScreen);
     actions.push({
       type: 'placeTrap',
-      trapId: trap.id,
+      trapId,
       x: spot.x,
       y: spot.y,
       dx: aim.x,
@@ -130,18 +129,18 @@ export class Controls {
   private trapScreen: Vec2 | null = null;
   private upgradeId: string | null = null;
   private trapIndex = 0;
-  private readonly traps: readonly TrapDefinition[];
+  private readonly handSize: number;
 
   // The first aim, before any input, should point away from the scene, where the bad vibes come
   // from and where a trap placed in front of the player fits.
-  constructor(traps: readonly TrapDefinition[], initialAim: Vec2) {
-    this.traps = traps;
+  constructor(handSize: number, initialAim: Vec2) {
+    this.handSize = handSize;
     this.heldAim = initialAim;
   }
 
   frame(snapshot: InputSnapshot): void {
     const { gameplay } = snapshot;
-    this.trapIndex = selectTrap(this.trapIndex, this.traps.length, gameplay, this.previousGameplay);
+    this.trapIndex = selectTrap(this.trapIndex, this.handSize, gameplay, this.previousGameplay);
     this.heldAim = nextHeldAim(this.heldAim, snapshot, this.previousGameplay);
     this.previousGameplay = gameplay;
     if (gameplay.placeTrap && !this.placeTrap) {
@@ -172,7 +171,7 @@ export class Controls {
       player,
       toWorld,
       heldAim: this.heldAim,
-      trap: this.traps[this.trapIndex],
+      trapId: player.hand?.[heldSlot(this.trapIndex, player.hand.length)],
       placeTrap: this.placeTrap,
       upgradeId: this.upgradeId,
       assist,

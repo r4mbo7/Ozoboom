@@ -102,7 +102,6 @@ describe('status', () => {
     simulation.step([commandFor(0, { move: { x: 1, y: 0 } })]);
     const paused = {
       tick: simulation.state.tick,
-      watts: simulation.state.core.watts,
       x: player?.x,
       events: [...simulation.state.events],
     };
@@ -112,7 +111,7 @@ describe('status', () => {
     simulation.step([]);
 
     expect(statusWhenOffered).toBe('choosingUpgrade');
-    expect(paused).toEqual({ tick: 1, watts: 50, x: startX, events: [] });
+    expect(paused).toEqual({ tick: 1, x: startX, events: [] });
     expect(statusWhenAnswered).toBe('running');
     expect(simulation.state.tick).toBe(2);
   });

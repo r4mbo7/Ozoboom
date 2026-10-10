@@ -37,7 +37,6 @@ export interface Textures {
   readonly shard: Shape;
   readonly streak: Shape;
   readonly vibes: Shape;
-  readonly watts: Shape;
   readonly players: PlayerTextures;
   readonly names: NameTextures;
   readonly arrow: Shape;
@@ -149,22 +148,6 @@ export function createTextures(): Textures {
       star(ctx, 4, 12, 2.6);
       ctx.fill();
       circle(ctx, 3);
-      ctx.fill();
-    }),
-    watts: paint(32, 32, 10, (ctx) => {
-      glow(ctx, WHITE, 6);
-      ctx.lineCap = 'round';
-      ctx.lineWidth = 2.6;
-      ctx.strokeStyle = WHITE;
-      ctx.beginPath();
-      for (let index = 0; index < 3; index += 1) {
-        const angle = (index / 3) * Math.PI + Math.PI / 2;
-        ctx.moveTo(Math.cos(angle) * 11, Math.sin(angle) * 11);
-        ctx.lineTo(-Math.cos(angle) * 11, -Math.sin(angle) * 11);
-      }
-      ctx.stroke();
-      ctx.fillStyle = WHITE;
-      circle(ctx, 3.4);
       ctx.fill();
     }),
     players: playerTextures(),

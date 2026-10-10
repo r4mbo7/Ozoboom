@@ -34,7 +34,7 @@ export function buildFeedbackReport(state: SimState | null, meta: FeedbackMeta):
       `phrase: ${String(state.set.phrase)}`,
       `tick: ${String(state.tick)} (${formatDuration(state.tick)})`,
       `status: ${state.status}`,
-      `stats: kills ${whole(stats.kills)}, phrasesHeld ${whole(stats.phrasesHeld)}, damageDealt ${whole(stats.damageDealt)}, vibesCollected ${whole(stats.vibesCollected)}, wattsSpent ${whole(stats.wattsSpent)}`,
+      `stats: kills ${whole(stats.kills)}, phrasesHeld ${whole(stats.phrasesHeld)}, damageDealt ${whole(stats.damageDealt)}, vibesCollected ${whole(stats.vibesCollected)}`,
     );
   }
   const { width, height, pixelRatio } = meta.viewport;

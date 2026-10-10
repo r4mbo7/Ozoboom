@@ -7,7 +7,7 @@ import { createSimulation, type SimulationOptions } from '../index';
 import { hashState } from '../replay';
 import type { Vec2 } from '../state';
 
-const REFERENCE_HASH = '5efc0dac';
+const REFERENCE_HASH = '34b2e135';
 
 const INTOLERANT: EnemyDefinition = {
   id: 'intolerant',
@@ -20,7 +20,6 @@ const INTOLERANT: EnemyDefinition = {
   attackCooldownTicks: 24,
   aggroRadius: 0,
   vibesDrop: 1,
-  wattsDrop: 0,
   scalingPerPhrase: { hp: 1, speed: 1 },
   special: { kind: 'suppress', radius: 100 },
 };
@@ -36,7 +35,6 @@ const FILMEUR: EnemyDefinition = {
   attackCooldownTicks: 48,
   aggroRadius: 0,
   vibesDrop: 1,
-  wattsDrop: 0,
   scalingPerPhrase: { hp: 1, speed: 1 },
   ranged: { projectileSpeed: 6, projectileRadius: 4, rangeTicks: 40, keepDistance: 150 },
   special: { kind: 'dazzle', radius: 90 },
@@ -53,7 +51,6 @@ const BAVARD: EnemyDefinition = {
   attackCooldownTicks: 48,
   aggroRadius: 0,
   vibesDrop: 1,
-  wattsDrop: 0,
   scalingPerPhrase: { hp: 1, speed: 1 },
   ranged: { projectileSpeed: 6, projectileRadius: 4, rangeTicks: 40, keepDistance: 150 },
   special: { kind: 'babble', everyBars: 2 },

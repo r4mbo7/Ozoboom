@@ -168,7 +168,7 @@ function createFixture(): SimState {
     rng: { a: 1, b: 2, c: 3, d: 4 },
     arena: { width: 1600, height: 1000 },
     set: { tier: 0, segment: 'buildup', phrase: 0, bar: 0, beat: 0, segmentStartTick: 0 },
-    core: { x: 800, y: 500, radius: 48, hp: 1000, maxHp: 1000, watts: 0 },
+    core: { x: 800, y: 500, radius: 48, hp: 1000, maxHp: 1000 },
     players: DEV_CLASS_IDS.map((classId, id) => devPlayer(id as 0 | 1 | 2 | 3, classId)),
     speakers: SPEAKER_LAYER_IDS.map((id): SpeakerState => ({
       id,
@@ -184,7 +184,7 @@ function createFixture(): SimState {
     pickups: [],
     pendingUpgrades: [],
     nextEntityId: 1,
-    stats: { kills: 0, phrasesHeld: 0, damageDealt: 0, vibesCollected: 0, wattsSpent: 0 },
+    stats: { kills: 0, phrasesHeld: 0, damageDealt: 0, vibesCollected: 0 },
     events: [],
   };
 }

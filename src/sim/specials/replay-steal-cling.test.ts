@@ -6,15 +6,16 @@ import type { SimulationOptions } from '../index';
 import { hashState, runScript } from '../replay';
 import type { Vec2 } from '../state';
 
-const REFERENCE_HASH = 'd3e76a37';
+const REFERENCE_HASH = 'e96ebaed';
 
 const SPECIALS_SET: SetDefinition = {
   id: 'specials-fixture-set',
   name: 'Set de test des spéciaux',
   bpm: 145,
   arena: { width: 1600, height: 900 },
-  core: { radius: 48, maxHp: 1000, wattsPerBar: 5 },
-  startingWatts: 50,
+  core: { radius: 48, maxHp: 1000 },
+  handSize: 2,
+  startingHand: [],
   maxTraps: 6,
   levelCurve: { baseVibes: 10, vibesPerLevel: 5 },
   pickups: { lifetimeTicks: 8 * 48, speed: 12 },

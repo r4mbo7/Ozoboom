@@ -68,7 +68,6 @@ export function createSpecialsState(): SimState {
   state.traps = [];
   state.pickups = [
     { id: 20, kind: 'vibes', amount: 1, ticksLeft: 99999, x: 590, y: 520, prevX: 590, prevY: 520 },
-    { id: 21, kind: 'watts', amount: 1, ticksLeft: 99999, x: 535, y: 470, prevX: 535, prevY: 470 },
   ];
   const [first] = state.players;
   if (first !== undefined) {

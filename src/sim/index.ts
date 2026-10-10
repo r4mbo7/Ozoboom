@@ -6,7 +6,6 @@ import { SpatialHash } from './spatial-hash';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
 import { bystanders } from './systems/bystanders';
-import { coreWatts } from './systems/core-watts';
 import { deaths } from './systems/deaths';
 import { enemyAttacks } from './systems/enemy-attacks';
 import { enemySteering } from './systems/enemy-steering';
@@ -67,7 +66,6 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     deaths,
     pickups,
     progression,
-    coreWatts,
     status,
   ],
   choosingUpgrade: [beginStep, upgradeChoice, status],

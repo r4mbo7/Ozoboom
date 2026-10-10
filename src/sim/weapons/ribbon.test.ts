@@ -15,7 +15,9 @@ function ribbonArena(markedTicks = MARKED_TICKS, length = 200) {
   const { simulation } = armedArena(
     thrownWeapon('ribbon', { kind: 'ribbon', length, markedTicks }, BACKBEATS),
   );
-  simulation.state.core.watts = 1000;
+  for (const player of simulation.state.players) {
+    player.hand = [FIXTURE_LURE.id, FIXTURE_LURE.id, FIXTURE_LURE.id];
+  }
   return { simulation };
 }
 

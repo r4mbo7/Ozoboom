@@ -82,21 +82,18 @@ describe('pickups', () => {
     expect(pickup.y).toBe(510 - PICKUP_SPEED);
   });
 
-  it('give collected vibes to the player and collected watts to the core', () => {
+  it('give collected vibes to the player', () => {
     const { simulation, player } = arena();
     const { state } = simulation;
     drop(state, 'vibes', 400 + 50, 400);
-    drop(state, 'watts', 400, 400 - 50);
 
     const recorded = stepAndRecord(simulation, 3);
 
     expect(player.vibes).toBe(3);
     expect(state.stats.vibesCollected).toBe(3);
-    expect(state.core.watts).toBe(50 + 3);
     expect(state.pickups).toEqual([]);
     expect(recorded.filter(({ event }) => event.type === 'pickupCollected')).toEqual([
       { tick: 3, event: { type: 'pickupCollected', playerId: 0, kind: 'vibes', amount: 3 } },
-      { tick: 3, event: { type: 'pickupCollected', playerId: 0, kind: 'watts', amount: 3 } },
     ]);
   });
 
@@ -177,19 +174,17 @@ describe('pickups in a team', () => {
     expect(downed.vibes).toBe(0);
   });
 
-  it('count the vibes collected once and leave the watts to the core alone', () => {
+  it('count the vibes collected once for the whole team', () => {
     const { simulation, players } = team();
     const [collector] = players;
     if (collector === undefined) {
       throw new Error('expected a player');
     }
     drop(simulation.state, 'vibes', collector.x + 50, collector.y);
-    drop(simulation.state, 'watts', collector.x, collector.y - 50);
 
     stepAndRecord(simulation, 3);
 
     expect(simulation.state.stats.vibesCollected).toBe(3);
-    expect(simulation.state.core.watts).toBe(50 + 3);
     expect(players.map((player) => player.vibes)).toEqual([3, 3, 3]);
   });
 });

@@ -25,7 +25,7 @@ describe('buildFeedbackReport', () => {
       'phrase: 6',
       'tick: 4782 (2:44)',
       'status: lost',
-      'stats: kills 1042, phrasesHeld 6, damageDealt 30500, vibesCollected 700, wattsSpent 320',
+      'stats: kills 1042, phrasesHeld 6, damageDealt 30500, vibesCollected 700',
       'device: gamepad',
       'browser: Mozilla/5.0 (X11; Linux x86_64) Chrome/141.0',
       'screen: 1280x800 @2x',

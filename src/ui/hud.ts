@@ -13,17 +13,17 @@ import {
   dropReading,
   enteredSpeaker,
   gearSlots,
+  handTiles,
   isNight,
   plugHelp,
   rosterOf,
   skillCharge,
   sunPosition,
-  trapTile,
   volumeCrans,
 } from './hud-model';
-import { BOLT, HEART, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
+import { HEART, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
 import { type LineupSlot, lineupCursor, lineupSlots, setOf } from '../sim/lineup';
-import { selectTrap } from './navigation';
+import { heldSlot, selectTrap } from './navigation';
 import { promptsFor } from './prompts';
 import { createWho, fillWho } from './who';
 import { cssName } from './sun';
@@ -110,20 +110,13 @@ export function createHud(): Hud {
   const gear = section('ui-hud__gear', 'Agrès');
 
   const traps = section('ui-hud__traps', 'Pièges');
-  const watts = el('div', 'ui-watts');
-  const wattsValue = el('span', 'ui-watts__value');
-  const wattsAmount = el('span', 'ui-watts__amount');
-  wattsAmount.append(icon('ui-watts__icon', BOLT), wattsValue);
-  wattsAmount.title = 'Watts';
-  const trapsCount = el('span', 'ui-traps__count');
-  watts.append(wattsAmount, trapsCount);
   const trapTiles = el('div', 'ui-traps');
   const cyclePrevious = el('span', 'ui-traps__cycle');
   const cycleNext = el('span', 'ui-traps__cycle');
   cyclePrevious.append(keycap('LB', 'button'));
   cycleNext.append(keycap('RB', 'button'));
   const trapName = el('div', 'ui-traps__name');
-  traps.append(watts, cyclePrevious, trapTiles, cycleNext, trapName);
+  traps.append(cyclePrevious, trapTiles, cycleNext, trapName);
 
   const skills = section('ui-hud__skills', 'Compétence');
   const skill = createSkillView();
@@ -145,7 +138,8 @@ export function createHud(): Hud {
   let slots: HTMLElement[] = [];
   let slotDefs: LineupSlot[] = [];
   let tiles: HTMLElement[] = [];
-  let tileCosts: HTMLElement[] = [];
+  // The trap each tile shows, to redraw a tile only when its trap changes.
+  let tileTraps: (string | null)[] = [];
   let trapDefinitions: ReadonlyMap<string, TrapDefinition> = new Map();
   let classDef: ClassDefinition | null = null;
   let builtDevice: InputDevice | null = null;
@@ -198,24 +192,15 @@ export function createHud(): Hud {
     plugRow.setAttribute('aria-valuemax', String(plugs.length));
     plugRow.hidden = plugs.length === 0;
 
-    selectedTrap = Math.min(selectedTrap, Math.max(content.traps.length - 1, 0));
+    selectedTrap = Math.min(selectedTrap, set.handSize - 1);
     trapDefinitions = new Map(content.traps.map((trap) => [trap.id, trap]));
-    tileCosts = [];
-    tiles = content.traps.map((trap, index) => {
+    tiles = Array.from({ length: set.handSize }, (_, index) => {
       const tile = el('div', 'ui-trap');
-      tile.title = `${trap.name} : ${trap.description}`;
       tile.dataset.touchControl = `trap:${String(index)}`;
-      const amount = el('span', '', formatNumber(trap.cost));
-      tileCosts.push(amount);
-      const cost = el('span', 'ui-trap__cost');
-      cost.append(icon('ui-trap__bolt', BOLT), amount);
-      tile.append(
-        el('span', 'ui-trap__key', String(index + 1)),
-        icon('ui-trap__icon', trapIcon(trap.effect)),
-        cost,
-      );
+      tile.append(el('span', 'ui-trap__key', String(index + 1)));
       return tile;
     });
+    tileTraps = tiles.map(() => null);
     trapTiles.replaceChildren(...tiles);
     classDef = null;
   }
@@ -432,24 +417,8 @@ export function createHud(): Hud {
 
     selectedTrap = selectTrap(selectedTrap, tiles.length, snapshot.gameplay, previousGameplay);
     previousGameplay = snapshot.gameplay;
-    const maxTraps = set === null ? 0 : trapCapacity(set, state);
     updateGear(player, state, content);
-    setText(wattsValue, formatNumber(state.core.watts));
-    setText(trapsCount, `${String(state.traps.length)} / ${String(maxTraps)} posés`);
-    content.traps.forEach((trap, index) => {
-      const tile = tiles[index];
-      if (tile === undefined) {
-        return;
-      }
-      const view = trapTile(trapDefinitions, state, player, trap.id, maxTraps);
-      setFlag(tile, 'selected', index === selectedTrap);
-      setFlag(tile, 'unaffordable', !view.available);
-      const amount = tileCosts[index];
-      if (amount !== undefined) {
-        setText(amount, formatNumber(view.cost));
-      }
-    });
-    setText(trapName, content.traps[selectedTrap]?.name ?? '');
+    updateHand(player, state);
 
     if (definition !== null) {
       const skillReady = player.skillCooldown <= 0;
@@ -457,6 +426,33 @@ export function createHud(): Hud {
       setFlag(skill.root, 'ready', skillReady);
       setText(skill.status, skillReady ? 'Prête' : 'Recharge');
     }
+  }
+
+  function updateHand(player: PlayerState, state: SimState): void {
+    const capacity = set === null ? 0 : trapCapacity(set, state);
+    const views = handTiles(trapDefinitions, state, player, tiles.length, capacity);
+    const selected = heldSlot(selectedTrap, player.hand?.length ?? 0);
+    views.forEach((view, index) => {
+      const tile = tiles[index];
+      if (tile === undefined) {
+        return;
+      }
+      if (tileTraps[index] !== view.trapId) {
+        tileTraps[index] = view.trapId;
+        const trap = view.trapId === null ? undefined : trapDefinitions.get(view.trapId);
+        tile.querySelector('.ui-trap__icon')?.remove();
+        if (trap !== undefined) {
+          tile.append(icon('ui-trap__icon', trapIcon(trap.effect)));
+        }
+        tile.title = trap === undefined ? 'Main libre' : `${trap.name} : ${trap.description}`;
+      }
+      setFlag(tile, 'empty', view.trapId === null);
+      setFlag(tile, 'selected', index === selected);
+      setFlag(tile, 'blocked', view.trapId !== null && !view.available);
+    });
+    const held = player.hand?.[selected];
+    setText(trapName, held === undefined ? '' : (trapDefinitions.get(held)?.name ?? ''));
+    trapName.hidden = held === undefined;
   }
 
   if (typeof ResizeObserver !== 'undefined') {

@@ -124,7 +124,7 @@ test('quits the set from the pause after a confirmation, then plays a new one', 
   const traps = page.getByRole('region', { name: 'Pièges' });
   await expect(traps).toBeVisible();
   await page.keyboard.press('KeyF');
-  await expect(page.getByText('1 / 6 posés')).toBeVisible();
+  await expect(page.locator('.ui-trap[data-empty]')).toHaveCount(2);
   await press(page, 'Escape');
   const pause = page.getByRole('dialog', { name: 'Pause' });
   await expect(pause).toBeVisible();
@@ -175,7 +175,7 @@ test('quits the set from the pause after a confirmation, then plays a new one', 
   await press(page, 'Enter');
 
   await expect(traps).toBeVisible();
-  await expect(page.getByText('0 / 6 posés')).toBeVisible();
+  await expect(page.locator('.ui-trap[data-empty]')).toHaveCount(1);
   await expect.poll(async () => (await game(page)).tick).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
@@ -211,6 +211,6 @@ test('quits the set with a gamepad, B going back to the pause', async ({ page })
   await expect(page.getByRole('region', { name: 'Écran titre' })).toBeVisible();
   await expect(pause).toBeHidden();
   await tapButtonUntil(page, PAD.A, () => traps.isVisible());
-  await expect(page.getByText('0 / 6 posés')).toBeVisible();
+  await expect(page.locator('.ui-trap[data-empty]')).toHaveCount(1);
   expect(errors).toEqual([]);
 });

@@ -39,12 +39,6 @@ function dropVibes(simulation: Simulation, x: number, y: number, amount: number)
   return pickup;
 }
 
-function steps(simulation: Simulation, count: number): void {
-  for (let i = 0; i < count; i++) {
-    simulation.step([]);
-  }
-}
-
 describe('steal', () => {
   it('goes to the nearest vibes pickup and absorbs it on contact', () => {
     const { simulation } = arena();
@@ -61,19 +55,6 @@ describe('steal', () => {
     expect(thief.carrying).toBe(7);
     expect(thief.fleeing).toBe(true);
     expect(simulation.state.pickups).toHaveLength(0);
-  });
-
-  it('ignores a watts pickup and keeps rushing the core without one of vibes', () => {
-    const { simulation } = arena();
-    const { core } = simulation.state;
-    const thief = placeEnemy(simulation.state, 'grifter', core.x, 100);
-    dropVibes(simulation, core.x, 300, 3).kind = 'watts';
-
-    steps(simulation, 200);
-
-    expect(thief.fleeing).toBeUndefined();
-    expect(thief.carrying).toBeUndefined();
-    expect({ x: thief.x, y: thief.y }).toEqual({ x: core.x, y: core.y - core.radius - 12 });
   });
 
   it('flees to the nearest edge at fleeSpeedMul and disappears with its loot once there', () => {
@@ -148,7 +129,6 @@ describe('steal', () => {
       true,
     );
     expect(state.stats.kills).toBe(1);
-    const dropped = state.pickups.filter((pickup) => pickup.kind === 'vibes');
-    expect(dropped.reduce((sum, pickup) => sum + pickup.amount, 0)).toBe(6 + ownDrop);
+    expect(state.pickups.reduce((sum, pickup) => sum + pickup.amount, 0)).toBe(6 + ownDrop);
   });
 });

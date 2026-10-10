@@ -30,7 +30,7 @@ test('plays a whole game with the keyboard only, from the title to a restart', a
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 
   await page.keyboard.press('KeyF');
-  await expect(page.getByText('1 / 6 posés')).toBeVisible();
+  await expect(page.locator('.ui-trap[data-empty]')).toHaveCount(2);
 
   // Without a pointer, the keyboard aims where the player moves: walk at the nearest bad vibe and
   // fire until the first level, then stand still and let the bad vibes win.
@@ -132,7 +132,7 @@ test('plays a whole game with the keyboard only, from the title to a restart', a
     })
     .toBe(true);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
-  await expect(page.getByText('0 / 6 posés')).toBeVisible();
+  await expect(page.locator('.ui-trap[data-empty]')).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 
@@ -181,7 +181,7 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
         // The test taps A itself in the menus.
       } else if (pad.buttons[0] === 1) {
         pad.buttons[0] = 0;
-      } else if (state.core.watts >= 15 && state.tick - lastTrap > TICKS_BETWEEN_TRAPS) {
+      } else if ((player.hand?.length ?? 0) > 0 && state.tick - lastTrap > TICKS_BETWEEN_TRAPS) {
         pad.buttons[0] = 1;
         lastTrap = state.tick;
       }
@@ -227,8 +227,8 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
   await expect(end).toBeVisible();
   await expect(end).toContainText('Sunrise');
   expect(upgrades).toBeGreaterThan(0);
-  await expect(page.getByText(/\d+ \/ 6 posés/)).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Pièges' })).toBeHidden();
   await tapButtonUntil(page, PAD.A, () => end.isHidden());
-  await expect(page.getByText('0 / 6 posés')).toBeVisible();
+  await expect(page.locator('.ui-trap[data-empty]')).toHaveCount(1);
   expect(errors).toEqual([]);
 });

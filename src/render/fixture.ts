@@ -169,7 +169,7 @@ export function spawnPickup(state: SimState): PickupState {
   return at(
     {
       id: state.nextEntityId,
-      kind: nextRandom(rng) < 0.7 ? 'vibes' : 'watts',
+      kind: 'vibes',
       amount: 1,
       ticksLeft: 200 + Math.floor(nextRandom(rng) * 400),
     },
@@ -225,7 +225,6 @@ export function createFixtureState(options: FixtureOptions): SimState {
       radius: 46,
       hp: 100,
       maxHp: 100,
-      watts: 20,
     },
     players: [],
     enemies: [],
@@ -234,7 +233,7 @@ export function createFixtureState(options: FixtureOptions): SimState {
     pickups: [],
     pendingUpgrades: [],
     nextEntityId: 0,
-    stats: { kills: 0, phrasesHeld: 0, damageDealt: 0, vibesCollected: 0, wattsSpent: 0 },
+    stats: { kills: 0, phrasesHeld: 0, damageDealt: 0, vibesCollected: 0 },
     events: [],
   };
   state.players.push(

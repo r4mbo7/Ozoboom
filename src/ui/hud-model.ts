@@ -9,8 +9,8 @@ import { NIGHT_END, NIGHT_START, type PaletteToken } from '../shared/palette';
 import { TICKS_PER_BAR } from '../shared/tempo';
 import { ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
-import { skillCooldownTicks, statValue } from '../sim/stats';
-import { trapActionCost } from '../sim/systems/traps';
+import { skillCooldownTicks } from '../sim/stats';
+import { trapAt } from '../sim/systems/traps';
 import { formatDuration, ratio } from './format';
 import type { UiFrame } from './types';
 
@@ -100,23 +100,26 @@ export function volumeCrans(set: SetDefinition, state: SimState): Cran[] {
   });
 }
 
-export interface TrapTile {
-  cost: number;
+export interface HandTile {
+  trapId: string | null;
   available: boolean;
 }
 
-export function trapTile(
-  definitions: ReadonlyMap<string, TrapDefinition>,
-  state: Pick<SimState, 'traps' | 'core'>,
-  player: Pick<PlayerState, 'x' | 'y' | 'modifiers' | 'suppressedTicks'>,
-  trapId: string,
+// One tile per hand slot. A held trap is available unless the field is full or a trap stands where
+// it would go.
+export function handTiles(
+  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
+  state: Pick<SimState, 'traps'>,
+  player: Pick<PlayerState, 'x' | 'y' | 'hand'>,
+  handSize: number,
   capacity: number,
-): TrapTile {
-  const cost = trapActionCost(definitions, state.traps, player, trapId, player);
-  return {
-    cost: cost ?? statValue(player, 'trapCostMul', definitions.get(trapId)?.cost ?? 0),
-    available: cost !== null && cost <= state.core.watts && state.traps.length < capacity,
-  };
+): HandTile[] {
+  const free =
+    state.traps.length < capacity && trapAt(definitions, state.traps, player) === undefined;
+  return Array.from({ length: handSize }, (_, index) => {
+    const trapId = player.hand?.[index] ?? null;
+    return { trapId, available: trapId !== null && free };
+  });
 }
 
 const COUNT_WORDS = ['zéro', 'une', 'deux', 'trois', 'quatre'];

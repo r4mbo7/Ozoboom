@@ -51,11 +51,11 @@ describe('combat', () => {
     expect(recorded.filter(({ event }) => event.type === 'enemyDied')).toMatchObject([
       { tick: hits.at(-1)?.tick, event: { id: bouncer.id, byPlayer: 0 } },
     ]);
-    expect(dropped).toEqual(['vibes', 'watts']);
+    expect(dropped).toEqual(['vibes']);
     expect(state.pickups).toEqual([]);
     expect(player.vibes).toBe(5);
     expect(state.stats).toMatchObject({ kills: 1, damageDealt: 140, vibesCollected: 5 });
-    expect(recorded.filter(({ event }) => event.type === 'pickupCollected')).toHaveLength(2);
+    expect(recorded.filter(({ event }) => event.type === 'pickupCollected')).toHaveLength(1);
   });
 
   it('lets an unchallenged enemy reach the core, hurt it on its cooldown, and lose the game', () => {

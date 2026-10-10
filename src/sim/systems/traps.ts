@@ -94,11 +94,8 @@ export function traps(ctx: StepContext): void {
 
 function placeTrap({ state, content, set }: StepContext, player: PlayerState, action: PlaceTrap) {
   const definition = content.traps.get(action.trapId);
-  if (definition === undefined || player.downed) {
-    return;
-  }
-  const cost = actionCost(definition, trapAt(content.traps, state.traps, action), player);
-  if (cost === null || state.core.watts < cost) {
+  const held = player.hand?.indexOf(action.trapId) ?? -1;
+  if (definition === undefined || player.downed || held < 0) {
     return;
   }
 
@@ -133,29 +130,8 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     hp: definition.hp,
     cooldown: 0,
   });
-  pay(state, cost);
+  player.hand?.splice(held, 1);
   state.events.push({ type: 'trapPlaced', id, kind: definition.id, x, y });
-}
-
-export function trapActionCost(
-  definitions: ReadonlyMap<string, TrapDefinition>,
-  traps: readonly TrapState[],
-  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks'>,
-  trapId: string,
-  at: Vec2,
-): number | null {
-  const definition = definitions.get(trapId);
-  return definition === undefined
-    ? null
-    : actionCost(definition, trapAt(definitions, traps, at), player);
-}
-
-function actionCost(
-  definition: TrapDefinition,
-  under: TrapState | undefined,
-  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks'>,
-): number | null {
-  return under === undefined ? statValue(player, 'trapCostMul', definition.cost) : null;
 }
 
 export function trapAt(
@@ -182,11 +158,6 @@ function overlaps(
   const dy = body.y - center.y;
   const reach = radius + body.radius;
   return dx * dx + dy * dy < reach * reach;
-}
-
-function pay(state: SimState, cost: number): void {
-  state.core.watts -= cost;
-  state.stats.wattsSpent += cost;
 }
 
 function cadencesFiring(state: SimState): Readonly<Record<TrapCadence, boolean>> {

@@ -40,7 +40,6 @@ export function createInitialState(
     radius: set.core.radius,
     hp: set.core.maxHp,
     maxHp: set.core.maxHp,
-    watts: set.startingWatts,
   };
 
   return {
@@ -64,7 +63,7 @@ export function createInitialState(
     placed: [],
     pendingUpgrades: [],
     nextEntityId: 1,
-    stats: { kills: 0, phrasesHeld: 0, damageDealt: 0, vibesCollected: 0, wattsSpent: 0 },
+    stats: { kills: 0, phrasesHeld: 0, damageDealt: 0, vibesCollected: 0 },
     events: [],
   };
 }
@@ -114,6 +113,7 @@ function createPlayer(
     downed: false,
     invulnerableTicks: 0,
     weapons: [],
+    hand: [...set.startingHand],
     ...(slot.name === undefined ? {} : { name: slot.name }),
   };
 }

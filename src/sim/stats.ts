@@ -23,10 +23,8 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   skillCooldownMul: false,
   skillPowerMul: false,
   trapDamageMul: false,
-  trapCostMul: false,
   trapRadiusMul: false,
   trapSlotsAdd: true,
-  wattsPerBarAdd: true,
 };
 
 export function statValue(

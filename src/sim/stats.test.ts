@@ -79,11 +79,11 @@ describe('applyModifiers', () => {
     const player = freshPlayer();
 
     applyModifiers(player, [
-      { stat: 'trapCostMul', mul: 0.5 },
+      { stat: 'trapRadiusMul', mul: 0.5 },
       { stat: 'pierceAdd', add: 1 },
     ]);
 
-    expect(player.modifiers).toEqual({ trapCostMul: 0.5, pierceAdd: 1 });
+    expect(player.modifiers).toEqual({ trapRadiusMul: 0.5, pierceAdd: 1 });
   });
 });
 

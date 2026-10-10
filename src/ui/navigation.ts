@@ -110,6 +110,11 @@ export function selectTrap(
   return wrap(index + delta, count);
 }
 
+// The hand slot a selection points to: the last trap held when the selected slot is empty.
+export function heldSlot(selected: number, held: number): number {
+  return Math.min(selected, held - 1);
+}
+
 function wrap(index: number, count: number): number {
   return ((index % count) + count) % count;
 }

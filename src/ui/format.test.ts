@@ -33,8 +33,8 @@ describe('endStats', () => {
   it('lists phrases held, time, kills, the scene volume and the score', () => {
     const state = fixtureState({
       tick: 125 * TICK_RATE_HZ,
-      core: { x: 0, y: 0, radius: 60, hp: 250, maxHp: 1000, watts: 0 },
-      stats: { kills: 1042, phrasesHeld: 6, damageDealt: 0, vibesCollected: 0, wattsSpent: 0 },
+      core: { x: 0, y: 0, radius: 60, hp: 250, maxHp: 1000 },
+      stats: { kills: 1042, phrasesHeld: 6, damageDealt: 0, vibesCollected: 0 },
     });
 
     expect(endStats(state)).toEqual([
@@ -48,7 +48,7 @@ describe('endStats', () => {
 
   it('never shows a negative volume after a defeat', () => {
     const state = fixtureState({
-      core: { x: 0, y: 0, radius: 60, hp: -40, maxHp: 1000, watts: 0 },
+      core: { x: 0, y: 0, radius: 60, hp: -40, maxHp: 1000 },
     });
 
     expect(endStats(state)[3]?.value).toBe('0\u202f%');

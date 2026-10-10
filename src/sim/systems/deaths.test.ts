@@ -56,7 +56,7 @@ describe('deaths', () => {
     );
   });
 
-  it('drop the vibes of the enemy where it fell, and no watts when it has none', () => {
+  it('drop the vibes of the enemy where it fell', () => {
     const simulation = arena();
     const dead = placeEnemy(simulation.state, 'grump', 400, 100);
     dead.hp = 0;
@@ -71,19 +71,6 @@ describe('deaths', () => {
         y: dead.y,
         ticksLeft: FIXTURE_SET.pickups.lifetimeTicks - 1,
       }),
-    ]);
-  });
-
-  it('drop vibes and watts side by side when the enemy carries both', () => {
-    const simulation = arena();
-    const dead = placeEnemy(simulation.state, 'doorman', 400, 100);
-    dead.hp = 0;
-
-    simulation.step([]);
-
-    expect(simulation.state.pickups).toEqual([
-      expect.objectContaining({ kind: 'vibes', amount: 5, x: dead.x - 10, y: dead.y }),
-      expect.objectContaining({ kind: 'watts', amount: 3, x: dead.x + 10, y: dead.y }),
     ]);
   });
 });

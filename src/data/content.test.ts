@@ -228,10 +228,10 @@ describe('CONTENT circus weapons, rarities and relics', () => {
     },
   );
 
-  it('keeps a single entry per upgrade, thirteen of them besides the relics', () => {
+  it('keeps a single entry per upgrade, eleven of them besides the relics', () => {
     const ids = upgrades.map((upgrade) => upgrade.id);
 
-    expect(upgrades.filter((upgrade) => upgrade.family !== 'relic')).toHaveLength(13);
+    expect(upgrades.filter((upgrade) => upgrade.family !== 'relic')).toHaveLength(11);
     expect(ids.filter((id) => /-(rare|legendaire)$/.test(id))).toEqual([]);
     expect(upgrades.filter((upgrade) => upgrade.family === 'relic' && upgrade.rarities)).toEqual(
       [],
@@ -336,7 +336,6 @@ describe('CONTENT numbers', () => {
   it.each(traps)('are positive where needed for trap $id', (trap) => {
     expect(
       invalid({
-        cost: [trap.cost, positive],
         radius: [trap.radius, positive],
         hp: [trap.hp, positive],
         ...effectFields(trap.effect),
@@ -383,8 +382,8 @@ describe.each(sets)('set $id', (set) => {
         height: [set.arena.height, positive],
         coreRadius: [set.core.radius, positive],
         coreMaxHp: [set.core.maxHp, positive],
-        wattsPerBar: [set.core.wattsPerBar, positive],
         maxTraps: [set.maxTraps, wholePositive],
+        handSize: [set.handSize, wholePositive],
         baseVibes: [set.levelCurve.baseVibes, positive],
         vibesPerLevel: [set.levelCurve.vibesPerLevel, positive],
         pickupLifetimeTicks: [set.pickups.lifetimeTicks, wholePositive],
@@ -392,6 +391,11 @@ describe.each(sets)('set $id', (set) => {
       }),
     ).toEqual([]);
     expect(set.tiers.length).toBeGreaterThan(0);
+  });
+
+  it('starts every hand with known traps it can hold', () => {
+    expect(set.startingHand.length).toBeLessThanOrEqual(set.handSize);
+    expect(set.startingHand.filter((id) => !traps.some((trap) => trap.id === id))).toEqual([]);
   });
 
   it('flies its pickups faster than any class runs, so they always catch their player', () => {
@@ -613,7 +617,7 @@ describe('V0.1 scope', () => {
       family('class').filter((upgrade) => upgrade.classId === 'mage').length,
     ).toBeGreaterThanOrEqual(4);
     expect(family('generic').length).toBeGreaterThanOrEqual(5);
-    expect(family('defense').length).toBeGreaterThanOrEqual(3);
+    expect(family('defense').length).toBeGreaterThanOrEqual(2);
   });
 
   it('has the soiree-v0 set at 145 BPM with two tiers of four phrases and a four bar break', () => {

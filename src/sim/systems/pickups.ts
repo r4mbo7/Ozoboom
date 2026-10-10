@@ -62,17 +62,13 @@ function attract(pickup: PickupState, player: PlayerState, speed: number): boole
 }
 
 function collect(state: SimState, pickup: PickupState, player: PlayerState): void {
-  if (pickup.kind === 'vibes') {
-    const amount = pickup.amount * volumeMul(state);
-    for (const member of state.players) {
-      if (!member.downed) {
-        member.vibes += amount;
-      }
+  const amount = pickup.amount * volumeMul(state);
+  for (const member of state.players) {
+    if (!member.downed) {
+      member.vibes += amount;
     }
-    state.stats.vibesCollected += amount;
-  } else {
-    state.core.watts += pickup.amount;
   }
+  state.stats.vibesCollected += amount;
   state.events.push({
     type: 'pickupCollected',
     playerId: player.id,

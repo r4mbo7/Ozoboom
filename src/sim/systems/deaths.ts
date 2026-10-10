@@ -34,7 +34,6 @@ export function deaths(ctx: StepContext): void {
       }
     }
     const vibesDrop = definition.vibesDrop + (enemy.carrying ?? 0);
-    const { wattsDrop } = definition;
     state.events.push({
       type: 'enemyDied',
       id: enemy.id,
@@ -47,13 +46,8 @@ export function deaths(ctx: StepContext): void {
     if (enemy.isBoss && !isLastTier(state.set, set)) {
       offerRelics(ctx);
     }
-    const spread = vibesDrop > 0 && wattsDrop > 0 ? enemy.radius / 2 : 0;
-    const { lifetimeTicks } = set.pickups;
     if (vibesDrop > 0) {
-      drop(state, 'vibes', vibesDrop, enemy.x - spread, enemy.y, lifetimeTicks);
-    }
-    if (wattsDrop > 0) {
-      drop(state, 'watts', wattsDrop, enemy.x + spread, enemy.y, lifetimeTicks);
+      drop(state, 'vibes', vibesDrop, enemy.x, enemy.y, set.pickups.lifetimeTicks);
     }
   }
   state.enemies.length = kept;

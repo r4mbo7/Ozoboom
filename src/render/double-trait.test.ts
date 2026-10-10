@@ -36,7 +36,6 @@ function context(): RenderContext {
       beam: shape,
       pip: shape,
       vibes: shape,
-      watts: shape,
       traps: { shockwave: shape, beam: shape, mist: shape, lure: shape, strobe: shape },
       names: { get: () => ({ fill: Texture.EMPTY, edge: Texture.EMPTY }) },
     },
@@ -175,23 +174,17 @@ describe('traps', () => {
 });
 
 describe('pickups', () => {
-  it.each(MOMENTS)('sparkle in gold for vibes and turquoise for watts at %f', (fraction) => {
+  it.each(MOMENTS)('sparkle in gold for vibes at %f', (fraction) => {
     const ctx = context();
     const frame = frameAt(fraction);
     const state = createFixtureState({ enemies: 0, projectiles: 0 });
-    const vibes = state.pickups.find((pickup) => pickup.kind === 'vibes');
-    const watts = state.pickups.find((pickup) => pickup.kind === 'watts');
-    if (vibes === undefined || watts === undefined) {
-      throw new Error('Fixture lacks a kind of pickup');
-    }
-    state.pickups = [vibes, watts];
+    state.pickups = state.pickups.slice(0, 1);
 
     createPickups(ctx).update(state, 0, frame);
 
     const bodies = ctx.layers.pickups.children.filter((_, index) => index % 2 === 1);
     expect(bodies.map((body) => (body as unknown as { tint: number }).tint)).toEqual([
       frame.palette.or,
-      frame.palette.turquoise,
     ]);
   });
 });

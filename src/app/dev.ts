@@ -24,7 +24,7 @@ export interface DevOptions {
 }
 
 const FAST_SPEED = 8;
-const FAST_HP = { boss: 0.05, wave: 0.5, core: 4 };
+const FAST_HP = { boss: 0.05, wave: 0.5, core: 8 };
 export const BENCH_ENEMIES = 300;
 
 const BENCH_PLAYER_IDS: readonly PlayerId[] = [0, 1, 2, 3];

@@ -30,7 +30,7 @@ export type {
 export { createFeedbackButton } from './feedback-button';
 export { createAutoAimToggle, createAutoFireToggle } from './toggle';
 export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './volume';
-export { selectTrap } from './navigation';
+export { heldSlot, selectTrap } from './navigation';
 export { SEAT_IDS, defaultName } from './lobby-model';
 
 type Screen = 'title' | 'lobby' | 'game' | 'end' | 'notice';

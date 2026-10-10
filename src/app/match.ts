@@ -4,6 +4,7 @@ import type { CommandSource } from '../net/types';
 import type { CameraFocus } from '../render/types';
 import { length, normalize } from '../shared/vec';
 import { IDLE_INPUT } from '../sim/commands';
+import { setOf } from '../sim/lineup';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId, PlayerState } from '../sim/state';
 import { statValue } from '../sim/stats';
@@ -119,8 +120,9 @@ export function createMatch(options: MatchOptions): Match {
     content,
   });
   const controls = new Map<PlayerId, Controls>();
+  const { handSize } = setOf(content, options.setId);
   for (const playerId of locals.keys()) {
-    controls.set(playerId, new Controls(content.traps, outwardAim(session, playerId)));
+    controls.set(playerId, new Controls(handSize, outwardAim(session, playerId)));
   }
   const seats: MatchSeat[] = slots.map((slot) => ({
     playerId: slot.id,

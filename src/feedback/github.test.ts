@@ -23,7 +23,7 @@ const CONTEXT = [
   'phrase: 6',
   'tick: 4782 (2:44)',
   'status: lost',
-  'stats: kills 1042, phrasesHeld 6, damageDealt 30500, vibesCollected 700, wattsSpent 320',
+  'stats: kills 1042, phrasesHeld 6, damageDealt 30500, vibesCollected 700',
   'device: gamepad',
   `browser: ${'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '.repeat(4)}`,
   'screen: 1280x800 @2x',

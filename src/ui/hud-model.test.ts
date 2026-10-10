@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameContent, SetDefinition } from '../data/types';
 import { TICKS_PER_BAR } from '../shared/tempo';
 import { setFraction } from '../sim/lineup';
-import type { SimState, TrapState } from '../sim/state';
+import type { SimState } from '../sim/state';
 import {
   UI_FIXTURE_CONTENT,
   fixtureForScreen,
@@ -16,12 +16,12 @@ import {
   dropReading,
   enteredSpeaker,
   gearSlots,
+  handTiles,
   isNight,
   playerLabel,
   plugHelp,
   rosterOf,
   sunPosition,
-  trapTile,
   volumeCrans,
 } from './hud-model';
 
@@ -108,51 +108,39 @@ describe('volumeCrans', () => {
   });
 });
 
-describe('trapTile', () => {
+describe('handTiles', () => {
   const definitions = new Map(UI_FIXTURE_CONTENT.traps.map((trap) => [trap.id, trap]));
-  const player = fixturePlayer({ x: 760, y: 500 });
+  const player = fixturePlayer({ x: 760, y: 500, hand: ['laser'] });
 
-  function fullField(under: Partial<TrapState> | null, watts = 200): SimState {
-    const far = Array.from({ length: under === null ? 6 : 5 }, (_, index) => ({
+  function field(count: number, underfoot = false): SimState {
+    const far = Array.from({ length: count }, (_, index) => ({
       ...fixtureTrap(1 + index, 'laser'),
       x: 100 + index * 200,
       y: 100,
     }));
-    const mine = under === null ? [] : [{ ...fixtureTrap(9, 'caisson-de-basse'), ...under }];
-    return fixtureState({
-      traps: [...far, ...mine],
-      core: { ...fixtureState().core, watts },
-    });
+    const under = underfoot ? [{ ...fixtureTrap(9, 'caisson-de-basse'), x: 760, y: 500 }] : [];
+    return fixtureState({ traps: [...far, ...under] });
   }
 
-  it('offers a placement on free ground when a slot is left and the watts cover it', () => {
-    const state = fullField(null);
-    state.traps.pop();
-
-    const tile = trapTile(definitions, state, player, 'caisson-de-basse', 6);
-
-    expect(tile).toEqual({ cost: 30, available: true });
-  });
-
-  it('greys a new placement out when all slots are taken', () => {
-    const state = fullField(null);
-
-    const tile = trapTile(definitions, state, player, 'caisson-de-basse', 6);
-
-    expect(tile).toEqual({ cost: 30, available: false });
-  });
-
-  it('greys every trap out over a placed trap, whatever its kind', () => {
-    const state = fullField({ x: 760, y: 500 });
-
-    const tiles = ['caisson-de-basse', 'laser'].map((id) =>
-      trapTile(definitions, state, player, id, 7),
-    );
+  it('shows each held trap, then the free slots', () => {
+    const tiles = handTiles(definitions, field(0), player, 2, 6);
 
     expect(tiles).toEqual([
-      { cost: 30, available: false },
-      { cost: 50, available: false },
+      { trapId: 'laser', available: true },
+      { trapId: null, available: false },
     ]);
+  });
+
+  it('greys a held trap out when all slots are taken', () => {
+    const tiles = handTiles(definitions, field(6), player, 2, 6);
+
+    expect(tiles[0]).toEqual({ trapId: 'laser', available: false });
+  });
+
+  it('greys a held trap out over a placed trap', () => {
+    const tiles = handTiles(definitions, field(0, true), player, 2, 6);
+
+    expect(tiles[0]).toEqual({ trapId: 'laser', available: false });
   });
 });
 

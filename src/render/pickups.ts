@@ -28,14 +28,14 @@ export function createPickups(ctx: RenderContext): Family {
       views.begin();
       for (const pickup of state.pickups) {
         const { body, outline } = views.acquire(pickup.id);
-        const shape = pickup.kind === 'vibes' ? t.vibes : t.watts;
+        const shape = t.vibes;
         const twinkle = calm ? 1 : 1 + 0.2 * Math.sin(now * 0.45 + pickup.id);
         body.texture = shape.texture;
-        setTint(body, pickup.kind === 'vibes' ? palette.or : palette.turquoise);
+        setTint(body, palette.or);
         body.visible = true;
         body.position.set(lerp(pickup.prevX, pickup.x, alpha), lerp(pickup.prevY, pickup.y, alpha));
         body.scale.set((PICKUP_RADIUS / shape.radius) * twinkle);
-        body.rotation = calm || pickup.kind === 'watts' ? 0 : now * 0.03 + pickup.id;
+        body.rotation = calm ? 0 : now * 0.03 + pickup.id;
         placeOutline(outline, body, shape.texture, shape.radius, frame);
       }
       views.end();

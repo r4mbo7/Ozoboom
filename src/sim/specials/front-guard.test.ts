@@ -17,7 +17,6 @@ const GUARD: EnemyDefinition = {
   attackCooldownTicks: 36,
   aggroRadius: 1,
   vibesDrop: 5,
-  wattsDrop: 3,
   scalingPerPhrase: { hp: 1, speed: 1 },
   special: { kind: 'frontGuard', frontDamageMul: 0.5 },
 };

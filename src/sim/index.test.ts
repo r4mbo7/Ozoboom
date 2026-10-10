@@ -5,13 +5,28 @@ import { FIXTURE_OPTIONS, commandFor } from './fixtures';
 import { createSimulation } from './index';
 
 describe('createSimulation', () => {
-  it('puts the core in the middle of the arena with its full volume and the starting watts', () => {
+  it('puts the core in the middle of the arena with its full volume', () => {
     const options = FIXTURE_OPTIONS;
 
     const { state } = createSimulation(options);
 
     expect(state.arena).toEqual({ width: 1600, height: 900 });
-    expect(state.core).toEqual({ x: 800, y: 450, radius: 48, hp: 1000, maxHp: 1000, watts: 50 });
+    expect(state.core).toEqual({ x: 800, y: 450, radius: 48, hp: 1000, maxHp: 1000 });
+  });
+
+  it('puts the starting traps of the set in every hand', () => {
+    const { state } = createSimulation({
+      ...FIXTURE_OPTIONS,
+      players: [
+        { id: 0, classId: 'raver' },
+        { id: 1, classId: 'raver' },
+      ],
+    });
+
+    expect(state.players.map((player) => player.hand)).toEqual([
+      ['subwoofer', 'subwoofer'],
+      ['subwoofer', 'subwoofer'],
+    ]);
   });
 
   it('places every player around the core, inside the arena, with the stats of their class', () => {
