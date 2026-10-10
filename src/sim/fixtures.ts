@@ -3,6 +3,7 @@ import type {
   ClassDefinition,
   EnemyDefinition,
   GameContent,
+  ObstacleDefinition,
   SetDefinition,
   TrapDefinition,
 } from '../data/types';
@@ -453,4 +454,52 @@ export const BYSTANDER_QUIET_OPTIONS: SimulationOptions = {
   ...FIXTURE_OPTIONS,
   setId: BYSTANDER_QUIET_SET.id,
   content: BYSTANDER_QUIET_CONTENT,
+};
+
+// A domed stage: a crown of poles and a ring of arms, both open on the four axes (the big entrances).
+const CROWN_ARENA = { width: 1600, height: 1000 };
+const CENTER = { x: CROWN_ARENA.width / 2, y: CROWN_ARENA.height / 2 };
+
+// Poles on a circle of `ringRadius`, except where the four axes cut an entrance `entrance` wide.
+// The circle is walked by t = tan(angle / 2) so it needs no trigonometry.
+function ring(
+  ringRadius: number,
+  poleRadius: number,
+  poles: number,
+  entrance: number,
+): ObstacleDefinition[] {
+  const found: ObstacleDefinition[] = [];
+  const half = poles / 2;
+  for (let i = 0; i < half; i++) {
+    const t = -1 + (2 * (i + 0.5)) / half;
+    const c = (1 - t * t) / (1 + t * t);
+    const s = (2 * t) / (1 + t * t);
+    for (const [x, y] of [
+      [c, s],
+      [-c, s],
+    ] as const) {
+      const pole = {
+        x: CENTER.x + x * ringRadius,
+        y: CENTER.y + y * ringRadius,
+        radius: poleRadius,
+      };
+      if (Math.abs(pole.x - CENTER.x) > entrance && Math.abs(pole.y - CENTER.y) > entrance) {
+        found.push(pole);
+      }
+    }
+  }
+  return found;
+}
+
+// A crown of poles with four wide entrances in the axes, and a ring of larger arms inside.
+const CROWN_OBSTACLES: readonly ObstacleDefinition[] = [
+  ...ring(430, 14, 56, 90),
+  ...ring(220, 24, 18, 70),
+];
+
+export const CROWN_SET: SetDefinition = {
+  ...FIXTURE_SET,
+  id: 'crown-set',
+  arena: CROWN_ARENA,
+  obstacles: CROWN_OBSTACLES,
 };

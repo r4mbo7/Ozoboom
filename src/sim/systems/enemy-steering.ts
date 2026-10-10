@@ -2,6 +2,8 @@ import type { EnemyDefinition } from '../../data/types';
 import { distanceSquared } from '../../shared/vec';
 import { lookup, type ResolvedContent } from '../content';
 import { playerById } from '../damage';
+import { flowWaypoint } from '../flow-field';
+import { lineBlocked, resolveObstacles } from '../obstacles';
 import type { Circle } from '../spatial-hash';
 import { STEERING_TARGETS } from '../specials';
 import type { SteeringOverride } from '../specials/types';
@@ -13,9 +15,11 @@ const LEASH_IN_AGGRO_RADII = 2;
 // Share of its speed a horde enemy spends moving away from the ones it overlaps.
 const SEPARATION_WEIGHT = 0.5;
 const separation = { x: 0, y: 0 };
+const waypoint = { x: 0, y: 0 };
 
 export function enemySteering(ctx: StepContext): void {
   const { state, content, enemyGrid } = ctx;
+  const obstacles = ctx.set.obstacles ?? [];
   enemyGrid.rebuild(state.enemies);
   for (const enemy of state.enemies) {
     if (enemy.hp <= 0) {
@@ -29,12 +33,20 @@ export function enemySteering(ctx: StepContext): void {
     const override = steeringOverride(ctx, enemy, definition);
     const target = override?.target ?? targetOf(state, enemy);
     const speed = enemy.speed * enemy.slowFactor * (override?.speedMul ?? 1);
-    const dx = target.x - enemy.x;
-    const dy = target.y - enemy.y;
+    // When the straight line to its target is blocked, a bad vibe walks the core's flow field
+    // instead, whoever its target is: a chased player behind a pole is reached once the line clears.
+    const detour =
+      ctx.flowFields !== undefined &&
+      override === undefined &&
+      lineBlocked(enemy.x, enemy.y, target.x, target.y, enemy.radius, obstacles) &&
+      flowWaypoint(ctx.flowFields, enemy.radius, enemy.x, enemy.y, waypoint);
+    const aim = detour ? waypoint : target;
+    const dx = aim.x - enemy.x;
+    const dy = aim.y - enemy.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const gap = distance - enemy.radius - target.radius;
+    const gap = detour ? distance : distance - enemy.radius - target.radius;
     const advance =
-      override === undefined && definition.ranged !== undefined
+      !detour && override === undefined && definition.ranged !== undefined
         ? Math.min(speed, Math.max(-speed, gap - definition.ranged.keepDistance))
         : Math.min(speed, Math.max(0, gap));
     let moveX = distance === 0 ? 0 : (dx / distance) * advance;
@@ -44,8 +56,11 @@ export function enemySteering(ctx: StepContext): void {
       moveX += separation.x * speed * SEPARATION_WEIGHT;
       moveY += separation.y * speed * SEPARATION_WEIGHT;
     }
+    const fromX = enemy.x;
+    const fromY = enemy.y;
     enemy.x = clamp(enemy.x + moveX, enemy.radius, state.arena.width - enemy.radius);
     enemy.y = clamp(enemy.y + moveY, enemy.radius, state.arena.height - enemy.radius);
+    resolveObstacles(enemy, fromX, fromY, obstacles);
     const moved = moveX !== 0 || moveY !== 0;
     if (moved && (definition.behaviour === 'heavy' || definition.behaviour === 'boss')) {
       pushTraps(state, content, enemy);
