@@ -7,9 +7,11 @@ import {
   roomCodeFromHash,
   rowsOf,
   seatName,
+  seatRows,
   stepClass,
   stepRow,
 } from './lobby-model';
+import { STAGE_CARDS } from './lobby-fixtures';
 import { NO_MENU_INTENTS } from './navigation';
 import type { LobbyModel, LobbySeat } from './types';
 
@@ -114,5 +116,26 @@ describe('deviceLabel', () => {
     expect(deviceLabel('keyboardMouse')).toBe('Clavier et souris');
     expect(deviceLabel('gamepad:1')).toBe('Manette 2');
     expect(deviceLabel(null)).toBe('À distance');
+  });
+});
+
+describe('the scene row', () => {
+  it('belongs to the host when there is a scene to choose', () => {
+    const stages = { stages: STAGE_CARDS, stageId: 'dome' };
+
+    expect(rowsOf(lobby(stages))).toEqual(['copy', 'name', 'class', 'stage', 'launch', 'leave']);
+    expect(seatRows(seat(), lobby(stages))).toEqual(['name', 'class', 'stage', 'launch', 'online']);
+  });
+
+  it('is left out for a guest, and without a choice', () => {
+    const guest = seat({ host: false });
+
+    expect(rowsOf(lobby({ stages: STAGE_CARDS, seats: [guest] }))).toEqual([
+      'name',
+      'class',
+      'leave',
+    ]);
+    expect(rowsOf(lobby({ stages: STAGE_CARDS.slice(0, 1) }))).not.toContain('stage');
+    expect(seatRows(guest, lobby({ stages: STAGE_CARDS }))).toEqual(['name', 'class']);
   });
 });

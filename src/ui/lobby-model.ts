@@ -80,7 +80,12 @@ export function deviceLabel(device: DeviceId | null): string {
 }
 
 export type Row =
-  'create' | 'code' | 'join' | 'copy' | 'name' | 'class' | 'launch' | 'online' | 'leave';
+  'create' | 'code' | 'join' | 'copy' | 'name' | 'class' | 'stage' | 'launch' | 'online' | 'leave';
+
+// Only the host picks the scene, and only when there is a choice.
+export function hasStageChoice(model: LobbyModel): boolean {
+  return (model.stages?.length ?? 0) > 1;
+}
 
 export function rowsOf(model: LobbyModel): readonly Row[] {
   const view = lobbyView(model);
@@ -96,14 +101,22 @@ export function rowsOf(model: LobbyModel): readonly Row[] {
     rows.push('name', 'class');
   }
   if (own?.host === true) {
+    if (hasStageChoice(model)) {
+      rows.push('stage');
+    }
     rows.push('launch');
   }
   rows.push('leave');
   return rows;
 }
 
-export function seatRows(seat: LobbySeat): readonly Row[] {
-  return seat.host ? ['name', 'class', 'launch', 'online'] : ['name', 'class'];
+export function seatRows(seat: LobbySeat, model: LobbyModel): readonly Row[] {
+  if (!seat.host) {
+    return ['name', 'class'];
+  }
+  return hasStageChoice(model)
+    ? ['name', 'class', 'stage', 'launch', 'online']
+    : ['name', 'class', 'launch', 'online'];
 }
 
 export interface RowStep {

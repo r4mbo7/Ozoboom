@@ -1,5 +1,5 @@
 import type { ClassInfo } from './class-picker';
-import type { LobbyModel, LobbySeat } from './types';
+import type { LobbyModel, LobbySeat, StageCard } from './types';
 
 // The data holds one class until the tank and the healer are written: the harness shows all three.
 export const LOBBY_CLASSES: readonly ClassInfo[] = [
@@ -21,6 +21,11 @@ export const LOBBY_CLASSES: readonly ClassInfo[] = [
     role: 'Soigne, répare la scène et relève ses amis.',
     color: '#7cf2b0',
   },
+];
+
+export const STAGE_CARDS: readonly StageCard[] = [
+  { setId: 'main', name: 'Main stage', style: 'Psytrance full-on', bpm: 145, decor: 'lake' },
+  { setId: 'dome', name: 'Le Dome', style: 'Downtempo, dub', bpm: 96.7, decor: 'dome' },
 ];
 
 export const LOBBY_FIXTURES = [
@@ -63,6 +68,8 @@ const LOCAL: LobbyModel = {
   seats: [],
   canLaunch: false,
   error: null,
+  stages: STAGE_CARDS,
+  stageId: 'dome',
 };
 
 const ENTRY: LobbyModel = { ...LOCAL, mode: 'online', seats: [] };
@@ -111,6 +118,8 @@ export function lobbyFixture(name: LobbyFixture, origin: string): LobbyModel {
         ],
         canLaunch: true,
         error: null,
+        stages: STAGE_CARDS,
+        stageId: 'dome',
       };
     case 'guest':
       return {
@@ -125,6 +134,8 @@ export function lobbyFixture(name: LobbyFixture, origin: string): LobbyModel {
         ],
         canLaunch: false,
         error: null,
+        stages: STAGE_CARDS,
+        stageId: 'dome',
       };
     case 'entry':
       return ENTRY;

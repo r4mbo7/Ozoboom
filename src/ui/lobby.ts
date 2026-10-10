@@ -10,6 +10,7 @@ import {
   defaultName,
   deviceLabel,
   deviceOf,
+  hasStageChoice,
   lobbyView,
   normalizeRoomCode,
   ownSeat,
@@ -22,6 +23,7 @@ import {
   stepRow,
 } from './lobby-model';
 import { type MenuInput, createMenuInput } from './navigation';
+import { createStageCards, stepStage } from './stage';
 import { onMouseMove } from './pointer';
 import { promptsFor } from './prompts';
 import type { LobbyModel, LobbySeat, UiFrame } from './types';
@@ -32,6 +34,7 @@ export interface LobbyActions {
   leaveSeat(playerId: PlayerId): void;
   seatClass(playerId: PlayerId, classId: string): void;
   seatName(playerId: PlayerId, name: string): void;
+  chooseStage(setId: string): void;
   createRoom(): void;
   joinRoom(code: string): void;
   launch(): void;
@@ -179,6 +182,13 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     return { element: item, field, input, stepper, tag, host, name, role, join, wait };
   }
 
+  const stageLabel = el('p', 'ui-panel__label');
+  const stageCards = createStageCards('Scène', (setId) => {
+    actions.chooseStage(setId);
+  });
+  const stagePanel = el('div', 'ui-lobby__stage');
+  stagePanel.append(stageLabel, stageCards.element);
+
   const onlineButton = button('Jouer en ligne');
   const launchButton = button('Lancer le set', 'ui-button ui-button--primary');
   const waiting = el('p', 'ui-lobby__waiting', 'En attente de l’hôte');
@@ -189,7 +199,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
   const hint = el('p', 'ui-hint');
 
   const body = el('div', 'ui-lobby__body');
-  body.append(header, error, entry, share, seatList, footer, hint);
+  body.append(header, error, entry, share, seatList, stagePanel, footer, hint);
   element.append(body);
 
   const inputs = [codeInput, ...cards.map((card) => card.input)];
@@ -310,6 +320,8 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
         return card?.field ?? null;
       case 'class':
         return card?.stepper.element ?? null;
+      case 'stage':
+        return stageCards.element;
       case 'launch':
         return launchButton;
       case 'online':
@@ -340,6 +352,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       codeField,
       joinButton,
       copyButton,
+      stageCards.element,
       launchButton,
       onlineButton,
       leaveButton,
@@ -419,6 +432,9 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
           }
         }
         break;
+      case 'stage':
+        stepNow(1);
+        break;
       case 'launch':
         launchNow();
         break;
@@ -431,7 +447,18 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     }
   }
 
+  function stepNow(direction: -1 | 1): void {
+    const next = stepStage(model.stages ?? [], model.stageId ?? '', direction);
+    if (next !== null) {
+      actions.chooseStage(next);
+    }
+  }
+
   function side(seat: LobbySeat | null, row: Row | undefined, direction: -1 | 1): void {
+    if (row === 'stage') {
+      stepNow(direction);
+      return;
+    }
     if (seat === null || row !== 'class') {
       return;
     }
@@ -472,7 +499,9 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
   }
 
   function rowsOfSeat(seat: LobbySeat): readonly Row[] {
-    return seatRows(seat).filter((row) => row !== 'online' || actions.goOnline !== undefined);
+    return seatRows(seat, model).filter(
+      (row) => row !== 'online' || actions.goOnline !== undefined,
+    );
   }
 
   function updateLocal(frame: UiFrame, edges: MenuIntents): void {
@@ -545,7 +574,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
         hint,
         [
           { keys: ['Entrée', 'A'], label: 'rejoindre' },
-          { keys: prompts.navigateRow, label: 'classe' },
+          { keys: prompts.navigateRow, label: hasStageChoice(model) ? 'classe, scène' : 'classe' },
           { keys: [prompts.confirm], label: 'valider' },
           { keys: ['Échap', 'B'], label: 'quitter sa place' },
         ],
@@ -557,7 +586,14 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       hint,
       [
         { keys: prompts.navigate, label: 'naviguer' },
-        ...(lobbyView(model) === 'entry' ? [] : [{ keys: prompts.navigateRow, label: 'classe' }]),
+        ...(lobbyView(model) === 'entry'
+          ? []
+          : [
+              {
+                keys: prompts.navigateRow,
+                label: hasStageChoice(model) ? 'classe, scène' : 'classe',
+              },
+            ]),
         { keys: [prompts.confirm], label: 'valider' },
         { keys: [prompts.back], label: 'quitter' },
       ],
@@ -631,7 +667,12 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
       }
     });
 
+    const stages = model.stages ?? [];
     const guest = view === 'room' && !hosting;
+    stageCards.set(stages, model.stageId ?? '');
+    stageCards.setReadonly(guest);
+    stagePanel.hidden = view === 'entry' || stages.length < 2;
+    setText(stageLabel, guest ? 'L’hôte choisit la scène' : 'Scène');
     launchButton.hidden = guest || view === 'entry';
     onlineButton.hidden = view !== 'local' || actions.goOnline === undefined;
     launchButton.setAttribute('aria-disabled', String(!model.canLaunch));

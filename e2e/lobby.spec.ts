@@ -306,6 +306,7 @@ test.describe('online lobby', () => {
     await tap(page, 'ArrowRight');
     expect(lines).toContain('[ui] onSeatClass 0 tank');
     await tap(page, 'ArrowDown');
+    await tap(page, 'ArrowDown');
     await expect(lobby.getByRole('button', { name: 'Lancer le set' })).toHaveAttribute(
       'aria-current',
       'true',

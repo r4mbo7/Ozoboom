@@ -18,7 +18,13 @@ import {
   idleSnapshot,
 } from './fixtures';
 import { createUi, prefersCalmMode } from './index';
-import { LOBBY_CLASSES, LOBBY_FIXTURES, ROOM_CODE, lobbyFixture } from './lobby-fixtures';
+import {
+  LOBBY_CLASSES,
+  LOBBY_FIXTURES,
+  ROOM_CODE,
+  STAGE_CARDS,
+  lobbyFixture,
+} from './lobby-fixtures';
 import { SEAT_IDS, defaultName } from './lobby-model';
 import { SUN_PALETTES, type SunMoment } from '../shared/palette';
 import { applyPalette, uiPaletteAt } from './sun';
@@ -208,12 +214,19 @@ const ui = createUi(
     },
     onChooseStage: (setId) => {
       console.info('[ui] onChooseStage', setId);
+      if (lobby !== null) {
+        showLobby({ ...lobby, stageId: setId });
+      } else {
+        ui.showStagePicker({ stages: STAGE_CARDS, stageId: setId });
+      }
     },
     onConfirmStage: () => {
       console.info('[ui] onConfirmStage');
+      open('game');
     },
     onLeaveStagePicker: () => {
       console.info('[ui] onLeaveStagePicker');
+      open('title');
     },
     onLeaveLobby() {
       console.info('[ui] onLeaveLobby');
@@ -342,6 +355,9 @@ const notice = params.get('notice');
 if (notice === 'desync' || notice === 'hostLeft' || notice === 'connectionLost') {
   ui.update(state, { snapshot: pending, players: [] }, UI_FIXTURE_CONTENT);
   ui.showNotice(notice, params.get('details') ?? '');
+}
+if (params.has('stagepicker')) {
+  ui.showStagePicker({ stages: STAGE_CARDS, stageId: 'dome' });
 }
 const requestedLobby = params.get('lobby');
 if (requestedLobby !== null) {

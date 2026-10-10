@@ -9,11 +9,12 @@ import { createHud } from './hud';
 import { createLobby } from './lobby';
 import { createMenuInput } from './navigation';
 import { createNotice } from './notice';
+import { createStagePicker } from './stage';
 import { createSunFollower } from './sun';
 import { createTitle } from './title';
 import type { GameContent } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
-import type { LobbyModel, Notice, Ui, UiCallbacks } from './types';
+import type { LobbyModel, Notice, StagePickerModel, Ui, UiCallbacks } from './types';
 import { createUpgradeOverlay } from './upgrade';
 import { VOLUME_STEPS, type SoundLevel, stepSound } from './volume';
 
@@ -23,6 +24,8 @@ export type {
   LobbySeat,
   LocalPlayer,
   Notice,
+  StageCard,
+  StagePickerModel,
   Ui,
   UiCallbacks,
   UiFrame,
@@ -33,7 +36,7 @@ export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './
 export { heldSlot, selectTrap } from './navigation';
 export { SEAT_IDS, defaultName } from './lobby-model';
 
-type Screen = 'title' | 'lobby' | 'game' | 'end' | 'notice';
+type Screen = 'title' | 'stage' | 'lobby' | 'game' | 'end' | 'notice';
 
 const NOTICES: Readonly<Record<Notice, { title: string; text: string; glyph: string }>> = {
   desync: {
@@ -165,6 +168,9 @@ export function createUi(
       seatName(playerId, name) {
         callbacks.onSeatName(playerId, name);
       },
+      chooseStage(setId) {
+        callbacks.onChooseStage(setId);
+      },
       ...(callbacks.onGoOnline === undefined
         ? {}
         : {
@@ -191,6 +197,21 @@ export function createUi(
     },
     classes,
   );
+  const stagePicker = createStagePicker({
+    choose(setId) {
+      callbacks.onChooseStage(setId);
+    },
+    confirm() {
+      once(() => {
+        callbacks.onConfirmStage();
+      });
+    },
+    leave() {
+      once(() => {
+        callbacks.onLeaveStagePicker();
+      });
+    },
+  });
   const notice = createNotice(
     'Interruption',
     () => {
@@ -205,6 +226,7 @@ export function createUi(
     upgrade.element,
     end.element,
     title.element,
+    stagePicker.element,
     lobby.element,
     notice.element,
   );
@@ -231,6 +253,7 @@ export function createUi(
     setFlag(root, 'touch', next === 'touch');
     title.setDevice(next);
     end.setDevice(next);
+    stagePicker.setDevice(next);
     lobby.setDevice(next);
     notice.setDevice(next);
   }
@@ -242,6 +265,7 @@ export function createUi(
       sun.fix('nuit');
     }
     title.element.hidden = next !== 'title';
+    stagePicker.element.hidden = next !== 'stage';
     lobby.element.hidden = next !== 'lobby';
     notice.element.hidden = next !== 'notice';
     hud.element.hidden = next !== 'game' && next !== 'notice';
@@ -273,7 +297,14 @@ export function createUi(
     showVisits(count) {
       title.setVisits(count);
     },
-    showStagePicker: () => undefined,
+    showStagePicker(model: StagePickerModel) {
+      stagePicker.setModel(model);
+      if (screen !== 'stage') {
+        sun.fix('nuit');
+        show('stage');
+        menuInput.open();
+      }
+    },
     showLobby(model) {
       sun.fix('nuit');
       show('lobby');
@@ -314,6 +345,10 @@ export function createUi(
 
       if (screen === 'title') {
         title.menu.handle(edges);
+        return;
+      }
+      if (screen === 'stage') {
+        stagePicker.update(edges);
         return;
       }
       if (screen === 'lobby') {

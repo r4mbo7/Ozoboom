@@ -449,6 +449,7 @@
 /* Title */
 
 .ui-title,
+.ui-stagepicker,
 .ui-lobby {
   overflow-y: auto;
   background:
@@ -1146,6 +1147,109 @@
   .ui-lobby__actions .ui-button:not(.ui-button--primary) {
     width: calc(100% - 2 * var(--ui-chevron));
   }
+}
+
+/* Stage cards */
+
+.ui-stagecards {
+  --stage-width: 300px;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: 16px;
+  padding: 6px;
+  border: 1.5px solid transparent;
+  border-radius: calc(var(--ui-radius) + 6px);
+}
+
+.ui-stagecards[aria-current] {
+  border-color: var(--turquoise);
+  box-shadow: 0 0 0 2px var(--turquoise);
+}
+
+.ui-lobby__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.ui-lobby__stage .ui-stagecards {
+  --stage-width: 220px;
+}
+
+.ui-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, var(--stage-width));
+  padding: 10px 10px 14px;
+  border: 1.5px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-panel);
+  box-shadow: var(--ui-lift);
+  color: var(--texte);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease-out,
+    background-color 120ms ease-out;
+}
+
+.ui-stage:hover {
+  border-color: var(--turquoise);
+}
+
+.ui-stage[aria-checked='true'] {
+  border-color: var(--or);
+  background: color-mix(in srgb, var(--turquoise) 22%, var(--ui-panel));
+}
+
+.ui-stagecards[data-readonly] .ui-stage {
+  cursor: default;
+}
+
+.ui-stagecards[data-readonly] .ui-stage:not([aria-checked='true']) {
+  opacity: 0.6;
+}
+
+.ui-stagecards[data-readonly] .ui-stage:hover:not([aria-checked='true']) {
+  border-color: var(--ui-line);
+}
+
+.ui-stage__preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: calc(var(--ui-radius) - 6px);
+}
+
+.ui-stage__name {
+  padding-inline: 6px;
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.ui-stage__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-inline: 6px;
+}
+
+.ui-stage__chip {
+  padding: 3px 12px;
+  border: 1.5px solid var(--ui-line);
+  border-radius: 20px;
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* HUD */
