@@ -29,7 +29,7 @@ Une scène est un set (`SetDefinition`) : son arène, son noyau, ses paliers, se
 
 - R7. Le Dome joue à 96,7 BPM, soit les 2/3 de 145. Le tick reste à 29 Hz. Au Dome, un temps vaut 18 ticks, une mesure 72 et une phrase 1152, contre 12, 48 et 768 sur la main stage.
 - R8. La longueur du temps devient une donnée du set, lue par la sim, le rendu, l'audio et l'interface. `src/shared/tempo.ts` cesse d'être une constante unique.
-- R9. Les durées des données restent comptées en temps et en mesures : au Dome, tout ce qui suit la musique dure un tiers de plus. Le Dome se rééquilibre par des parties sans écran, hors pièges et watts, et ses nombres vivent dans son set.
+- R9. Au Dome, tout ce que la grille compte en temps, en mesures et en phrases dure un tiers de plus ; les durées écrites en ticks dans les données restent en temps réel (ADR 0012). Le Dome se rééquilibre par des parties sans écran, hors pièges et watts, et ses nombres vivent dans son set.
 - R10. Rien ne change sur la main stage : les empreintes de ses rejeux restent identiques.
 
 **Musique**
@@ -75,6 +75,6 @@ Une troisième scène. Un tempo qui accélère pendant le set, comme dans le liv
 
 - Une scène est un set : le choix de la scène est celui de `setId`, déjà transmis au lancement en ligne.
 - Le Dome joue aux 2/3 de 145 pour garder des ticks entiers (18 par temps) et le même pas de sim. Le demi-temps sur la grille de 145 a été écarté : il ne sonne pas comme le live de référence.
-- Le tempo par scène défait le principe « un seul temps musical » de `architecture.md` : il demande un ADR avant le code.
+- Le tempo par scène défait le principe « un seul temps musical » de `architecture.md` : [ADR 0012](../adr/0012-le-tempo-est-une-donnee-de-la-scene.md).
 - Les obstacles filtrent sans fermer : on entre de partout, sauf les plus grosses bad vibes, et les tirs y butent.
 - Les photos et l'enregistrement de référence de `dome/` appartiennent à d'autres : ils restent hors du dépôt (`.gitignore`).
