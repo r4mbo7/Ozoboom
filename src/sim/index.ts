@@ -9,6 +9,7 @@ import { bystanders } from './systems/bystanders';
 import { deaths } from './systems/deaths';
 import { enemyAttacks } from './systems/enemy-attacks';
 import { enemySteering } from './systems/enemy-steering';
+import { lootCarriers, loots } from './systems/loot';
 import { pickups } from './systems/pickups';
 import { placedTotems, placedZones } from './systems/placed';
 import { playerAttack } from './systems/player-attack';
@@ -55,6 +56,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     placedZones,
     skills,
     spawning,
+    lootCarriers,
     enemySteering,
     placedTotems,
     specials,
@@ -65,6 +67,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     enemyAttacks,
     deaths,
     pickups,
+    loots,
     progression,
     status,
   ],

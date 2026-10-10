@@ -148,8 +148,8 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
   await tapButtonUntil(page, PAD.Start, () => pause.isHidden());
 
   // A player in the page: aims the right stick at the nearest bad vibe and fires, picks up the
-  // vibes, stays by the scene, places traps and novas the close ones. It counts in ticks, not in
-  // milliseconds, so that a loaded machine does not change how it plays.
+  // vibes and the loots, stays by the scene, places traps and novas the close ones. It counts in
+  // ticks, not in milliseconds, so that a loaded machine does not change how it plays.
   await page.evaluate(() => {
     const TICKS_BETWEEN_TRAPS = 336;
     let lastTrap = -TICKS_BETWEEN_TRAPS;
@@ -163,7 +163,8 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
       const running = state.status === 'running';
       const distance = (x: number, y: number) => Math.hypot(x - player.x, y - player.y);
       const nearest = [...state.enemies].sort((a, b) => distance(a.x, a.y) - distance(b.x, b.y))[0];
-      const pickup = state.pickups
+      const handFree = (player.hand?.length ?? 0) < 2;
+      const pickup = [...state.pickups, ...(handFree ? (state.loots ?? []) : [])]
         .filter((candidate) => distance(candidate.x, candidate.y) < 350)
         .sort((a, b) => distance(a.x, a.y) - distance(b.x, b.y))[0];
       const goal = pickup ?? { x: state.core.x - 100, y: state.core.y };

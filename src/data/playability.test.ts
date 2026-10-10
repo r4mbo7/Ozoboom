@@ -53,8 +53,19 @@ describe('starting values of soiree-v0', () => {
     expect(seconds(fromFarthestEdge / desagreable.speed)).toBeLessThanOrEqual(12);
   });
 
-  it('put a bass bin in every hand from the start', () => {
+  it('put a bass bin in every hand from the start, and in the first loot', () => {
     expect(set.startingHand).toEqual([caisson.id]);
+    expect(set.loot?.first).toBe(caisson.id);
+  });
+
+  it('make the bass bin the most common trap of a loot', () => {
+    const others = CONTENT.traps.filter((trap) => trap.id !== caisson.id);
+
+    expect(others.every((trap) => trap.lootWeight < caisson.lootWeight)).toBe(true);
+  });
+
+  it('carry a loot about every twenty seconds', () => {
+    expect(seconds((set.loot?.everyBars ?? 0) * TICKS_PER_BAR)).toBeCloseTo(20, -1);
   });
 
   it('let the méprisant reach its target from where it stands', () => {

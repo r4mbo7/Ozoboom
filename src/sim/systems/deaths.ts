@@ -2,8 +2,12 @@ import { lookup } from '../content';
 import { drawRelics } from '../draw';
 import { SPECIALS } from '../specials';
 import type { PickupKind, SimState } from '../state';
+import { dropLoot } from './loot';
 import { isLastTier } from './set-progress';
 import type { StepContext } from './types';
+
+// Between the loots a boss drops side by side, one per player.
+const LOOT_SPACING = 40;
 
 export function deaths(ctx: StepContext): void {
   const { state, content, set } = ctx;
@@ -45,6 +49,14 @@ export function deaths(ctx: StepContext): void {
     state.stats.kills += 1;
     if (enemy.isBoss && !isLastTier(state.set, set)) {
       offerRelics(ctx);
+    }
+    if (enemy.carriesLoot === true) {
+      dropLoot(ctx, enemy.x, enemy.y);
+    }
+    if (enemy.isBoss) {
+      state.players.forEach((_, index) => {
+        dropLoot(ctx, enemy.x + (index - (state.players.length - 1) / 2) * LOOT_SPACING, enemy.y);
+      });
     }
     if (vibesDrop > 0) {
       drop(state, 'vibes', vibesDrop, enemy.x, enemy.y, set.pickups.lifetimeTicks);

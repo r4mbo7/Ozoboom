@@ -9,6 +9,7 @@ import { contrast, mixColor } from './ground-sun';
 import { type Frame, createFrame } from './frame';
 import { createLayers } from './layers';
 import { writePixiPalette } from './palette';
+import { createLoots } from './loots';
 import { createPickups } from './pickups';
 import type { Shape } from './textures';
 import { TRAP_TOKENS } from './textures';
@@ -186,5 +187,33 @@ describe('pickups', () => {
     expect(bodies.map((body) => (body as unknown as { tint: number }).tint)).toEqual([
       frame.palette.or,
     ]);
+  });
+});
+
+describe('loots', () => {
+  it.each(MOMENTS)('show their trap in its color inside a turquoise ring at %f', (fraction) => {
+    const ctx = context();
+    const frame = frameAt(fraction);
+    const state = createFixtureState({ enemies: 1, projectiles: 0 });
+    const [carrier] = state.enemies;
+    if (carrier === undefined) {
+      throw new Error('Fixture has no enemy');
+    }
+    carrier.carriesLoot = true;
+    state.loots = [
+      { id: 900, trapId: 'laser', ticksLeft: 100, x: 300, y: 300, prevX: 300, prevY: 300 },
+    ];
+
+    createLoots(ctx).update(state, 0, frame);
+
+    const tints = (layer: Container) =>
+      layer.children
+        .filter((sprite) => sprite.visible)
+        .map((sprite) => (sprite as unknown as { tint: number }).tint);
+    expect(tints(ctx.layers.pickups)).toContain(frame.palette[TRAP_TOKENS.beam]);
+    expect(tints(ctx.layers.pickups)).toContain(frame.palette.turquoise);
+    expect(
+      tints(ctx.layers.pickups).filter((tint) => tint === frame.palette.turquoise),
+    ).toHaveLength(2);
   });
 });

@@ -137,6 +137,8 @@ export interface EnemyState extends Positioned {
   clingCooldown?: number;
   // Collant: hp as of the previous tick's check, to size the latest hit for detaching.
   hpWatermark?: number;
+  // Carries a loot it drops when it dies.
+  carriesLoot?: boolean;
   // Mâle alpha: its last step, which faces the hits it takes at `damageMul`.
   front?: { x: number; y: number; damageMul: number };
 }
@@ -205,6 +207,12 @@ export interface PickupState extends Positioned {
   ticksLeft: number;
 }
 
+export interface LootState extends Positioned {
+  id: EntityId;
+  trapId: string;
+  ticksLeft: number;
+}
+
 export interface BystanderState extends Positioned {
   id: EntityId;
   kind: string;
@@ -261,6 +269,15 @@ export type SimEvent =
   | { type: 'trapFired'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapDestroyed'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'pickupCollected'; playerId: PlayerId; kind: PickupKind; amount: number }
+  | { type: 'lootDropped'; id: EntityId; trapId: string; x: number; y: number }
+  | {
+      type: 'lootCollected';
+      id: EntityId;
+      playerId: PlayerId;
+      trapId: string;
+      x: number;
+      y: number;
+    }
   | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyRevived'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'vibesStolen'; id: EntityId; kind: string; x: number; y: number }
@@ -313,6 +330,12 @@ export interface SimState {
   // Optional: created only once a Festivalier en détresse spawns, so the replay fingerprint of a
   // game without one stays unchanged.
   bystanders?: BystanderState[];
+  // Optional, like `bystanders`: created with the first loot carrier of a set that has loot.
+  loots?: LootState[];
+  // Loots dropped so far: the first one holds `LootRules.first`.
+  lootsDropped?: number;
+  // A loot bar went by and no bad vibe carries its loot yet.
+  lootDue?: boolean;
   volume?: number;
   speakers?: SpeakerState[];
   placed?: PlacedState[];

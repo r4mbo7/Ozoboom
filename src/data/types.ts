@@ -112,6 +112,8 @@ export interface TrapDefinition {
   hp: number;
   cadence: TrapCadence;
   effect: TrapEffect;
+  // Odds of this trap in a loot against the other traps, the same for every class.
+  lootWeight: number;
 }
 
 export type UpgradeFamily = 'class' | 'generic' | 'defense' | 'relic';
@@ -254,6 +256,15 @@ export interface TierDefinition {
   bystanderSpawns?: readonly BystanderSpawnRule[];
 }
 
+// Every `everyBars` bars, the next bad vibe to spawn carries a loot; killed, it drops it.
+export interface LootRules {
+  everyBars: number;
+  lifetimeBars: number;
+  radius: number;
+  // The trap of the first loot of the game.
+  first: string;
+}
+
 export interface SetDefinition {
   id: string;
   name: string;
@@ -263,6 +274,8 @@ export interface SetDefinition {
   // Traps a player carries at most, and those each player starts the game with.
   handSize: number;
   startingHand: readonly string[];
+  // Absent means no loot.
+  loot?: LootRules;
   maxTraps: number;
   levelCurve: { baseVibes: number; vibesPerLevel: number };
   pickups: { lifetimeTicks: number; speed: number };

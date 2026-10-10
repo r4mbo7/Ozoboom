@@ -128,6 +128,7 @@ export const FIXTURE_CONTENT: GameContent = {
       hp: 100,
       cadence: 'beat',
       effect: { kind: 'shockwave', damage: 8, radius: 90, knockback: 12 },
+      lootWeight: 3,
     },
   ],
   upgrades: [
@@ -179,6 +180,7 @@ const trap = (
   hp: 50,
   cadence,
   effect,
+  lootWeight: 1,
 });
 
 const [raver] = FIXTURE_CONTENT.classes;
@@ -352,6 +354,7 @@ export const FIXTURE_LURE: TrapDefinition = {
   hp: 50,
   cadence: 'continuous',
   effect: { kind: 'lure', radius: 150, markedDamageMul: 2 },
+  lootWeight: 1,
 };
 
 export const FIXTURE_PROP: TrapDefinition = {
@@ -362,6 +365,7 @@ export const FIXTURE_PROP: TrapDefinition = {
   hp: 1000,
   cadence: 'bar',
   effect: { kind: 'mist', slowFactor: 1, healPerBar: 0, radius: 1 },
+  lootWeight: 1,
 };
 
 // The fixture without scheduled waves (the boss still lands on each drop), plus one enemy of each

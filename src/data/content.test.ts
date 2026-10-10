@@ -338,6 +338,7 @@ describe('CONTENT numbers', () => {
       invalid({
         radius: [trap.radius, positive],
         hp: [trap.hp, positive],
+        lootWeight: [trap.lootWeight, positive],
         ...effectFields(trap.effect),
       }),
     ).toEqual([]);
@@ -391,6 +392,22 @@ describe.each(sets)('set $id', (set) => {
       }),
     ).toEqual([]);
     expect(set.tiers.length).toBeGreaterThan(0);
+  });
+
+  it('drops loots on whole bars, starting with a known trap', () => {
+    const { loot } = set;
+    if (loot === undefined) {
+      return;
+    }
+
+    expect(
+      invalid({
+        everyBars: [loot.everyBars, wholePositive],
+        lifetimeBars: [loot.lifetimeBars, wholePositive],
+        radius: [loot.radius, positive],
+      }),
+    ).toEqual([]);
+    expect(traps.map((trap) => trap.id)).toContain(loot.first);
   });
 
   it('starts every hand with known traps it can hold', () => {

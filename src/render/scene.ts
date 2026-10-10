@@ -25,6 +25,7 @@ import { createGroundWaves } from './ground-waves';
 import { type Layers, applyLight, createLayers } from './layers';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { isPaletteToken } from './palette';
+import { createLoots } from './loots';
 import { createPickups } from './pickups';
 import { createMarkers } from './markers';
 import { createStageMarker } from './stage-marker';
@@ -127,6 +128,7 @@ export class Scene implements Renderer {
       createCore(ctx),
       traps,
       createPickups(ctx),
+      createLoots(ctx),
       createBystanders(ctx),
       enemies,
       createSpecials(ctx),

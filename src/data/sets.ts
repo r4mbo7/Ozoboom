@@ -10,6 +10,7 @@ export const SETS: readonly SetDefinition[] = [
     core: { radius: 56, maxHp: 500 },
     handSize: 2,
     startingHand: ['caisson-de-basse'],
+    loot: { everyBars: 12, lifetimeBars: 16, radius: 16, first: 'caisson-de-basse' },
     maxTraps: 6,
     levelCurve: { baseVibes: 5, vibesPerLevel: 4 },
     pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },

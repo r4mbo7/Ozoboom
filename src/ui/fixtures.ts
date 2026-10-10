@@ -95,6 +95,7 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       hp: 100,
       cadence: 'beat',
       effect: { kind: 'shockwave', damage: 12, radius: 120, knockback: 20 },
+      lootWeight: 1,
     },
     {
       id: 'laser',
@@ -104,6 +105,7 @@ export const UI_FIXTURE_CONTENT: GameContent = {
       hp: 80,
       cadence: 'continuous',
       effect: { kind: 'beam', damagePerTick: 1, length: 320, width: 8 },
+      lootWeight: 1,
     },
   ],
   weapons: [
