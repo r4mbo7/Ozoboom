@@ -318,7 +318,11 @@ export type MusicVoiceId =
   | 'kalimba'
   | 'choir'
   | 'siren'
-  | 'bowl';
+  | 'bowl'
+  | 'darbouka'
+  | 'riq'
+  | 'oud'
+  | 'ney';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
 // `kick` plays out of the break, `clap` only in the drop.

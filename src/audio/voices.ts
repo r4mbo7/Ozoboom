@@ -467,4 +467,119 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       });
     }
   },
+  // An accented step is the doum, the others the tek.
+  darbouka: ({ out, at, position, accent, light }) => {
+    const level = light ? 0.5 : 1;
+    if (accent) {
+      playTone(out, at, {
+        wave: 'sine',
+        hz: 105,
+        toHz: 63,
+        glide: 0.25,
+        gain: 0.42 * level,
+        attack: 0.001,
+        hold: 0.02,
+        release: 0.32,
+      });
+      playNoise(out, at, {
+        gain: 0.105 * level,
+        attack: 0.001,
+        hold: 0.004,
+        release: 0.07,
+        filter: { type: 'lowpass', hz: 380 },
+      });
+      return;
+    }
+    const pan = position % 2 === 0 ? 0.2 : -0.2;
+    playNoise(out, at, {
+      gain: 0.13 * level,
+      attack: 0.001,
+      hold: 0.002,
+      release: 0.045,
+      pan,
+      filter: { type: 'bandpass', hz: 3600, q: 1.6 },
+    });
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: 1150,
+      toHz: 900,
+      glide: 0.02,
+      gain: 0.04 * level,
+      attack: 0.001,
+      hold: 0.002,
+      release: 0.03,
+      pan,
+    });
+  },
+  riq: ({ out, at, position }) => {
+    const pan = position % 8 < 4 ? -0.3 : 0.3;
+    for (const offset of [0, 0.011, 0.024]) {
+      playNoise(out, at + offset, {
+        gain: 0.05,
+        attack: 0.001,
+        hold: 0.002,
+        release: 0.08,
+        pan,
+        filter: { type: 'highpass', hz: 8200 },
+      });
+    }
+  },
+  oud: ({ out, send, at, hz, position, light }) => {
+    const level = light ? 0.75 : 1;
+    const pan = position % 2 === 0 ? -0.3 : 0.3;
+    playTone(send, at, {
+      wave: 'sawtooth',
+      hz: hz * 1.015,
+      toHz: hz,
+      glide: 0.02,
+      gain: 0.065 * level,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.42,
+      pan,
+      filter: { type: 'lowpass', hz: 3600, toHz: 260, glide: 0.32, q: 2.5 },
+    });
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: hz * 2,
+      gain: 0.015 * level,
+      attack: 0.001,
+      hold: 0.004,
+      release: 0.15,
+      pan,
+    });
+  },
+  ney: ({ out, send, at, hz, steps, until, light }) => {
+    const level = light ? 0.6 : 1;
+    const hold = Math.max(0, Math.min(steps * SIXTEENTH * 0.85, until - at - 0.22));
+    const vibrato = steps >= 3 ? { hz: 5.4, cents: 24, delay: 0.16 } : undefined;
+    playTone(send, at, {
+      wave: 'triangle',
+      hz: hz * 0.985,
+      toHz: hz,
+      glide: 0.06,
+      gain: 0.05 * level,
+      attack: 0.05,
+      hold,
+      release: 0.22,
+      ...(vibrato ? { vibrato } : {}),
+      filter: { type: 'lowpass', hz: 2400 },
+    });
+    playTone(out, at, {
+      wave: 'sine',
+      hz: hz * 2,
+      gain: 0.01 * level,
+      attack: 0.06,
+      hold,
+      release: 0.2,
+      ...(vibrato ? { vibrato } : {}),
+    });
+    playNoise(out, at, {
+      gain: 0.022 * level,
+      attack: 0.04,
+      hold: Math.max(0, Math.min(steps * SIXTEENTH * 0.7, until - at - 0.18)),
+      release: 0.18,
+      filter: { type: 'bandpass', hz: hz * 2, q: 9 },
+    });
+  },
 };
