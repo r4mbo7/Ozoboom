@@ -1,6 +1,6 @@
 import type { MusicVoiceId } from '../data/types';
-import { TICKS_PER_BAR } from '../shared/tempo';
-import { STEP_TICKS, TICK_SECONDS } from './clock';
+import { type Tempo } from '../shared/tempo';
+import { sixteenthSeconds } from './clock';
 import { playNoise, playTone } from './synth';
 
 export interface MusicVoiceContext {
@@ -9,6 +9,7 @@ export interface MusicVoiceContext {
   send: AudioNode;
   at: number;
   step: number;
+  tempo: Tempo;
   position: number;
   hz: number;
   // The part's previous note.
@@ -27,8 +28,7 @@ export interface MusicVoiceContext {
 
 export type MusicVoice = (ctx: MusicVoiceContext) => void;
 
-const SIXTEENTH = STEP_TICKS * TICK_SECONDS;
-const SWEEP_TICKS = 8 * TICKS_PER_BAR;
+const SWEEP_BARS = 8;
 const BASS_ACCENTS = [0.8, 1, 1.3];
 const ORIENTAL_VOICES: readonly (readonly [detune: number, octaves: number, gain: number])[] = [
   [-14, 0, 0.04],
@@ -65,8 +65,8 @@ const CHOIR_FORMANTS: readonly (readonly [hz: number, q: number, gain: number])[
 const TOM_HZ = [190, 160, 130, 105];
 const GATE_TOP_HZ = 2200;
 
-function sweepOf(step: number): number {
-  return 0.5 - 0.5 * Math.cos((2 * Math.PI * step) / SWEEP_TICKS);
+function sweepOf(step: number, tempo: Tempo): number {
+  return 0.5 - 0.5 * Math.cos((2 * Math.PI * step) / (SWEEP_BARS * tempo.ticksPerBar));
 }
 
 function texturePan(position: number): number {
@@ -74,22 +74,23 @@ function texturePan(position: number): number {
 }
 
 export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
-  'rolling-bass': ({ out, at, hz, position, cutoff }) => {
+  'rolling-bass': ({ out, at, hz, position, cutoff, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     const accented = cutoff * (BASS_ACCENTS[position - 1] ?? 1);
-    const envelope = { attack: 0.002, hold: SIXTEENTH * 0.5, release: SIXTEENTH * 0.25 };
+    const envelope = { attack: 0.002, hold: sixteenth * 0.5, release: sixteenth * 0.25 };
     playTone(out, at, {
       ...envelope,
       wave: 'sawtooth',
       hz,
       gain: 0.42,
-      filter: { type: 'lowpass', hz: accented, toHz: 140, glide: SIXTEENTH * 0.55, q: 6 },
+      filter: { type: 'lowpass', hz: accented, toHz: 140, glide: sixteenth * 0.55, q: 6 },
     });
     playTone(out, at, {
       ...envelope,
       wave: 'square',
       hz: hz * 2,
       gain: 0.06,
-      filter: { type: 'lowpass', hz: accented * 1.4, toHz: 220, glide: SIXTEENTH * 0.45, q: 3 },
+      filter: { type: 'lowpass', hz: accented * 1.4, toHz: 220, glide: sixteenth * 0.45, q: 3 },
     });
   },
   knock: ({ out, at, hz, position }) => {
@@ -166,20 +167,22 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       filter: { type: 'lowpass', hz: 2500, q: 2 },
     });
   },
-  squelch: ({ out, at, hz, step }) => {
-    const sweep = sweepOf(step);
+  squelch: ({ out, at, hz, step, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
+    const sweep = sweepOf(step, tempo);
     const cutoff = 500 + 2200 * sweep;
     playTone(out, at, {
       wave: 'sawtooth',
       hz,
       gain: 0.05,
       attack: 0.002,
-      hold: SIXTEENTH * 0.6,
-      release: SIXTEENTH * 0.3,
-      filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.35, glide: SIXTEENTH * 0.8, q: 14 },
+      hold: sixteenth * 0.6,
+      release: sixteenth * 0.3,
+      filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.35, glide: sixteenth * 0.8, q: 14 },
     });
   },
-  lead: ({ out, at, hz, steps, cutoff, until }) => {
+  lead: ({ out, at, hz, steps, cutoff, until, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     for (const detune of [-8, 8]) {
       playTone(out, at, {
         wave: 'sawtooth',
@@ -187,16 +190,17 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         detune,
         gain: 0.04,
         attack: 0.01,
-        hold: Math.max(0, Math.min(steps * SIXTEENTH * 0.8, until - at - 0.08)),
+        hold: Math.max(0, Math.min(steps * sixteenth * 0.8, until - at - 0.08)),
         release: 0.08,
-        filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.4, glide: steps * SIXTEENTH, q: 7 },
+        filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.4, glide: steps * sixteenth, q: 7 },
       });
     }
   },
-  oriental: ({ send, at, hz, fromHz, steps, cutoff, light, until }) => {
+  oriental: ({ send, at, hz, fromHz, steps, cutoff, light, until, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     const long = steps >= 4;
     const release = long ? 0.16 : 0.07;
-    const hold = Math.max(0, Math.min(steps * SIXTEENTH * 0.85, until - at - release));
+    const hold = Math.max(0, Math.min(steps * sixteenth * 0.85, until - at - release));
     const level = light ? 0.45 : 1;
     for (const [detune, octaves, gain] of ORIENTAL_VOICES) {
       playTone(send, at, {
@@ -214,31 +218,33 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
           type: 'lowpass',
           hz: cutoff,
           toHz: cutoff * 0.55,
-          glide: steps * SIXTEENTH,
+          glide: steps * sixteenth,
           q: 3,
         },
       });
     }
   },
-  'round-bass': ({ out, at, hz, cutoff }) => {
-    const envelope = { attack: 0.004, hold: SIXTEENTH * 1.3, release: SIXTEENTH * 0.5 };
+  'round-bass': ({ out, at, hz, cutoff, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
+    const envelope = { attack: 0.004, hold: sixteenth * 1.3, release: sixteenth * 0.5 };
     playTone(out, at, {
       ...envelope,
       wave: 'sawtooth',
       hz,
       gain: 0.34,
-      filter: { type: 'lowpass', hz: cutoff, toHz: 160, glide: SIXTEENTH * 1.6, q: 4 },
+      filter: { type: 'lowpass', hz: cutoff, toHz: 160, glide: sixteenth * 1.6, q: 4 },
     });
     playTone(out, at, { ...envelope, wave: 'sine', hz, gain: 0.2 });
   },
-  'ghost-bass': ({ out, at, hz, cutoff }) => {
+  'ghost-bass': ({ out, at, hz, cutoff, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     playTone(out, at, {
       wave: 'sawtooth',
       hz,
       gain: 0.12,
       attack: 0.002,
-      hold: SIXTEENTH * 0.3,
-      release: SIXTEENTH * 0.2,
+      hold: sixteenth * 0.3,
+      release: sixteenth * 0.2,
       filter: { type: 'lowpass', hz: cutoff * 0.8, q: 3 },
     });
   },
@@ -260,7 +266,8 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       });
     }
   },
-  'mist-lead': ({ send, at, hz, steps }) => {
+  'mist-lead': ({ send, at, hz, steps, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     const long = steps >= 4;
     for (const detune of [-8, 8]) {
       playTone(send, at, {
@@ -269,10 +276,10 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         detune,
         gain: 0.026,
         attack: 0.01,
-        hold: steps * SIXTEENTH * 0.82,
+        hold: steps * sixteenth * 0.82,
         release: long ? 0.16 : 0.08,
         ...(long ? { vibrato: { hz: 5.5, cents: 18, delay: 0.14 } } : {}),
-        filter: { type: 'lowpass', hz: 2600, toHz: 1170, glide: steps * SIXTEENTH, q: 5 },
+        filter: { type: 'lowpass', hz: 2600, toHz: 1170, glide: steps * sixteenth, q: 5 },
       });
     }
   },
@@ -289,7 +296,8 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       pan: Math.floor(position / 8) % 2 === 0 ? -0.6 : 0.6,
     });
   },
-  'goa-lead': ({ send, at, hz, steps, cutoff, until }) => {
+  'goa-lead': ({ send, at, hz, steps, cutoff, until, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     const long = steps >= 4;
     const release = long ? 0.16 : 0.08;
     for (const detune of [-12, 0, 12]) {
@@ -299,27 +307,28 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         detune,
         gain: 0.027,
         attack: 0.01,
-        hold: Math.max(0, Math.min(steps * SIXTEENTH * 0.82, until - at - release)),
+        hold: Math.max(0, Math.min(steps * sixteenth * 0.82, until - at - release)),
         release,
         ...(long ? { vibrato: { hz: 5.5, cents: 18, delay: 0.14 } } : {}),
         filter: {
           type: 'lowpass',
           hz: cutoff,
           toHz: cutoff * 0.45,
-          glide: steps * SIXTEENTH,
+          glide: steps * sixteenth,
           q: 5,
         },
       });
     }
   },
-  gate: ({ out, at, hz, cutoff }) => {
+  gate: ({ out, at, hz, cutoff, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     playTone(out, at, {
       wave: 'sawtooth',
       hz,
       gain: 0.018,
       attack: 0.002,
-      hold: SIXTEENTH * 0.5,
-      release: SIXTEENTH * 0.25,
+      hold: sixteenth * 0.5,
+      release: sixteenth * 0.25,
       filter: { type: 'lowpass', hz: Math.min(cutoff, GATE_TOP_HZ), q: 2 },
     });
   },
@@ -348,10 +357,11 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       release: 0.18,
     });
   },
-  acid: ({ out, send, at, step, hz, fromHz, cutoff, light, accent, slide, legato }) => {
+  acid: ({ out, send, at, step, hz, fromHz, cutoff, light, accent, slide, legato, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     // 380-1300 Hz in a first buildup, 700-3800 Hz in a first drop, brighter with each tier.
     const [low, high] = light ? [300, 2200] : [250 + cutoff * 0.14, 320 + cutoff * 1.09];
-    const open = low + (high - low) * sweepOf(step);
+    const open = low + (high - low) * sweepOf(step, tempo);
     playTone(light ? send : out, at, {
       wave: 'sawtooth',
       hz: slide ? fromHz : hz,
@@ -359,13 +369,13 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       glide: 0.06,
       gain: (accent ? 0.085 : 0.06) * (light ? 0.55 : 1),
       attack: 0.002,
-      hold: legato ? SIXTEENTH : SIXTEENTH * 0.55,
-      release: SIXTEENTH * 0.3,
+      hold: legato ? sixteenth : sixteenth * 0.55,
+      release: sixteenth * 0.3,
       filter: {
         type: 'lowpass',
         hz: open * (accent ? 2.2 : 1.3),
         toHz: open * 0.4,
-        glide: SIXTEENTH * 0.9,
+        glide: sixteenth * 0.9,
         q: 17,
       },
     });
@@ -420,9 +430,10 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       pan,
     });
   },
-  choir: ({ send, at, hz, steps, until }) => {
+  choir: ({ send, at, hz, steps, until, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     const release = 0.8;
-    const hold = Math.max(0, Math.min(steps * SIXTEENTH, until - at - 0.5 - release));
+    const hold = Math.max(0, Math.min(steps * sixteenth, until - at - 0.5 - release));
     for (const detune of [-9, 0, 9]) {
       for (const [formant, q, gain] of CHOIR_FORMANTS) {
         playTone(send, at, {
@@ -439,8 +450,9 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       }
     }
   },
-  siren: ({ send, at, hz, steps, until }) => {
-    const seconds = Math.max(0.5, Math.min(steps * SIXTEENTH, until - at));
+  siren: ({ send, at, hz, steps, until, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
+    const seconds = Math.max(0.5, Math.min(steps * sixteenth, until - at));
     playTone(send, at, {
       wave: 'sine',
       hz,
@@ -549,9 +561,10 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       pan,
     });
   },
-  ney: ({ out, send, at, hz, steps, until, light }) => {
+  ney: ({ out, send, at, hz, steps, until, light, tempo }) => {
+    const sixteenth = sixteenthSeconds(tempo);
     const level = light ? 0.6 : 1;
-    const hold = Math.max(0, Math.min(steps * SIXTEENTH * 0.85, until - at - 0.22));
+    const hold = Math.max(0, Math.min(steps * sixteenth * 0.85, until - at - 0.22));
     const vibrato = steps >= 3 ? { hz: 5.4, cents: 24, delay: 0.16 } : undefined;
     playTone(send, at, {
       wave: 'triangle',
@@ -577,7 +590,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
     playNoise(out, at, {
       gain: 0.022 * level,
       attack: 0.04,
-      hold: Math.max(0, Math.min(steps * SIXTEENTH * 0.7, until - at - 0.18)),
+      hold: Math.max(0, Math.min(steps * sixteenth * 0.7, until - at - 0.18)),
       release: 0.18,
       filter: { type: 'bandpass', hz: hz * 2, q: 9 },
     });

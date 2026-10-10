@@ -1,8 +1,20 @@
-import { TICKS_PER_BEAT, TICK_MS } from '../shared/tempo';
+import { MAIN_TEMPO, TICKS_PER_BEAT, TICK_MS, type Tempo } from '../shared/tempo';
 
 export const TICK_SECONDS = TICK_MS / 1000;
 export const STEP_TICKS = TICKS_PER_BEAT / 4;
 export const LOOKAHEAD_SECONDS = 2 * TICKS_PER_BEAT * TICK_SECONDS;
+export function sixteenthSeconds(tempo: Tempo = MAIN_TEMPO): number {
+  return (tempo.ticksPerBeat / 4) * TICK_SECONDS;
+}
+
+export function beatSeconds(tempo: Tempo = MAIN_TEMPO): number {
+  return tempo.ticksPerBeat * TICK_SECONDS;
+}
+
+export function barSeconds(tempo: Tempo = MAIN_TEMPO): number {
+  return tempo.ticksPerBar * TICK_SECONDS;
+}
+
 export const DRIFT_TOLERANCE_SECONDS = 0.015;
 export const MAX_SLEW_SECONDS = 0.002;
 export const RESYNC_SECONDS = 0.1;

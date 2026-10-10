@@ -1,5 +1,5 @@
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
-import { STEP_TICKS, TICK_SECONDS } from './clock';
+import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import { barSeconds, sixteenthSeconds } from './clock';
 import { keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 
@@ -8,12 +8,8 @@ export type SpeakerLayerId = (typeof SPEAKER_LAYER_IDS)[number];
 
 export const MUFFLED_HZ = 260;
 export const MUFFLED_LEVEL = 0.3;
-export const OPEN_TICKS = TICKS_PER_BAR;
 export const BREAK_LEVEL = 0.5;
 export const BREAK_OPEN = 0.6;
-
-const SIXTEENTH = STEP_TICKS * TICK_SECONDS;
-const BAR_SECONDS = TICKS_PER_BAR * TICK_SECONDS;
 
 export interface Presence {
   level: number;
@@ -31,6 +27,7 @@ export interface VoiceContext {
   light: boolean;
   level: number;
   open: number;
+  tempo: Tempo;
 }
 
 export function isSpeakerLayerId(id: string): id is SpeakerLayerId {
@@ -38,15 +35,21 @@ export function isSpeakerLayerId(id: string): id is SpeakerLayerId {
 }
 
 // The first beat that is still to be scheduled: a layer never starts between two beats.
-export function entryTickOf(tick: number, cursor: number): number {
-  return Math.ceil(Math.max(tick + 1, cursor) / TICKS_PER_BEAT) * TICKS_PER_BEAT;
+export function entryTickOf(tick: number, cursor: number, tempo: Tempo = MAIN_TEMPO): number {
+  const beat = tempo.ticksPerBeat;
+  return Math.ceil(Math.max(tick + 1, cursor) / beat) * beat;
 }
 
 // A speaker that is being plugged, or plugged but not yet in, is heard muffled and quiet; from its
 // entry tick the filter opens over one bar. The break lightens it like the other layers.
-export function presenceAt(step: number, entry: number | null, inBreak: boolean): Presence {
+export function presenceAt(
+  step: number,
+  entry: number | null,
+  inBreak: boolean,
+  tempo: Tempo = MAIN_TEMPO,
+): Presence {
   const entered = entry !== null && step >= entry;
-  const open = entered ? Math.min(1, (step - entry) / OPEN_TICKS) : 0;
+  const open = entered ? Math.min(1, (step - entry) / tempo.ticksPerBar) : 0;
   const level = entered ? 1 : MUFFLED_LEVEL;
   return {
     level: inBreak ? level * BREAK_LEVEL : level,
@@ -70,6 +73,7 @@ const ACID_SLIDES: ReadonlySet<number> = new Set([3, 7, 13]);
 
 function domeChill(ctx: VoiceContext) {
   const { out, at, bar, sixteenth, chord, key, level, open } = ctx;
+  const barLength = barSeconds(ctx.tempo);
   if (sixteenth % 8 === 0) {
     for (const offset of [0, 4]) {
       for (const detune of [-9, 9]) {
@@ -78,9 +82,9 @@ function domeChill(ctx: VoiceContext) {
           hz: keyHz(key, chord + offset, 3),
           detune,
           gain: 0.045 * level,
-          attack: BAR_SECONDS * 0.2,
-          hold: BAR_SECONDS * 0.3,
-          release: BAR_SECONDS * 0.4,
+          attack: barLength * 0.2,
+          hold: barLength * 0.3,
+          release: barLength * 0.4,
           pan: detune < 0 ? -0.5 : 0.5,
           filter: { type: 'lowpass', hz: bright(open, 1800, 420), q: 0.8 },
         });
@@ -178,6 +182,7 @@ function sub(ctx: VoiceContext) {
 
 function cercleAcid(ctx: VoiceContext) {
   const { out, at, bar, sixteenth, chord, key, level, open, light } = ctx;
+  const step = sixteenthSeconds(ctx.tempo);
   if (light && sixteenth % 4 !== 2) {
     return;
   }
@@ -192,15 +197,15 @@ function cercleAcid(ctx: VoiceContext) {
     ...(slide
       ? {
           toHz: keyHz(key, chord + (ACID_DEGREES[(sixteenth + 1) % 16] ?? 0), 1),
-          glide: SIXTEENTH * 0.9,
+          glide: step * 0.9,
         }
       : {}),
     gain: (accent ? 0.075 : 0.05) * level,
     attack: 0.002,
-    hold: SIXTEENTH * 0.55,
-    release: SIXTEENTH * 0.3,
+    hold: step * 0.55,
+    release: step * 0.3,
     pan: sixteenth % 2 === 0 ? -0.15 : 0.15,
-    filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.3, glide: SIXTEENTH * 0.8, q: 13 },
+    filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.3, glide: step * 0.8, q: 13 },
   });
 }
 

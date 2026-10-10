@@ -4,15 +4,16 @@ import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state
 import {
   LATE_TOLERANCE_SECONDS,
   LOOKAHEAD_SECONDS,
-  TICK_SECONDS,
+  barSeconds,
   firstStepAtOrAfter,
   follow,
+  sixteenthSeconds,
   stepsToSchedule,
   tickToTime,
   timeToTick,
   type Anchor,
 } from './clock';
-import { CROSSFADE_SECONDS, createFader } from './fade';
+import { createFader } from './fade';
 import type { MusicLayer, MusicPart, MusicTrack, SetDefinition } from '../data/types';
 import { DRUM_VOICES } from './drums';
 import { createReverb, type Acoustics, type Reverb } from './reverb';
@@ -69,6 +70,8 @@ export interface Music {
   // Fades the set back in over one bar, on the grid of the next update.
   fadeIn(): void;
   setTrack(track: MusicTrack): void;
+  // The tempo of the set it plays, the main stage's before any set.
+  tempo(): Tempo;
 }
 
 export interface Threshold {
@@ -510,7 +513,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let setId: string | null = null;
   const context = out.context;
   const level = context.createGain();
-  const fader = createFader(level.gain, context, 1);
+  const fader = createFader(level.gain, context, 1, () => barSeconds(tempo));
   level.connect(out);
   let bus: Bus | null = null;
   let last: SimState | null = null;
@@ -526,7 +529,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let choking = false;
   const entries = new Map<SpeakerLayerId, number>();
   const stepTicks = () => tempo.ticksPerBeat / 4;
-  const sixteenthSeconds = () => stepTicks() * TICK_SECONDS;
+  const sixteenthLength = () => sixteenthSeconds(tempo);
   const plugging = new Set<SpeakerLayerId>();
 
   function openBus(cutoff = OPEN_HZ): Bus {
@@ -539,7 +542,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     output.connect(level);
     const lead = context.createGain();
     const echo = context.createDelay(1);
-    echo.delayTime.value = 3 * sixteenthSeconds();
+    echo.delayTime.value = 3 * sixteenthLength();
     const echoTone = context.createBiquadFilter();
     echoTone.type = 'lowpass';
     echoTone.frequency.value = 2600;
@@ -617,7 +620,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     if (dropTick !== null) {
       const start = tickToTime(clock, set.segmentStartTick);
       const cut = cutTime(clock);
-      if (cut - from > sixteenthSeconds()) {
+      if (cut - from > sixteenthLength()) {
         riser(target.input, from, cut, (from - start) / (cut - start), track);
       }
     }
@@ -633,7 +636,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       if (speaker.plugged) {
         plugged.add(speaker.id);
         if (!entries.has(speaker.id)) {
-          entries.set(speaker.id, entryTickOf(state.tick, cursor));
+          entries.set(speaker.id, entryTickOf(state.tick, cursor, tempo));
         }
       } else if (speaker.plugTicks > 0) {
         plugging.add(speaker.id);
@@ -728,7 +731,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         const progress = 1 - (left - ticksPerBeat) / (ROLL_BARS * ticksPerBar - ticksPerBeat);
         const hits = Math.max(1, stepTicks() / cue.roll);
         for (let hit = 0; hit < hits; hit += 1) {
-          snare(input, at + (hit * sixteenthSeconds()) / hits, progress, track);
+          snare(input, at + (hit * sixteenthLength()) / hits, progress, track);
         }
       }
     }
@@ -748,6 +751,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         send: target.lead,
         at,
         step,
+        tempo,
         position,
         hz: partHz(part, note[1], chord, key),
         fromHz: partHz(part, previous[1], chord, key),
@@ -770,7 +774,8 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         key,
         kick: layers.kick,
         light,
-        ...presenceAt(step, entries.get(id) ?? null, light),
+        tempo,
+        ...presenceAt(step, entries.get(id) ?? null, light, tempo),
       });
     }
     if (layers.pad && sixteenth === 0) {
@@ -793,6 +798,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   return {
     setTrack(next) {
       track = next;
+    },
+    tempo() {
+      return tempo;
     },
     update(state, now, currentTime) {
       last = state;
@@ -889,7 +897,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         clock,
         cursor,
         currentTime - LATE_TOLERANCE_SECONDS,
-        currentTime + CROSSFADE_SECONDS,
+        currentTime + barSeconds(tempo),
         stepTicks(),
       );
       const until = Math.min(range.until, dropTick ?? Infinity);

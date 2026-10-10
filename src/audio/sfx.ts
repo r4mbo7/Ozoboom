@@ -1,7 +1,8 @@
 import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { SimEvent } from '../sim/state';
 import type { Cue } from './types';
-import { DEFAULT_BPM } from '../shared/tempo';
+import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import { beatSeconds } from './clock';
 import { keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 
@@ -118,51 +119,55 @@ export function coreHitDegree(core: SfxCore): number {
   return Math.round((core.hp / core.maxHp) * 7);
 }
 
-const BEAT_SECONDS = 60 / DEFAULT_BPM;
+// What follows the beat of the set (the fans, the revive pulse) is throttled to it.
+export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> {
+  const beat = beatSeconds(tempo);
+  return {
+    playerFired: { perFrame: 1, concurrent: 3, seconds: 0.09 },
+    enemyHit: { perFrame: 2, concurrent: 4, seconds: 0.04 },
+    enemyDied: { perFrame: 3, concurrent: 6, seconds: 0.24 },
+    coreHit: { perFrame: 1, concurrent: 1, seconds: 0.36 },
+    trapSub: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    trapBreath: { perFrame: 1, concurrent: 2, seconds: 0.16 },
+    levelUp: { perFrame: 1, concurrent: 1, seconds: 0.45 },
+    upgradeChosen: { perFrame: 1, concurrent: 1, seconds: 0.3 },
+    skillUsed: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    gameWon: { perFrame: 1, concurrent: 1, seconds: 2 },
+    gameLost: { perFrame: 1, concurrent: 1, seconds: 2 },
+    weaponSweep: { perFrame: 1, concurrent: 2, seconds: 0.2 },
+    weaponSpark: { perFrame: 1, concurrent: 3, seconds: 0.07 },
+    weaponHoop: { perFrame: 1, concurrent: 2, seconds: 0.22 },
+    weaponDiabolo: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    weaponFrisbee: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    weaponPlate: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    weaponTotem: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+    weaponFans: { perFrame: 1, concurrent: 1, seconds: beat / 2 },
+    weaponRibbon: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    weaponGained: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+    weaponEvolved: { perFrame: 1, concurrent: 1, seconds: 0.8 },
+    enemyYawn: { perFrame: 1, concurrent: 2, seconds: 0.6 },
+    enemySigh: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    enemyBabble: { perFrame: 1, concurrent: 2, seconds: 0.15 },
+    enemyGrowl: { perFrame: 1, concurrent: 2, seconds: 0.35 },
+    vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
+    playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
+    bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
+    bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+    volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
+    skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    skillHeal: { perFrame: 1, concurrent: 2, seconds: 0.7 },
+    taunted: { perFrame: 1, concurrent: 2, seconds: 0.5 },
+    playerHealed: { perFrame: 1, concurrent: 2, seconds: 0.15 },
+    playerDowned: { perFrame: 1, concurrent: 2, seconds: 0.6 },
+    playerRevived: { perFrame: 1, concurrent: 2, seconds: 0.8 },
+    playerReviving: { perFrame: 1, concurrent: 1, seconds: beat },
+    seatTaken: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    seatFreed: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    launch: { perFrame: 1, concurrent: 1, seconds: 1.4 },
+  };
+}
 
-export const SFX_LIMITS: Readonly<Record<SfxName, SfxLimit>> = {
-  playerFired: { perFrame: 1, concurrent: 3, seconds: 0.09 },
-  enemyHit: { perFrame: 2, concurrent: 4, seconds: 0.04 },
-  enemyDied: { perFrame: 3, concurrent: 6, seconds: 0.24 },
-  coreHit: { perFrame: 1, concurrent: 1, seconds: 0.36 },
-  trapSub: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  trapBreath: { perFrame: 1, concurrent: 2, seconds: 0.16 },
-  levelUp: { perFrame: 1, concurrent: 1, seconds: 0.45 },
-  upgradeChosen: { perFrame: 1, concurrent: 1, seconds: 0.3 },
-  skillUsed: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  gameWon: { perFrame: 1, concurrent: 1, seconds: 2 },
-  gameLost: { perFrame: 1, concurrent: 1, seconds: 2 },
-  weaponSweep: { perFrame: 1, concurrent: 2, seconds: 0.2 },
-  weaponSpark: { perFrame: 1, concurrent: 3, seconds: 0.07 },
-  weaponHoop: { perFrame: 1, concurrent: 2, seconds: 0.22 },
-  weaponDiabolo: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  weaponFrisbee: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  weaponPlate: { perFrame: 1, concurrent: 2, seconds: 0.4 },
-  weaponTotem: { perFrame: 1, concurrent: 1, seconds: 0.5 },
-  weaponFans: { perFrame: 1, concurrent: 1, seconds: BEAT_SECONDS / 2 },
-  weaponRibbon: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  weaponGained: { perFrame: 1, concurrent: 1, seconds: 0.5 },
-  weaponEvolved: { perFrame: 1, concurrent: 1, seconds: 0.8 },
-  enemyYawn: { perFrame: 1, concurrent: 2, seconds: 0.6 },
-  enemySigh: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  enemyBabble: { perFrame: 1, concurrent: 2, seconds: 0.15 },
-  enemyGrowl: { perFrame: 1, concurrent: 2, seconds: 0.35 },
-  vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
-  playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
-  bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
-  bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
-  volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
-  skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-  skillHeal: { perFrame: 1, concurrent: 2, seconds: 0.7 },
-  taunted: { perFrame: 1, concurrent: 2, seconds: 0.5 },
-  playerHealed: { perFrame: 1, concurrent: 2, seconds: 0.15 },
-  playerDowned: { perFrame: 1, concurrent: 2, seconds: 0.6 },
-  playerRevived: { perFrame: 1, concurrent: 2, seconds: 0.8 },
-  playerReviving: { perFrame: 1, concurrent: 1, seconds: BEAT_SECONDS },
-  seatTaken: { perFrame: 1, concurrent: 2, seconds: 0.4 },
-  seatFreed: { perFrame: 1, concurrent: 2, seconds: 0.4 },
-  launch: { perFrame: 1, concurrent: 1, seconds: 1.4 },
-};
+export const SFX_LIMITS = sfxLimitsFor(MAIN_TEMPO);
 
 export function sfxOf(
   event: SimEvent,
@@ -897,6 +902,7 @@ export interface Sfx {
   cue(cue: Cue, now: number): void;
   beginFrame(): void;
   setKey(key: MusicKey): void;
+  setTempo(tempo: Tempo): void;
 }
 
 export function createSfx(
@@ -906,7 +912,8 @@ export function createSfx(
   initialKey: MusicKey = SOIREE_OUVERTURE,
 ): Sfx {
   let key = initialKey;
-  const limiter = createSfxLimiter(SFX_LIMITS);
+  let limiter = createSfxLimiter(SFX_LIMITS);
+  let beat = MAIN_TEMPO.ticksPerBeat;
   return {
     play(events, now, players = [], core = FULL_CORE) {
       for (const event of events) {
@@ -928,6 +935,12 @@ export function createSfx(
     },
     setKey(next) {
       key = next;
+    },
+    setTempo(next) {
+      if (next.ticksPerBeat !== beat) {
+        beat = next.ticksPerBeat;
+        limiter = createSfxLimiter(sfxLimitsFor(next));
+      }
     },
   };
 }

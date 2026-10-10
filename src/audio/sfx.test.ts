@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { SimEvent } from '../sim/state';
 import { SOIREE_OUVERTURE } from '../data/tracks';
+import { tempoOf } from '../shared/tempo';
 import { keyHz } from './scale';
 import {
   SFX_LIMITS,
+  sfxLimitsFor,
   coreHitDegree,
   createSfx,
   createSfxLimiter,
@@ -152,6 +154,17 @@ describe('sfxOf', () => {
 
   it('stays silent on weapons when no lookup is given', () => {
     expect(sfxOf(weaponFired('baton-de-feu'), trapEffectOf)).toBeNull();
+  });
+});
+
+describe('sfxLimitsFor', () => {
+  it('keeps the main stage limits and stretches the beat-bound ones at the Dome', () => {
+    const dome = sfxLimitsFor(tempoOf(18));
+
+    expect(dome.weaponFans.seconds).toBeCloseTo(0.3103, 3);
+    expect(dome.playerReviving.seconds).toBeCloseTo(0.621, 3);
+    expect(dome.coreHit).toEqual(SFX_LIMITS.coreHit);
+    expect(SFX_LIMITS.playerReviving.seconds).toBeCloseTo(60 / 145, 9);
   });
 });
 

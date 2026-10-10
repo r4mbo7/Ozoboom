@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR } from '../shared/tempo';
-import { TICK_SECONDS } from './clock';
+import { TICKS_PER_BAR, tempoOf } from '../shared/tempo';
+import { TICK_SECONDS, barSeconds } from './clock';
 import { CROSSFADE_SECONDS, fadeCurve, fadeTo, presenceAt, presenceGain, restingAt } from './fade';
 
 describe('fadeTo', () => {
@@ -13,6 +13,12 @@ describe('fadeTo', () => {
     expect(presenceAt(fade, 10)).toBe(0);
     expect(presenceAt(fade, 10 + CROSSFADE_SECONDS / 2)).toBeCloseTo(0.5, 9);
     expect(presenceAt(fade, 10 + CROSSFADE_SECONDS)).toBe(1);
+  });
+
+  it('takes one bar of the Dome to cross-fade at the Dome', () => {
+    const fade = fadeTo(restingAt(0), 1, 10, barSeconds(tempoOf(18)));
+
+    expect(fade.seconds).toBeCloseTo(2.483, 3);
   });
 
   it('turns back from where it is, without a jump, and only takes the way back', () => {

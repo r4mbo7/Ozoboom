@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { TICKS_PER_BAR, TICKS_PER_BEAT, tempoOf } from '../shared/tempo';
 import {
   BREAK_LEVEL,
   MUFFLED_LEVEL,
-  OPEN_TICKS,
   SPEAKER_LAYER_IDS,
   entryTickOf,
   isSpeakerLayerId,
@@ -45,13 +44,19 @@ describe('presenceAt', () => {
 
   it('enters at full level on its tick and opens the filter over one bar', () => {
     expect(presenceAt(entry, entry, false)).toEqual({ level: 1, open: 0 });
-    expect(presenceAt(entry + OPEN_TICKS / 2, entry, false).open).toBeCloseTo(0.5);
-    expect(presenceAt(entry + OPEN_TICKS, entry, false)).toEqual({ level: 1, open: 1 });
-    expect(OPEN_TICKS).toBe(TICKS_PER_BAR);
+    expect(presenceAt(entry + TICKS_PER_BAR / 2, entry, false).open).toBeCloseTo(0.5);
+    expect(presenceAt(entry + TICKS_PER_BAR, entry, false)).toEqual({ level: 1, open: 1 });
+  });
+
+  it('opens over one bar of the set that plays it', () => {
+    const dome = tempoOf(18);
+
+    expect(presenceAt(dome.ticksPerBar / 2, 0, false, dome).open).toBeCloseTo(0.5);
+    expect(entryTickOf(1, 0, dome)).toBe(18);
   });
 
   it('stays in the set and lightens in the break like the other layers', () => {
-    const lit = presenceAt(entry + OPEN_TICKS, entry, true);
+    const lit = presenceAt(entry + TICKS_PER_BAR, entry, true);
 
     expect(lit.level).toBe(BREAK_LEVEL);
     expect(lit.open).toBeLessThan(1);

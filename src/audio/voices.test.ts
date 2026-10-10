@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { STEP_TICKS, TICK_SECONDS } from './clock';
+import { MAIN_TEMPO, tempoOf } from '../shared/tempo';
+import { sixteenthSeconds } from './clock';
 import { MUSIC_VOICES, type MusicVoiceContext } from './voices';
 
 const noop = () => undefined;
@@ -44,6 +45,7 @@ const play = (voice: keyof typeof MUSIC_VOICES, overrides: Partial<MusicVoiceCon
     send: out,
     at: 1,
     step: 0,
+    tempo: MAIN_TEMPO,
     position: 0,
     hz: 220,
     fromHz: 220,
@@ -130,6 +132,7 @@ function contextOf(rig: Probe, overrides: Partial<MusicVoiceContext> = {}): Musi
     send: rig.send,
     at: 1,
     step: 0,
+    tempo: MAIN_TEMPO,
     position: 0,
     hz: 440,
     fromHz: 440,
@@ -178,7 +181,7 @@ describe('oriental voices', () => {
   it('holds the ney for its length with a breath of noise, and stops it at the cut', () => {
     const held = probe();
     const cut = probe();
-    const sixteenth = STEP_TICKS * TICK_SECONDS;
+    const sixteenth = sixteenthSeconds();
 
     MUSIC_VOICES.ney(contextOf(held, { steps: 8 }));
     MUSIC_VOICES.ney(contextOf(cut, { steps: 8, until: 1 + sixteenth }));
@@ -186,5 +189,20 @@ describe('oriental voices', () => {
     expect(held.sources).toBe(1);
     expect(Math.max(...held.ends)).toBeGreaterThan(1 + 8 * sixteenth * 0.85);
     expect(Math.max(...cut.ends)).toBeLessThan(1 + sixteenth + 0.3);
+  });
+
+  it('holds a note of four sixteenths for 621 ms at the Dome and as before on the main stage', () => {
+    const main = probe();
+    const dome = probe();
+    const domeTempo = tempoOf(18);
+
+    MUSIC_VOICES.ney(contextOf(main, { steps: 4 }));
+    MUSIC_VOICES.ney(contextOf(dome, { steps: 4, tempo: domeTempo }));
+
+    expect(4 * sixteenthSeconds(domeTempo)).toBeCloseTo(0.621, 3);
+    expect(Math.max(...dome.ends) - Math.max(...main.ends)).toBeCloseTo(
+      4 * 0.85 * (sixteenthSeconds(domeTempo) - sixteenthSeconds()),
+      6,
+    );
   });
 });

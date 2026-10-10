@@ -82,7 +82,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     const { context, music, ambience } = running;
     if (menuAt !== null && context.currentTime >= menuAt) {
       menuAt = null;
-      ambience.enter(music.fadeOut(context.currentTime));
+      const tempo = music.tempo();
+      ambience.enter(music.fadeOut(context.currentTime), tempo);
     }
     if (!ambience.pump() && menuAt === null) {
       stopPumping?.();
@@ -119,6 +120,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     const now = heardNow(context);
     if (now !== null) {
       music.update(state, now, context.currentTime);
+      sfx.setTempo(music.tempo());
     }
     sfx.beginFrame();
     applyMood();

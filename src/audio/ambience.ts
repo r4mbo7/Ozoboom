@@ -1,5 +1,5 @@
-import { TICKS_PER_BEAT } from '../shared/tempo';
-import { TICK_SECONDS } from './clock';
+import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import { barSeconds, beatSeconds } from './clock';
 import { createFader } from './fade';
 import { midiToHz } from './scale';
 import { playTone } from './synth';
@@ -18,15 +18,15 @@ export interface AmbienceNote {
 }
 
 export interface Ambience {
-  // Fades in from now, its first note on `origin` when it was silent.
-  enter(origin: number): void;
+  // Fades in from now, its first note on `origin` when it was silent, on the beat of `tempo`.
+  enter(origin: number, tempo?: Tempo): void;
   leave(): void;
   // Schedules what comes next; false once it is silent and has nothing left to play.
   pump(): boolean;
 }
 
 // Half time: an eighth note of the ambience lasts one beat of the set.
-export const EIGHTH_SECONDS = TICKS_PER_BEAT * TICK_SECONDS;
+export const EIGHTH_SECONDS = beatSeconds();
 export const CHORD_EIGHTHS = 16;
 // F sharp without a third: neither the A of the phrygian set nor the A sharp of the hijaz one.
 export const AMBIENCE_CHORDS: readonly AmbienceChord[] = [
@@ -43,7 +43,6 @@ const PAD_ATTACK = 2;
 const PAD_RELEASE = 2.5;
 const CATCH_UP_ATTACK = 0.5;
 const RHYTHM_DUCK_SECONDS = 0.12;
-const ECHO_SECONDS = 1.5 * EIGHTH_SECONDS;
 const ECHO_FEEDBACK = 0.4;
 const ECHO_RETURN = 0.3;
 
@@ -131,11 +130,13 @@ function arp(out: AudioNode, at: number, midi: number, index: number) {
 export function createAmbience(out: AudioNode): Ambience {
   const context = out.context;
   const level = context.createGain();
-  const fader = createFader(level.gain, context, 0);
+  let tempoNow = MAIN_TEMPO;
+  let eighth = EIGHTH_SECONDS;
+  const fader = createFader(level.gain, context, 0, () => barSeconds(tempoNow));
   level.connect(out);
   const rhythm = context.createGain();
   const echo = context.createDelay(2);
-  echo.delayTime.value = ECHO_SECONDS;
+  echo.delayTime.value = 1.5 * eighth;
   const echoTone = context.createBiquadFilter();
   echoTone.type = 'lowpass';
   echoTone.frequency.value = 1800;
@@ -157,7 +158,7 @@ export function createAmbience(out: AudioNode): Ambience {
 
   function play(index: number, at: number) {
     for (const note of ambienceNotesAt(index)) {
-      const seconds = note.eighths * EIGHTH_SECONDS;
+      const seconds = note.eighths * eighth;
       if (note.voice === 'pad') {
         pad(level, at, note.midi, seconds, PAD_ATTACK);
       } else if (note.voice === 'drone') {
@@ -174,7 +175,7 @@ export function createAmbience(out: AudioNode): Ambience {
     if (chordStart === index) {
       return;
     }
-    const seconds = start + (chordStart + CHORD_EIGHTHS) * EIGHTH_SECONDS - now;
+    const seconds = start + (chordStart + CHORD_EIGHTHS) * eighth - now;
     const chord = ambienceChordAt(index);
     drone(level, now, chord.bass, seconds, CATCH_UP_ATTACK);
     for (const midi of chord.tones) {
@@ -183,9 +184,12 @@ export function createAmbience(out: AudioNode): Ambience {
   }
 
   return {
-    enter(at) {
+    enter(at, tempo = MAIN_TEMPO) {
       const now = context.currentTime;
       if (origin === null) {
+        tempoNow = tempo;
+        eighth = beatSeconds(tempo);
+        echo.delayTime.value = 1.5 * eighth;
         origin = Math.max(at, now);
         cursor = 0;
         rhythm.gain.cancelScheduledValues(now);
@@ -210,14 +214,14 @@ export function createAmbience(out: AudioNode): Ambience {
         origin = null;
         return false;
       }
-      const due = Math.ceil((now - LATE_SECONDS - origin) / EIGHTH_SECONDS);
+      const due = Math.ceil((now - LATE_SECONDS - origin) / eighth);
       if (cursor < due) {
         catchUp(origin, due, now);
         cursor = due;
       }
       const horizon = Math.min(now + LOOKAHEAD_SECONDS, stopAt ?? Infinity);
-      for (; origin + cursor * EIGHTH_SECONDS < horizon; cursor += 1) {
-        play(cursor, origin + cursor * EIGHTH_SECONDS);
+      for (; origin + cursor * eighth < horizon; cursor += 1) {
+        play(cursor, origin + cursor * eighth);
       }
       return true;
     },

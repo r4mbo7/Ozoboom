@@ -1,7 +1,6 @@
-import { TICKS_PER_BAR } from '../shared/tempo';
-import { TICK_SECONDS } from './clock';
+import { barSeconds } from './clock';
 
-export const CROSSFADE_SECONDS = TICKS_PER_BAR * TICK_SECONDS;
+export const CROSSFADE_SECONDS = barSeconds();
 
 const CURVE_POINTS_PER_SECOND = 200;
 
@@ -37,9 +36,14 @@ export function presenceAt(fade: Fade, time: number): number {
   return fade.from + ((fade.to - fade.from) * (time - fade.start)) / fade.seconds;
 }
 
-export function fadeTo(current: Fade, presence: number, at: number): Fade {
+export function fadeTo(
+  current: Fade,
+  presence: number,
+  at: number,
+  crossfade = CROSSFADE_SECONDS,
+): Fade {
   const from = presenceAt(current, at);
-  return { from, to: presence, start: at, seconds: Math.abs(presence - from) * CROSSFADE_SECONDS };
+  return { from, to: presence, start: at, seconds: Math.abs(presence - from) * crossfade };
 }
 
 export function fadeCurve(fade: Fade): Float32Array<ArrayBuffer> {
@@ -51,13 +55,18 @@ export function fadeCurve(fade: Fade): Float32Array<ArrayBuffer> {
   return curve;
 }
 
-export function createFader(param: AudioParam, context: BaseAudioContext, presence: number): Fader {
+export function createFader(
+  param: AudioParam,
+  context: BaseAudioContext,
+  presence: number,
+  crossfade: () => number = () => CROSSFADE_SECONDS,
+): Fader {
   let fade = restingAt(presence);
   param.value = presenceGain(presence);
   return {
     to(target) {
       const now = context.currentTime;
-      fade = fadeTo(fade, target, now);
+      fade = fadeTo(fade, target, now, crossfade());
       param.cancelScheduledValues(now);
       if (fade.seconds > 0) {
         param.setValueCurveAtTime(fadeCurve(fade), now, fade.seconds);
