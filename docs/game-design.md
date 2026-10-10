@@ -27,12 +27,12 @@ Moment à moment :
 
 1. Se déplacer, viser, tirer. Les ennemis convergent vers le noyau et attaquent les joueurs qui les gênent.
 2. Ramasser les vibes (expérience) laissées par les ennemis. Un niveau offre trois améliorations tirées au sort, on en prend une.
-3. Dépenser les watts (ressource de défense, produite par la scène à chaque mesure et lâchée par certains ennemis) pour poser ou améliorer des pièges.
+3. Tuer les bad vibes qui portent un loot et le ramasser : il contient un piège à poser, que l'on déplace ensuite au gré de la partie.
 4. Au break, souffler : soigner, réparer la scène, replacer les pièges.
 
 ## Le noyau
 
-La scène principale et son sound system. Sa vie est son volume. Les ennemis le ciblent par défaut. Il produit des watts à chaque mesure. Il peut être réparé (par le healer surtout). S'il tombe à zéro, la musique s'arrête : partie perdue.
+La scène principale et son sound system. Sa vie est son volume. Les ennemis le ciblent par défaut. Il peut être réparé (par le healer surtout). S'il tombe à zéro, la musique s'arrête : partie perdue.
 
 ## Les ennemis : bad vibes
 
@@ -78,17 +78,21 @@ Trois classes complémentaires, **tranchées** : mage, tank, healer. Chacune fai
 
 ## Les pièges
 
-Du matériel de festival, posé avec des watts, qui agit sur le temps musical :
+Du matériel de festival, trouvé dans les loots, qui agit sur le temps musical. **Tranché le 2026-10-10** : plus de watts ni de niveaux de piège.
 
-| Piège            | Effet                                               |
-| ---------------- | --------------------------------------------------- |
-| Caisson de basse | onde de choc sur le kick, repousse                  |
-| Laser            | ligne de dégâts continue, orientable                |
-| Brumisateur      | zone qui ralentit les ennemis et soigne les joueurs |
-| Déco UV          | attire les ennemis, les marque (dégâts bonus)       |
-| Stroboscope      | étourdit sur le drop                                |
+| Piège            | Effet                                               | Classe   |
+| ---------------- | --------------------------------------------------- | -------- |
+| Caisson de basse | onde de choc sur le kick, repousse                  | Nounours |
+| Laser            | ligne de dégâts continue, orientable                | Luxiole  |
+| Brumisateur      | zone qui ralentit les ennemis et soigne les joueurs | Hygie    |
+| Déco UV          | attire les ennemis, les marque (dégâts bonus)       | Nounours |
+| Stroboscope      | étourdit sur le drop                                | Hygie    |
 
-Nombre d'emplacements limité, un de plus par niveau de Volume, et autant de plus que la Rallonge en donne à chaque joueur de l'équipe. Un piège posé se renforce avec des watts : le passer au niveau N coûte N fois son prix de pose (caisson : 15, 30, 45). Les lourds peuvent pousser ou casser un piège.
+- Toutes les 12 mesures (environ 20 s), une bad vibe qui entre sur la piste porte un loot et se voit de loin. Tuée, elle le lâche. Un boss lâche un loot par joueur. Un loot au sol disparaît au bout de 16 mesures.
+- Le loot contient un piège tiré au sort quand on le ramasse, deux fois plus souvent un piège de sa classe.
+- Celui qui ramasse le loot porte le piège, deux au plus : les mains pleines, les loots restent au sol. Chaque joueur commence avec un Caisson de basse en main.
+- La touche de pose pose le piège choisi devant soi. Devant un piège posé, elle le reprend en main, avec la vie qui lui reste : n'importe quel joueur peut ainsi déplacer n'importe quel piège.
+- Nombre d'emplacements limité, un de plus par niveau de Volume, et autant de plus que la Rallonge en donne à chaque joueur de l'équipe. Les lourds peuvent pousser ou casser un piège.
 
 ## Progression dans la partie
 
@@ -174,7 +178,7 @@ Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-0
 
 - 2 à 4 joueurs. **Coop locale et coop en ligne en V0.2**, décidé le 2026-10-05 : en local, le clavier et la souris comptent pour un joueur et chaque manette pour un autre ; en ligne, un lien d'invitation, sans compte, pair à pair avec le navigateur d'un joueur qui fait l'hôte et fait foi (ADR 0007).
 - Un allié à terre se relève par un coéquipier qui reste une mesure à son contact, deux temps pour l'Hygie ; il revient avec la moitié de sa vie. Tous à terre, la scène est seule : la partie finit vite.
-- Vibes, watts et Volume sont d'équipe, le noyau est commun. La difficulté monte avec le nombre de joueurs (apparitions et vie des bad vibes, données du set). Cible mesurée sans écran (`pnpm balance`) : une équipe de N joueurs de la même classe tient autant de phrases que cette classe seule, à plus ou moins une ; chaque classe seule tient au moins autant que la Luxiole moins une phrase ; trois classes différentes tiennent au moins autant que trois Luxiole.
+- Vibes et Volume sont d'équipe, le noyau est commun, les pièges en main sont à chacun. La difficulté monte avec le nombre de joueurs (apparitions et vie des bad vibes, données du set). Cible mesurée sans écran (`pnpm balance`) : une équipe de N joueurs de la même classe tient autant de phrases que cette classe seule, à plus ou moins une ; chaque classe seule tient au moins autant que la Luxiole moins une phrase ; trois classes différentes tiennent au moins autant que trois Luxiole.
 - Chaque joueur porte un nom libre, affiché au-dessus de lui et dans le HUD. En ligne, chacun suit son personnage à la caméra ; en local, la caméra cadre tout le monde.
 
 ## Classement public
