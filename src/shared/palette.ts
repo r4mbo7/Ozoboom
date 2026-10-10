@@ -83,6 +83,20 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
   },
 };
 
+export interface SandPalette {
+  sable: string;
+  sableClair: string;
+  ride: string;
+}
+
+// The sand of the Dome under the same four moments as SUN_PALETTES: it replaces sol and solClair on its ground only.
+export const SAND_PALETTES: Record<SunMoment, SandPalette> = {
+  crepuscule: { sable: '#55363c', sableClair: '#74484a', ride: '#7a4a52' },
+  nuit: { sable: '#211b2e', sableClair: '#322840', ride: '#463a5a' },
+  aube: { sable: '#e2c39c', sableClair: '#efd7b2', ride: '#c9a47a' },
+  jour: { sable: '#ebd3a0', sableClair: '#f6e5bf', ride: '#d2b07c' },
+};
+
 export const NIGHT_START = 0.25;
 export const NIGHT_END = 0.6;
 export const DAWN_AT = 0.85;
@@ -100,6 +114,18 @@ const STOPS: readonly (readonly [number, SunMoment])[] = [
 ];
 
 export function paletteAt(fraction: number): SunPalette {
+  return mixAt(SUN_PALETTES, PALETTE_TOKENS, fraction);
+}
+
+export function sandAt(fraction: number): SandPalette {
+  return mixAt(SAND_PALETTES, ['sable', 'sableClair', 'ride'], fraction);
+}
+
+function mixAt<K extends string>(
+  palettes: Record<SunMoment, Record<K, string>>,
+  tokens: readonly K[],
+  fraction: number,
+): Record<K, string> {
   const t = clamp01(fraction);
   const next = Math.max(
     1,
@@ -107,11 +133,11 @@ export function paletteAt(fraction: number): SunPalette {
   );
   const [fromAt, fromMoment] = STOPS[next - 1] ?? [0, 'crepuscule'];
   const [toAt, toMoment] = STOPS[next] ?? [1, 'jour'];
-  const from = SUN_PALETTES[fromMoment];
-  const to = SUN_PALETTES[toMoment];
+  const from = palettes[fromMoment];
+  const to = palettes[toMoment];
   const mix = (t - fromAt) / (toAt - fromAt);
-  const mixed = {} as SunPalette;
-  for (const token of PALETTE_TOKENS) {
+  const mixed = {} as Record<K, string>;
+  for (const token of tokens) {
     mixed[token] = mixHex(from[token], to[token], mix);
   }
   return mixed;

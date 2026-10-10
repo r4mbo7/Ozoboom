@@ -97,6 +97,7 @@ const player = state.players[0];
 if (player !== undefined && params.has('trapRadius')) {
   applyModifiers(player, [{ stat: 'trapRadiusMul', mul: count('trapRadius', 1) }]);
 }
+state.setId = params.get('set') ?? state.setId;
 const found = SETS.find((candidate) => candidate.id === state.setId);
 if (found === undefined) {
   throw new Error(`Missing set ${state.setId}`);

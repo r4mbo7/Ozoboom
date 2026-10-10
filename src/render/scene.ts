@@ -117,6 +117,7 @@ export class Scene implements Renderer {
         ]),
       ),
       weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
+      decors: new Map(content.sets.map((set) => [set.id, set.decor ?? 'lake'])),
       skillEffects: new Map(content.classes.map((def) => [def.id, def.skill.effect])),
     };
     const traps = createTraps(ctx);

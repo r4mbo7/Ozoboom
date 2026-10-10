@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { paletteAt } from '../shared/palette';
+import { paletteAt, sandAt } from '../shared/palette';
 import { MASK_BODY, MARK, maskTone } from './face-kit';
 import { LAKE_SKY_MIX, SOL_CLAIR_SHARE, TREE_COUNT, layoutGround, shoreAt } from './ground-layout';
 import { MAX_FIREFLIES, contrast, firefliesAt, mixColor, shadowAt } from './ground-sun';
-import { createPixiPalette, writePixiPalette } from './palette';
+import { createPixiPalette, parseHexColor, writePixiPalette } from './palette';
 
 const ARENA = { width: 1600, height: 1000 };
 const MOMENTS = [
@@ -132,6 +132,24 @@ describe('legibility of the bad vibes', () => {
       const rim = palette.badVibeRim;
       const body = maskTone(rim, MASK_BODY);
       for (const ground of groundsOf(palette)) {
+        const silhouette = Math.max(contrast(rim, ground), contrast(body, ground));
+        if (silhouette < 3) {
+          faint.push(`${fraction.toFixed(3)}: ${silhouette.toFixed(2)}:1`);
+        }
+      }
+    }
+
+    expect(faint).toEqual([]);
+  });
+
+  it('stand out from the sand of the Dome at every hour, by their rim or their body', () => {
+    const faint: string[] = [];
+
+    for (const fraction of FRACTIONS) {
+      const rim = pixiPaletteAt(fraction).badVibeRim;
+      const body = maskTone(rim, MASK_BODY);
+      const sand = sandAt(fraction);
+      for (const ground of [sand.sable, sand.sableClair].map(parseHexColor)) {
         const silhouette = Math.max(contrast(rim, ground), contrast(body, ground));
         if (silhouette < 3) {
           faint.push(`${fraction.toFixed(3)}: ${silhouette.toFixed(2)}:1`);

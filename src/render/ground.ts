@@ -1,10 +1,11 @@
-import { Graphics, type Texture, TilingSprite } from 'pixi.js';
+import { Container, Graphics, type Texture, TilingSprite } from 'pixi.js';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { createFireflies } from './ground-fireflies';
 import { SOL_CLAIR_SHARE, layoutGround } from './ground-layout';
 import { grainTile, patchTile } from './ground-paint';
+import { createSand } from './ground-sand';
 import { createTrees } from './ground-trees';
 import { createWater } from './ground-water';
 
@@ -18,14 +19,18 @@ export function createGround(ctx: RenderContext): Family {
   const surface = new Graphics();
   const patches = new TilingSprite();
   const grain = new TilingSprite();
-  parent.addChild(surface, patches, grain);
-  const water = createWater(ctx, parent);
+  const lake = new Container();
+  parent.addChild(lake);
+  lake.addChild(surface, patches, grain);
+  const water = createWater(ctx, lake);
   const floor = new Graphics();
   const lines = new Graphics();
   const petals = new Graphics();
   const border = new Graphics();
-  parent.addChild(floor, lines, petals, border);
-  const trees = createTrees(parent);
+  lake.addChild(floor, lines, petals, border);
+  const trees = createTrees(lake);
+  const sand = createSand(parent);
+  sand.root.visible = false;
   const fireflies = createFireflies(ctx, parent);
 
   let drawnWidth = 0;
@@ -83,14 +88,19 @@ export function createGround(ctx: RenderContext): Family {
     border.clear().rect(0, 0, width, height).stroke({ width: 14, color: WHITE, alpha: 0.08 });
     border.rect(0, 0, width, height).stroke({ width: 3, color: WHITE, alpha: 0.6 });
 
+    sand.draw(layout, seed);
     water.draw(layout, seed);
     trees.draw(layout);
     fireflies.draw(layout, seed);
   }
 
-  function style(frame: Frame): void {
+  function style(frame: Frame, dome: boolean): void {
     const { palette, light } = frame;
     styledAt = frame.fraction;
+    if (dome) {
+      sand.style(frame);
+      return;
+    }
     surface.tint = palette.solClair;
     surface.alpha = SOL_CLAIR_SHARE.lawn;
     patches.tint = palette.solClair;
@@ -111,15 +121,24 @@ export function createGround(ctx: RenderContext): Family {
       if (arena.width !== drawnWidth || arena.height !== drawnHeight || seed !== drawnSeed) {
         draw(arena, seed);
       }
-      if (frame.fraction !== styledAt) {
-        style(frame);
+      const dome = ctx.decors.get(state.setId) === 'dome';
+      if (dome !== sand.root.visible) {
+        sand.root.visible = dome;
+        lake.visible = !dome;
+        styledAt = Number.NaN;
       }
-      water.update(state, frame);
+      if (frame.fraction !== styledAt) {
+        style(frame, dome);
+      }
+      if (!dome) {
+        water.update(state, frame);
+      }
       fireflies.update(frame);
     },
     destroy(): void {
       parent.destroy({ children: true });
       trees.destroy();
+      sand.destroy();
       release();
     },
   };

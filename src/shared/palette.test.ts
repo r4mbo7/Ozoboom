@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { PALETTE_TOKENS, SUN_PALETTES, lightAt, paletteAt, relativeLuminance } from './palette';
+import {
+  PALETTE_TOKENS,
+  SAND_PALETTES,
+  SUN_PALETTES,
+  lightAt,
+  paletteAt,
+  relativeLuminance,
+  sandAt,
+} from './palette';
 
 const HEX = /^#[0-9a-f]{6}$/;
 
@@ -89,5 +97,15 @@ describe('relativeLuminance', () => {
     expect(relativeLuminance('#000000')).toBe(0);
     expect(relativeLuminance('#ffffff')).toBeCloseTo(1, 6);
     expect(relativeLuminance('#808080')).toBeCloseTo(0.2159, 4);
+  });
+});
+
+describe('sandAt', () => {
+  it('lands on the sand of each moment and mixes between them', () => {
+    expect(sandAt(0)).toEqual(SAND_PALETTES.crepuscule);
+    expect(sandAt(0.4)).toEqual(SAND_PALETTES.nuit);
+    expect(sandAt(1)).toEqual(SAND_PALETTES.jour);
+    expect(sandAt(0.725).sable).not.toBe(SAND_PALETTES.nuit.sable);
+    expect(sandAt(0.725).sable).not.toBe(SAND_PALETTES.aube.sable);
   });
 });

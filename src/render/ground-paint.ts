@@ -100,3 +100,24 @@ export function crownRim(): Shape {
     ctx.stroke();
   });
 }
+
+// Fine dots of sand, round and short, tinted by the caller.
+export function sandTile(seed: number): Texture {
+  const size = 256;
+  return tile(size, (ctx) => {
+    const rng = seedRng((seed + 104729) >>> 0);
+    ctx.fillStyle = WHITE;
+    for (let index = 0; index < 900; index += 1) {
+      ctx.globalAlpha = 0.2 + nextFloat(rng) * 0.6;
+      ctx.beginPath();
+      ctx.arc(
+        nextFloat(rng) * size,
+        nextFloat(rng) * size,
+        0.5 + nextFloat(rng) * 0.8,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+    }
+  });
+}
