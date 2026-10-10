@@ -8,12 +8,12 @@ import {
   tempoOf,
 } from '../shared/tempo';
 import { CONTENT } from './content';
-import type { TierDefinition } from './types';
+import type { ObstacleDefinition, TierDefinition } from './types';
 
 const { classes, enemies, traps, upgrades, sets, bystanders = [] } = CONTENT;
 const weapons = CONTENT.weapons ?? [];
 const fusions = CONTENT.fusions ?? [];
-const speakers = sets.flatMap((set) => set.speakers ?? []);
+const speakers = sets[0]?.speakers ?? [];
 
 const enemyById = new Map(enemies.map((enemy) => [enemy.id, enemy]));
 const bystanderById = new Map(bystanders.map((bystander) => [bystander.id, bystander]));
@@ -647,5 +647,121 @@ describe('V0.1 scope', () => {
       [4, 4],
       [4, 4],
     ]);
+  });
+});
+
+describe('The Dome', () => {
+  const dome = sets.find((set) => set.id === 'dome');
+  const obstacles = dome?.obstacles ?? [];
+  const center = { x: (dome?.arena.width ?? 0) / 2, y: (dome?.arena.height ?? 0) / 2 };
+  const biggestPlayer = Math.max(...classes.map((definition) => definition.radius));
+  const ordinary = enemies.filter(
+    (enemy) => enemy.behaviour !== 'heavy' && enemy.behaviour !== 'boss',
+  );
+  const biggestOrdinary = Math.max(...ordinary.map((enemy) => enemy.radius));
+  const smallestHeavy = Math.min(
+    ...enemies.filter((enemy) => enemy.behaviour === 'heavy').map((enemy) => enemy.radius),
+  );
+  const bossRadii = enemies
+    .filter((enemy) => enemy.behaviour === 'boss')
+    .map((enemy) => enemy.radius);
+  const biggestBoss = Math.max(...bossRadii);
+  const passMin = 2 * Math.max(biggestPlayer, biggestOrdinary);
+  const heavyMin = 2 * smallestHeavy;
+  const bossMin = 2 * biggestBoss;
+  const distance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+  const turn = (point: { x: number; y: number }) => {
+    const dx = point.x - center.x;
+    const dy = point.y - center.y;
+    const share = dx / (Math.abs(dx) + Math.abs(dy));
+    return dy >= 0 ? 1 - share : 3 + share;
+  };
+  const gap = (a: ObstacleDefinition, b: ObstacleDefinition) =>
+    distance(a, b) - a.radius - b.radius;
+  const crown = obstacles
+    .filter((obstacle) => distance(obstacle, center) < 400)
+    .sort((a, b) => turn(a) - turn(b));
+  const arms = obstacles.filter((obstacle) => distance(obstacle, center) >= 400);
+  const crownPairs = crown.map(
+    (post, index) => [post, crown[(index + 1) % crown.length] ?? post] as const,
+  );
+  const crownGaps = crownPairs.map(([post, next]) => gap(post, next));
+  const armGaps = arms.flatMap((stone, index) =>
+    arms.slice(index + 1).map((other) => gap(stone, other)),
+  );
+
+  it('plays at two thirds of the main stage tempo in a long room', () => {
+    expect(dome?.ticksPerBeat).toBe(18);
+    expect(dome?.bpm).toBe(tempoOf(18).bpm);
+    expect(dome?.decor).toBe('dome');
+    expect(dome?.acoustics?.reverbSeconds).toBeCloseTo(3.6, 1);
+    expect(dome?.arena).toEqual(sets[0]?.arena);
+  });
+
+  it('lets the biggest player and ordinary bad vibe through between two posts, not heavy ones or bosses', () => {
+    const narrow = crownGaps.filter((width) => width < bossMin);
+
+    expect(narrow).toHaveLength(crown.length - 4);
+    for (const width of narrow) {
+      expect(width).toBeGreaterThanOrEqual(passMin);
+      expect(width).toBeLessThan(heavyMin);
+    }
+  });
+
+  it('opens four entrances for a boss, one on each axis', () => {
+    const entrances = crownPairs.flatMap(([post, next]) =>
+      gap(post, next) >= bossMin ? [{ x: (post.x + next.x) / 2, y: (post.y + next.y) / 2 }] : [],
+    );
+
+    expect(entrances).toHaveLength(4);
+    for (const entrance of entrances) {
+      const off = Math.min(Math.abs(entrance.x - center.x), Math.abs(entrance.y - center.y));
+      expect(off).toBeLessThan(1);
+    }
+  });
+
+  it('opens the ring of arms in many narrow passages and a wide one on each axis, under the hands', () => {
+    const narrow = armGaps.filter((width) => width > 0 && width < bossMin);
+
+    expect(narrow.length).toBeGreaterThanOrEqual(8);
+    for (const width of narrow) {
+      expect(width).toBeGreaterThanOrEqual(passMin);
+      expect(width).toBeLessThan(heavyMin);
+    }
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      for (let along = 360; along <= 480; along += 10) {
+        const point = { x: center.x + dx * along, y: center.y + dy * along };
+        for (const stone of arms) {
+          expect(distance(point, stone) - stone.radius).toBeGreaterThanOrEqual(biggestBoss);
+        }
+      }
+    }
+  });
+
+  it('keeps the core, the speakers and the arena edge clear of every obstacle', () => {
+    for (const obstacle of obstacles) {
+      expect(distance(obstacle, center) - obstacle.radius).toBeGreaterThan(dome?.core.radius ?? 0);
+      expect(obstacle.x - obstacle.radius).toBeGreaterThanOrEqual(0);
+      expect(obstacle.y - obstacle.radius).toBeGreaterThanOrEqual(0);
+      expect(obstacle.x + obstacle.radius).toBeLessThanOrEqual(dome?.arena.width ?? 0);
+      expect(obstacle.y + obstacle.radius).toBeLessThanOrEqual(dome?.arena.height ?? 0);
+      for (const speaker of dome?.speakers ?? []) {
+        expect(distance(obstacle, speaker)).toBeGreaterThan(obstacle.radius + speaker.radius);
+      }
+    }
+  });
+
+  it('keeps the main stage speakers, names and tiers', () => {
+    expect(dome?.speakers?.map((speaker) => speaker.name)).toEqual(
+      sets[0]?.speakers?.map((speaker) => speaker.name),
+    );
+    expect(dome?.tiers).toEqual(sets[0]?.tiers);
+    expect(sets[0]?.id).toBe('soiree-v0');
   });
 });
