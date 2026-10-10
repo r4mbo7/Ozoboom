@@ -278,6 +278,8 @@ export interface ObstacleDefinition {
 export interface SetDefinition {
   id: string;
   name: string;
+  // The music style shown on the stage's card. Absent means none.
+  style?: string;
   // Must equal the tempo of `ticksPerBeat` (`tempoOf`).
   bpm: number;
   // Length of the stage's beat in ticks, the tick rate staying the same (ADR 0012). Absent means 12.

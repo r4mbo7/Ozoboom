@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { MusicTrack } from '../data/types';
-import { drawTrack, trackOf } from './track';
+import { drawTrack, stageTracks, trackOf } from './track';
 
 const TRACKS: readonly MusicTrack[] = ['a', 'b', 'c'].map((id) => ({ ...SOIREE_OUVERTURE, id }));
 const RANDOMS = [0, 0.2, 0.4, 0.6, 0.8, 0.999];
@@ -35,5 +35,16 @@ describe('trackOf', () => {
   it('plays an unknown track as the first one', () => {
     expect(trackOf(TRACKS, 'b').id).toBe('b');
     expect(trackOf(TRACKS, 'from-a-newer-version').id).toBe('a');
+  });
+});
+
+describe('stageTracks', () => {
+  it('keeps only the tracks the stage names', () => {
+    expect(stageTracks(TRACKS, ['c', 'a']).map((track) => track.id)).toEqual(['a', 'c']);
+  });
+
+  it('keeps every track for a stage that names none, or none that exist', () => {
+    expect(stageTracks(TRACKS, undefined)).toEqual(TRACKS);
+    expect(stageTracks(TRACKS, ['nope'])).toEqual(TRACKS);
   });
 });

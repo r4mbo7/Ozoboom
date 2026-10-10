@@ -1,4 +1,4 @@
-import type { DecorId } from './types';
+import type { DecorId } from '../data/types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -35,8 +35,6 @@ const DOME = `
   <path d="M80 19 V71 M54 45 H106 M62 27 L98 63 M98 27 L62 63" stroke="#5c3b1c" stroke-width="1" opacity="0.7"/>
   <circle cx="80" cy="45" r="4" fill="#ffd27a"/>`;
 
-const NIGHT = '<rect width="160" height="90" fill="#060a1c"/>';
-
 // A small picture of a stage, drawn by the interface for the picker and the lobby.
 export function stagePreview(decor: DecorId): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg');
@@ -44,6 +42,6 @@ export function stagePreview(decor: DecorId): SVGSVGElement {
   svg.setAttribute('class', 'ui-stage__preview');
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
-  svg.innerHTML = decor === 'dome' ? DOME : decor === 'lake' ? LAKE : NIGHT;
+  svg.innerHTML = decor === 'dome' ? DOME : LAKE;
   return svg;
 }

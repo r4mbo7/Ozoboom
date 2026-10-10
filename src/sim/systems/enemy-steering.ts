@@ -2,7 +2,6 @@ import type { EnemyDefinition } from '../../data/types';
 import { distanceSquared } from '../../shared/vec';
 import { lookup, type ResolvedContent } from '../content';
 import { playerById } from '../damage';
-import { resolveObstacles } from '../obstacles';
 import type { Circle } from '../spatial-hash';
 import { STEERING_TARGETS } from '../specials';
 import type { SteeringOverride } from '../specials/types';
@@ -17,7 +16,6 @@ const separation = { x: 0, y: 0 };
 
 export function enemySteering(ctx: StepContext): void {
   const { state, content, enemyGrid } = ctx;
-  const obstacles = ctx.set.obstacles ?? [];
   enemyGrid.rebuild(state.enemies);
   for (const enemy of state.enemies) {
     if (enemy.hp <= 0) {
@@ -46,11 +44,8 @@ export function enemySteering(ctx: StepContext): void {
       moveX += separation.x * speed * SEPARATION_WEIGHT;
       moveY += separation.y * speed * SEPARATION_WEIGHT;
     }
-    const fromX = enemy.x;
-    const fromY = enemy.y;
     enemy.x = clamp(enemy.x + moveX, enemy.radius, state.arena.width - enemy.radius);
     enemy.y = clamp(enemy.y + moveY, enemy.radius, state.arena.height - enemy.radius);
-    resolveObstacles(enemy, fromX, fromY, obstacles);
     const moved = moveX !== 0 || moveY !== 0;
     if (moved && (definition.behaviour === 'heavy' || definition.behaviour === 'boss')) {
       pushTraps(state, content, enemy);

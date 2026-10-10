@@ -1,6 +1,6 @@
 import type { Mood } from '../audio/types';
 
-export type Screen = 'title' | 'lobby' | 'game' | 'ending' | 'end';
+export type Screen = 'title' | 'stage' | 'lobby' | 'game' | 'ending' | 'end';
 
 export interface SoundScene {
   readonly screen: Screen;

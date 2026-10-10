@@ -21,6 +21,7 @@ test('plays ten seconds from the title without a console error', async ({ page }
   const errors = collectConsoleErrors(page);
   await page.goto('./');
   await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await page.getByRole('button', { name: 'Lancer le set' }).click();
 
   await expect(page.locator('canvas')).toBeVisible();
   for (const name of HUD_PANELS) {

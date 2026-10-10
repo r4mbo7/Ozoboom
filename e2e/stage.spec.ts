@@ -26,9 +26,6 @@ test.describe('stage picker', () => {
     await expect(picker.getByRole('radio')).toHaveCount(2);
     await expect(picker.getByRole('radio', { name: /Le Dome/ })).toBeChecked();
     await expect(picker.getByRole('radio', { name: /Main stage/ })).toContainText('145 BPM');
-    await page.screenshot({
-      path: '/tmp/claude-1000/-home-cdlr-dev-Ozoboom/c6c76ee2-b7ca-4cec-ae22-009a54f4b196/scratchpad/stage-picker.png',
-    });
 
     await tap(page, 'ArrowLeft');
     expect(lines).toContain('[ui] onChooseStage main');
@@ -83,5 +80,35 @@ test.describe('stage in the lobby', () => {
 
     await stages.getByRole('radio', { name: /Main stage/ }).click();
     expect(lines.filter((line) => line.includes('onChooseStage'))).toEqual([]);
+  });
+});
+
+test.describe('stage in the app', () => {
+  test('Jouer opens the choice, launches the picked scene and proposes it again', async ({
+    page,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await page.goto('./?dev=fast&stages');
+    await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+    const stages = page.getByRole('radiogroup', { name: 'Scènes' });
+    test.skip(!(await stages.isVisible()), 'a single set in the content: nothing to choose');
+
+    const cards = stages.getByRole('radio');
+    const last = cards.last();
+    await expect(cards.first()).toBeChecked();
+    await last.click();
+    await expect(last).toBeChecked();
+    await page.getByRole('button', { name: 'Lancer le set' }).click();
+    await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
+    const played = await page.evaluate(() => window.ozoboom?.state.setId);
+    expect(played).not.toBe('soiree-v0');
+    expect(await page.evaluate(() => window.localStorage.getItem('ozoboom.stageId'))).toBe(played);
+
+    await page.reload();
+    await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+    await expect(stages.getByRole('radio').last()).toBeChecked();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
   });
 });

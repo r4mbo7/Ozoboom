@@ -232,3 +232,41 @@ describe('createRoom as host', () => {
     expect(() => room.start('set-1', 1, 'track-1')).toThrow();
   });
 });
+
+describe('the stage of a room', () => {
+  function hostOn(transport: MemoryTransport): Room {
+    return createRoom(transport, 'host', {
+      version: V1,
+      classIds: CLASS_IDS,
+      name: 'Hôte',
+      classId: 'mage',
+      setId: 'soiree-v0',
+    });
+  }
+
+  it('reaches a guest with the lobby, and again at each change of the host', () => {
+    const [h, g] = network(2) as [MemoryTransport, MemoryTransport];
+    const hostRoom = hostOn(h);
+    const guest = join(g, { name: 'Invité', classId: 'tank' });
+    h.flush();
+
+    expect(guest.room.setId).toBe('soiree-v0');
+    hostRoom.setStage('dome');
+    h.flush();
+
+    expect(guest.room.setId).toBe('dome');
+    expect(hostRoom.setId).toBe('dome');
+  });
+
+  it('is not changed by a guest', () => {
+    const [h, g] = network(2) as [MemoryTransport, MemoryTransport];
+    const hostRoom = hostOn(h);
+    const guest = join(g, { name: 'Invité', classId: 'tank' });
+
+    h.flush();
+    guest.room.setStage('dome');
+    h.flush();
+
+    expect(hostRoom.setId).toBe('soiree-v0');
+  });
+});

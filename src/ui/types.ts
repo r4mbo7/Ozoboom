@@ -1,4 +1,4 @@
-import type { GameContent } from '../data/types';
+import type { DecorId, GameContent } from '../data/types';
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
 import type { PlayerId, SimState } from '../sim/state';
 
@@ -13,9 +13,6 @@ export interface UiFrame {
   // Every active device with its id: the lobby lets each one without a seat take one.
   devices?: readonly { device: DeviceId; snapshot: InputSnapshot }[];
 }
-
-// The id of a set's backdrop, drawn by the stage picker's preview.
-export type DecorId = string;
 
 export interface StageCard {
   setId: string;

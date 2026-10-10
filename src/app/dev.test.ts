@@ -62,3 +62,15 @@ describe('the bench at four players', () => {
     expect(new Set(session.state.players.map((player) => player.y)).size).toBe(4);
   });
 });
+
+describe('the stages of a dev mode', () => {
+  const first = CONTENT.sets[0];
+  const two = { ...CONTENT, sets: first === undefined ? [] : [first, { ...first, id: 'other' }] };
+
+  it('plays on the first stage only, unless the URL keeps them all', () => {
+    expect(readDevOptions('?dev=fast', two).content.sets).toHaveLength(1);
+    expect(readDevOptions('?dev=bench', two).content.sets).toHaveLength(1);
+    expect(readDevOptions('?dev=fast&stages', two).content.sets).toHaveLength(2);
+    expect(readDevOptions('', two).content.sets).toHaveLength(2);
+  });
+});

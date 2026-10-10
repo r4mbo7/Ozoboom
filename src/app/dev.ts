@@ -12,6 +12,7 @@ import type { PlayerId, SimState } from '../sim/state';
 // - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
 //   weapons and a plugged speaker, to measure a frame. `&players=4` seats four players on one
 //   screen instead (one of each class, then the first again), three weapons each, camera on everyone.
+// Both play on the first stage only, so that « Jouer » starts at once; `&stages` keeps every stage.
 // Both expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
 export type DevMode = 'fast' | 'bench';
 
@@ -33,6 +34,9 @@ const MAX_BENCH_PLAYERS = BENCH_PLAYER_IDS.length;
 export function readDevOptions(search: string, content: GameContent): DevOptions {
   const params = new URLSearchParams(search);
   const mode = params.get('dev');
+  if (mode !== null && !params.has('stages')) {
+    return readDevOptions(`${search}&stages`, { ...content, sets: content.sets.slice(0, 1) });
+  }
   if (mode === 'fast') {
     return { mode, speed: FAST_SPEED, players: 1, content: fastContent(content) };
   }

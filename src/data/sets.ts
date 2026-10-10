@@ -4,7 +4,9 @@ import type { ObstacleDefinition, SetDefinition } from './types';
 const MAIN_STAGE: SetDefinition = {
   id: 'soiree-v0',
   name: "La soirée d'ouverture",
+  style: 'Psytrance full-on',
   bpm: DEFAULT_BPM,
+  trackIds: ['soiree-ouverture', 'brume-du-lac', 'grenouille-acide', 'goa-des-etoiles'],
   arena: { width: 1600, height: 1000 },
   core: { radius: 56, maxHp: 500 },
   handSize: 2,
@@ -198,6 +200,7 @@ const DOME: SetDefinition = {
   ...MAIN_STAGE,
   id: 'dome',
   name: 'Le Dome',
+  style: 'Downtempo, dub',
   bpm: tempoOf(DOME_TICKS_PER_BEAT).bpm,
   ticksPerBeat: DOME_TICKS_PER_BEAT,
   decor: 'dome',

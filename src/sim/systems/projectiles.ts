@@ -1,17 +1,15 @@
 import { damageCore, damagePlayer, playerById } from '../damage';
 import { healPlayer, hurtEnemy, markedDamageMul, knockBack } from '../effects';
-import { touchesObstacle } from '../obstacles';
 import type { PlayerId, PlayerState, ProjectileState, SimState } from '../state';
 import type { StepContext } from './types';
 
 const LANDING_KNOCKBACK_PER_RADIUS = 0.25;
 const RETURN_TICKS = 600;
 
-export function projectiles({ state, set, content, enemyGrid }: StepContext): void {
+export function projectiles({ state, content, enemyGrid }: StepContext): void {
   const markedMul = markedDamageMul(content);
   enemyGrid.rebuild(state.enemies);
   const { width, height } = state.arena;
-  const obstacles = set.obstacles ?? [];
   let kept = 0;
   for (const projectile of state.projectiles) {
     if (projectile.returning === true && flyHome(state, projectile)) {
@@ -26,14 +24,9 @@ export function projectiles({ state, set, content, enemyGrid }: StepContext): vo
     } else if (projectile.returning !== true && projectile.arc === undefined) {
       spent = hitEnemies(state, enemyGrid, projectile, markedMul);
     }
-    const blocked =
-      !spent &&
-      projectile.arc === undefined &&
-      projectile.returning !== true &&
-      touchesObstacle(projectile, obstacles);
     const inArena =
       projectile.x >= 0 && projectile.x <= width && projectile.y >= 0 && projectile.y <= height;
-    if (!spent && (blocked || projectile.ticksLeft <= 0 || !inArena)) {
+    if (!spent && (projectile.ticksLeft <= 0 || !inArena)) {
       spent = !endOfFlight(state, enemyGrid, projectile, markedMul);
     }
     if (!spent) {

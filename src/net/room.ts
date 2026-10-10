@@ -15,6 +15,8 @@ export interface RoomProfile {
   classId: string;
   // Known classes: an unknown one becomes the first of the list.
   classIds: readonly string[];
+  // Host only: the stage the room starts on.
+  setId?: string;
 }
 
 export interface Room {
@@ -22,6 +24,10 @@ export interface Room {
   readonly seats: readonly Seat[];
   // The seat of this peer, once the host has given it one.
   readonly localSeat: Seat | null;
+  // The stage the host picked, as the room knows it; null until a guest hears of it.
+  readonly setId: string | null;
+  // Host only: changes the stage and tells the room.
+  setStage(setId: string): void;
   // Changes this peer's own name and/or class and tells the room.
   setSeat(change: { name?: string; classId?: string }): void;
   // Host only: freezes the room, sends the start to the guests and fires onStart here too.
@@ -56,6 +62,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         ]
       : [];
   let started = false;
+  let setId: string | null = role === 'host' ? (profile.setId ?? null) : null;
 
   const notify = (): void => {
     for (const listener of [...changeListeners]) {
@@ -64,7 +71,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
   };
 
   const publish = (): void => {
-    const message: NetMessage = { type: 'lobby', seats };
+    const message: NetMessage = { type: 'lobby', seats, ...(setId === null ? {} : { setId }) };
     for (const seat of seats) {
       if (seat.peer !== null && seat.peer !== transport.id) {
         transport.send(seat.peer, message);
@@ -152,6 +159,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
     switch (message.type) {
       case 'lobby':
         seats = [...message.seats];
+        setId = message.setId ?? null;
         notify();
         return;
       case 'refused':
@@ -200,6 +208,15 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
     },
     get localSeat() {
       return seats.find((seat) => seat.peer === transport.id) ?? null;
+    },
+    get setId() {
+      return setId;
+    },
+    setStage(next) {
+      if (role === 'host' && !started && next !== setId) {
+        setId = next;
+        publish();
+      }
     },
     setSeat(change) {
       if (started) {

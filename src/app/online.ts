@@ -4,7 +4,7 @@ import { createPeerTransport, type PeerTransport } from '../net/peerjs';
 import { createRoom, type RefusalReason, type Room, type StartMessage } from '../net/room';
 import type { PeerId, Role, Seat } from '../net/types';
 import type { PlayerId } from '../sim/state';
-import type { LobbyModel, Notice, Ui } from '../ui';
+import type { LobbyModel, Notice, StageCard, Ui } from '../ui';
 
 // One online game: what the app needs to run it, whoever hosts.
 export interface OnlineMatch {
@@ -23,7 +23,10 @@ export interface Interruption {
 
 export interface OnlineEnv {
   readonly ui: Pick<Ui, 'showLobby' | 'updateLobby'>;
-  readonly setId: string;
+  // The scenes to pick from.
+  readonly stages: readonly StageCard[];
+  // The scene the host proposes when it opens a room: the last one played.
+  stageId(): string;
   readonly classIds: readonly string[];
   // Milliseconds, injectable for the watchdog tests.
   now?(): number;
@@ -54,6 +57,8 @@ export interface Online {
   joinRoom(code: string): void;
   setSeatName(name: string): void;
   setSeatClass(classId: string): void;
+  // Host only: the scene of the next set, sent to the guests.
+  setStage(setId: string): void;
   launch(): void;
   // The end screen shows: a guest tells the host its game is over.
   matchEnded(): void;
@@ -159,6 +164,8 @@ export function createOnline(env: OnlineEnv): Online {
       })),
       canLaunch: role === 'host' && seats.length >= MIN_PLAYERS_TO_LAUNCH,
       error,
+      stages: env.stages,
+      stageId: room?.setId ?? env.stageId(),
     };
   }
 
@@ -344,6 +351,7 @@ export function createOnline(env: OnlineEnv): Online {
         name: '',
         classId: env.classId(),
         classIds: env.classIds,
+        setId: env.stageId(),
       });
       room = joined;
       joined.onChange(showLobby);
@@ -425,11 +433,18 @@ export function createOnline(env: OnlineEnv): Online {
     setSeatClass(classId) {
       room?.setSeat({ classId });
     },
+    setStage(setId) {
+      room?.setStage(setId);
+    },
     launch() {
       if (room === null || role !== 'host' || !model().canLaunch) {
         return;
       }
-      room.start(env.setId, crypto.getRandomValues(new Uint32Array(1))[0] ?? 0, env.trackId());
+      room.start(
+        room.setId ?? env.stageId(),
+        crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
+        env.trackId(),
+      );
     },
     matchEnded() {
       if (phase !== 'playing') {
@@ -452,7 +467,7 @@ export function createOnline(env: OnlineEnv): Online {
       const start: StartMessage = {
         type: 'start',
         seed: crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
-        setId: env.setId,
+        setId: room.setId ?? env.stageId(),
         trackId: env.trackId(),
         players: present.map((seat) => ({
           id: seat.playerId,

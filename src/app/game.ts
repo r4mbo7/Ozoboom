@@ -8,6 +8,7 @@ import {
   openFeedback,
 } from '../feedback';
 import { TRACKS } from '../data/tracks';
+import type { SetDefinition } from '../data/types';
 import { createInputHub } from '../input';
 import type { DeviceId, InputSnapshot } from '../input/intents';
 import { createRenderer } from '../render';
@@ -20,8 +21,10 @@ import type { CameraFocus } from '../render/types';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId } from '../sim/state';
 import {
+  type LobbyModel,
   type LocalPlayer,
   type SoundLevel,
+  type StageCard,
   type UiFrame,
   VOLUME_STEPS,
   createFeedbackButton,
@@ -50,12 +53,11 @@ import { loadPrefs, savePref } from './prefs';
 import { createSeats, type LaunchedSeats } from './seats';
 import { soundOf, type Screen } from './sound';
 import { createToast } from './toast';
-import { drawTrack, trackOf } from './track';
+import { drawTrack, stageTracks, trackOf } from './track';
 import { countVisit } from './visits';
 import { playerLabel } from '../ui/hud-model';
 
 const GESTURES = ['pointerdown', 'pointerup', 'keydown'] as const;
-const SET_ID = 'soiree-v0';
 const DEFAULT_CLASS_ID = 'mage';
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const TOGETHER_FOCUS: CameraFocus = { kind: 'everyone' };
@@ -73,10 +75,18 @@ const CATCH_UP_TICKS_PER_FRAME = 2;
 
 export async function startGame(root: HTMLElement, dev: DevOptions): Promise<void> {
   const { content } = dev;
-  const set = content.sets.find((candidate) => candidate.id === SET_ID);
-  if (set === undefined) {
-    throw new Error(`Missing set ${SET_ID}`);
+  const first = content.sets[0];
+  if (first === undefined) {
+    throw new Error('No set to play');
   }
+  const defaultSet: SetDefinition = first;
+  const stages: readonly StageCard[] = content.sets.map((definition) => ({
+    setId: definition.id,
+    name: definition.name,
+    style: definition.style ?? '',
+    bpm: definition.bpm,
+    decor: definition.decor ?? 'lake',
+  }));
   const storage = () => window.localStorage;
   const classIds = content.classes.map((definition) => definition.id);
   const prefs = loadPrefs(storage, {
@@ -86,10 +96,15 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     autoFire: false,
     autoAim: false,
     classId: DEFAULT_CLASS_ID,
+    stageId: defaultSet.id,
     trackId: '',
   });
   if (!classIds.includes(prefs.classId)) {
     prefs.classId = classIds.includes(DEFAULT_CLASS_ID) ? DEFAULT_CLASS_ID : (classIds[0] ?? '');
+  }
+
+  if (!content.sets.some((definition) => definition.id === prefs.stageId)) {
+    prefs.stageId = defaultSet.id;
   }
 
   const stage = document.createElement('div');
@@ -104,7 +119,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const hub = createInputHub(stage);
   const audio = createAudioEngine({
     setOf: (setId) => content.sets.find((candidate) => candidate.id === setId),
-    breakBars: (tier) => set.tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,
+    breakBars: (tier) =>
+      setNamed(match.session.state.setId).tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,
     trapEffectOf: (id) => content.traps.find((trap) => trap.id === id)?.effect.kind ?? id,
     sfxLookups: {
       weaponKindOf: (id) => content.weapons?.find((weapon) => weapon.id === id)?.effect.kind,
@@ -115,6 +131,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   });
 
   let screen: Screen = 'title';
+  // The scene of the next set, solo or from the lobby: the last one played at first.
+  let stageId = prefs.stageId;
   let paused = false;
   let frozenAlpha = 0;
   let endingLeft = 0;
@@ -154,7 +172,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   renderer.setOptions({ focus: match.focus });
 
   const ui = createUi(root, {
-    onStart: play,
+    onStart: openStagePicker,
     onRestart() {
       if (onlineMatch !== null) {
         online.relaunch();
@@ -193,13 +211,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     onJoinSeat(device) {
       if (seats.join(device)) {
         audio.cue('seatTaken');
-        ui.updateLobby(seats.model());
+        ui.updateLobby(localLobby());
       }
     },
     onLeaveSeat(playerId) {
       if (seats.leave(playerId)) {
         audio.cue('seatFreed');
-        ui.updateLobby(seats.model());
+        ui.updateLobby(localLobby());
       }
     },
     onSeatClass(playerId, classId) {
@@ -209,7 +227,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         return;
       }
       seats.setClass(playerId, classId);
-      ui.updateLobby(seats.model());
+      ui.updateLobby(localLobby());
     },
     onSeatName(playerId, name) {
       if (onlineLobby) {
@@ -217,7 +235,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         return;
       }
       seats.setName(playerId, name);
-      ui.updateLobby(seats.model());
+      ui.updateLobby(localLobby());
     },
     onGoOnline: openOnline,
     onCreateRoom() {
@@ -236,9 +254,21 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         launch(seats.launch());
       }
     },
-    onChooseStage: () => undefined,
-    onConfirmStage: () => undefined,
-    onLeaveStagePicker: () => undefined,
+    onChooseStage(setId) {
+      if (!content.sets.some((definition) => definition.id === setId)) {
+        return;
+      }
+      stageId = setId;
+      if (screen === 'stage') {
+        ui.showStagePicker({ stages, stageId });
+      } else if (onlineLobby) {
+        online.setStage(setId);
+      } else {
+        ui.updateLobby(localLobby());
+      }
+    },
+    onConfirmStage: play,
+    onLeaveStagePicker: toTitle,
     onLeaveLobby: toTitle,
     onLeaveNotice: quit,
   });
@@ -247,7 +277,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   });
   const online = createOnline({
     ui,
-    setId: SET_ID,
+    stages,
+    stageId: () => stageId,
     classIds,
     classId: () => prefs.classId,
     trackId: nextTrackId,
@@ -346,7 +377,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   ): Match {
     return createMatch({
       seed: crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
-      setId: SET_ID,
+      setId: stageId,
       content,
       slots,
       locals,
@@ -431,8 +462,27 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     autoAimToggle.set(enabled);
   }
 
+  function setNamed(id: string): SetDefinition {
+    return content.sets.find((definition) => definition.id === id) ?? defaultSet;
+  }
+
   function nextTrackId(): string {
-    return drawTrack(TRACKS, prefs.trackId, Math.random).id;
+    return drawTrack(stageTracks(TRACKS, setNamed(stageId).trackIds), prefs.trackId, Math.random)
+      .id;
+  }
+
+  function localLobby(): LobbyModel {
+    return { ...seats.model(), stages, stageId };
+  }
+
+  function openStagePicker(): void {
+    if (stages.length < 2) {
+      play();
+      return;
+    }
+    screen = 'stage';
+    applySound();
+    ui.showStagePicker({ stages, stageId });
   }
 
   function beginGame(trackId: string): void {
@@ -451,13 +501,20 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     applySound();
   }
 
+  function rememberStage(): void {
+    prefs.stageId = stageId;
+    savePref(storage, 'stageId', stageId);
+  }
+
   function play(): void {
+    rememberStage();
     launched = null;
     setMatch(soloMatch());
     beginGame(nextTrackId());
   }
 
   function launch(seated: LaunchedSeats): void {
+    rememberStage();
     launched = seated;
     setMatch(newMatch(seated.slots, seated.locals, TOGETHER_FOCUS));
     beginGame(nextTrackId());
@@ -476,6 +533,9 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     void audio.start();
     onlineLobby = false;
     onlineMatch = started;
+    if (started.role === 'host') {
+      rememberStage();
+    }
     interruption = null;
     launched = null;
     toast.clear();
@@ -513,7 +573,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     seats.clear();
     screen = 'lobby';
     applySound();
-    ui.showLobby(seats.model());
+    ui.showLobby(localLobby());
   }
 
   function toTitle(): void {
@@ -618,7 +678,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       }
     }
     if (onlineMatch === null) {
-      if (screen === 'title' || screen === 'lobby' || paused) {
+      if (screen === 'title' || screen === 'stage' || screen === 'lobby' || paused) {
         return;
       }
       stepOnce();

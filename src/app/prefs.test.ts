@@ -8,6 +8,7 @@ const DEFAULTS = {
   autoFire: false,
   autoAim: false,
   classId: 'mage',
+  stageId: 'soiree-v0',
   trackId: '',
 };
 
@@ -51,6 +52,7 @@ describe('prefs', () => {
     savePref(() => storage, 'autoFire', true);
     savePref(() => storage, 'autoAim', true);
     savePref(() => storage, 'classId', 'tank');
+    savePref(() => storage, 'stageId', 'dome');
     savePref(() => storage, 'trackId', 'soiree-ouverture');
 
     expect(loadPrefs(() => storage, DEFAULTS)).toEqual({
@@ -60,6 +62,7 @@ describe('prefs', () => {
       autoFire: true,
       autoAim: true,
       classId: 'tank',
+      stageId: 'dome',
       trackId: 'soiree-ouverture',
     });
   });
