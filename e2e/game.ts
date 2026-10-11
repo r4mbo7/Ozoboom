@@ -28,6 +28,8 @@ declare global {
         readonly connectMs: number | null;
       } | null;
       forceVersion: string | null;
+      // A test's player, called after every step of the game: the next step reads the devices again.
+      onStep: (() => void) | null;
     };
     fakePad?: FakePad;
     fakePads?: (FakeSlot | null)[];

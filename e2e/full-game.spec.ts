@@ -148,16 +148,21 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
   await tapButtonUntil(page, PAD.Start, () => pause.isHidden());
 
   // A player in the page: aims the right stick at the nearest bad vibe and fires, picks up the
-  // vibes and the loots, stays by the scene, places traps and novas the close ones. It counts in
-  // ticks, not in milliseconds, so that a loaded machine does not change how it plays.
+  // vibes and the loots, stays by the scene, places traps and novas the close ones. It plays after
+  // every step of the game, so that a loaded machine, which draws fewer frames, does not change how
+  // it plays.
   await page.evaluate(() => {
+    const game = window.ozoboom;
+    const pad = window.fakePad;
+    if (game === undefined || pad === undefined) {
+      throw new Error('No game or no fake gamepad');
+    }
     const TICKS_BETWEEN_TRAPS = 336;
     let lastTrap = -TICKS_BETWEEN_TRAPS;
-    const play = () => {
-      const pad = window.fakePad;
-      const state = window.ozoboom?.state;
-      const player = state?.players[0];
-      if (pad === undefined || state === undefined || player === undefined) {
+    game.onStep = () => {
+      const { state } = game;
+      const player = state.players[0];
+      if (player === undefined) {
         return;
       }
       const running = state.status === 'running';
@@ -186,14 +191,12 @@ test('plays a whole game with a gamepad only, to the sunrise and a restart', asy
         pad.buttons[0] = 1;
         lastTrap = state.tick;
       }
-      if (state.status !== 'won' && state.status !== 'lost') {
-        requestAnimationFrame(play);
-      } else {
+      if (state.status === 'won' || state.status === 'lost') {
         pad.axes = [0, 0, 0, 0];
         pad.buttons.fill(0);
+        game.onStep = null;
       }
     };
-    play();
   });
 
   const upgrade = page.getByRole('region', { name: 'Choix d’amélioration' });

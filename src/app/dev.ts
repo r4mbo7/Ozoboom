@@ -7,13 +7,14 @@ import type { PlayerId, SimState } from '../sim/state';
 
 // Development modes, only behind the `dev` URL parameter, never by default:
 // - `?dev=fast`: a short set (one phrase per tier, one-bar break, weaker bad vibes, sturdier
-//   scene) played eight times faster, slower when the browser draws under 29 frames per second, and
-//   drawn light, to reach the end of a game in a browser test;
+//   scene) played eight times faster and drawn light, to reach the end of a game in a browser test;
 // - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
 //   weapons and a plugged speaker, to measure a frame. `&players=4` seats four players on one
 //   screen instead (one of each class, then the first again), three weapons each, camera on everyone.
 // Both play on the first stage only, so that « Jouer » starts at once; `&stages` keeps every stage.
 // Both expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
+// A browser test's player set in `window.ozoboom.onStep` plays after every step of the game, and the
+// next step reads what it did on the devices, however few frames a loaded machine draws.
 export type DevMode = 'fast' | 'bench';
 
 export interface DevOptions {
@@ -143,6 +144,8 @@ export interface DevProbe {
   readonly cost: FrameCost;
   // A game version the page pretends to have, set from `window.ozoboom.forceVersion`.
   readonly forcedVersion: string | null;
+  // True when a test's player has played and may have changed the devices.
+  afterStep(): boolean;
   endFrame(time: number): void;
 }
 
@@ -162,6 +165,7 @@ export function createDevProbe(
   };
   const exposed = {
     forceVersion: null as string | null,
+    onStep: null as (() => void) | null,
     get state() {
       return state();
     },
@@ -184,6 +188,13 @@ export function createDevProbe(
     cost,
     get forcedVersion() {
       return exposed.forceVersion;
+    },
+    afterStep() {
+      if (exposed.onStep === null) {
+        return false;
+      }
+      exposed.onStep();
+      return true;
     },
     endFrame(time) {
       total.sim += cost.sim;

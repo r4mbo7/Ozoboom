@@ -54,8 +54,14 @@ async function tapPad(page: Page, button: number): Promise<void> {
 
 // Two players in the page, each on their own device: the keyboard through key events, the gamepad
 // through its sticks. Both go for the nearest vibe, else walk at the nearest bad vibe, and fire.
+// They play after every step of the game, however few frames a loaded machine draws.
 async function startBots(page: Page): Promise<void> {
   await page.evaluate(() => {
+    const game = window.ozoboom;
+    const pad = window.fakePads?.[0];
+    if (game === undefined || pad === undefined || pad === null) {
+      throw new Error('No game or no fake gamepad');
+    }
     const held = new Set<string>();
     const hold = (code: string, on: boolean) => {
       if (held.has(code) === on) return;
@@ -63,10 +69,8 @@ async function startBots(page: Page): Promise<void> {
       else held.delete(code);
       window.dispatchEvent(new KeyboardEvent(on ? 'keydown' : 'keyup', { code }));
     };
-    const play = () => {
-      const state = window.ozoboom?.state;
-      const pad = window.fakePads?.[0];
-      if (state === undefined || pad === undefined || pad === null) return;
+    game.onStep = () => {
+      const { state } = game;
       const running = state.status === 'running';
       const goalOf = (id: number) => {
         const player = state.players.find((candidate) => candidate.id === id);
@@ -108,15 +112,13 @@ async function startBots(page: Page): Promise<void> {
       ];
       // The right trigger of the standard mapping.
       pad.buttons[7] = second?.nearest === undefined ? 0 : 1;
-      if (state.status !== 'won' && state.status !== 'lost') {
-        requestAnimationFrame(play);
-      } else {
+      if (state.status === 'won' || state.status === 'lost') {
         for (const code of [...held]) hold(code, false);
         pad.axes = [0, 0, 0, 0];
         pad.buttons.fill(0);
+        game.onStep = null;
       }
     };
-    play();
   });
 }
 
