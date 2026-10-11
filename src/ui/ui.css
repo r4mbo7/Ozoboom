@@ -1213,8 +1213,8 @@
   cursor: default;
 }
 
-.ui-stagecards[data-readonly] .ui-stage:not([aria-checked='true']) {
-  opacity: 0.6;
+.ui-stagecards[data-readonly] .ui-stage:not([aria-checked='true']) .ui-stage__preview {
+  opacity: 0.5;
 }
 
 .ui-stagecards[data-readonly] .ui-stage:hover:not([aria-checked='true']) {
