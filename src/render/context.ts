@@ -1,7 +1,6 @@
 import type {
   BystanderDefinition,
   ClassDefinition,
-  DecorId,
   EnemyBehaviour,
   EnemyDefinition,
   SetDefinition,
@@ -53,7 +52,6 @@ export interface RenderContext {
   readonly helpTicks: ReadonlyMap<string, number>;
   readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
   readonly weaponLooks: ReadonlyMap<string, WeaponLook>;
-  readonly decors: ReadonlyMap<string, DecorId>;
   readonly skillEffects: ReadonlyMap<string, SkillEffect>;
 }
 

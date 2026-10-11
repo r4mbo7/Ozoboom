@@ -1,10 +1,7 @@
 import { nextFloat, seedRng } from '../shared/prng';
+import { DOME_SCALE as SCALE } from '../data/sets';
 import type { ObstacleDefinition } from '../data/types';
-
-export interface Point {
-  readonly x: number;
-  readonly y: number;
-}
+import type { Vec2 } from '../shared/vec';
 
 export interface Light {
   readonly x: number;
@@ -15,8 +12,6 @@ export interface Light {
 
 export const RIBS = 24;
 export const TWINKLE_GROUPS = 3;
-// The mock-up (1200 x 900) is scaled by 10/9 around the core.
-export const SCALE = 10 / 9;
 export const RING = 300 * SCALE;
 export const RIB_FROM = 56 * SCALE;
 export const PANELS = { from: 252 * SCALE, to: 280 * SCALE } as const;
@@ -25,7 +20,7 @@ export const LIGHTS = { from: 74 * SCALE, to: 232 * SCALE } as const;
 // The crown's posts are the obstacles on the ring; the giants' arms lie further out.
 export function crownPosts(
   obstacles: readonly ObstacleDefinition[],
-  center: Point,
+  center: Vec2,
 ): readonly ObstacleDefinition[] {
   const distance = (o: ObstacleDefinition): number => Math.hypot(o.x - center.x, o.y - center.y);
   const ring = Math.min(...obstacles.map(distance));
@@ -33,7 +28,7 @@ export function crownPosts(
 }
 
 // Group 0 stays lit; the others twinkle, each on its own phase.
-export function garlands(seed: number, center: Point): readonly Light[] {
+export function garlands(seed: number, center: Vec2): readonly Light[] {
   const rng = seedRng(seed);
   const step = (Math.PI * 2) / RIBS;
   const lights: Light[] = [];

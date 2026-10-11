@@ -1,9 +1,9 @@
 import { Container, Graphics, Sprite, type Texture, TilingSprite } from 'pixi.js';
 import { hillAt } from '../shared/palette';
 import { nextFloat, seedRng } from '../shared/prng';
-import { FLOOR, almondEdge, insideAlmond } from './ambyss-layout';
-import { SCALE, type Seat, groveOf, seatsOf } from './butte-layout';
-import type { Point } from './dome-layout';
+import { FLOOR, SCALE, almondEdge, insideAlmond } from './ambyss-layout';
+import { type Seat, groveOf, seatsOf } from './butte-layout';
+import type { Vec2 } from '../shared/vec';
 import type { Frame } from './frame';
 import { type Layout, OVERFLOW } from './ground-layout';
 import { sandTile, softDisc } from './ground-paint';
@@ -14,6 +14,7 @@ const TAU = Math.PI * 2;
 const WHITE = 0xffffff;
 const BLACK = 0x000000;
 const CONTOURS = 9;
+const LAND_RESOLUTION = 0.5;
 const CONTOUR_SEGMENTS = 240;
 const TUFT_DENSITY = 2.4e-4;
 const EDGE_POINTS = 48;
@@ -26,7 +27,7 @@ const SOFT = [
   [0, 0.3],
 ] as const;
 
-function almondPath(graphics: Graphics, center: Point): Graphics {
+function almondPath(graphics: Graphics, center: Vec2): Graphics {
   for (const north of [true, false]) {
     for (let step = 0; step <= EDGE_POINTS; step += 1) {
       const t = north ? step / EDGE_POINTS : 1 - step / EDGE_POINTS;
@@ -81,7 +82,12 @@ export function createButte(parent: Container) {
     blur.anchor.set(0.5);
   }
   const grove = new Container();
-  root.addChild(surface, slope, summit, east, tufts, contours, grain, paths, grove);
+  // The land under the hill is all soft colour: baked at low density each time the hour tints it, a frame draws it
+  // as one sprite instead of four layers as wide as the screen.
+  const land = new Container();
+  land.addChild(surface, slope, summit, east);
+  land.cacheAsTexture({ resolution: LAND_RESOLUTION });
+  root.addChild(land, tufts, contours, grain, paths, grove);
   const trees = createTrees(grove);
   const floor = new Graphics();
   const rim = new Graphics();
@@ -130,7 +136,7 @@ export function createButte(parent: Container) {
 
       const phases = Array.from({ length: 4 }, () => nextFloat(rng) * TAU);
       const [p0 = 0, p1 = 0, p2 = 0, p3 = 0] = phases;
-      const wobble = (x: number, y: number): Point => ({
+      const wobble = (x: number, y: number): Vec2 => ({
         x:
           (11 * Math.sin(0.006 * x + 0.8 * Math.cos(0.005 * y) + p0) +
             5 * Math.sin(0.013 * y + p1)) *
@@ -220,6 +226,7 @@ export function createButte(parent: Container) {
       summit.tint = sable;
       east.tint = parseHexColor(hill.soleil);
       east.alpha = hill.est;
+      land.updateCacheTexture();
       tufts.tint = courbe;
       tufts.alpha = 0.55;
       contours.tint = courbe;

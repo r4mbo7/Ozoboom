@@ -1,7 +1,7 @@
 import { Container, type Renderer as PixiRenderer, autoDetectRenderer } from 'pixi.js';
 import type { ClassDefinition, SkillDefinition } from '../data/types';
 import { NIGHT_END, NIGHT_START, type PaletteToken, lightAt, paletteAt } from '../shared/palette';
-import { MAIN_TEMPO, TICK_MS } from '../shared/tempo';
+import { TICK_MS } from '../shared/tempo';
 import type { SimState } from '../sim/state';
 import { createClassEffects } from './class-effects';
 import type { Family, RenderContext } from './context';
@@ -209,7 +209,6 @@ export function createPortraits(
       helpTicks: new Map(),
       speakerLooks: new Map(),
       weaponLooks: new Map(),
-      decors: new Map(),
       skillEffects,
     };
     const first = classes[0];
@@ -218,7 +217,6 @@ export function createPortraits(
     }
     const state = emptyState(standing(first), VIEW_UNITS);
     const frame = createFrame();
-    frame.tempo = MAIN_TEMPO;
     frame.fraction = NIGHT;
     frame.light = light;
     writePixiPalette(frame.palette, palette);

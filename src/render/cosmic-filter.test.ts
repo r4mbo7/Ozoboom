@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hillAt, paletteAt, sandAt } from '../shared/palette';
+import { hillAt, momentAt, paletteAt, sandAt } from '../shared/palette';
 import { tempoOf } from '../shared/tempo';
 import {
   GROW_TICKS,
@@ -7,7 +7,7 @@ import {
   hsl,
   trailGlow,
   trailsAt,
-  veilLookAt,
+  VEIL_LOOKS,
   veilsAt,
 } from './cosmic-filter';
 import { MASK_BODY, maskTone } from './face-kit';
@@ -84,8 +84,8 @@ describe('veils', () => {
   });
 
   it('are violet at night and golden at dawn', () => {
-    const [night] = veilLookAt(0.4).tones;
-    const [dawn] = veilLookAt(0.85).tones;
+    const night = parseHexColor(momentAt(VEIL_LOOKS, 0.4).tone0);
+    const dawn = parseHexColor(momentAt(VEIL_LOOKS, 0.85).tone0);
 
     expect(night & 0xff).toBeGreaterThan((night >> 8) & 0xff);
     expect((dawn >> 16) & 0xff).toBeGreaterThan(dawn & 0xff);
@@ -101,7 +101,7 @@ describe('veils', () => {
       const hill = hillAt(fraction);
       const rim = parseHexColor(sun.badVibeRim);
       const body = maskTone(rim, MASK_BODY);
-      const { tones, alpha } = veilLookAt(fraction);
+      const { tone0, tone1, alpha } = momentAt(VEIL_LOOKS, fraction);
       for (const hex of [
         sun.sol,
         sun.solClair,
@@ -113,7 +113,11 @@ describe('veils', () => {
         hill.sableClair,
       ]) {
         const ground = parseHexColor(hex);
-        const veiled = mixColor(mixColor(ground, tones[0], alpha), tones[1], alpha);
+        const veiled = mixColor(
+          mixColor(ground, parseHexColor(tone0), alpha),
+          parseHexColor(tone1),
+          alpha,
+        );
         const silhouette = Math.max(contrast(rim, veiled), contrast(body, veiled));
         if (silhouette < 3) {
           faint.push(`${fraction.toFixed(3)} on ${hex}: ${silhouette.toFixed(2)}:1`);

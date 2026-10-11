@@ -1,12 +1,8 @@
-import { type SunMoment, spanAt } from '../shared/palette';
+import type { SunMoment } from '../shared/palette';
 import { nextFloat, seedRng } from '../shared/prng';
 import type { Tempo } from '../shared/tempo';
-import { FLOOR } from './ambyss-layout';
-import type { Point } from './dome-layout';
-import { mixColor } from './ground-sun';
-
-// The filter was drawn around an almond 346 wide: it is scaled to the stage's floor.
-const SCALE = FLOOR.halfWidth / 346.4;
+import { SCALE } from './ambyss-layout';
+import type { Vec2 } from '../shared/vec';
 
 export const GROW_TICKS = 5;
 const SECOND_TRAIL_CHANCE = 0.4;
@@ -49,19 +45,21 @@ export interface Veil {
   readonly tone: 0 | 1;
 }
 
+// The veils take turns: tone 0, then tone 1.
 export interface VeilLook {
-  readonly tones: readonly [number, number];
+  readonly tone0: string;
+  readonly tone1: string;
   readonly alpha: number;
 }
 
-const VEIL_LOOKS: Record<SunMoment, VeilLook> = {
-  crepuscule: { tones: [0xffa078, 0x9b6bff], alpha: 0.12 },
-  nuit: { tones: [0x9b6bff, 0x3fd0c9], alpha: 0.13 },
-  aube: { tones: [0xffc878, 0xffaa96], alpha: 0.22 },
-  jour: { tones: [0xffe2a0, 0xfff0c8], alpha: 0.16 },
+export const VEIL_LOOKS: Record<SunMoment, VeilLook> = {
+  crepuscule: { tone0: '#ffa078', tone1: '#9b6bff', alpha: 0.12 },
+  nuit: { tone0: '#9b6bff', tone1: '#3fd0c9', alpha: 0.13 },
+  aube: { tone0: '#ffc878', tone1: '#ffaa96', alpha: 0.22 },
+  jour: { tone0: '#ffe2a0', tone1: '#fff0c8', alpha: 0.16 },
 };
 
-function trailsOfBeat(seed: number, beat: number, tempo: Tempo, center: Point): Trail[] {
+function trailsOfBeat(seed: number, beat: number, tempo: Tempo, center: Vec2): Trail[] {
   const rng = seedRng((seed ^ Math.imul(beat + 1, 0x9e3779b1)) >>> 0);
   const between = (min: number, spread: number) => min + nextFloat(rng) * spread;
   const count = nextFloat(rng) < SECOND_TRAIL_CHANCE ? 2 : 1;
@@ -87,7 +85,7 @@ function trailsOfBeat(seed: number, beat: number, tempo: Tempo, center: Point): 
 }
 
 // The trails alive at `now`: each beat lets one or two loose, and each fades out within a bar.
-export function trailsAt(seed: number, now: number, tempo: Tempo, center: Point): Trail[] {
+export function trailsAt(seed: number, now: number, tempo: Tempo, center: Vec2): Trail[] {
   const { ticksPerBeat, ticksPerBar } = tempo;
   const trails: Trail[] = [];
   const first = Math.max(0, Math.floor((now - ticksPerBar) / ticksPerBeat) + 1);
@@ -118,17 +116,6 @@ export function veilsAt(now: number, tempo: Tempo, calm: boolean): Veil[] {
       tone: (index % 2) as 0 | 1,
     };
   });
-}
-
-export function veilLookAt(fraction: number): VeilLook {
-  const span = spanAt(fraction);
-  const { mix } = span;
-  const from = VEIL_LOOKS[span.from];
-  const to = VEIL_LOOKS[span.to];
-  return {
-    tones: [mixColor(from.tones[0], to.tones[0], mix), mixColor(from.tones[1], to.tones[1], mix)],
-    alpha: from.alpha + (to.alpha - from.alpha) * mix,
-  };
 }
 
 // hue in degrees, saturation and lightness in [0, 1].

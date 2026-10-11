@@ -88,6 +88,7 @@ export class Scene implements Renderer {
     this.sets = new Map(content.sets.map((set) => [set.id, set]));
     this.camera = frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, width, height);
     this.layers = createLayers(this.stage);
+    this.frame.resolution = pixi.resolution;
     this.dropTrails = createDropTrails(pixi, this.layers);
 
     const ctx: RenderContext = {
@@ -110,16 +111,15 @@ export class Scene implements Renderer {
         ]),
       ),
       weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
-      decors: new Map(content.sets.map((set) => [set.id, set.decor])),
       skillEffects: new Map(content.classes.map((def) => [def.id, def.skill.effect])),
     };
     const traps = createTraps(ctx);
     const enemies = createEnemies(ctx);
     this.families = [
       createGround(ctx),
-      createGiants(ctx, content.sets),
+      createGiants(ctx),
       createGroundWaves(ctx),
-      ...createDecors(ctx, this.sets),
+      ...createDecors(ctx),
       createSpeakers(ctx),
       createCore(ctx),
       traps,

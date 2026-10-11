@@ -1,10 +1,9 @@
 import { Graphics } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
-import { SETS, SPEAKER_REACH } from '../data/sets';
+import { DOME_SCALE as SCALE, SETS, SPEAKER_REACH } from '../data/sets';
+import type { Vec2 } from '../shared/vec';
 import { traceBody } from './giants-body';
 import {
-  type Point,
-  SCALE,
   armPath,
   clearSpot,
   clusterReach,
@@ -89,7 +88,7 @@ describe('layGiants', () => {
     const body = new Graphics();
     traceBody(body);
     const torso = body.getLocalBounds();
-    const toSegment = (at: Point, from: Point, to: Point) => {
+    const toSegment = (at: Vec2, from: Vec2, to: Vec2) => {
       const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
       const along = Math.max(
         0,

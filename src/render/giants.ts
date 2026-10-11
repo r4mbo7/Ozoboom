@@ -1,20 +1,13 @@
 import { Container, Graphics, type Sprite } from 'pixi.js';
+import { DOME_SCALE as SCALE } from '../data/sets';
 import type { SetDefinition } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import { nextFloat, seedRng, type RngState } from '../shared/prng';
-import { setTempo } from '../sim/lineup';
 import type { SimState } from '../sim/state';
+import type { Vec2 } from '../shared/vec';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import {
-  type Point,
-  SCALE,
-  armPath,
-  clearSpot,
-  giantClusters,
-  keepClear,
-  layGiants,
-} from './giants-layout';
+import { armPath, clearSpot, giantClusters, keepClear, layGiants } from './giants-layout';
 import { traceBody, traceThrough } from './giants-body';
 import { add, setTint } from './util';
 
@@ -23,7 +16,7 @@ const WHITE = 0xffffff;
 const INK = 0x1a1020;
 const CREAM = 0xfffaeb;
 const COLORS: readonly PaletteToken[] = ['mage', 'turquoise', 'or', 'healer', 'tank'];
-const CORNERS: readonly Point[] = [
+const CORNERS: readonly Vec2[] = [
   { x: 90, y: 250 },
   { x: 90, y: 650 },
   { x: 1110, y: 250 },
@@ -53,8 +46,7 @@ interface Giant {
 // The four giants of the Dome, backs to the stage: their arms are soft bands as wide as the arm stones, and their
 // joined hands glow over the four entrances, with mushroom clusters around them. Drawn once, tinted with the hour:
 // additive by night, see-through by day. The caps pulse on the set's beat, still in the calm mode.
-export function createGiants(ctx: RenderContext, sets: readonly SetDefinition[]): Family {
-  const sources = new Map(sets.map((set) => [set.id, set]));
+export function createGiants(ctx: RenderContext): Family {
   const root = new Container();
   root.visible = false;
   ctx.layers.ground.addChild(root);
@@ -92,7 +84,7 @@ export function createGiants(ctx: RenderContext, sets: readonly SetDefinition[])
     mushrooms.push({ cap, halo, token, size, phase: nextFloat(rng) * TAU });
   }
 
-  function cluster(c: Point, spread: number, rng: RngState) {
+  function cluster(c: Vec2, spread: number, rng: RngState) {
     const count = 3 + Math.floor(nextFloat(rng) * 3);
     for (let index = 0; index < count; index += 1) {
       mushroom(
@@ -186,13 +178,17 @@ export function createGiants(ctx: RenderContext, sets: readonly SetDefinition[])
         setTint(part, frame.palette[token]);
       }
     }
+    for (const { cap, halo, token } of mushrooms) {
+      setTint(cap, frame.palette[token]);
+      setTint(halo, frame.palette[token]);
+    }
   }
 
   return {
     update(state: SimState, _alpha: number, frame: Frame): void {
-      const set = sources.get(state.setId);
-      root.visible = ctx.decors.get(state.setId) === 'dome' && set !== undefined;
-      if (!root.visible || set === undefined) {
+      const { set } = frame;
+      root.visible = set.decor === 'dome';
+      if (!root.visible) {
         return;
       }
       const key = `${String(state.arena.width)}x${String(state.arena.height)}:${String(state.seed)}:${state.setId}`;
@@ -200,20 +196,19 @@ export function createGiants(ctx: RenderContext, sets: readonly SetDefinition[])
         drawnKey = key;
         draw(state, set);
       }
-      if (frame.fraction !== styledAt || frame.light.additive !== styledAdditive) {
+      if (frame.fraction !== styledAt) {
         style(frame);
       }
-      const beat = setTempo(set).ticksPerBeat;
-      for (const { cap, halo, token, size, phase } of mushrooms) {
+      const beat = frame.tempo.ticksPerBeat;
+      for (const { halo, size, phase } of mushrooms) {
         const glow = frame.calm ? 1 : 0.75 + 0.25 * Math.sin((frame.now / beat) * Math.PI + phase);
-        setTint(cap, frame.palette[token]);
-        setTint(halo, frame.palette[token]);
         halo.alpha = 0.4 * glow;
         halo.scale.set((size * 4.4 * (0.9 + 0.1 * glow)) / 128);
       }
+      const knotAlpha = frame.calm ? 0.35 : 0.3 + 0.1 * Math.sin((frame.now / beat) * Math.PI);
       for (const { knots } of giants) {
         for (const knot of knots) {
-          knot.alpha = frame.calm ? 0.35 : 0.3 + 0.1 * Math.sin((frame.now / beat) * Math.PI);
+          knot.alpha = knotAlpha;
         }
       }
     },

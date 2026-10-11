@@ -1,5 +1,5 @@
 import type { Graphics } from 'pixi.js';
-import type { Point } from './giants-layout';
+import type { Vec2 } from '../shared/vec';
 
 const TAU = Math.PI * 2;
 const WHITE = 0xffffff;
@@ -90,7 +90,7 @@ export function traceBody(g: Graphics): void {
 }
 
 // A smooth curve through every point (Catmull-Rom), so that it runs over each stone of the arm.
-export function traceThrough(g: Graphics, points: readonly Point[]): void {
+export function traceThrough(g: Graphics, points: readonly Vec2[]): void {
   const [first] = points;
   if (first === undefined) {
     return;

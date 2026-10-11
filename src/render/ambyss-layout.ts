@@ -1,4 +1,4 @@
-import type { Point } from './dome-layout';
+import type { Vec2 } from '../shared/vec';
 
 // An almond is the overlap of two circles (a vesica piscis): tips on the east-west axis, apexes on the north-south.
 export interface Almond {
@@ -7,6 +7,8 @@ export interface Almond {
 }
 
 export const FLOOR: Almond = { halfWidth: 400, halfHeight: 230 };
+// The mock-ups were drawn around an almond 346 wide: their measures grow with FLOOR.
+export const SCALE = FLOOR.halfWidth / 346.4;
 export const CANOPY: Almond = { halfWidth: 440, halfHeight: 255 };
 // How far the guy ropes run past the canopy's edge, to their pegs.
 export const ROPE_LENGTH = 80;
@@ -19,12 +21,12 @@ function arc({ halfWidth, halfHeight }: Almond): { radius: number; spread: numbe
 // A point of the almond's edge, from the west tip (t = 0) to the east one (t = 1), along its north or south arc,
 // pushed `grow` further out.
 export function almondEdge(
-  center: Point,
+  center: Vec2,
   almond: Almond,
   t: number,
   north: boolean,
   grow = 0,
-): Point {
+): Vec2 {
   const { radius, spread } = arc(almond);
   const offset = radius - almond.halfHeight;
   const swing = -spread + 2 * spread * t;
@@ -36,7 +38,7 @@ export function almondEdge(
   };
 }
 
-export function insideAlmond(center: Point, almond: Almond, point: Point, margin = 0): boolean {
+export function insideAlmond(center: Vec2, almond: Almond, point: Vec2, margin = 0): boolean {
   const { radius } = arc(almond);
   const offset = radius - almond.halfHeight;
   const dx = point.x - center.x;

@@ -111,18 +111,6 @@ export interface HillPalette {
   est: number;
 }
 
-const HILL_TOKENS = [
-  'herbe',
-  'herbeClaire',
-  'sable',
-  'sableClair',
-  'courbe',
-  'arbre',
-  'arbreClair',
-  'coussin',
-  'soleil',
-] as const;
-
 // The hill of Ambyss under the same four moments as SUN_PALETTES: it replaces sol and solClair on its ground only.
 export const HILL_PALETTES: Record<SunMoment, HillPalette> = {
   crepuscule: {
@@ -206,23 +194,19 @@ const STOPS: readonly (readonly [number, SunMoment])[] = [
 ];
 
 export function paletteAt(fraction: number): SunPalette {
-  return mixAt(SUN_PALETTES, PALETTE_TOKENS, fraction);
+  return momentAt(SUN_PALETTES, fraction);
 }
 
 export function sandAt(fraction: number): SandPalette {
-  return mixAt(SAND_PALETTES, ['sable', 'sableClair', 'ride'], fraction);
+  return momentAt(SAND_PALETTES, fraction);
 }
 
 export function canopyAt(fraction: number): CanopyPalette {
-  return mixAt(CANOPY_PALETTES, ['toile', 'corde', 'violet'], fraction);
+  return momentAt(CANOPY_PALETTES, fraction);
 }
 
 export function hillAt(fraction: number): HillPalette {
-  const { from, to, mix } = spanAt(fraction);
-  return {
-    ...mixAt(HILL_PALETTES, HILL_TOKENS, fraction),
-    est: HILL_PALETTES[from].est * (1 - mix) + HILL_PALETTES[to].est * mix,
-  };
+  return momentAt(HILL_PALETTES, fraction);
 }
 
 export function spanAt(fraction: number): { from: SunMoment; to: SunMoment; mix: number } {
@@ -236,17 +220,22 @@ export function spanAt(fraction: number): { from: SunMoment; to: SunMoment; mix:
   return { from, to, mix: (t - fromAt) / (toAt - fromAt) };
 }
 
-function mixAt<K extends string>(
-  palettes: Record<SunMoment, Record<K, string>>,
-  tokens: readonly K[],
+// A table of the four moments at an hour: its `#rrggbb` colors mixed channel by channel, its numbers linearly.
+export function momentAt<T extends Readonly<Record<keyof T, string | number>>>(
+  table: Record<SunMoment, T>,
   fraction: number,
-): Record<K, string> {
+): T {
   const { from, to, mix } = spanAt(fraction);
-  const mixed = {} as Record<K, string>;
-  for (const token of tokens) {
-    mixed[token] = mixHex(palettes[from][token], palettes[to][token], mix);
+  const mixed: Partial<Record<keyof T, string | number>> = {};
+  for (const key of Object.keys(table[from]) as (keyof T)[]) {
+    const a = table[from][key];
+    const b = table[to][key];
+    mixed[key] =
+      typeof a === 'number' && typeof b === 'number'
+        ? a * (1 - mix) + b * mix
+        : mixHex(String(a), String(b), mix);
   }
-  return mixed;
+  return mixed as T;
 }
 
 export function lightAt(fraction: number): Light {

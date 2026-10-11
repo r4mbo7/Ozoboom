@@ -1,10 +1,6 @@
-import { SPEAKER_REACH } from '../data/sets';
+import { DOME_SCALE as SCALE, SPEAKER_REACH } from '../data/sets';
 import type { ObstacleDefinition, SetDefinition } from '../data/types';
-
-export interface Point {
-  x: number;
-  y: number;
-}
+import type { Vec2 } from '../shared/vec';
 
 export interface GiantArm {
   readonly stones: readonly ObstacleDefinition[];
@@ -17,7 +13,7 @@ export interface GiantLayout {
 
 export interface ArmPath {
   // Shoulder, the stones the arm runs over, then the hand on the entrance axis.
-  readonly points: readonly Point[];
+  readonly points: readonly Vec2[];
   // Stones nearer the giant's axis than its shoulder: they lie under the torso.
   readonly underTorso: readonly ObstacleDefinition[];
 }
@@ -25,8 +21,6 @@ export interface ArmPath {
 const TAU = Math.PI * 2;
 const CROWN_MARGIN = 1.15;
 const DIAGONALS = [-0.75, -0.25, 0.25, 0.75].map((turn) => turn * Math.PI);
-// The mock-up (1200 x 900) is scaled by 10/9 around the core.
-export const SCALE = 10 / 9;
 export const SHOULDER = { x: 398, y: 32 } as const;
 const HAND_REACH = 420 * SCALE;
 
@@ -36,7 +30,7 @@ function wrap(angle: number): number {
 
 // The crown is the nearest ring of obstacles to the core; what lies beyond it are the giants' arm stones. Each stone
 // goes to the nearest diagonal, on the side of it that its angle falls, and an arm lists its stones from the body out.
-export function layGiants(obstacles: readonly ObstacleDefinition[], center: Point): GiantLayout[] {
+export function layGiants(obstacles: readonly ObstacleDefinition[], center: Vec2): GiantLayout[] {
   const polar = obstacles.map((stone) => ({
     stone,
     distance: Math.hypot(stone.x - center.x, stone.y - center.y),
@@ -61,9 +55,9 @@ export function layGiants(obstacles: readonly ObstacleDefinition[], center: Poin
 
 // The arm leaves the shoulder, runs over its stones and ends on the entrance axis, as far out as its last stone:
 // there it meets the hand of the neighbouring giant.
-export function armPath(giant: GiantLayout, center: Point, arm: 0 | 1): ArmPath {
+export function armPath(giant: GiantLayout, center: Vec2, arm: 0 | 1): ArmPath {
   const side = arm === 0 ? -1 : 1;
-  const polar = (radius: number, angle: number): Point => ({
+  const polar = (radius: number, angle: number): Vec2 => ({
     x: center.x + Math.cos(angle) * radius,
     y: center.y + Math.sin(angle) * radius,
   });
@@ -72,7 +66,7 @@ export function armPath(giant: GiantLayout, center: Point, arm: 0 | 1): ArmPath 
     Math.hypot(SHOULDER.x, SHOULDER.y) * SCALE,
     giant.angle + side * shoulderOffset,
   );
-  const offset = (stone: Point): number =>
+  const offset = (stone: Vec2): number =>
     Math.abs(wrap(Math.atan2(stone.y - center.y, stone.x - center.x) - giant.angle));
   const { stones } = giant.arms[arm];
   const along = stones.filter((stone) => offset(stone) > shoulderOffset);
@@ -85,7 +79,7 @@ export function armPath(giant: GiantLayout, center: Point, arm: 0 | 1): ArmPath 
   };
 }
 
-export interface Disc extends Point {
+export interface Disc extends Vec2 {
   readonly radius: number;
 }
 
@@ -109,7 +103,7 @@ const MAX_NUDGES = 14;
 const GRID = 20 * SCALE;
 const GRID_RINGS = 8;
 
-function clearance(at: Point, reach: number, avoid: readonly Disc[]): number {
+function clearance(at: Vec2, reach: number, avoid: readonly Disc[]): number {
   return Math.min(
     ...avoid.map((disc) => Math.hypot(at.x - disc.x, at.y - disc.y) - disc.radius - reach),
     Infinity,
@@ -117,7 +111,7 @@ function clearance(at: Point, reach: number, avoid: readonly Disc[]): number {
 }
 
 // The first candidate whose cluster clears every disc; when none does, the one that clears them best.
-function firstClear(candidates: readonly Point[], reach: number, avoid: readonly Disc[]): Point {
+function firstClear(candidates: readonly Vec2[], reach: number, avoid: readonly Disc[]): Vec2 {
   let best = candidates[0] ?? { x: 0, y: 0 };
   let bestClearance = -Infinity;
   for (const candidate of candidates) {
@@ -136,10 +130,10 @@ function firstClear(candidates: readonly Point[], reach: number, avoid: readonly
 // Two clusters per giant, a fifteenth of a turn either side of its axis, slid along the arc off any disc to avoid.
 export function giantClusters(
   giants: readonly GiantLayout[],
-  center: Point,
+  center: Vec2,
   avoid: readonly Disc[],
   spread: number,
-): Point[] {
+): Vec2[] {
   const reach = clusterReach(spread);
   const nudges = Array.from({ length: MAX_NUDGES * 2 + 1 }, (_, index) =>
     index === 0 ? 0 : (index % 2 === 1 ? 1 : -1) * Math.ceil(index / 2),
@@ -159,8 +153,8 @@ export function giantClusters(
 }
 
 // A corner cluster keeps its spot unless a disc covers it: then the nearest clear spot on a grid around it.
-export function clearSpot(at: Point, spread: number, avoid: readonly Disc[]): Point {
-  const around: Point[] = [];
+export function clearSpot(at: Vec2, spread: number, avoid: readonly Disc[]): Vec2 {
+  const around: Vec2[] = [];
   for (let dy = -GRID_RINGS; dy <= GRID_RINGS; dy += 1) {
     for (let dx = -GRID_RINGS; dx <= GRID_RINGS; dx += 1) {
       around.push({ x: at.x + dx * GRID, y: at.y + dy * GRID });

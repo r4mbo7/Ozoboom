@@ -1,17 +1,9 @@
 import { Container, Graphics } from 'pixi.js';
+import { DOME_SCALE as SCALE } from '../data/sets';
 import type { SetDefinition } from '../data/types';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
-import {
-  PANELS,
-  RIBS,
-  RIB_FROM,
-  RING,
-  SCALE,
-  TWINKLE_GROUPS,
-  crownPosts,
-  garlands,
-} from './dome-layout';
+import { PANELS, RIBS, RIB_FROM, RING, TWINKLE_GROUPS, crownPosts, garlands } from './dome-layout';
 import type { Frame } from './frame';
 import { mixColor } from './ground-sun';
 import { setTint } from './util';
@@ -23,7 +15,7 @@ const PANEL_TOKENS = ['mage', 'turquoise', 'or', 'healer'] as const;
 
 // The decor of a stage with `decor: 'dome'`: a filigree dome of thin ribs, garlands and UV panels laid under the
 // fight, a ring of round posts as wide as the stage's obstacles. Drawn once white, then tinted.
-export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefinition>): Family {
+export function createDome(ctx: RenderContext): Family {
   const root = new Container();
   ctx.layers.decor.addChild(root);
   const panels = PANEL_TOKENS.map(() => new Graphics());
@@ -36,7 +28,6 @@ export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefi
 
   let drawnKey = '';
   let styledAt = Number.NaN;
-  let styledAdditive: boolean | null = null;
 
   function draw(set: SetDefinition, seed: number): void {
     const center = { x: set.arena.width / 2, y: set.arena.height / 2 };
@@ -95,7 +86,6 @@ export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefi
   function style(frame: Frame): void {
     const { palette, light } = frame;
     styledAt = frame.fraction;
-    styledAdditive = light.additive;
     const wood = mixColor(palette.or, DARK_WOOD, 0.45);
     const mode = light.additive ? 'add' : 'normal';
     for (const [index, panel] of panels.entries()) {
@@ -114,9 +104,9 @@ export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefi
 
   return {
     update(state: SimState, _alpha: number, frame: Frame): void {
-      const set = sets.get(state.setId);
-      root.visible = set?.decor === 'dome';
-      if (!root.visible || set === undefined) {
+      const { set } = frame;
+      root.visible = set.decor === 'dome';
+      if (!root.visible) {
         return;
       }
       const key = `${set.id} ${String(state.seed)}`;
@@ -124,7 +114,7 @@ export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefi
         drawnKey = key;
         draw(set, state.seed);
       }
-      if (frame.fraction !== styledAt || frame.light.additive !== styledAdditive) {
+      if (frame.fraction !== styledAt) {
         style(frame);
       }
       for (const [index, shape] of garland.entries()) {

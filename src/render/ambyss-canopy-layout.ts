@@ -1,10 +1,10 @@
 import { CANOPY, ROPE_LENGTH, almondEdge } from './ambyss-layout';
-import type { Point } from './dome-layout';
+import type { Vec2 } from '../shared/vec';
 
 export type SpiralColor = 'mage' | 'turquoise' | 'or' | 'tank' | 'healer' | 'violet';
 
 export interface Spiral {
-  readonly center: Point;
+  readonly center: Vec2;
   readonly radius: number;
   readonly turns: number;
   readonly width: number;
@@ -13,17 +13,17 @@ export interface Spiral {
 }
 
 export interface Curve {
-  readonly from: Point;
-  readonly control: Point;
-  readonly to: Point;
+  readonly from: Vec2;
+  readonly control: Vec2;
+  readonly to: Vec2;
 }
 
 export interface CanopyLayout {
-  readonly anchors: readonly Point[];
+  readonly anchors: readonly Vec2[];
   readonly scallops: readonly Omit<Curve, 'from'>[];
-  readonly masts: readonly [Point, Point];
+  readonly masts: readonly [Vec2, Vec2];
   readonly seams: readonly Curve[];
-  readonly ropes: readonly { from: Point; to: Point; angle: number }[];
+  readonly ropes: readonly { from: Vec2; to: Vec2; angle: number }[];
   readonly spirals: readonly Spiral[];
 }
 
@@ -57,8 +57,8 @@ const SPIRALS: readonly (readonly [
   [-330, 70, 1.4, 70, 10, false, 'healer'],
 ];
 
-export function canopyLayout(center: Point): CanopyLayout {
-  const anchors: Point[] = [
+export function canopyLayout(center: Vec2): CanopyLayout {
+  const anchors: Vec2[] = [
     { x: center.x - CANOPY.halfWidth, y: center.y },
     { x: center.x + CANOPY.halfWidth, y: center.y },
   ];
@@ -67,7 +67,7 @@ export function canopyLayout(center: Point): CanopyLayout {
       anchors.push(almondEdge(center, CANOPY, span / SPANS_PER_ARC, north));
     }
   }
-  const bearing = ({ x, y }: Point) => Math.atan2(y - center.y, x - center.x);
+  const bearing = ({ x, y }: Vec2) => Math.atan2(y - center.y, x - center.x);
   anchors.sort((a, b) => bearing(a) - bearing(b));
 
   const scallops = anchors.map((from, index) => {
@@ -82,7 +82,7 @@ export function canopyLayout(center: Point): CanopyLayout {
     };
   });
 
-  const masts: [Point, Point] = [
+  const masts: [Vec2, Vec2] = [
     { x: center.x - MAST_SPREAD * SCALE_X, y: center.y },
     { x: center.x + MAST_SPREAD * SCALE_X, y: center.y },
   ];
@@ -113,7 +113,7 @@ export function canopyLayout(center: Point): CanopyLayout {
   return { anchors, scallops, masts, seams, ropes, spirals };
 }
 
-export function spiralPoints(spiral: Spiral): Point[] {
+export function spiralPoints(spiral: Spiral): Vec2[] {
   const steps = Math.round(spiral.turns * SPIRAL_STEPS_PER_TURN);
   const direction = spiral.clockwise ? 1 : -1;
   return Array.from({ length: steps + 1 }, (_, step) => {

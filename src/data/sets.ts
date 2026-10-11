@@ -1,8 +1,9 @@
 import { rotate, unitFromAngle } from '../shared/angle';
 import { TICKS_PER_BAR } from '../shared/tempo';
+import type { Vec2 } from '../shared/vec';
 import type { ObstacleDefinition, SetDefinition, SpawnRule } from './types';
 
-const MAIN_STAGE: SetDefinition = {
+export const MAIN_STAGE: SetDefinition = {
   id: 'soiree-v0',
   name: 'Main stage',
   style: 'Psytrance full-on',
@@ -128,13 +129,8 @@ const MAIN_STAGE: SetDefinition = {
 
 const DOME_TICKS_PER_BEAT = 18;
 
-interface Point {
-  x: number;
-  y: number;
-}
-
 interface CrownShape {
-  center: Point;
+  center: Vec2;
   radius: number;
   posts: number;
   postRadius: number;
@@ -142,10 +138,10 @@ interface CrownShape {
 }
 
 interface ArmsShape {
-  center: Point;
+  center: Vec2;
   giants: number;
   firstGiantRadians: number;
-  curve: readonly [Point, Point, Point, Point];
+  curve: readonly [Vec2, Vec2, Vec2, Vec2];
   stoneRadius: number;
   gap: number;
   stonesPerSide: number;
@@ -170,11 +166,11 @@ function crownObstacles(shape: CrownShape): ObstacleDefinition[] {
 
 const ARM_SAMPLES = 400;
 
-function distance(a: Point, b: Point): number {
+function distance(a: Vec2, b: Vec2): number {
   return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
-function bezierAt([p0, p1, p2, p3]: ArmsShape['curve'], t: number): Point {
+function bezierAt([p0, p1, p2, p3]: ArmsShape['curve'], t: number): Vec2 {
   const u = 1 - t;
   const a = u * u * u;
   const b = 3 * u * u * t;
@@ -188,13 +184,13 @@ function bezierAt([p0, p1, p2, p3]: ArmsShape['curve'], t: number): Point {
 
 // Stones one chord apart along the curve, the first one on the giant's axis at the curve's start
 // distance, then stonesPerSide on each side of the axis (the curve and its mirror image).
-function armStones(shape: ArmsShape): Point[] {
+function armStones(shape: ArmsShape): Vec2[] {
   const chord = 2 * shape.stoneRadius + shape.gap;
   const curve = Array.from({ length: ARM_SAMPLES + 1 }, (_, i) =>
     bezierAt(shape.curve, i / ARM_SAMPLES),
   );
-  const stones: Point[] = [];
-  let last: Point = { x: shape.curve[0].x, y: 0 };
+  const stones: Vec2[] = [];
+  let last: Vec2 = { x: shape.curve[0].x, y: 0 };
   let next = 1;
   while (stones.length < shape.stonesPerSide) {
     const from = curve[next - 1];
@@ -222,7 +218,7 @@ function armsObstacles(shape: ArmsShape): ObstacleDefinition[] {
   const obstacles: ObstacleDefinition[] = [];
   for (let giant = 0; giant < shape.giants; giant++) {
     const radians = shape.firstGiantRadians + (giant * 2 * Math.PI) / shape.giants;
-    const place = (point: Point): ObstacleDefinition => {
+    const place = (point: Vec2): ObstacleDefinition => {
       const world = rotate(point, radians);
       return {
         x: Math.round(shape.center.x + world.x),
@@ -244,7 +240,7 @@ function armsObstacles(shape: ArmsShape): ObstacleDefinition[] {
 // 38 between two of them: the biggest player (18) fits, the heavy bad vibes (20) do not. The four
 // axes stay open for a boss (48). Arm stones are 18 wide with the same 38 gaps and stop 70 short of
 // each axis, under the joined hands.
-const DOME_SCALE = 10 / 9;
+export const DOME_SCALE = 10 / 9;
 const DOME_CENTER = { x: 800, y: 500 };
 
 const DOME_OBSTACLES: readonly ObstacleDefinition[] = [

@@ -8,6 +8,7 @@ import {
   canopyAt,
   hillAt,
   lightAt,
+  momentAt,
   paletteAt,
   relativeLuminance,
   sandAt,
@@ -145,5 +146,21 @@ describe('spanAt', () => {
     expect(spanAt(0.4)).toMatchObject({ from: 'nuit', to: 'nuit' });
     expect(spanAt(0.725)).toEqual({ from: 'nuit', to: 'aube', mix: 0.5 });
     expect(spanAt(1)).toEqual({ from: 'aube', to: 'jour', mix: 1 });
+  });
+});
+
+describe('momentAt', () => {
+  it('mixes the colors of a table channel by channel and its numbers linearly', () => {
+    const table = {
+      crepuscule: { color: '#000000', share: 0 },
+      nuit: { color: '#204060', share: 1 },
+      aube: { color: '#ffffff', share: 0.5 },
+      jour: { color: '#ffffff', share: 0.5 },
+    };
+
+    const mixed = momentAt(table, 0.125);
+
+    expect(mixed).toEqual({ color: '#102030', share: 0.5 });
+    expect(momentAt(table, 0.4)).toEqual(table.nuit);
   });
 });

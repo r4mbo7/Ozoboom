@@ -1,11 +1,9 @@
 import { nextFloat, seedRng } from '../shared/prng';
 import type { Arena } from '../sim/state';
-import { type Almond, FLOOR, almondEdge } from './ambyss-layout';
-import type { Point } from './dome-layout';
+import { type Almond, FLOOR, SCALE, almondEdge } from './ambyss-layout';
+import type { Vec2 } from '../shared/vec';
 import type { Tree } from './ground-layout';
 
-// The hill was drawn around an almond 346 wide: its measures grow with FLOOR.
-export const SCALE = FLOOR.halfWidth / 346.4;
 export const AISLE = { x: 20 * SCALE, y: 16 * SCALE } as const;
 export const CROWD = [0xc9a0b8, 0xa0b8c9, 0xc9c0a0, 0xa0c9b0, 0xb8a0c9] as const;
 
@@ -25,14 +23,14 @@ const CLUMPS = [
 const CLUMP_SPREAD = { x: 110 * SCALE, y: 70 * SCALE } as const;
 const TREE_RADIUS = [18 * SCALE, 34 * SCALE] as const;
 
-export interface Seat extends Point {
+export interface Seat extends Vec2 {
   // Turned so that its front faces the core.
   readonly angle: number;
   readonly festivalGoer: number | null;
 }
 
 // Red cushions in curved rows, smaller almonds inside the floor, an aisle along each axis.
-export function seatsOf(center: Point, seed: number): Seat[] {
+export function seatsOf(center: Vec2, seed: number): Seat[] {
   const rng = seedRng((seed + 7121) >>> 0);
   const seats: Seat[] = [];
   for (const share of ROWS) {

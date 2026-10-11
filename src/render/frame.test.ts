@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SETS } from '../data/sets';
 import type { SetDefinition } from '../data/types';
 import { lightAt, paletteAt } from '../shared/palette';
-import { setFraction } from '../sim/lineup';
+import { setFraction, setTempo } from '../sim/lineup';
 import { createFixtureState } from './fixture';
 import { pinFraction } from './fixture-time';
 import { advanceFrame, createFrame } from './frame';
@@ -40,6 +40,19 @@ describe('advanceFrame', () => {
     expect(frame.fraction).toBeCloseTo(target, 2);
     expect(frame.palette).toEqual(expected);
     expect(frame.light).toEqual(lightAt(frame.fraction));
+  });
+
+  it('carries the set played and its tempo', () => {
+    const dome = SETS.find((set) => set.id === 'dome');
+    if (dome === undefined) {
+      throw new Error('Missing set');
+    }
+    const { frame, state } = frameAt(0.4);
+
+    advanceFrame(frame, dome, state, 0);
+
+    expect(frame.set).toBe(dome);
+    expect(frame.tempo).toBe(setTempo(dome));
   });
 
   it('follows the tick and its interpolation', () => {

@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import type { SetDefinition } from '../data/types';
-import { type SunMoment, canopyAt, spanAt } from '../shared/palette';
+import { type SunMoment, canopyAt, momentAt } from '../shared/palette';
 import type { SimState } from '../sim/state';
 import {
   type Curve,
@@ -9,8 +9,9 @@ import {
   canopyLayout,
   spiralPoints,
 } from './ambyss-canopy-layout';
+import { baseScale } from './camera';
 import type { Family, RenderContext } from './context';
-import type { Point } from './dome-layout';
+import type { Vec2 } from '../shared/vec';
 import type { Frame } from './frame';
 import { parseHexColor } from './palette';
 import { setTint } from './util';
@@ -37,7 +38,7 @@ const SHOWING: Record<SunMoment, { sail: number; paint: number }> = {
 
 function scalloped(
   shape: Graphics,
-  anchors: readonly Point[],
+  anchors: readonly Vec2[],
   spans: readonly Omit<Curve, 'from'>[],
 ) {
   const [first] = anchors;
@@ -53,25 +54,32 @@ function scalloped(
 
 // The decor of a stage with `decor: 'ambyss'`: a stretched sail on two masts, laid very translucent over the
 // fight, guy ropes down to pegs on the slope, painted spirals that glow at night. Drawn once white, then tinted.
-export function createAmbyss(ctx: RenderContext, sets: ReadonlyMap<string, SetDefinition>): Family {
+export function createAmbyss(ctx: RenderContext): Family {
   const root = new Container();
   ctx.layers.decor.addChild(root);
   const ropes = new Graphics();
   const pegs = new Graphics();
   const sail = new Graphics();
-  const clip = new Graphics();
   const paint = new Container();
-  const spirals = SPIRAL_COLORS.map(() => new Graphics());
+  // Each spiral is baked with its own clip into a texture, tinted as a whole: one sprite instead of stacked strokes.
+  const spirals = SPIRAL_COLORS.map(() => {
+    const layer = new Container();
+    const clip = new Graphics();
+    const shape = new Graphics();
+    shape.mask = clip;
+    layer.addChild(clip, shape);
+    return { layer, clip, shape };
+  });
   const seams = new Graphics();
   const edge = new Graphics();
   const masts = new Graphics();
   const lights = new Graphics();
-  paint.addChild(...spirals);
-  paint.mask = clip;
-  root.addChild(ropes, pegs, sail, clip, paint, seams, edge, masts, lights);
+  paint.addChild(...spirals.map(({ layer }) => layer));
+  root.addChild(ropes, pegs, sail, paint, seams, edge, masts, lights);
 
   let drawnId = '';
   let styledAt = Number.NaN;
+  let bakedKey = '';
 
   function draw(set: SetDefinition): void {
     const center = { x: set.arena.width / 2, y: set.arena.height / 2 };
@@ -99,10 +107,9 @@ export function createAmbyss(ctx: RenderContext, sets: ReadonlyMap<string, SetDe
 
     sail.clear();
     scalloped(sail, canopy.anchors, canopy.scallops).fill(WHITE);
-    clip.clear();
-    scalloped(clip, canopy.anchors, canopy.scallops).fill(WHITE);
-
-    for (const [index, shape] of spirals.entries()) {
+    for (const [index, { clip, shape }] of spirals.entries()) {
+      clip.clear();
+      scalloped(clip, canopy.anchors, canopy.scallops).fill(WHITE);
       shape.clear();
       for (const spiral of canopy.spirals.filter(({ color }) => color === SPIRAL_COLORS[index])) {
         // Segments shorter than the brush at the very heart of a spiral would spike its joins.
@@ -156,19 +163,16 @@ export function createAmbyss(ctx: RenderContext, sets: ReadonlyMap<string, SetDe
     const canopy = canopyAt(frame.fraction);
     const toile = parseHexColor(canopy.toile);
     const corde = parseHexColor(canopy.corde);
-    const { from, to, mix } = spanAt(frame.fraction);
-    const showing = (key: 'sail' | 'paint') =>
-      SHOWING[from][key] + (SHOWING[to][key] - SHOWING[from][key]) * mix;
+    const showing = momentAt(SHOWING, frame.fraction);
     const mode = light.additive ? 'add' : 'normal';
 
     setTint(sail, toile);
-    sail.alpha = showing('sail');
-    paint.alpha = showing('paint');
+    sail.alpha = showing.sail;
+    paint.alpha = showing.paint;
     paint.visible = paint.alpha > 0;
-    for (const [index, shape] of spirals.entries()) {
+    for (const [index, { layer }] of spirals.entries()) {
       const color = SPIRAL_COLORS[index] ?? 'violet';
-      setTint(shape, color === 'violet' ? parseHexColor(canopy.violet) : palette[color]);
-      shape.blendMode = mode;
+      setTint(layer, color === 'violet' ? parseHexColor(canopy.violet) : palette[color]);
     }
     for (const shape of [ropes, pegs, seams, edge, masts]) {
       setTint(shape, corde);
@@ -178,18 +182,32 @@ export function createAmbyss(ctx: RenderContext, sets: ReadonlyMap<string, SetDe
   }
 
   return {
-    update(state: SimState, _alpha: number, frame: Frame): void {
-      const set = sets.get(state.setId);
-      root.visible = set?.decor === 'ambyss';
-      if (!root.visible || set === undefined) {
+    update(_state: SimState, _alpha: number, frame: Frame): void {
+      const { set } = frame;
+      root.visible = set.decor === 'ambyss';
+      if (!root.visible) {
         return;
       }
       if (set.id !== drawnId) {
         drawnId = set.id;
+        bakedKey = '';
         draw(set);
       }
       if (frame.fraction !== styledAt) {
         style(frame);
+      }
+      // Baked as dense as the screen shows them at the usual zoom; drawn again only when that or the blend changes.
+      const mode = frame.light.additive ? 'add' : 'normal';
+      const resolution = baseScale(frame.camera.screenHeight) * frame.resolution;
+      const key = `${mode} ${String(resolution)}`;
+      if (key !== bakedKey) {
+        bakedKey = key;
+        for (const { layer, shape } of spirals) {
+          shape.blendMode = mode;
+          layer.blendMode = mode;
+          layer.cacheAsTexture({ resolution });
+          layer.updateCacheTexture();
+        }
       }
     },
     destroy(): void {
