@@ -20,10 +20,9 @@ const WHITE = 0xffffff;
 const TAU = Math.PI * 2;
 const DARK_WOOD = 0x2a1a0c;
 const PANEL_TOKENS = ['mage', 'turquoise', 'or', 'healer'] as const;
-const POST_SIZE = 30;
 
-// The decor of a stage with `decor: 'dome'`: a see-through dome of ribs, garlands and UV panels laid
-// under the fight, a ring of posts where the stage's obstacles are. Drawn once white, then tinted.
+// The decor of a stage with `decor: 'dome'`: a filigree dome of thin ribs, garlands and UV panels laid under the
+// fight, a ring of round posts as wide as the stage's obstacles. Drawn once white, then tinted.
 export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefinition>): Family {
   const root = new Container();
   ctx.layers.dome.addChild(root);
@@ -31,10 +30,9 @@ export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefi
   const garland = [0, ...Array.from({ length: TWINKLE_GROUPS }, (_, i) => i + 1)].map(
     () => new Graphics(),
   );
-  const outline = new Graphics();
   const ribs = new Graphics();
   const posts = new Graphics();
-  root.addChild(...panels, outline, ribs, ...garland, posts);
+  root.addChild(...panels, ribs, ...garland, posts);
 
   let drawnKey = '';
   let styledAt = Number.NaN;
@@ -60,26 +58,21 @@ export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefi
         panel.arc(center.x, center.y, PANELS.from, a1, a0, true);
         panel.closePath();
       }
-      panel.fill({ color: WHITE, alpha: 0.18 });
+      panel.fill({ color: WHITE, alpha: 0.1 });
       for (let rib = index; rib < RIBS; rib += PANEL_TOKENS.length) {
         const [x, y] = at((PANELS.from + PANELS.to) / 2, (rib + 0.5) * step);
-        panel.circle(x, y, 8 * SCALE);
+        panel.circle(x, y, 5 * SCALE);
       }
-      panel.stroke({ width: 1.4 * SCALE, color: WHITE, alpha: 0.8 });
+      panel.stroke({ width: SCALE, color: WHITE, alpha: 0.3 });
     }
 
-    for (const [shape, grow, alpha] of [
-      [outline, 2, 0.5],
-      [ribs, 0, 0.7],
-    ] as const) {
-      shape.clear();
-      for (let rib = 0; rib < RIBS; rib += 1) {
-        shape.moveTo(...at(RIB_FROM, rib * step)).lineTo(...at(RING, rib * step));
-      }
-      shape.stroke({ width: (3 + grow) * SCALE, color: WHITE, alpha, cap: 'round' });
-      shape.circle(center.x, center.y, RING);
-      shape.stroke({ width: (7 + grow) * SCALE, color: WHITE, alpha });
+    ribs.clear();
+    for (let rib = 0; rib < RIBS; rib += 1) {
+      ribs.moveTo(...at(RIB_FROM, rib * step)).lineTo(...at(RING, rib * step));
     }
+    ribs.stroke({ width: 1.2 * SCALE, color: WHITE, alpha: 0.6, cap: 'round' });
+    ribs.circle(center.x, center.y, RING);
+    ribs.stroke({ width: 3.5 * SCALE, color: WHITE });
 
     for (const shape of garland) {
       shape.clear();
@@ -89,19 +82,13 @@ export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefi
     }
 
     posts.clear();
-    const half = POST_SIZE / 2;
     for (const post of crownPosts(set.obstacles ?? [], center)) {
-      const angle = Math.atan2(post.y - center.y, post.x - center.x);
-      const corners = [
-        [-half, -half],
-        [half, -half],
-        [half, half],
-        [-half, half],
-      ].flatMap(([dx = 0, dy = 0]) => [
-        post.x + dx * Math.cos(angle) - dy * Math.sin(angle),
-        post.y + dx * Math.sin(angle) + dy * Math.cos(angle),
-      ]);
-      posts.poly(corners).fill(WHITE).poly(corners).stroke({ width: 1.5, color: DARK_WOOD });
+      posts.circle(post.x, post.y, post.radius - 1.5).fill({ color: WHITE, alpha: 0.45 });
+      posts.circle(post.x, post.y, post.radius - 1.5).stroke({ width: 3, color: WHITE });
+      posts.circle(post.x, post.y, post.radius).stroke({ width: 1, color: DARK_WOOD, alpha: 0.5 });
+      posts.circle(post.x, post.y, post.radius * 0.6);
+      posts.circle(post.x, post.y, post.radius * 0.25);
+      posts.stroke({ width: 1.2, color: WHITE, alpha: 0.6 });
     }
   }
 
@@ -114,11 +101,10 @@ export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefi
     for (const [index, panel] of panels.entries()) {
       setTint(panel, palette[PANEL_TOKENS[index] ?? 'or']);
       panel.blendMode = mode;
-      panel.alpha = light.additive ? 1 : 0.85;
+      panel.alpha = light.additive ? 1 : 0.6;
     }
     ribs.tint = wood;
-    outline.tint = palette.texte;
-    outline.visible = !light.additive;
+    ribs.alpha = light.additive ? 0.75 : 0.5;
     posts.tint = wood;
     for (const shape of garland) {
       shape.tint = palette.noyau;

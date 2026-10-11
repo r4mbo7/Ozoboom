@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SETS } from '../data/sets';
-import { layGiants } from './giants-layout';
+import { armPath, layGiants } from './giants-layout';
 
 const dome = SETS.find((set) => set.id === 'dome');
 
@@ -16,6 +16,27 @@ describe('layGiants', () => {
     const reach = (stone: { x: number; y: number }) => Math.hypot(stone.x - 800, stone.y - 500);
     expect(first?.arms[0].stones.length).toBeGreaterThan(0);
     expect(reach(first?.arms[0].stones[0] ?? { x: 0, y: 0 })).toBeGreaterThan(400);
+  });
+
+  it('runs each arm over its stones, and joins the hands of two neighbours over each entrance', () => {
+    const center = { x: 800, y: 500 };
+    const giants = layGiants(dome?.obstacles ?? [], center);
+
+    const arms = giants.flatMap((giant) =>
+      ([0, 1] as const).map((arm) => ({
+        stones: giant.arms[arm].stones,
+        ...armPath(giant, center, arm),
+      })),
+    );
+
+    for (const { stones, points, underTorso } of arms) {
+      expect(points.length - 2 + underTorso.length).toBe(stones.length);
+    }
+    const hands = arms.map(({ points }) => points.at(-1) ?? center);
+    expect(new Set(hands.map(({ x, y }) => `${x.toFixed(0)},${y.toFixed(0)}`)).size).toBe(4);
+    expect(hands.every(({ x, y }) => Math.abs(x - 800) < 0.5 || Math.abs(y - 500) < 0.5)).toBe(
+      true,
+    );
   });
 
   it('leaves out the posts of the crown', () => {

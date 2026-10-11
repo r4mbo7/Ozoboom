@@ -19,7 +19,7 @@ export const TWINKLE_GROUPS = 3;
 export const SCALE = 10 / 9;
 export const RING = 300 * SCALE;
 export const RIB_FROM = 56 * SCALE;
-export const PANELS = { from: 236 * SCALE, to: 282 * SCALE } as const;
+export const PANELS = { from: 252 * SCALE, to: 280 * SCALE } as const;
 export const LIGHTS = { from: 74 * SCALE, to: 232 * SCALE } as const;
 
 // The crown's posts are the obstacles on the ring; the giants' arms lie further out.
