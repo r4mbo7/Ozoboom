@@ -6,11 +6,13 @@ Jouer : [r4mbo7.github.io/Ozoboom](https://r4mbo7.github.io/Ozoboom/)
 
 ## État
 
-Au 2026-10-05 : la V0.2 est assemblée, il reste à la jouer à distance. Trois classes (la Luxiole, le Nounours, l'Hygie), seul ou de 2 à 4 amis, sur un même écran ou en ligne : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. Le nom vient d'Ozora et de Boom, deux festivals de psytrance.
+Au 2026-10-05 : la V0.2 est assemblée, il reste à la jouer à distance. Trois classes (la Luxiole, le Nounours, l'Hygie), seul ou de 2 à 4 amis, sur un même écran ou en ligne : lumière du coucher au lever du soleil, bad vibes en masques, enceintes annexes, agrès de cirque, reliques. Le nom vient d'Ozora et de Boom, deux festivals de psytrance. Deux scènes au choix avant le set : la main stage au bord du lac, à 145 BPM, et le Dome, une coupole de bois sur le sable, à 96,7 BPM.
 
 ![Une partie à quatre, de nuit : la VJ, le roadie et le care, devenus depuis la Luxiole, le Nounours et l'Hygie, et une seconde VJ](docs/captures/coop-quatre-joueurs-nuit.png)
 
 ![La partie à l'aube : la Batterie à plat au dernier drop](docs/captures/moment-3-aube.png)
+
+![Le Dome de nuit : la couronne de poteaux, les géants champignons et le Couvre-feu au premier drop](docs/captures/dome-moment-2-nuit.png)
 
 ### Jouer à plusieurs
 
@@ -24,16 +26,17 @@ Au doigt, seul ou en ligne, de préférence tenu à l'horizontale. Un pouce sur 
 
 Pour jouer sans les barres du navigateur, ajouter le jeu à l'écran d'accueil (Safari : Partager puis « Sur l'écran d'accueil » ; Chrome : menu puis « Installer l'application ») et le lancer depuis son icône.
 
-Les autres captures (crépuscule, sunrise, chaque écran, le banc à 300 masques, la partie à quatre) sont dans [docs/captures](docs/captures).
+Les autres captures (crépuscule, sunrise, le Dome aux quatre moments, chaque écran dont le choix de la scène, le banc à 300 masques, la partie à quatre) sont dans [docs/captures](docs/captures).
 
-| Jalon      | Contenu                                                                                                                                                                                                                                    | État                                        |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| Fondations | Vision, direction artistique, game design, architecture, contrats, outillage, CI et déploiement                                                                                                                                            | fait                                        |
-| V0         | Prototype solo jouable : mage, vagues, deux pièges, clavier et manette, musique synthétisée, bouton « Ton avis » ([exigences](docs/brainstorms/2026-10-04-v0-requirements.md), [plan](docs/plans/v0.md))                                   | fait                                        |
-| V0.1       | Direction artistique « Cycle du soleil », bad vibes en masques, enceintes annexes et Volume, agrès de cirque, raretés, fusions, reliques ([exigences](docs/brainstorms/2026-10-04-v0.1-requirements.md), [plan](docs/plans/v0.1.md))       | fait                                        |
-| V0.2       | Trois classes, coop locale, coop en ligne par lien, pair à pair en lockstep ([exigences](docs/brainstorms/2026-10-05-v0.2-requirements.md), [plan](docs/plans/v0.2.md), [ADR 0007](docs/adr/0007-coop-en-ligne-lockstep-webrtc-peerjs.md)) | assemblée, vérifications à distance à faire |
-| V1         | Tous les pièges, équilibrage, tactile, mode radio, retours des joueurs ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))                                                                                                            | en cours : tactile fait                     |
-| V2         | Classement public : soirée du jour, scores vérifiés par rejeu                                                                                                                                                                              | à venir                                     |
+| Jalon      | Contenu                                                                                                                                                                                                                                               | État                                        |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Fondations | Vision, direction artistique, game design, architecture, contrats, outillage, CI et déploiement                                                                                                                                                       | fait                                        |
+| V0         | Prototype solo jouable : mage, vagues, deux pièges, clavier et manette, musique synthétisée, bouton « Ton avis » ([exigences](docs/brainstorms/2026-10-04-v0-requirements.md), [plan](docs/plans/v0.md))                                              | fait                                        |
+| V0.1       | Direction artistique « Cycle du soleil », bad vibes en masques, enceintes annexes et Volume, agrès de cirque, raretés, fusions, reliques ([exigences](docs/brainstorms/2026-10-04-v0.1-requirements.md), [plan](docs/plans/v0.1.md))                  | fait                                        |
+| V0.2       | Trois classes, coop locale, coop en ligne par lien, pair à pair en lockstep ([exigences](docs/brainstorms/2026-10-05-v0.2-requirements.md), [plan](docs/plans/v0.2.md), [ADR 0007](docs/adr/0007-coop-en-ligne-lockstep-webrtc-peerjs.md))            | assemblée, vérifications à distance à faire |
+| V1         | Tous les pièges, équilibrage, tactile, mode radio, retours des joueurs ([jalon](https://github.com/r4mbo7/Ozoboom/milestone/2))                                                                                                                       | en cours : tactile fait                     |
+| Le Dome    | Deuxième scène au choix : coupole de bois sur le sable, downtempo à 96,7 BPM, obstacles ([exigences](docs/brainstorms/2026-10-10-dome-requirements.md), [plan](docs/plans/dome.md), [ADR 0012](docs/adr/0012-le-tempo-est-une-donnee-de-la-scene.md)) | assemblé, à jouer                           |
+| V2         | Classement public : soirée du jour, scores vérifiés par rejeu                                                                                                                                                                                         | à venir                                     |
 
 ## Documentation
 

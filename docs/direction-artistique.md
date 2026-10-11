@@ -51,7 +51,8 @@ Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distingue
 - À plusieurs : le nom du joueur flotte au-dessus de lui, en Space Grotesk, à taille d'écran constante, dans la couleur de sa classe (fond sombre la nuit, contour sombre le jour) ; il n'y en a pas en solo. Un allié à terre garde sa teinte grise, un anneau de perles à la couleur de sa classe se remplit pendant la relève, un halo doux s'ouvre quand il se relève. Un joueur hors de l'écran est signalé par une flèche au bord, dans la couleur de sa classe. La caméra qui cadre tout le monde recule jusqu'aux trois cinquièmes de l'échelle d'un joueur, puis les flèches prennent le relais.
 - Bad vibes : des masques sombres de mauvaises humeurs, bordés d'un liseré clair, aux traits et aux yeux clairs, un visage par sorte (voir le bestiaire de `game-design.md`), reconnaissable en un coup d'œil à 16 pixels : la forme du masque et la bouche portent l'identité, les yeux l'intention. Chassée, une bad vibe sourit un temps puis éclate en couleurs. Les grandes figures des drops sont des masques plus grands et plus sévères.
 - Festivalier en détresse : masque pâle et inquiet, croix de soin qui pulse au-dessus. Il n'est pas sombre : c'est quelqu'un à aider.
-- Décor : rive du lac, arbres, ombres portées selon la position du soleil, reflets sur l'eau, lucioles la nuit.
+- Décor de la main stage : rive du lac, arbres, ombres portées selon la position du soleil, reflets sur l'eau, lucioles la nuit.
+- Décor du Dome, la scène Dome d'Ozora : sable à dunes et à grain, piste plus claire sous la coupole, teintes de sable aux quatre moments. La coupole est en filigrane pour laisser voir la piste : 24 côtes de bois depuis l'oculus, guirlandes, bande de panneaux peints aux UV, couronne de poteaux au sol. Quatre géants cosmiques à tête de champignon aux diagonales, dos à la scène, joignent leurs mains au-dessus des quatre grandes entrées ; des grappes de champignons luisent la nuit.
 - Les pièges ressemblent au matériel de festival : caisson de basse, laser, brumisateur, déco UV, stroboscope.
 - Pièges, couleur de leur effet : caisson `turquoise`, laser `mage`, brumisateur `healer`, déco UV `or`, stroboscope `texte`. Ramassables : vibes `or`, loot `turquoise` avec l'icône de son piège, et la bad vibe qui le porte en garde un halo. Noyau : la part allumée de l'anneau extérieur `or` est la vie restante.
 - Effets du Nounours et de l'Hygie, dans la couleur de leur classe : la charge laisse une comète derrière le Nounours et un anneau qui se resserre sur les bad vibes attirées, qui clignotent un temps (en couleur `or`, au plus un clignotement par temps) ; le soin est un anneau qui s'élargit, un reflet `healer` sur chaque allié soigné et un halo sur le noyau réparé ; une gerbe sur chaque allié relevé. En mode calme : pas de clignotement (la bad vibe garde un éclairage fixe), intensité réduite de moitié, durées allongées, moins d'éclats.
@@ -60,13 +61,18 @@ Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distingue
 
 ## Rythme
 
-Le tempo est celui du full-on psytrance : **145 BPM**. Un temps dure 413,8 ms, une mesure (4 temps) 1,655 s, une phrase de 16 mesures 26,5 s.
+Le tempo est celui de la scène ([ADR 0012](adr/0012-le-tempo-est-une-donnee-de-la-scene.md)) :
 
-Tout ce qui bouge est calé dessus : le noyau pulse sur le kick, les pièges tirent sur le temps, les vagues arrivent sur la mesure, le boss sur le drop. Les durées d'animation s'expriment en temps et en mesures, pas en millisecondes. Le module `src/shared/tempo.ts` est la source unique de ces conversions. L'heure, elle, avance avec le set entier : lente, elle ne pulse jamais.
+| Scène      | Tempo                          | Temps    | Mesure (4 temps) | Phrase (16 mesures) |
+| ---------- | ------------------------------ | -------- | ---------------- | ------------------- |
+| Main stage | **145 BPM**, full-on psytrance | 413,8 ms | 1,655 s          | 26,5 s              |
+| Le Dome    | **96,7 BPM**, les 2/3 de 145   | 620,7 ms | 2,48 s           | 39,7 s              |
+
+Tout ce qui bouge est calé dessus : le noyau pulse sur le kick, les pièges tirent sur le temps, les vagues arrivent sur la mesure, le boss sur le drop. Les durées d'animation s'expriment en temps et en mesures, pas en millisecondes. `setTempo(set)` de `src/sim/lineup.ts` donne ces conversions pour la scène jouée. L'heure, elle, avance avec le set entier : lente, elle ne pulse jamais.
 
 ## Son
 
-- Musique : psytrance (full-on ou progressive, 140 à 150 BPM), en couches qui s'épaississent avec les vagues et se vident au break avant le drop. En V0, la musique est synthétisée dans le navigateur (Web Audio), ce qui règle la question des droits et du poids.
+- Musique : chaque scène a ses morceaux. Main stage : psytrance (full-on ou progressive, 140 à 150 BPM). Dome : downtempo, dub et psybient à 96,7 BPM, avec darbouka, riq, ney, oud, kalimba, chœur, sirène dub et bol chantant, sous une réverbe de coupole de 3,6 s. En couches qui s'épaississent avec les vagues et se vident au break avant le drop. En V0, la musique est synthétisée dans le navigateur (Web Audio), ce qui règle la question des droits et du poids.
 - Effets : courts, tonals, dans la gamme du morceau. Les ennemis sont sourds (bruits mats, étouffés), les joueurs brillants (sons synthétiques, aigus).
 - Droits : uniquement des pistes libres (CC0, CC-BY) ou composées pour le jeu. Aucun morceau commercial.
 
@@ -101,6 +107,6 @@ Un jeu de lasers et de stroboscopes doit protéger les personnes photosensibles.
 
 ## Références
 
-- Festivals : Ozora (Dádpuszta, Hongrie) pour la scène principale en bois et les décos ; Boom (Idanha-a-Nova, Portugal) pour le lac, le Dance Temple et l'Alchemy Circle.
+- Festivals : Ozora (Dádpuszta, Hongrie) pour la scène principale en bois, les décos et le Dome ; Boom (Idanha-a-Nova, Portugal) pour le lac, le Dance Temple et l'Alchemy Circle.
 - Art : géométrie sacrée, flyers de soirées psytrance, ciels de coucher et de lever du soleil.
 - Jeux : Alba et Sky : Children of the Light (lumière du jour qui change), Journey, Vampire Survivors et Megabonk (lisibilité d'une horde).

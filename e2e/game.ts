@@ -233,3 +233,88 @@ export async function readGame(page: Page): Promise<GameSummary | null> {
     };
   }, FUSED_LEVELS);
 }
+
+// A player in the page drives the fake gamepad: aims the right stick at the nearest bad vibe and
+// fires, picks up the vibes and the loots, stays by the scene, places traps and novas the close
+// ones. It plays after every step of the game, so that a loaded machine, which draws fewer frames,
+// does not change how it plays. Every level offer is taken with the pad, until the game ends.
+export async function playWithPad(
+  page: Page,
+): Promise<{ status: SimState['status'] | undefined; upgrades: number }> {
+  await page.evaluate(() => {
+    const game = window.ozoboom;
+    const pad = window.fakePad;
+    if (game === undefined || pad === undefined) {
+      throw new Error('No game or no fake gamepad');
+    }
+    const TICKS_BETWEEN_TRAPS = 336;
+    let lastTrap = -TICKS_BETWEEN_TRAPS;
+    game.onStep = () => {
+      const { state } = game;
+      const player = state.players[0];
+      if (player === undefined) {
+        return;
+      }
+      const running = state.status === 'running';
+      const distance = (x: number, y: number) => Math.hypot(x - player.x, y - player.y);
+      const nearest = [...state.enemies].sort((a, b) => distance(a.x, a.y) - distance(b.x, b.y))[0];
+      const handFree = (player.hand?.length ?? 0) < 2;
+      const pickup = [...state.pickups, ...(handFree ? (state.loots ?? []) : [])]
+        .filter((candidate) => distance(candidate.x, candidate.y) < 350)
+        .sort((a, b) => distance(a.x, a.y) - distance(b.x, b.y))[0];
+      const goal = pickup ?? { x: state.core.x - 100, y: state.core.y };
+      const toGoal = distance(goal.x, goal.y);
+      pad.axes = [
+        running && toGoal > 20 ? (goal.x - player.x) / toGoal : 0,
+        running && toGoal > 20 ? (goal.y - player.y) / toGoal : 0,
+        nearest === undefined ? 0 : (nearest.x - player.x) / distance(nearest.x, nearest.y),
+        nearest === undefined ? 0 : (nearest.y - player.y) / distance(nearest.x, nearest.y),
+      ];
+      pad.buttons[7] = running && nearest !== undefined ? 1 : 0;
+      pad.buttons[6] =
+        running && state.enemies.some((enemy) => distance(enemy.x, enemy.y) < 140) ? 1 : 0;
+      if (!running) {
+        // The test taps A itself in the menus.
+      } else if (pad.buttons[0] === 1) {
+        pad.buttons[0] = 0;
+      } else if ((player.hand?.length ?? 0) > 0 && state.tick - lastTrap > TICKS_BETWEEN_TRAPS) {
+        pad.buttons[0] = 1;
+        lastTrap = state.tick;
+      }
+      if (state.status === 'won' || state.status === 'lost') {
+        pad.axes = [0, 0, 0, 0];
+        pad.buttons.fill(0);
+        game.onStep = null;
+      }
+    };
+  });
+
+  const upgrade = page.getByRole('region', { name: 'Choix d’amélioration' });
+  const firstCard = upgrade.getByRole('button').first();
+  let upgrades = 0;
+  let status = (await readGame(page))?.status;
+  while (status !== 'won' && status !== 'lost') {
+    if (status === 'choosingUpgrade') {
+      await expect(firstCard).toHaveAttribute('aria-current', 'true');
+      await tapButtonUntil(
+        page,
+        PAD.DpadRight,
+        async () => (await firstCard.getAttribute('aria-current')) === null,
+      );
+      // Two levels at once present two offers in a row: a choice shows as one more upgrade, not as a status.
+      const chosen = (await readGame(page))?.choices ?? 0;
+      await tapButtonUntil(
+        page,
+        PAD.A,
+        async () => ((await readGame(page))?.choices ?? 0) > chosen,
+      );
+      upgrades += 1;
+    }
+    await expect
+      .poll(async () => (await readGame(page))?.status, { timeout: 150_000 })
+      .not.toBe('running');
+    status = (await readGame(page))?.status;
+  }
+
+  return { status, upgrades };
+}

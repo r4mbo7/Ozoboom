@@ -4,7 +4,7 @@ import type { ObstacleDefinition, SetDefinition, SpawnRule } from './types';
 
 const MAIN_STAGE: SetDefinition = {
   id: 'soiree-v0',
-  name: "La soirée d'ouverture",
+  name: 'Main stage',
   style: 'Psytrance full-on',
   bpm: DEFAULT_BPM,
   trackIds: ['soiree-ouverture', 'brume-du-lac', 'grenouille-acide', 'goa-des-etoiles'],

@@ -19,7 +19,7 @@ Deux manières de tuer, **tranchées** : tirer directement sur les ennemis, et p
 
 ## Boucle de jeu
 
-Une partie dure 15 à 25 minutes et suit le set : des phrases de 16 mesures (26,5 s à 145 BPM) forment la montée, puis un break et un drop closent chaque palier, avec un boss sur le drop. Le boss arrive avec une escorte : les bad vibes du palier continuent d'arriver, un peu plus denses qu'à la fin de la montée ; le break reste calme. Le déroulé du set est visible à l'écran comme un line-up : les joueurs savent quand le drop tombe.
+Une partie dure 15 à 25 minutes et suit le set : des phrases de 16 mesures (26,5 s à 145 BPM sur la main stage, 39,7 s au Dome) forment la montée, puis un break et un drop closent chaque palier, avec un boss sur le drop. Le boss arrive avec une escorte : les bad vibes du palier continuent d'arriver, un peu plus denses qu'à la fin de la montée ; le break reste calme. Le déroulé du set est visible à l'écran comme un line-up : les joueurs savent quand le drop tombe.
 
 Les bad vibes arrivent de partout sur le bord de la piste. Par moments, une vague de 8 mesures arrive d'un ou deux côtés : 8 bad vibes sur 10 en viennent, les autres de partout.
 
@@ -151,9 +151,22 @@ Les quatre branchées ouvrent le ruban arc-en-ciel et les fusions B2B. Le Volume
 
 Les nombres sont des points de départ, à régler dans `src/data/` en jouant.
 
+## Les scènes
+
+**Tranché le 2026-10-10.** Une scène est un set de `src/data/sets.ts`. L'hôte la choisit juste avant de lancer, en solo, en local ou en ligne ; la dernière jouée est présélectionnée.
+
+| Scène      | Style, tempo                       | Décor                                                   | Obstacles                               |
+| ---------- | ---------------------------------- | ------------------------------------------------------- | --------------------------------------- |
+| Main stage | psytrance full-on, 145 BPM         | rive du lac                                             | aucun                                   |
+| Le Dome    | downtempo, dub, psybient, 96,7 BPM | coupole de bois sur le sable, quatre géants champignons | poteaux de la couronne, bras des géants |
+
+- Même arène, même noyau, mêmes paliers et boss ; au Dome, les quatre enceintes sont replacées autour de la coupole.
+- Au Dome, tout ce qui se compte en temps, en mesures et en phrases dure un tiers de plus ; les durées en ticks restent en temps réel ([ADR 0012](adr/0012-le-tempo-est-une-donnee-de-la-scene.md)). Ses vagues de groupe sont plus denses pour garder la pression par seconde.
+- Les obstacles arrêtent les tirs et filtrent sans fermer : joueurs et bad vibes passent entre deux poteaux ou deux pierres des bras, les lourdes et les boss prennent les quatre grandes entrées dans les axes. Rien n'apparaît ni ne se pose dedans.
+
 ## Rythme et musique
 
-- 145 BPM, source unique de temps pour le jeu, les pièges, les spawns, l'audio et l'interface (voir `direction-artistique.md`).
+- Le tempo de la scène, source unique de temps pour le jeu, les pièges, les spawns, l'audio et l'interface (voir `direction-artistique.md`).
 - Le set est découpé en paliers. Chaque palier : montée (vagues), break (répit), drop (boss). Le dernier palier mène au sunrise.
 - La difficulté augmente par phrase, les boss par palier.
 
