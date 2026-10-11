@@ -101,7 +101,7 @@ export function createGround(ctx: RenderContext, kit: WeaponKit): GroundFamily {
       return;
     }
     lastTick = state.tick;
-    if (!isBarTick(state.tick)) {
+    if (!isBarTick(state.tick, frame.tempo)) {
       return;
     }
     for (const entry of state.placed ?? []) {

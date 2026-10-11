@@ -1,6 +1,5 @@
-import { TICK_RATE_HZ, TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { MAIN_TEMPO, TICK_RATE_HZ, TICKS_PER_BEAT, type Tempo } from '../shared/tempo';
 
-export const BEAT_DECAY_TICKS = TICKS_PER_BAR / 2;
 export const MAX_FLASHES_PER_SECOND = 3;
 export const MIN_TICKS_BETWEEN_FLASHES = Math.ceil(TICK_RATE_HZ / MAX_FLASHES_PER_SECOND);
 
@@ -8,11 +7,12 @@ export function lerp(previous: number, current: number, alpha: number): number {
   return previous + (current - previous) * alpha;
 }
 
-export function beatEnvelope(ticksSinceBeat: number): number {
-  if (ticksSinceBeat < 0 || ticksSinceBeat >= BEAT_DECAY_TICKS) {
+export function beatEnvelope(ticksSinceBeat: number, tempo: Tempo = MAIN_TEMPO): number {
+  const decay = tempo.ticksPerBar / 2;
+  if (ticksSinceBeat < 0 || ticksSinceBeat >= decay) {
     return 0;
   }
-  const remaining = 1 - ticksSinceBeat / BEAT_DECAY_TICKS;
+  const remaining = 1 - ticksSinceBeat / decay;
   return remaining * remaining;
 }
 

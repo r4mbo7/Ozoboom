@@ -1,6 +1,6 @@
 import { Graphics } from 'pixi.js';
 import type { SimState } from '../sim/state';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { DOME_FACETS, type Facet } from './textures';
@@ -18,7 +18,7 @@ import {
 const TAU = Math.PI * 2;
 const FLASH_TICKS = TICKS_PER_BEAT / 2;
 const FADE_TICKS = TICKS_PER_BEAT;
-const RAY_TURN_TICKS = TICKS_PER_BAR * 4;
+const RAY_TURN_BARS = 4;
 const RING_REACH = 1.12;
 const SEGMENT_WIDTH = 6;
 const RIM_GROW = 2;
@@ -175,7 +175,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
       halo.scale.set(((core.radius * 3.4) / t.halo.radius) * (1 + 0.3 * pulse));
       halo.alpha = (0.55 + 0.45 * pulse) * light.haloAlpha;
 
-      let turn = frame.calm ? 0 : (frame.now / RAY_TURN_TICKS) * TAU;
+      let turn = frame.calm ? 0 : (frame.now / (RAY_TURN_BARS * frame.tempo.ticksPerBar)) * TAU;
       for (const ray of rays) {
         setTint(ray, color);
         ray.position.set(core.x, core.y);

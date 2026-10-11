@@ -1,6 +1,6 @@
 import type { Graphics, Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { TICKS_PER_BAR, type Tempo } from '../shared/tempo';
 import type { SimState, SpeakerState } from '../sim/state';
 import { setTint } from './util';
 
@@ -55,8 +55,12 @@ export function speakerTurn(
     : 0;
 }
 
-export function plugShare(plugTicks: number, plugBars: number): number {
-  const needed = plugBars * TICKS_PER_BAR;
+export function plugShare(
+  plugTicks: number,
+  plugBars: number,
+  ticksPerBar: number = TICKS_PER_BAR,
+): number {
+  const needed = plugBars * ticksPerBar;
   return needed > 0 ? Math.min(1, Math.max(0, plugTicks / needed)) : 0;
 }
 
@@ -106,10 +110,10 @@ export function drawWaves(
   body: Sprite,
   swell: number,
   color: number,
-  frame: { readonly calm: boolean; readonly now: number },
+  frame: { readonly calm: boolean; readonly now: number; readonly tempo: Tempo },
 ): void {
   const { waves } = view;
-  const phase = frame.calm ? 0 : (frame.now / TICKS_PER_BEAT) % 1;
+  const phase = frame.calm ? 0 : (frame.now / frame.tempo.ticksPerBeat) % 1;
   setTint(waves, color);
   waves.visible = true;
   waves.position.copyFrom(body.position);

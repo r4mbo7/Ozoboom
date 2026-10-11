@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { MAIN_TEMPO, TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import { cardLines, cardOrigin, cardScale, isNear, opensBelow, plugStep } from './speaker-card';
 
 const DOME = {
@@ -13,7 +13,7 @@ describe('speaker card lines', () => {
     const lines = cardLines(
       DOME,
       'Assiettes chinoises',
-      plugStep({ plugTicks: 0, plugged: false }, 2),
+      plugStep({ plugTicks: 0, plugged: false }, 2, MAIN_TEMPO),
       2,
     );
 
@@ -26,7 +26,12 @@ describe('speaker card lines', () => {
   });
 
   it('says one bar in the singular', () => {
-    const lines = cardLines(DOME, null, plugStep({ plugTicks: 0, plugged: false }, 1), 1);
+    const lines = cardLines(
+      DOME,
+      null,
+      plugStep({ plugTicks: 0, plugged: false }, 1, MAIN_TEMPO),
+      1,
+    );
 
     expect(lines[1]).toBe('reste une mesure dedans');
     expect(lines[2]).toBe('Volume +1');
@@ -39,14 +44,14 @@ describe('speaker card lines', () => {
     [TICKS_PER_BAR, 4],
     [2 * TICKS_PER_BAR - 1, 1],
   ])('counts the beats left while plugging, %i ticks in: %i', (plugTicks, beats) => {
-    const step = plugStep({ plugTicks, plugged: false }, 2);
+    const step = plugStep({ plugTicks, plugged: false }, 2, MAIN_TEMPO);
 
     expect(step).toBe(beats);
     expect(cardLines(DOME, null, step, 2)[1]).toBe(`branchement : encore ${String(beats)} temps`);
   });
 
   it('says plugged once it is', () => {
-    const step = plugStep({ plugTicks: 0, plugged: true }, 2);
+    const step = plugStep({ plugTicks: 0, plugged: true }, 2, MAIN_TEMPO);
 
     expect(cardLines(DOME, null, step, 2)[1]).toBe('branchée');
   });

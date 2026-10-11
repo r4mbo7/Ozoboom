@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { MAIN_TEMPO, TICKS_PER_BAR, TICKS_PER_BEAT, tempoOf } from '../shared/tempo';
 import { LEDS, danceLevel, litLeds, standbyOn } from './speaker-leds';
 
 const IDS = ['dome-chill', 'foret', 'sub', 'cercle-acid'];
@@ -13,13 +13,23 @@ describe('LED column while plugging', () => {
     [TICKS_PER_BAR, 4],
     [TICKS_PER_BAR * 2 - 1, 7],
   ])('lights one LED per beat of the two plug bars: %i ticks give %i', (plugTicks, lit) => {
-    expect(litLeds({ id: 'sub', plugTicks, plugged: false }, 2, { now: 5, calm: false })).toBe(lit);
+    expect(
+      litLeds({ id: 'sub', plugTicks, plugged: false }, 2, {
+        now: 5,
+        calm: false,
+        tempo: MAIN_TEMPO,
+      }),
+    ).toBe(lit);
   });
 
   it('fills the column in calm mode once plugged', () => {
-    expect(litLeds({ id: 'sub', plugTicks: 0, plugged: true }, 2, { now: 37, calm: true })).toBe(
-      LEDS,
-    );
+    expect(
+      litLeds({ id: 'sub', plugTicks: 0, plugged: true }, 2, {
+        now: 37,
+        calm: true,
+        tempo: MAIN_TEMPO,
+      }),
+    ).toBe(LEDS);
   });
 });
 
@@ -60,10 +70,36 @@ describe('standby LED', () => {
     [TICKS_PER_BAR - 1, false],
     [TICKS_PER_BAR * 5 + 2, true],
   ])('at %f ticks is lit the first quarter of each bar: %s', (now, on) => {
-    expect(standbyOn({ now, calm: false })).toBe(on);
+    expect(standbyOn({ now, calm: false, tempo: MAIN_TEMPO })).toBe(on);
   });
 
   it('stays lit in calm mode', () => {
-    expect(standbyOn({ now: TICKS_PER_BEAT * 2, calm: true })).toBe(true);
+    expect(standbyOn({ now: TICKS_PER_BEAT * 2, calm: true, tempo: MAIN_TEMPO })).toBe(true);
+  });
+});
+
+describe('LEDs at the Dome tempo', () => {
+  const dome = tempoOf(18);
+
+  it('dance to a new level every 18 ticks', () => {
+    for (const beat of [0, 1, 5, 9]) {
+      expect(danceLevel(beat * 18, 'sub', dome)).toBe(danceLevel(beat * 12, 'sub', MAIN_TEMPO));
+      expect(danceLevel(beat * 18 + 17.99, 'sub', dome)).toBe(
+        danceLevel(beat * 12 + 11.99, 'sub', MAIN_TEMPO),
+      );
+    }
+  });
+
+  it('light one LED per Dome beat while plugging', () => {
+    const frame = { now: 5, calm: false, tempo: dome };
+
+    expect(litLeds({ id: 'sub', plugTicks: 17, plugged: false }, 2, frame)).toBe(0);
+    expect(litLeds({ id: 'sub', plugTicks: 18, plugged: false }, 2, frame)).toBe(1);
+  });
+
+  it('keep the standby LED lit for the first quarter of the 72-tick bar', () => {
+    expect(standbyOn({ now: 17.9, calm: false, tempo: dome })).toBe(true);
+    expect(standbyOn({ now: 18, calm: false, tempo: dome })).toBe(false);
+    expect(standbyOn({ now: 72, calm: false, tempo: dome })).toBe(true);
   });
 });

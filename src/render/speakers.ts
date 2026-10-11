@@ -1,5 +1,5 @@
 import { Graphics, Sprite, Texture } from 'pixi.js';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { SimEvent, SimState, SpeakerState } from '../sim/state';
 import type { Family, RenderContext, SpeakerLook } from './context';
 import type { Frame } from './frame';
@@ -21,12 +21,12 @@ const MARKS = 5;
 const CLOUDS = 3;
 const FLASH_TICKS = TICKS_PER_BEAT;
 const SHOCK_TICKS = TICKS_PER_BEAT / 2;
-const DRIFT_TICKS = TICKS_PER_BAR * 2;
+const DRIFT_BARS = 2;
 const OFF_LIFT = 0.35;
 const STANDBY_BODY = 0.28;
 const STANDBY_ZONE = 0.3;
 const BEAMS = 3;
-const SWEEP_TICKS = TICKS_PER_BAR * 8;
+const SWEEP_BARS = 8;
 const BEAM_REACH = 1.15;
 const BEAM_ALPHA = 0.55;
 const HALO_REACH = 0.62;
@@ -115,7 +115,7 @@ export function createSpeakers(ctx: RenderContext): Family {
     frame: Frame,
   ): void {
     const { aura } = look;
-    const { light, pulse, calm, now } = frame;
+    const { light, pulse, calm, now, tempo } = frame;
     const radius = 'radius' in aura ? aura.radius : speaker.radius * 2;
     const x = speaker.x;
     const y = speaker.y;
@@ -127,7 +127,7 @@ export function createSpeakers(ctx: RenderContext): Family {
     view.halo.scale.set((radius * HALO_REACH) / t.halo.radius);
     view.halo.alpha = glowShare * (0.7 + 0.3 * pulse) * light.haloAlpha;
 
-    const sweep = calm ? 0 : (now / SWEEP_TICKS) * TAU;
+    const sweep = calm ? 0 : (now / (SWEEP_BARS * tempo.ticksPerBar)) * TAU;
     for (const [index, beam] of view.beams.entries()) {
       setTint(beam, color);
       beam.visible = true;
@@ -140,7 +140,7 @@ export function createSpeakers(ctx: RenderContext): Family {
 
     const shape = aura.kind === 'lure' ? t.traps.lure : t.traps.mist;
     const count = aura.kind === 'mist' ? CLOUDS : aura.kind === 'lure' ? MARKS : 0;
-    const drift = calm ? 0 : (now / DRIFT_TICKS) * TAU;
+    const drift = calm ? 0 : (now / (DRIFT_BARS * tempo.ticksPerBar)) * TAU;
     for (let index = 0; index < MARKS; index += 1) {
       const mark = view.marks[index];
       if (mark === undefined) {

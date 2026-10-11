@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR, TICKS_PER_PHRASE } from '../shared/tempo';
+import { TICKS_PER_BAR, TICKS_PER_PHRASE, tempoOf } from '../shared/tempo';
 import { type DropClock, dropFilterIntensity, echoAlpha } from './drop-filter';
 
 const START = 1000;
@@ -9,6 +9,17 @@ function clock(tier: number, segment: DropClock['set']['segment'] = 'drop'): Dro
 }
 
 describe('dropFilterIntensity', () => {
+  it('rises, holds and falls over the bars of the set tempo', () => {
+    const dome = tempoOf(18);
+    const second = clock(1);
+    const fallStart = START + dome.ticksPerBar + dome.ticksPerPhrase;
+
+    expect(dropFilterIntensity(second, START + dome.ticksPerBar / 2, dome)).toBeCloseTo(0.5);
+    expect(dropFilterIntensity(second, START + dome.ticksPerBar, dome)).toBe(1);
+    expect(dropFilterIntensity(second, fallStart + 2 * dome.ticksPerBar, dome)).toBeCloseTo(0.5);
+    expect(dropFilterIntensity(second, fallStart + 4 * dome.ticksPerBar, dome)).toBe(0);
+  });
+
   it('is 0 outside a drop', () => {
     expect(dropFilterIntensity(clock(0, 'buildup'), START + TICKS_PER_BAR)).toBe(0);
     expect(dropFilterIntensity(clock(1, 'break'), START + TICKS_PER_BAR)).toBe(0);

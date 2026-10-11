@@ -1,6 +1,6 @@
 import { Container, Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { SimEvent, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import { Farewells, type FarewellHooks } from './enemy-deaths';
@@ -22,7 +22,6 @@ const BEAT_SWELL = 0.05;
 const DOWN_GRAY = 0xd0d0d8;
 const DOWN_MIX = 0.55;
 const ZS = 3;
-const Z_LOOP_TICKS = TICKS_PER_BAR;
 const BLINK_MIX = { normal: 0.65, calm: 0.35 };
 const GLINT_SIZE = 1.2;
 const GUARD_GRAY = 0.4;
@@ -131,7 +130,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
     const zs = (view.zs ??= Array.from({ length: ZS }, () => add(sleepers, textures.masks.drowsy)));
     const size = (view.radius * 0.2) / textures.masks.drowsy.radius;
     zs.forEach((z, index) => {
-      const progress = (frame.now / Z_LOOP_TICKS + index / ZS) % 1;
+      const progress = (frame.now / frame.tempo.ticksPerBar + index / ZS) % 1;
       z.visible = true;
       setTint(z, frame.palette.texte);
       z.position.set(
@@ -214,8 +213,9 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         const index =
           frames === 1 || calm
             ? 0
-            : Math.floor((frame.now / (mask.face.loopBeats * TICKS_PER_BEAT)) * frames + enemy.id) %
-              frames;
+            : Math.floor(
+                (frame.now / (mask.face.loopBeats * frame.tempo.ticksPerBeat)) * frames + enemy.id,
+              ) % frames;
         sprite.texture = down
           ? mask.down
           : asleep

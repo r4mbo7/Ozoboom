@@ -1,5 +1,5 @@
 import type { Container, Sprite } from 'pixi.js';
-import { TICKS_PER_BAR } from '../shared/tempo';
+import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import { TAU } from './paint';
 import { type Look, type LookInput, type Spawn, angleSpring, fade, lerpAngle } from './player-look';
 import type { Textures } from './textures';
@@ -15,8 +15,8 @@ const RECOIL = 5;
 const NOVA_TICKS = 48;
 
 // The poi make a turn per bar: they follow the time, not the frame.
-export function poiAngle(now: number): number {
-  return (((now % TICKS_PER_BAR) + TICKS_PER_BAR) % TICKS_PER_BAR) * (TAU / TICKS_PER_BAR);
+export function poiAngle(now: number, { ticksPerBar }: Tempo = MAIN_TEMPO): number {
+  return (((now % ticksPerBar) + ticksPerBar) % ticksPerBar) * (TAU / ticksPerBar);
 }
 
 // The last ball thrown alternates: the first shot throws ball 0.
@@ -138,7 +138,7 @@ export function createPoiLook(bodies: Container, textures: Textures, spawn: Spaw
       setTint(head, input.teint);
       placeOutline(outline, shoulders, t.shoulders.texture, REFERENCE, frame);
 
-      const turn = poiAngle(frame.now);
+      const turn = poiAngle(frame.now, frame.tempo);
       const thrown = whippedBall(input.fireCount);
       const reach = POI_ORBIT * novaStretch(input.sinceSkill);
       for (let index = 0; index < 2; index += 1) {

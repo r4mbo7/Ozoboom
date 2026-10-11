@@ -6,8 +6,7 @@ import type {
   WeaponDefinition,
 } from '../data/types';
 import { NIGHT_END, NIGHT_START, type PaletteToken } from '../shared/palette';
-import { TICKS_PER_BAR } from '../shared/tempo';
-import { ticksToDrop } from '../sim/lineup';
+import { setTempo, ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
 import { skillCooldownTicks } from '../sim/stats';
 import { trapAt } from '../sim/systems/traps';
@@ -85,9 +84,10 @@ export interface Cran {
 }
 
 export function volumeCrans(set: SetDefinition, state: SimState): Cran[] {
+  const { ticksPerBar } = setTempo(set);
   return (set.speakers ?? []).map((definition, index) => {
     const speaker = state.speakers?.find((candidate) => candidate.id === definition.id);
-    const needed = definition.plugBars * TICKS_PER_BAR;
+    const needed = definition.plugBars * ticksPerBar;
     const fill = speaker?.plugged === true ? 1 : ratio(speaker?.plugTicks ?? 0, needed);
     const cranState: CranState = speaker?.plugged === true ? 'on' : fill > 0 ? 'plugging' : 'off';
     return {

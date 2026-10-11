@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TICK_RATE_HZ, TICKS_PER_BAR } from '../shared/tempo';
+import { TICK_RATE_HZ, TICKS_PER_BAR, tempoOf } from '../shared/tempo';
 import {
   BLINK_TICKS,
   FlashLimiter,
@@ -28,6 +28,14 @@ describe('beatEnvelope', () => {
     expect(beatEnvelope(halfBar / 2)).toBeCloseTo(0.25, 6);
     expect(beatEnvelope(halfBar)).toBe(0);
     expect(beatEnvelope(-1)).toBe(0);
+  });
+
+  it('fades over two beats of the set tempo, so a Dome pulse is back every 18 ticks', () => {
+    const dome = tempoOf(18);
+
+    expect(beatEnvelope(0, dome)).toBe(1);
+    expect(beatEnvelope(18, dome)).toBeCloseTo(0.25, 6);
+    expect(beatEnvelope(36, dome)).toBe(0);
   });
 
   it('only decreases between two beats', () => {

@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { SpeakerDefinition } from '../data/types';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import type { Tempo } from '../shared/tempo';
 import type { Vec2 } from '../shared/vec';
 import type { SimState, SpeakerState } from '../sim/state';
 import { worldToScreen } from './camera';
@@ -32,15 +32,19 @@ const LINES = [
 type CardDefinition = Pick<SpeakerDefinition, 'name' | 'description' | 'plugBars'>;
 
 // PLUGGED once plugged, IDLE while nobody stands in it, else the beats still needed.
-export function plugStep(speaker: Pick<SpeakerState, 'plugTicks' | 'plugged'>, plugBars: number) {
+export function plugStep(
+  speaker: Pick<SpeakerState, 'plugTicks' | 'plugged'>,
+  plugBars: number,
+  tempo: Tempo,
+) {
   if (speaker.plugged) {
     return PLUGGED;
   }
   if (speaker.plugTicks <= 0) {
     return IDLE;
   }
-  const left = plugBars * TICKS_PER_BAR - speaker.plugTicks;
-  return Math.max(1, Math.ceil(left / TICKS_PER_BEAT));
+  const left = plugBars * tempo.ticksPerBar - speaker.plugTicks;
+  return Math.max(1, Math.ceil(left / tempo.ticksPerBeat));
 }
 
 function stateLine(step: number, plugBars: number): string {
@@ -178,7 +182,7 @@ export function createSpeakerCards(ctx: RenderContext): Family {
         }
         const definition = lookup(looks, speaker.id, 'speaker');
         const view = views.acquire(index);
-        const step = plugStep(speaker, definition.plugBars);
+        const step = plugStep(speaker, definition.plugBars, frame.tempo);
         if (view.id !== speaker.id || view.step !== step) {
           view.id = speaker.id;
           view.step = step;

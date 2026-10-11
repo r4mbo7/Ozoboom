@@ -1,6 +1,6 @@
 import { Container, type Sprite } from 'pixi.js';
 import type { PlayerId, PlayerState, SimEvent, SimState } from '../sim/state';
-import { TICKS_PER_BEAT } from '../shared/tempo';
+import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
@@ -26,8 +26,8 @@ const NEVER = Number.NEGATIVE_INFINITY;
 const PLAYER_BURSTS = 48;
 
 // The contour breathes on the beat, smoothly: never a flash.
-export function contourAlpha(now: number): number {
-  const phase = (((now % TICKS_PER_BEAT) + TICKS_PER_BEAT) % TICKS_PER_BEAT) / TICKS_PER_BEAT;
+export function contourAlpha(now: number, { ticksPerBeat }: Tempo = MAIN_TEMPO): number {
+  const phase = (((now % ticksPerBeat) + ticksPerBeat) % ticksPerBeat) / ticksPerBeat;
   return 0.3 + 0.35 * (1 + Math.sin(phase * TAU));
 }
 
@@ -280,7 +280,7 @@ export function createPlayers(ctx: RenderContext): Family {
           setTint(contour, color);
           contour.position.set(x, y);
           contour.scale.set(((lookTextures.extent + CONTOUR_MARGIN) / CONTOUR_RING) * scale);
-          contour.alpha = contourAlpha(now);
+          contour.alpha = contourAlpha(now, frame.tempo);
         }
       }
       views.end();

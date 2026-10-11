@@ -1,5 +1,5 @@
 import { Container, type Sprite } from 'pixi.js';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import { TAU } from './paint';
 import { type Look, type Spawn, fade, spring } from './player-look';
 import type { Textures } from './textures';
@@ -9,7 +9,6 @@ import { add, hide, placeOutline, setTint } from './util';
 
 const POMPOMS = 8;
 const FIREFLIES = 5;
-const BASE_SPIN = TAU / (2 * TICKS_PER_BAR);
 const RUN_SPIN = 2.8;
 // Springs in reference pixels and ticks: the pompoms fly out as the parasol spins faster, lag behind
 // the run and bounce on the beat.
@@ -19,7 +18,6 @@ const POMPOM_OUT = POMPOM_STRING - 1.5;
 const LAND_TICKS = 1.2;
 const JELLY_TICKS = 29;
 const HOP_MOVING = 0.4;
-const CHASE_STEP = TICKS_PER_BEAT / 4;
 
 const FLING_AT = 0;
 const LAG_X = 2;
@@ -27,11 +25,17 @@ const LAG_Y = 4;
 
 // The pompoms light up one after the other on the sixteenths, a tail of three behind the head; the
 // calm mode holds them all at the same glow.
-export function chase(now: number, index: number, calm: boolean): number {
+export function chase(
+  now: number,
+  index: number,
+  calm: boolean,
+  tempo: Tempo = MAIN_TEMPO,
+): number {
+  const step = tempo.ticksPerBeat / 4;
   if (calm) {
     return 0.65;
   }
-  const head = Math.floor(now / CHASE_STEP) % POMPOMS;
+  const head = Math.floor(now / step) % POMPOMS;
   return 0.3 + 0.7 * Math.max(0, 1 - ((head - index + POMPOMS) % POMPOMS) / 3);
 }
 
@@ -69,7 +73,7 @@ export function createParasolLook(
   const springs = new Float64Array(6);
   let fresh = true;
   let spin = 0;
-  let rate = BASE_SPIN;
+  let rate = Number.NaN;
   let lastBeat = -1;
   let landAt = Number.NEGATIVE_INFINITY;
   let lastHitAt = Number.NaN;
@@ -80,7 +84,7 @@ export function createParasolLook(
     reset() {
       springs.fill(0);
       fresh = true;
-      rate = BASE_SPIN;
+      rate = Number.NaN;
       lastBeat = -1;
       landAt = jellyAt = Number.NEGATIVE_INFINITY;
       lastHitAt = Number.NaN;
@@ -94,7 +98,11 @@ export function createParasolLook(
       const { now, calm, light, palette } = frame;
       const strength = calm ? 0.5 : 1;
       const run = Math.min(1, input.speed) * input.moving;
-      rate += (BASE_SPIN * (1 + RUN_SPIN * run) - rate) * (1 - Math.exp(-dt * 0.1));
+      const baseSpin = TAU / (2 * frame.tempo.ticksPerBar);
+      if (Number.isNaN(rate)) {
+        rate = baseSpin;
+      }
+      rate += (baseSpin * (1 + RUN_SPIN * run) - rate) * (1 - Math.exp(-dt * 0.1));
       spin += rate * dt;
 
       if (input.beatIndex !== lastBeat) {
@@ -131,7 +139,7 @@ export function createParasolLook(
       spring(
         springs,
         FLING_AT,
-        (rate / BASE_SPIN - 1) * FLING.reach,
+        (rate / baseSpin - 1) * FLING.reach,
         FLING.stiffness,
         FLING.damping,
         dt,
@@ -153,10 +161,10 @@ export function createParasolLook(
         dt,
       );
 
-      const beatShare = Math.min(1, Math.max(0, input.sinceBeat / TICKS_PER_BEAT));
+      const beatShare = Math.min(1, Math.max(0, input.sinceBeat / frame.tempo.ticksPerBeat));
       const hop = input.moving * Math.sin(Math.PI * beatShare) * strength;
       const land = input.moving * fade(now - landAt, LAND_TICKS) * strength;
-      const sway = (1 - input.moving) * Math.sin((TAU * now) / (2 * TICKS_PER_BAR));
+      const sway = (1 - input.moving) * Math.sin((TAU * now) / (2 * frame.tempo.ticksPerBar));
       const shake = now - jellyAt;
       const jelly =
         shake >= 0 && shake < JELLY_TICKS
@@ -208,7 +216,7 @@ export function createParasolLook(
         const localY = (Math.sin(rib - angle) * reach * wide) / scale;
         const pompomX = centerX + (localX * cos - localY * sin) * scale + lagX * 0.9 * scale;
         const pompomY = centerY + (localX * sin + localY * cos) * scale + lagY * 0.9 * scale;
-        const glow = Math.max(flash, chase(now, index, calm));
+        const glow = Math.max(flash, chase(now, index, calm, frame.tempo));
         const tint = index % 2 === 0 ? palette.or : color;
         const pompom = pompoms[index];
         const lit = lights[index];

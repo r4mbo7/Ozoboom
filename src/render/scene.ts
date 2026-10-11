@@ -173,7 +173,8 @@ export class Scene implements Renderer {
         this.onEvent(event, state);
       }
     }
-    frame.pulse = beatEnvelope(frame.now - this.beatTick) * (frame.calm ? CALM.pulse : 1);
+    frame.pulse =
+      beatEnvelope(frame.now - this.beatTick, frame.tempo) * (frame.calm ? CALM.pulse : 1);
 
     this.frameWorld(state, alpha);
     frame.camera = this.camera;

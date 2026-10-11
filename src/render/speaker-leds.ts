@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import type { Frame } from './frame';
 import { ofSpeaker, plugShare } from './speaker-kit';
 import { setTint } from './util';
@@ -51,8 +51,8 @@ function seedOf(id: string): number {
   return seed;
 }
 
-export function danceLevel(now: number, id: string): number {
-  const beats = now / TICKS_PER_BEAT;
+export function danceLevel(now: number, id: string, tempo: Tempo = MAIN_TEMPO): number {
+  const beats = now / tempo.ticksPerBeat;
   const beat = Math.floor(beats);
   const level = DANCE_FLOOR + (scramble(beat * 7919 + seedOf(id)) % DANCE_LEVELS);
   return Math.round(level - (beats - beat) * DANCE_DROP);
@@ -61,16 +61,17 @@ export function danceLevel(now: number, id: string): number {
 export function litLeds(
   speaker: Plug,
   plugBars: number,
-  frame: Pick<Frame, 'now' | 'calm'>,
+  frame: Pick<Frame, 'now' | 'calm' | 'tempo'>,
 ): number {
   if (speaker.plugged) {
-    return frame.calm ? LEDS : danceLevel(frame.now, speaker.id);
+    return frame.calm ? LEDS : danceLevel(frame.now, speaker.id, frame.tempo);
   }
-  return Math.floor(plugShare(speaker.plugTicks, plugBars) * LEDS + 1e-6);
+  return Math.floor(plugShare(speaker.plugTicks, plugBars, frame.tempo.ticksPerBar) * LEDS + 1e-6);
 }
 
-export function standbyOn(frame: Pick<Frame, 'now' | 'calm'>): boolean {
-  return frame.calm || frame.now % TICKS_PER_BAR < TICKS_PER_BAR / 4;
+export function standbyOn(frame: Pick<Frame, 'now' | 'calm' | 'tempo'>): boolean {
+  const { ticksPerBar } = frame.tempo;
+  return frame.calm || frame.now % ticksPerBar < ticksPerBar / 4;
 }
 
 export function createLedViews(): Pick<LedView, 'leds' | 'standby'> {
