@@ -27,6 +27,10 @@ test('plays ten seconds from the title without a console error', async ({ page }
   for (const name of HUD_PANELS) {
     await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
   }
+  // The HUD shows empty and the first frame fills it: without a GPU, that frame can take seconds.
+  await expect(page.getByRole('timer', { name: 'Drop' })).toHaveText(/\d+:\d{2}$/, {
+    timeout: 60_000,
+  });
   const atStart = await secondsToDrop(page);
   // The countdown follows the sim ticks: ten seconds off it are ten seconds of play. Without a GPU
   // the CI renders a few frames per second and the loop slows the sim down, hence the wide budget.
