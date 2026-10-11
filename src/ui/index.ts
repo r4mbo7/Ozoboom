@@ -2,7 +2,8 @@ import './ui.css';
 import type { InputDevice } from '../input/intents';
 import { CLASSES } from '../data/classes';
 import { setFraction, setOf } from '../sim/lineup';
-import type { ClassInfo } from './class-picker';
+import { type ClassInfo, swatchPortrait } from './class-picker';
+import { createClassPicker } from './class-screen';
 import { el, setFlag } from './dom';
 import { createEnd } from './end';
 import { createHud } from './hud';
@@ -14,11 +15,21 @@ import { createSunFollower } from './sun';
 import { createTitle } from './title';
 import type { GameContent } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
-import type { LobbyModel, Notice, StagePickerModel, Ui, UiCallbacks } from './types';
+import type {
+  CreatePortrait,
+  LobbyModel,
+  Notice,
+  StagePickerModel,
+  Ui,
+  UiCallbacks,
+} from './types';
 import { createUpgradeOverlay } from './upgrade';
 import { VOLUME_STEPS, type SoundLevel, stepSound } from './volume';
 
 export type {
+  ClassPickerModel,
+  ClassPortrait,
+  CreatePortrait,
   EndSession,
   LobbyModel,
   LobbySeat,
@@ -36,7 +47,7 @@ export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './
 export { heldSlot, selectTrap } from './navigation';
 export { SEAT_IDS, defaultName } from './lobby-model';
 
-type Screen = 'title' | 'stage' | 'lobby' | 'game' | 'end' | 'notice';
+type Screen = 'title' | 'class' | 'stage' | 'lobby' | 'game' | 'end' | 'notice';
 
 const NOTICES: Readonly<Record<Notice, { title: string; text: string; glyph: string }>> = {
   desync: {
@@ -62,11 +73,13 @@ export function prefersCalmMode(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-// The classes offered are the data ones: only a harness shows others.
+// The classes offered are the data ones: only a harness shows others. Without a portrait maker
+// (the game draws them), each class shows as a disc of its colour.
 export function createUi(
   root: HTMLElement,
   callbacks: UiCallbacks,
   classes: readonly ClassInfo[] = CLASSES,
+  portrait: CreatePortrait = () => swatchPortrait(classes),
 ): Ui {
   const container = el('div', 'ui');
   root.append(container);
@@ -99,44 +112,53 @@ export function createUi(
           callbacks.onFeedback?.(details);
         };
 
-  const title = createTitle(
-    {
-      ...(feedback === undefined ? {} : { feedback }),
-      start() {
-        once(() => {
-          callbacks.onStart();
-        });
-      },
-      playTogether() {
-        callbacks.onPlayTogether();
-      },
-      chooseClass(classId) {
-        callbacks.onChooseClass(classId);
-      },
-      toggleCalmMode() {
-        calmMode = !calmMode;
-        applyOptions();
-        callbacks.onToggleCalmMode(calmMode);
-      },
-      toggleMute() {
-        setSound({ volume, muted: !muted });
-      },
-      stepVolume(side) {
-        setSound(stepSound({ volume, muted }, side));
-      },
-      toggleAutoFire() {
-        autoFire = !autoFire;
-        applyOptions();
-        callbacks.onToggleAutoFire(autoFire);
-      },
-      toggleAutoAim() {
-        autoAim = !autoAim;
-        applyOptions();
-        callbacks.onToggleAutoAim(autoAim);
-      },
+  const title = createTitle({
+    ...(feedback === undefined ? {} : { feedback }),
+    start() {
+      once(() => {
+        callbacks.onStart();
+      });
     },
-    classes,
-  );
+    playTogether() {
+      callbacks.onPlayTogether();
+    },
+    toggleCalmMode() {
+      calmMode = !calmMode;
+      applyOptions();
+      callbacks.onToggleCalmMode(calmMode);
+    },
+    toggleMute() {
+      setSound({ volume, muted: !muted });
+    },
+    stepVolume(side) {
+      setSound(stepSound({ volume, muted }, side));
+    },
+    toggleAutoFire() {
+      autoFire = !autoFire;
+      applyOptions();
+      callbacks.onToggleAutoFire(autoFire);
+    },
+    toggleAutoAim() {
+      autoAim = !autoAim;
+      applyOptions();
+      callbacks.onToggleAutoAim(autoAim);
+    },
+  });
+  const classPicker = createClassPicker(classes, portrait, {
+    choose(classId) {
+      callbacks.onChooseClass(classId);
+    },
+    confirm() {
+      once(() => {
+        callbacks.onConfirmClass();
+      });
+    },
+    leave() {
+      once(() => {
+        callbacks.onLeaveClassPicker();
+      });
+    },
+  });
   const hud = createHud();
   const upgrade = createUpgradeOverlay((playerId, upgradeId) => {
     callbacks.onChooseUpgrade(playerId, upgradeId);
@@ -196,6 +218,7 @@ export function createUi(
       },
     },
     classes,
+    portrait,
   );
   const stagePicker = createStagePicker({
     choose(setId) {
@@ -226,6 +249,7 @@ export function createUi(
     upgrade.element,
     end.element,
     title.element,
+    classPicker.element,
     stagePicker.element,
     lobby.element,
     notice.element,
@@ -253,6 +277,7 @@ export function createUi(
     setFlag(root, 'touch', next === 'touch');
     title.setDevice(next);
     end.setDevice(next);
+    classPicker.setDevice(next);
     stagePicker.setDevice(next);
     lobby.setDevice(next);
     notice.setDevice(next);
@@ -265,6 +290,7 @@ export function createUi(
       sun.fix('nuit');
     }
     title.element.hidden = next !== 'title';
+    classPicker.element.hidden = next !== 'class';
     stagePicker.element.hidden = next !== 'stage';
     lobby.element.hidden = next !== 'lobby';
     notice.element.hidden = next !== 'notice';
@@ -290,12 +316,19 @@ export function createUi(
       autoAim = options.autoAim;
       applyOptions();
       applyDevice(options.device);
-      title.setClass(options.classId);
       show('title');
       title.menu.select(0);
     },
     showVisits(count) {
       title.setVisits(count);
+    },
+    showClassPicker(model) {
+      classPicker.setModel(model);
+      if (screen !== 'class') {
+        sun.fix('nuit');
+        show('class');
+        menuInput.open();
+      }
     },
     showStagePicker(model: StagePickerModel) {
       stagePicker.setModel(model);
@@ -345,6 +378,10 @@ export function createUi(
 
       if (screen === 'title') {
         title.menu.handle(edges);
+        return;
+      }
+      if (screen === 'class') {
+        classPicker.update(edges);
         return;
       }
       if (screen === 'stage') {

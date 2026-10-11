@@ -1,5 +1,12 @@
 import { type Locator, type Page, expect as baseExpect, test } from '@playwright/test';
-import { PAD, collectConsoleErrors, plugFakeGamepad, tapButtonUntil, tiltLeftStick } from './game';
+import {
+  PAD,
+  collectConsoleErrors,
+  playSolo,
+  plugFakeGamepad,
+  tapButtonUntil,
+  tiltLeftStick,
+} from './game';
 
 // A direction held in combat, to move, must not walk a menu that opens under it: the menu waits
 // for its release.
@@ -115,7 +122,7 @@ test('an arrow key held at a level up leaves the first card selected until it is
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   const upgrade = page.getByRole('region', { name: 'Choix d’amélioration' });
   const cards = upgrade.getByRole('button');
@@ -142,7 +149,7 @@ test('a key held when the game is lost leaves « Rejouer » selected until it is
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   const end = page.getByRole('region', { name: 'Fin de partie' });
   const restart = end.getByRole('button', { name: 'Rejouer' });

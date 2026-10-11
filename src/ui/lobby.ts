@@ -26,7 +26,7 @@ import { type MenuInput, createMenuInput } from './navigation';
 import { createStageCards, stepStage } from './stage';
 import { onMouseMove } from './pointer';
 import { promptsFor } from './prompts';
-import type { LobbyModel, LobbySeat, UiFrame } from './types';
+import type { ClassPortrait, CreatePortrait, LobbyModel, LobbySeat, UiFrame } from './types';
 
 export interface LobbyActions {
   joinSeat(device: DeviceId): void;
@@ -55,6 +55,7 @@ interface SeatCard {
   readonly field: HTMLElement;
   readonly input: HTMLInputElement;
   readonly stepper: ClassStepper;
+  readonly portrait: ClassPortrait;
   readonly tag: HTMLElement;
   readonly host: HTMLElement;
   readonly name: HTMLElement;
@@ -81,7 +82,11 @@ function onPointerClick(node: HTMLElement, action: () => void): void {
   });
 }
 
-export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]): LobbyScreen {
+export function createLobby(
+  actions: LobbyActions,
+  classes: readonly ClassInfo[],
+  portrait: CreatePortrait,
+): LobbyScreen {
   let model: LobbyModel = {
     mode: 'local',
     role: 'host',
@@ -173,13 +178,28 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     const role = el('p', 'ui-seat__role');
     const join = button(JOIN_TEXT, 'ui-seat__join');
     const wait = el('p', 'ui-seat__wait', 'En attente d’un joueur');
-    item.append(head, join, wait, field, name, stepper.element, role);
+    const drawn = portrait();
+    const frame = el('div', 'ui-seat__portrait');
+    frame.append(drawn.element);
+    item.append(head, frame, join, wait, field, name, stepper.element, role);
 
     input.addEventListener('input', () => {
       actions.seatName(playerId, seatName(input.value, playerId));
     });
     onPointerClick(join, joinWithKeyboard);
-    return { element: item, field, input, stepper, tag, host, name, role, join, wait };
+    return {
+      element: item,
+      field,
+      input,
+      stepper,
+      portrait: drawn,
+      tag,
+      host,
+      name,
+      role,
+      join,
+      wait,
+    };
   }
 
   const stageLabel = el('p', 'ui-panel__label');
@@ -626,6 +646,7 @@ export function createLobby(actions: LobbyActions, classes: readonly ClassInfo[]
     card.tag.hidden = seat === null;
     card.host.hidden = seat === null || !seat.host || view !== 'local';
     card.stepper.element.toggleAttribute('data-readonly', !editable);
+    card.portrait.setClass(seat?.classId ?? classes[0]?.id ?? '');
     if (seat === null) {
       return;
     }

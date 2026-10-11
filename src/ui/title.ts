@@ -1,10 +1,8 @@
 import type { InputDevice } from '../input/intents';
-import { type ClassInfo, createClassCards } from './class-picker';
 import { el, fillHint, keycap, setText } from './dom';
 import { formatNumber } from './format';
 import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
-import { stepClass } from './lobby-model';
 import { promptsFor } from './prompts';
 import { createAutoAimToggle, createAutoFireToggle, createToggle } from './toggle';
 import { createSoundControl } from './volume';
@@ -12,7 +10,6 @@ import { createSoundControl } from './volume';
 export interface TitleActions {
   start(): void;
   playTogether(): void;
-  chooseClass(classId: string): void;
   toggleCalmMode(): void;
   toggleMute(): void;
   stepVolume(side: -1 | 1): void;
@@ -33,7 +30,6 @@ export interface TitleScreen {
   readonly element: HTMLElement;
   readonly menu: Menu;
   setOptions(options: TitleOptions): void;
-  setClass(classId: string): void;
   setDevice(device: InputDevice): void;
   setVisits(count: number): void;
 }
@@ -46,7 +42,7 @@ const MANDALA =
   }).join('') +
   '<circle r="96"/><circle r="60"/><circle r="30"/></svg>';
 
-export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]): TitleScreen {
+export function createTitle(actions: TitleActions): TitleScreen {
   const element = el('section', 'ui-screen ui-title');
   element.setAttribute('aria-label', 'Écran titre');
 
@@ -64,10 +60,6 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
   play.type = 'button';
   const together = el('button', 'ui-button', 'Jouer à plusieurs');
   together.type = 'button';
-  let classId = classes[0]?.id ?? '';
-  const picker = createClassCards(classes, (next) => {
-    choose(next);
-  });
   const calm = createToggle('Mode calme', 'Sans strobos, secousses ni halos forts', 'Oui', 'Non');
   const sound = createSoundControl((side) => {
     actions.stepVolume(side);
@@ -75,15 +67,7 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
   const autoFire = createAutoFireToggle();
   const autoAim = createAutoAimToggle();
 
-  const items = [
-    play,
-    picker.element,
-    together,
-    calm.button,
-    sound.element,
-    autoFire.button,
-    autoAim.button,
-  ];
+  const items = [play, together, calm.button, sound.element, autoFire.button, autoAim.button];
   if (actions.feedback !== undefined) {
     items.push(createFeedbackButton());
   }
@@ -107,20 +91,9 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
   body.append(header, nav, controls, hint, meta);
   element.append(body);
 
-  function choose(next: string): void {
-    if (next !== classId) {
-      classId = next;
-      picker.set(next);
-      actions.chooseClass(next);
-    }
-  }
-
   const activations = [
     () => {
       actions.start();
-    },
-    () => {
-      choose(stepClass(classes, classId, 1) ?? classId);
     },
     () => {
       actions.playTogether();
@@ -146,19 +119,14 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
       activations[index]?.();
     },
     (index, side) => {
-      if (items[index] === sound.element) {
-        actions.stepVolume(side);
-        return true;
-      }
-      if (items[index] !== picker.element) {
+      if (items[index] !== sound.element) {
         return false;
       }
-      choose(stepClass(classes, classId, side) ?? classId);
+      actions.stepVolume(side);
       return true;
     },
   );
   menu.setItems(items);
-  picker.set(classId);
 
   let device: InputDevice | null = null;
 
@@ -173,10 +141,6 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
     },
     setVisits(count) {
       setText(meta, `v${__APP_RELEASE__} · ${formatNumber(count)} visite${count > 1 ? 's' : ''}`);
-    },
-    setClass(next) {
-      classId = next;
-      picker.set(next);
     },
     setDevice(next) {
       if (next === device) {
@@ -198,7 +162,7 @@ export function createTitle(actions: TitleActions, classes: readonly ClassInfo[]
         hint,
         [
           { keys: prompts.navigate, label: 'naviguer' },
-          { keys: prompts.navigateRow, label: 'classe, son' },
+          { keys: prompts.navigateRow, label: 'son' },
           { keys: [prompts.confirm], label: 'valider' },
         ],
         prompts.style,

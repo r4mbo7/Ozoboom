@@ -11,7 +11,7 @@ import { TRACKS } from '../data/tracks';
 import type { SetDefinition } from '../data/types';
 import { createInputHub } from '../input';
 import type { DeviceId, InputSnapshot } from '../input/intents';
-import { createRenderer } from '../render';
+import { createPortraits, createRenderer } from '../render';
 import { SUN_PALETTES } from '../shared/palette';
 import type { GameMode } from '../shared/stats';
 import { TICK_MS } from '../shared/tempo';
@@ -22,6 +22,7 @@ import type { CameraFocus } from '../render/types';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId } from '../sim/state';
 import {
+  type ClassPickerModel,
   type LobbyModel,
   type LocalPlayer,
   type SoundLevel,
@@ -170,107 +171,117 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   });
   renderer.setOptions({ focus: match.focus });
 
-  const ui = createUi(root, {
-    onStart: openStagePicker,
-    onRestart() {
-      if (onlineMatch !== null) {
-        online.relaunch();
-      } else if (launched === null) {
-        play();
-      } else {
-        launch(launched);
-      }
-    },
-    onQuit: quit,
-    onChooseUpgrade(playerId, upgradeId) {
-      match.chooseUpgrade(playerId, upgradeId);
-    },
-    onToggleCalmMode(enabled) {
-      prefs.calmMode = enabled;
-      renderer.setOptions({ calmMode: enabled });
-      savePref(storage, 'calmMode', enabled);
-    },
-    onToggleMute(muted) {
-      setSound({ volume: prefs.volume, muted });
-    },
-    onSetVolume(volume) {
-      setSound({ volume, muted: prefs.muted });
-    },
-    onToggleAutoFire: setAutoFire,
-    onToggleAutoAim: setAutoAim,
-    onFeedback: openForm,
-    onPlayTogether: openLobby,
-    onChooseClass(classId) {
-      if (classIds.includes(classId)) {
-        prefs.classId = classId;
-        savePref(storage, 'classId', classId);
-        setMatch(soloMatch());
-      }
-    },
-    onJoinSeat(device) {
-      if (seats.join(device)) {
-        audio.cue('seatTaken');
+  const ui = createUi(
+    root,
+    {
+      onStart: openClassPicker,
+      onRestart() {
+        if (onlineMatch !== null) {
+          online.relaunch();
+        } else if (launched === null) {
+          play();
+        } else {
+          launch(launched);
+        }
+      },
+      onQuit: quit,
+      onChooseUpgrade(playerId, upgradeId) {
+        match.chooseUpgrade(playerId, upgradeId);
+      },
+      onToggleCalmMode(enabled) {
+        prefs.calmMode = enabled;
+        renderer.setOptions({ calmMode: enabled });
+        savePref(storage, 'calmMode', enabled);
+      },
+      onToggleMute(muted) {
+        setSound({ volume: prefs.volume, muted });
+      },
+      onSetVolume(volume) {
+        setSound({ volume, muted: prefs.muted });
+      },
+      onToggleAutoFire: setAutoFire,
+      onToggleAutoAim: setAutoAim,
+      onFeedback: openForm,
+      onPlayTogether: openLobby,
+      onChooseClass(classId) {
+        if (classIds.includes(classId)) {
+          prefs.classId = classId;
+          savePref(storage, 'classId', classId);
+          setMatch(soloMatch());
+          if (screen === 'class') {
+            ui.showClassPicker(classPicker());
+          }
+        }
+      },
+      onConfirmClass: openStagePicker,
+      onLeaveClassPicker: toTitle,
+      onJoinSeat(device) {
+        if (seats.join(device)) {
+          audio.cue('seatTaken');
+          ui.updateLobby(localLobby());
+        }
+      },
+      onLeaveSeat(playerId) {
+        if (seats.leave(playerId)) {
+          audio.cue('seatFreed');
+          ui.updateLobby(localLobby());
+        }
+      },
+      onSeatClass(playerId, classId) {
+        if (onlineLobby) {
+          void audio.start();
+          online.setSeatClass(classId);
+          return;
+        }
+        seats.setClass(playerId, classId);
         ui.updateLobby(localLobby());
-      }
-    },
-    onLeaveSeat(playerId) {
-      if (seats.leave(playerId)) {
-        audio.cue('seatFreed');
+      },
+      onSeatName(playerId, name) {
+        if (onlineLobby) {
+          online.setSeatName(name);
+          return;
+        }
+        seats.setName(playerId, name);
         ui.updateLobby(localLobby());
-      }
-    },
-    onSeatClass(playerId, classId) {
-      if (onlineLobby) {
+      },
+      onGoOnline: openOnline,
+      onCreateRoom() {
         void audio.start();
-        online.setSeatClass(classId);
-        return;
-      }
-      seats.setClass(playerId, classId);
-      ui.updateLobby(localLobby());
-    },
-    onSeatName(playerId, name) {
-      if (onlineLobby) {
-        online.setSeatName(name);
-        return;
-      }
-      seats.setName(playerId, name);
-      ui.updateLobby(localLobby());
-    },
-    onGoOnline: openOnline,
-    onCreateRoom() {
-      void audio.start();
-      online.createRoom();
-    },
-    onJoinRoom(code) {
-      void audio.start();
-      online.joinRoom(code);
-    },
-    onLaunch() {
-      if (onlineLobby) {
+        online.createRoom();
+      },
+      onJoinRoom(code) {
         void audio.start();
-        online.launch();
-      } else if (seats.count > 0) {
-        launch(seats.launch());
-      }
+        online.joinRoom(code);
+      },
+      onLaunch() {
+        if (onlineLobby) {
+          void audio.start();
+          online.launch();
+        } else if (seats.count > 0) {
+          launch(seats.launch());
+        }
+      },
+      onChooseStage(setId) {
+        if (!content.sets.some((definition) => definition.id === setId)) {
+          return;
+        }
+        stageId = setId;
+        if (screen === 'stage') {
+          ui.showStagePicker({ stages, stageId });
+        } else if (onlineLobby) {
+          online.setStage(setId);
+        } else {
+          ui.updateLobby(localLobby());
+        }
+      },
+      onConfirmStage: play,
+      onLeaveStagePicker: openClassPicker,
+      onLeaveLobby: toTitle,
+      onLeaveNotice: quit,
     },
-    onChooseStage(setId) {
-      if (!content.sets.some((definition) => definition.id === setId)) {
-        return;
-      }
-      stageId = setId;
-      if (screen === 'stage') {
-        ui.showStagePicker({ stages, stageId });
-      } else if (onlineLobby) {
-        online.setStage(setId);
-      } else {
-        ui.updateLobby(localLobby());
-      }
-    },
-    onConfirmStage: play,
-    onLeaveStagePicker: toTitle,
-    onLeaveLobby: toTitle,
-    onLeaveNotice: quit,
-  });
+    content.classes,
+    createPortraits(content.classes, () => prefs.calmMode),
+  );
   void countVisit(window.location.hostname, (url) => fetch(url)).then((count) => {
     if (count !== null) ui.showVisits(count);
   });
@@ -352,7 +363,6 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       autoFire: prefs.autoFire,
       autoAim: prefs.autoAim,
       device: view.merged.device,
-      classId: prefs.classId,
     });
   }
 
@@ -472,6 +482,16 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
 
   function localLobby(): LobbyModel {
     return { ...seats.model(), stages, stageId };
+  }
+
+  function classPicker(): ClassPickerModel {
+    return { classId: prefs.classId, launches: stages.length < 2 };
+  }
+
+  function openClassPicker(): void {
+    screen = 'class';
+    applySound();
+    ui.showClassPicker(classPicker());
   }
 
   function openStagePicker(): void {
@@ -687,7 +707,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       }
     }
     if (onlineMatch === null) {
-      if (screen === 'title' || screen === 'stage' || screen === 'lobby' || paused) {
+      if (
+        screen === 'title' ||
+        screen === 'class' ||
+        screen === 'stage' ||
+        screen === 'lobby' ||
+        paused
+      ) {
         return;
       }
       stepOnce();

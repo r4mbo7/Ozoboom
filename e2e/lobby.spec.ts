@@ -27,42 +27,67 @@ function lobbyOf(page: Page) {
 }
 
 test.describe('title', () => {
-  test('picks the class beside Jouer, with the mouse and with left and right', async ({ page }) => {
+  test('opens the class picker from Jouer, without a class on the title', async ({ page }) => {
     const errors = collectConsoleErrors(page);
     const lines = logs(page);
     await page.goto('/dev/ui.html?screen=title');
+    await expect(page.getByRole('radiogroup')).toHaveCount(0);
 
-    const picker = page.getByRole('radiogroup', { name: 'Ta classe' });
-    await expect(picker.getByRole('radio')).toHaveCount(3);
-    await expect(picker.getByRole('radio', { name: 'La Luxiole' })).toBeChecked();
-    await picker.getByRole('radio', { name: 'Le Nounours' }).click();
-    await expect(picker.getByRole('radio', { name: 'Le Nounours' })).toBeChecked();
-    await expect(picker).toContainText('Tient la ligne');
-    expect(lines).toContain('[ui] onChooseClass tank');
+    await page.getByRole('button', { name: 'Jouer', exact: true }).click();
 
-    await expect(picker).toHaveAttribute('aria-current', 'true');
-    await tap(page, 'ArrowRight');
-    await expect(picker.getByRole('radio', { name: "L'Hygie" })).toBeChecked();
-    await tap(page, 'ArrowLeft');
-    await tap(page, 'ArrowLeft');
-    await expect(picker.getByRole('radio', { name: 'La Luxiole' })).toBeChecked();
-    expect(lines).toContain('[ui] onChooseClass healer');
-    expect(lines).toContain('[ui] onChooseClass mage');
+    expect(lines).toContain('[ui] onStart');
+    const screen = page.getByRole('region', { name: 'Choix du perso' });
+    await expect(screen.getByRole('heading', { name: 'La Luxiole' })).toBeVisible();
+    await screen.getByRole('button', { name: 'Retour au titre' }).click();
+    expect(lines).toContain('[ui] onLeaveClassPicker');
     expect(errors).toEqual([]);
   });
 
-  test('keeps Jouer a single gesture, and opens the lobby from Jouer à plusieurs', async ({
-    page,
-  }) => {
+  test('opens the lobby from Jouer à plusieurs', async ({ page }) => {
     const lines = logs(page);
     await page.goto('/dev/ui.html?screen=title');
     await page.getByRole('button', { name: 'Jouer à plusieurs' }).click();
     expect(lines).toContain('[ui] onPlayTogether');
     await expect(lobbyOf(page).getByRole('heading', { name: 'Salon local' })).toBeVisible();
+  });
+});
 
-    await page.goto('/dev/ui.html?screen=title');
-    await page.getByRole('button', { name: 'Jouer', exact: true }).click();
-    expect(lines).toContain('[ui] onStart');
+test.describe('class picker', () => {
+  test('picks a class with the mouse and with left and right, and tells what it does', async ({
+    page,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    const lines = logs(page);
+    await page.goto('/dev/ui.html?classpicker');
+    const screen = page.getByRole('region', { name: 'Choix du perso' });
+    const classes = screen.getByRole('radiogroup', { name: 'Classes' });
+    await expect(classes.getByRole('radio')).toHaveCount(3);
+    await expect(classes.getByRole('radio', { name: 'La Luxiole' })).toBeChecked();
+
+    await classes.getByRole('radio', { name: 'Le Nounours' }).click();
+
+    await expect(classes.getByRole('radio', { name: 'Le Nounours' })).toBeChecked();
+    await expect(screen.getByRole('heading', { name: 'Le Nounours' })).toBeVisible();
+    await expect(screen).toContainText('Tient la ligne');
+    await expect(screen).toContainText('Charge');
+    await expect(screen).toContainText('200');
+    expect(lines).toContain('[ui] onChooseClass tank');
+
+    await tap(page, 'ArrowRight');
+    await expect(classes.getByRole('radio', { name: "L'Hygie" })).toBeChecked();
+    await tap(page, 'ArrowLeft');
+    await tap(page, 'ArrowLeft');
+    await expect(classes.getByRole('radio', { name: 'La Luxiole' })).toBeChecked();
+    expect(lines).toContain('[ui] onChooseClass healer');
+    expect(lines).toContain('[ui] onChooseClass mage');
+
+    await tap(page, 'Enter');
+    expect(lines).toContain('[ui] onConfirmClass');
+    await expect(page.getByRole('radiogroup', { name: 'Scènes' })).toBeVisible();
+    await tap(page, 'Escape');
+    expect(lines).toContain('[ui] onLeaveStagePicker');
+    await expect(screen).toBeVisible();
+    expect(errors).toEqual([]);
   });
 });
 

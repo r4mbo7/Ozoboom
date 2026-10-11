@@ -1,5 +1,5 @@
 import { type Page, expect as baseExpect, test } from '@playwright/test';
-import { collectConsoleErrors } from './game';
+import { collectConsoleErrors, playSolo } from './game';
 
 // A phone held sideways. The bench keeps the player alive whatever the bad vibes do.
 test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
@@ -41,7 +41,7 @@ test('plays a game with a finger: stick, traps and pause', async ({ page }) => {
     navigator.getGamepads = () => [];
   });
   await page.goto('./?dev=bench');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).tap();
+  await playSolo(page, 'tap');
   const pause = page.getByRole('button', { name: 'Pause' });
   await expect(pause).toBeVisible();
   await expect(page.locator('.ui-trap__key').first()).toBeHidden();

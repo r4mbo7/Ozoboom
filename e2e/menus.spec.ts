@@ -1,5 +1,5 @@
 import { type Locator, type Page, expect as baseExpect, test } from '@playwright/test';
-import { collectConsoleErrors } from './game';
+import { collectConsoleErrors, playSolo } from './game';
 
 // A menu that opens under a resting cursor gets a synthetic hover from the browser: it must keep
 // its default selection until the mouse really moves.
@@ -50,7 +50,7 @@ async function expectRestingCursorIgnored(
 
 async function startGame(page: Page): Promise<void> {
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 }
 
@@ -93,7 +93,7 @@ test('the title shows again under a resting cursor without moving the selection'
   await page.goto('./');
   const feedback = page.getByRole('button', { name: /^Ton avis/ });
   const sound = page.getByRole('slider', { name: 'Son' });
-  for (let index = 0; index < 7; index++) {
+  for (let index = 0; index < 6; index++) {
     await page.keyboard.press('ArrowDown');
     await frames(page);
   }

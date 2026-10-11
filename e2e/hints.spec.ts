@@ -2,6 +2,7 @@ import { type Locator, type Page, expect as baseExpect, test } from '@playwright
 import {
   PAD,
   collectConsoleErrors,
+  playSolo,
   plugFakeGamepad,
   repeatUntil,
   tapButton,
@@ -42,7 +43,7 @@ async function startGame(page: Page, device: 'keyboard' | 'gamepad'): Promise<vo
     await tapButtonUntil(page, PAD.A, () => traps.isVisible());
   } else {
     await page.goto('./?dev=fast');
-    await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+    await playSolo(page);
     await page.mouse.move(1, 1);
     await expect(traps).toBeVisible();
   }

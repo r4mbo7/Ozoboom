@@ -326,3 +326,12 @@ export async function playWithPad(
 
   return { status, upgrades };
 }
+
+// From the title with a single scene (`?dev`): « Jouer », then « Lancer le set » under the class picked.
+export async function playSolo(page: Page, gesture: 'click' | 'tap' = 'click'): Promise<void> {
+  await page.getByRole('button', { name: 'Jouer', exact: true })[gesture]();
+  await page
+    .getByRole('region', { name: 'Choix du perso' })
+    .getByRole('button', { name: 'Lancer le set' })
+    [gesture]();
+}

@@ -1,5 +1,5 @@
 import { type Page, expect as baseExpect, test } from '@playwright/test';
-import { collectConsoleErrors, repeatUntil } from './game';
+import { collectConsoleErrors, playSolo, repeatUntil } from './game';
 
 test.describe.configure({ timeout: 120_000 });
 const expect = baseExpect.configure({ timeout: 30_000 });
@@ -35,7 +35,7 @@ async function loseBy(page: Page, cause: 'silence' | 'downed'): Promise<void> {
 
 async function startGame(page: Page): Promise<void> {
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 }
 
@@ -91,7 +91,7 @@ test('goes back to the title from the end of a lost game, then plays a new one',
   await expect(page.getByRole('region', { name: 'Écran titre' })).toBeVisible();
   await expect(end).toBeHidden();
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeHidden();
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   const fresh = await page.evaluate(() => ({
     seed: window.ozoboom?.state.seed,

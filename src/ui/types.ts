@@ -27,6 +27,21 @@ export interface StagePickerModel {
   stageId: string;
 }
 
+// Solo: the class picked, and whether confirming launches the set or leads to the scene.
+export interface ClassPickerModel {
+  classId: string;
+  launches: boolean;
+}
+
+// A class drawn alive by the game: the ui places it, the app makes it (the ui cannot draw the game).
+export interface ClassPortrait {
+  readonly element: HTMLElement;
+  setClass(classId: string): void;
+  destroy(): void;
+}
+
+export type CreatePortrait = () => ClassPortrait;
+
 export interface LobbySeat {
   playerId: PlayerId;
   name: string;
@@ -68,7 +83,11 @@ export interface UiCallbacks {
   onToggleAutoFire(enabled: boolean): void;
   onToggleAutoAim(enabled: boolean): void;
   onPlayTogether(): void;
+  // Picks a class, in the class picker.
   onChooseClass(classId: string): void;
+  // Solo: validates the picked class.
+  onConfirmClass(): void;
+  onLeaveClassPicker(): void;
   onJoinSeat(device: DeviceId): void;
   onLeaveSeat(playerId: PlayerId): void;
   onSeatClass(playerId: PlayerId, classId: string): void;
@@ -81,6 +100,7 @@ export interface UiCallbacks {
   onChooseStage(setId: string): void;
   // Solo: validates the picked scene.
   onConfirmStage(): void;
+  // Solo: back to the class picker.
   onLeaveStagePicker(): void;
   onLaunch(): void;
   onLeaveLobby(): void;
@@ -98,8 +118,8 @@ export interface Ui {
     autoFire: boolean;
     autoAim: boolean;
     device: InputDevice;
-    classId: string;
   }): void;
+  showClassPicker(model: ClassPickerModel): void;
   showVisits(count: number): void;
   showStagePicker(model: StagePickerModel): void;
   showLobby(model: LobbyModel): void;

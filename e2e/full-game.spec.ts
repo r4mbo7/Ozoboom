@@ -35,6 +35,8 @@ test('plays a whole game with the keyboard only, from the title to a restart', a
   await page.goto('./?dev=fast');
   await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
   await page.keyboard.press('Enter');
+  await expect(page.getByRole('region', { name: 'Choix du perso' })).toBeVisible();
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 
   await page.keyboard.press('KeyF');

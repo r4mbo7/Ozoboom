@@ -24,9 +24,10 @@ async function expectWholeIn(texts: Locator, frame: string): Promise<void> {
 test.describe('a phone held upright', () => {
   test.use({ viewport: { width: 412, height: 915 }, hasTouch: true, isMobile: true });
 
-  test('shows every class name whole on the title', async ({ page }) => {
+  test('shows every class name whole on the class picker', async ({ page }) => {
     await page.goto('./?dev=fast');
-    await expectWholeIn(page.locator('.ui-class__name'), '.ui-class');
+    await page.getByRole('button', { name: 'Jouer', exact: true }).tap();
+    await expectWholeIn(page.locator('.ui-classcard__name'), '.ui-classcard');
   });
 });
 
@@ -35,8 +36,9 @@ test.describe('a phone held sideways', () => {
 
   test('keeps the skill name and its state inside the action bar', async ({ page }) => {
     await page.goto('./?dev=bench');
-    await page.getByRole('radio', { name: 'Le Nounours' }).tap();
     await page.getByRole('button', { name: 'Jouer', exact: true }).tap();
+    await page.getByRole('radio', { name: 'Le Nounours' }).tap();
+    await page.getByRole('button', { name: 'Lancer le set' }).tap();
     await expect(page.locator('.ui-skill__status')).toHaveText('Prête');
     await expectWholeIn(page.locator('.ui-skill__name, .ui-skill__status'), '.ui-hud__bar');
   });

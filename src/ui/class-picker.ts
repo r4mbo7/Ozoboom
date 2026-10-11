@@ -1,7 +1,11 @@
 import type { ClassDefinition } from '../data/types';
 import { el, icon, setText } from './dom';
+import type { ClassPortrait } from './types';
 
-export type ClassInfo = Pick<ClassDefinition, 'id' | 'name' | 'role' | 'color'>;
+export type ClassInfo = Pick<
+  ClassDefinition,
+  'id' | 'name' | 'role' | 'color' | 'maxHp' | 'speed' | 'attack' | 'skill'
+>;
 
 const THEMED = new Set(['mage', 'tank', 'healer']);
 
@@ -10,55 +14,20 @@ export function classColor(info: ClassInfo): string {
   return THEMED.has(info.id) ? `var(--${info.id})` : info.color;
 }
 
-function swatch(info: ClassInfo): HTMLSpanElement {
-  const node = el('span', 'ui-swatch');
-  node.style.setProperty('--class-color', classColor(info));
-  node.setAttribute('aria-hidden', 'true');
-  return node;
-}
-
-export interface ClassCards {
-  readonly element: HTMLElement;
-  set(classId: string): void;
-}
-
-// Every class as a card, the chosen one lit, and its role underneath. The group is one item of the
-// menu: left and right move the choice, a click on a card makes it.
-export function createClassCards(
-  classes: readonly ClassInfo[],
-  onChoose: (classId: string) => void,
-): ClassCards {
-  const element = el('div', 'ui-classpick');
-  element.setAttribute('role', 'radiogroup');
-  const label = el('p', 'ui-panel__label', 'Ta classe');
-  label.id = 'ui-classpick-label';
-  element.setAttribute('aria-labelledby', label.id);
-  const row = el('div', 'ui-classpick__cards');
-  const role = el('p', 'ui-classpick__role');
-  role.setAttribute('aria-live', 'polite');
-
-  const cards = classes.map((info) => {
-    const card = el('button', 'ui-class');
-    card.type = 'button';
-    card.tabIndex = -1;
-    card.setAttribute('role', 'radio');
-    card.append(swatch(info), el('span', 'ui-class__name', info.name));
-    card.addEventListener('click', (event) => {
-      event.stopPropagation();
-      onChoose(info.id);
-    });
-    return card;
-  });
-  row.append(...cards);
-  element.append(label, row, role);
-
+// Without the game to draw it, a class shows as a lit disc of its colour.
+export function swatchPortrait(classes: readonly ClassInfo[]): ClassPortrait {
+  const element = el('span', 'ui-portrait-swatch');
+  element.setAttribute('aria-hidden', 'true');
   return {
     element,
-    set(classId) {
-      classes.forEach((info, index) => {
-        cards[index]?.setAttribute('aria-checked', String(info.id === classId));
-      });
-      setText(role, classes.find((info) => info.id === classId)?.role ?? '');
+    setClass(classId) {
+      const info = classes.find((entry) => entry.id === classId);
+      if (info !== undefined) {
+        element.style.setProperty('--class-color', classColor(info));
+      }
+    },
+    destroy() {
+      element.remove();
     },
   };
 }

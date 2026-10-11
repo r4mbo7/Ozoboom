@@ -1,5 +1,12 @@
 import { type Page, expect as baseExpect, test } from '@playwright/test';
-import { PAD, collectConsoleErrors, plugFakeGamepad, tapButton, tapButtonUntil } from './game';
+import {
+  PAD,
+  collectConsoleErrors,
+  playSolo,
+  plugFakeGamepad,
+  tapButton,
+  tapButtonUntil,
+} from './game';
 
 test.describe.configure({ timeout: 120_000 });
 const expect = baseExpect.configure({ timeout: 30_000 });
@@ -27,7 +34,7 @@ function stored(page: Page, key: string): Promise<string | null> {
 test('sets the sound level from the pause and remembers it on the title', async ({ page }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   await press(page, 'Escape');
   const pause = page.getByRole('dialog', { name: 'Pause' });
@@ -67,7 +74,7 @@ test('sets the sound level from the pause and remembers it on the title', async 
   await titleSound.getByText('Musique et effets').click();
   await expect(titleSound).toHaveAttribute('aria-valuetext', '70 %');
   await titleSound.getByText('Musique et effets').click();
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   await press(page, 'Escape');
   await expect(pause.getByRole('slider', { name: 'Son' })).toHaveAttribute(
@@ -88,7 +95,7 @@ test('turns on automatic fire and aim from the title and keeps them in the pause
   await autoFire.click();
   await page.getByRole('switch', { name: /^Visée automatique/ }).click();
   await page.reload();
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   await press(page, 'Escape');
 
@@ -120,7 +127,7 @@ test('quits the set from the pause after a confirmation, then plays a new one', 
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   const traps = page.getByRole('region', { name: 'Pièges' });
   await expect(traps).toBeVisible();
   await page.keyboard.press('KeyF');
@@ -172,6 +179,8 @@ test('quits the set from the pause after a confirmation, then plays a new one', 
   expect(quit.seed).not.toBe(paused.seed);
   expect(quit.tick).toBe(0);
 
+  await press(page, 'Enter');
+  await expect(page.getByRole('region', { name: 'Choix du perso' })).toBeVisible();
   await press(page, 'Enter');
 
   await expect(traps).toBeVisible();

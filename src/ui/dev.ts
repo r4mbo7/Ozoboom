@@ -18,13 +18,8 @@ import {
   idleSnapshot,
 } from './fixtures';
 import { createUi, prefersCalmMode } from './index';
-import {
-  LOBBY_CLASSES,
-  LOBBY_FIXTURES,
-  ROOM_CODE,
-  STAGE_CARDS,
-  lobbyFixture,
-} from './lobby-fixtures';
+import { CLASSES } from '../data/classes';
+import { LOBBY_FIXTURES, ROOM_CODE, STAGE_CARDS, lobbyFixture } from './lobby-fixtures';
 import { SEAT_IDS, defaultName } from './lobby-model';
 import { SUN_PALETTES, type SunMoment } from '../shared/palette';
 import { applyPalette, uiPaletteAt } from './sun';
@@ -59,8 +54,8 @@ const titleOptions = {
   volume: 10,
   autoFire: params.has('autoFire'),
   autoAim: params.has('autoAim'),
-  classId: 'mage',
 };
+let classId = 'mage';
 const blockedTab: FeedbackTransport = {
   send: () => Promise.resolve({ status: 'failed' }),
 };
@@ -107,7 +102,7 @@ const ui = createUi(
   {
     onStart() {
       console.info('[ui] onStart');
-      open('game');
+      ui.showClassPicker({ classId, launches: false });
     },
     onRestart() {
       console.info('[ui] onRestart');
@@ -154,9 +149,18 @@ const ui = createUi(
       console.info('[ui] onPlayTogether');
       showLobby(lobbyFixture('local-empty', origin()));
     },
-    onChooseClass: (classId) => {
-      console.info('[ui] onChooseClass', classId);
-      titleOptions.classId = classId;
+    onChooseClass: (chosen) => {
+      console.info('[ui] onChooseClass', chosen);
+      classId = chosen;
+      ui.showClassPicker({ classId, launches: false });
+    },
+    onConfirmClass: () => {
+      console.info('[ui] onConfirmClass');
+      ui.showStagePicker({ stages: STAGE_CARDS, stageId: 'dome' });
+    },
+    onLeaveClassPicker: () => {
+      console.info('[ui] onLeaveClassPicker');
+      open('title');
     },
     onJoinSeat: (deviceId) => {
       console.info('[ui] onJoinSeat', deviceId);
@@ -165,7 +169,7 @@ const ui = createUi(
         const taken: LobbySeat = {
           playerId: free,
           name: defaultName(free),
-          classId: LOBBY_CLASSES[0]?.id ?? 'mage',
+          classId: CLASSES[0]?.id ?? 'mage',
           device: deviceId,
           remote: false,
           host: lobby.seats.length === 0,
@@ -226,7 +230,7 @@ const ui = createUi(
     },
     onLeaveStagePicker: () => {
       console.info('[ui] onLeaveStagePicker');
-      open('title');
+      ui.showClassPicker({ classId, launches: false });
     },
     onLeaveLobby() {
       console.info('[ui] onLeaveLobby');
@@ -237,7 +241,7 @@ const ui = createUi(
       open('title');
     },
   },
-  LOBBY_CLASSES,
+  CLASSES,
 );
 
 function openForm(): void {
@@ -355,6 +359,9 @@ const notice = params.get('notice');
 if (notice === 'desync' || notice === 'hostLeft' || notice === 'connectionLost') {
   ui.update(state, { snapshot: pending, players: [] }, UI_FIXTURE_CONTENT);
   ui.showNotice(notice, params.get('details') ?? '');
+}
+if (params.has('classpicker')) {
+  ui.showClassPicker({ classId, launches: false });
 }
 if (params.has('stagepicker')) {
   ui.showStagePicker({ stages: STAGE_CARDS, stageId: 'dome' });

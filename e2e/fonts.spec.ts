@@ -18,8 +18,9 @@ test('loads the self-hosted fonts and never leaves the origin during a game', as
   await page.goto('./');
   await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await page.getByRole('button', { name: 'Choisir la scène' }).click();
   await page.getByRole('button', { name: 'Lancer le set' }).click();
-  await expect(page.locator('canvas')).toBeVisible();
+  await expect(page.locator('.game-stage canvas')).toBeVisible();
   // Held until it shows: a key pressed and released between two slow frames is never read.
   await page.keyboard.down('Escape');
   await expect(page.getByRole('dialog', { name: 'Pause' })).toBeVisible({ timeout: 30_000 });

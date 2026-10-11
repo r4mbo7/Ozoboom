@@ -95,7 +95,7 @@ export interface StagePickerScreen {
   update(edges: MenuIntents): void;
 }
 
-// Solo: after « Jouer », pick the scene. Left and right choose, Enter launches, Escape goes back.
+// Solo: after the class, pick the scene. Left and right choose, Enter launches, Escape goes back.
 export function createStagePicker(actions: StagePickerActions): StagePickerScreen {
   let model: StagePickerModel = { stages: [], stageId: '' };
 
@@ -114,7 +114,7 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
   const launch = el('button', 'ui-button ui-button--primary', 'Lancer le set');
   launch.type = 'button';
   launch.tabIndex = -1;
-  const back = el('button', 'ui-button', 'Retour au titre');
+  const back = el('button', 'ui-button', 'Retour au perso');
   back.type = 'button';
   back.tabIndex = -1;
   launch.addEventListener('click', () => {

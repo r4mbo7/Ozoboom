@@ -18,23 +18,40 @@ export type Draw = (ctx: Ctx) => void;
 // Width and height of the cell, the radius the shape stands for, and how to draw it around (0, 0).
 export type Piece = readonly [width: number, height: number, radius: number, draw: Draw];
 
+let density = 1;
+
+// What `make` paints, `times` finer at the same size on screen: for shapes shown larger than in a game.
+export function paintedFiner<T>(times: number, make: () => T): T {
+  const before = density;
+  density = times;
+  try {
+    return make();
+  } finally {
+    density = before;
+  }
+}
+
 function canvas2d(width: number, height: number): { canvas: HTMLCanvasElement; ctx: Ctx } {
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = Math.ceil(width * density);
+  canvas.height = Math.ceil(height * density);
   const ctx = canvas.getContext('2d');
   if (ctx === null) {
     throw new Error('Canvas 2D context is unavailable');
   }
+  ctx.scale(density, density);
   return { canvas, ctx };
+}
+
+function sourceOf(canvas: HTMLCanvasElement): CanvasSource {
+  return new CanvasSource({ resource: canvas, resolution: density, autoGenerateMipmaps: true });
 }
 
 export function paint(width: number, height: number, radius: number, draw: Draw): Shape {
   const { canvas, ctx } = canvas2d(width, height);
   ctx.translate(width / 2, height / 2);
   draw(ctx);
-  const source = new CanvasSource({ resource: canvas, autoGenerateMipmaps: true });
-  return { texture: new Texture({ source }), radius };
+  return { texture: new Texture({ source: sourceOf(canvas) }), radius };
 }
 
 const SHEET_WIDTH = 1024;
@@ -77,7 +94,7 @@ export function paintSheet<K extends string>(pieces: Readonly<Record<K, Piece>>)
     draw(ctx);
     ctx.restore();
   }
-  const source = new CanvasSource({ resource: canvas, autoGenerateMipmaps: true });
+  const source = sourceOf(canvas);
   const shapes = {} as Record<K, Shape>;
   for (const name of names) {
     const [width, height, radius] = pieces[name];

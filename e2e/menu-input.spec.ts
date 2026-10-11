@@ -81,6 +81,7 @@ test('Space does nothing in any menu, even after a click on a button', async ({ 
   await expectSpaceIgnored(page);
 
   await clickAndLeave(page, page.getByRole('button', { name: 'Jouer', exact: true }));
+  await clickAndLeave(page, page.getByRole('button', { name: 'Lancer le set' }));
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   await press(page, 'Escape');
   const pause = page.getByRole('dialog', { name: 'Pause' });

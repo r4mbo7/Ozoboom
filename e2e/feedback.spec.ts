@@ -1,5 +1,5 @@
 import { type Locator, type Page, expect as baseExpect, test } from '@playwright/test';
-import { collectConsoleErrors, repeatUntil } from './game';
+import { collectConsoleErrors, playSolo, repeatUntil } from './game';
 
 // Every key press waits for two frames, and SwiftShader frames are slow on CI and when tests run
 // in parallel: the budget of the full games, and 30 seconds per assertion instead of 5.
@@ -109,7 +109,7 @@ test('sends feedback from the title, before any game', async ({ page }) => {
   const feedback = page.getByRole('button', { name: /^Ton avis/ });
   await expect(feedback).toBeVisible();
 
-  for (let index = 0; index < 7; index++) {
+  for (let index = 0; index < 6; index++) {
     await press(page, 'ArrowDown');
   }
   await expect(feedback).toHaveAttribute('aria-current', 'true');
@@ -133,7 +133,7 @@ test('sends feedback from the pause, and the game stays paused', async ({ page }
   const errors = collectConsoleErrors(page);
   await interceptNewTabs(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
 
   await press(page, 'Escape');
@@ -176,7 +176,7 @@ test('sends feedback from the end screen, with the stats of the game', async ({ 
   const errors = collectConsoleErrors(page);
   await interceptNewTabs(page);
   await page.goto('./?dev=fast');
-  await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+  await playSolo(page);
   await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
   // The test is about the form, not about losing: the scene goes silent until the game is lost.
   // Once is not enough, as the scene may repair itself before the sim checks the status.

@@ -93,6 +93,7 @@ test.describe('stage in the app', () => {
     const errors = collectConsoleErrors(page);
     await page.goto('./?dev=fast&stages');
     await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+    await page.getByRole('button', { name: 'Choisir la scène' }).click();
     const stages = page.getByRole('radiogroup', { name: 'Scènes' });
     test.skip(!(await stages.isVisible()), 'a single set in the content: nothing to choose');
 
@@ -109,7 +110,9 @@ test.describe('stage in the app', () => {
 
     await page.reload();
     await page.getByRole('button', { name: 'Jouer', exact: true }).click();
+    await page.getByRole('button', { name: 'Choisir la scène' }).click();
     await expect(stages.getByRole('radio').last()).toBeChecked();
+    await page.getByRole('button', { name: 'Retour au perso' }).click();
     await page.getByRole('button', { name: 'Retour au titre' }).click();
     await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
     expect(errors).toEqual([]);
