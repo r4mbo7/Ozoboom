@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paletteAt, sandAt } from '../shared/palette';
+import { hillAt, paletteAt, sandAt } from '../shared/palette';
 import { MASK_BODY, MARK, maskTone } from './face-kit';
 import { LAKE_SKY_MIX, SOL_CLAIR_SHARE, TREE_COUNT, layoutGround, shoreAt } from './ground-layout';
 import { MAX_FIREFLIES, contrast, firefliesAt, mixColor, shadowAt } from './ground-sun';
@@ -153,6 +153,29 @@ describe('legibility of the bad vibes', () => {
         const silhouette = Math.max(contrast(rim, ground), contrast(body, ground));
         if (silhouette < 3) {
           faint.push(`${fraction.toFixed(3)}: ${silhouette.toFixed(2)}:1`);
+        }
+      }
+    }
+
+    expect(faint).toEqual([]);
+  });
+
+  it('stand out from the hill of Ambyss at every hour, lit by the east or not, by their rim or their body', () => {
+    const faint: string[] = [];
+
+    for (const fraction of FRACTIONS) {
+      const rim = pixiPaletteAt(fraction).badVibeRim;
+      const body = maskTone(rim, MASK_BODY);
+      const hill = hillAt(fraction);
+      const sun = parseHexColor(hill.soleil);
+      for (const ground of [hill.herbe, hill.herbeClaire, hill.sable, hill.sableClair].map(
+        parseHexColor,
+      )) {
+        for (const lit of [ground, mixColor(ground, sun, hill.est)]) {
+          const silhouette = Math.max(contrast(rim, lit), contrast(body, lit));
+          if (silhouette < 3) {
+            faint.push(`${fraction.toFixed(3)}: ${silhouette.toFixed(2)}:1`);
+          }
         }
       }
     }

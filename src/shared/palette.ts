@@ -97,6 +97,84 @@ export const SAND_PALETTES: Record<SunMoment, SandPalette> = {
   jour: { sable: '#ebd3a0', sableClair: '#f6e5bf', ride: '#d2b07c' },
 };
 
+export interface HillPalette {
+  herbe: string;
+  herbeClaire: string;
+  sable: string;
+  sableClair: string;
+  courbe: string;
+  arbre: string;
+  arbreClair: string;
+  coussin: string;
+  soleil: string;
+  // How strongly the light of the east, in `soleil`, washes the hill.
+  est: number;
+}
+
+const HILL_TOKENS = [
+  'herbe',
+  'herbeClaire',
+  'sable',
+  'sableClair',
+  'courbe',
+  'arbre',
+  'arbreClair',
+  'coussin',
+  'soleil',
+] as const;
+
+// The hill of Ambyss under the same four moments as SUN_PALETTES: it replaces sol and solClair on its ground only.
+export const HILL_PALETTES: Record<SunMoment, HillPalette> = {
+  crepuscule: {
+    herbe: '#3a2236',
+    herbeClaire: '#4d2d45',
+    sable: '#5c3a44',
+    sableClair: '#7a525a',
+    courbe: '#7a4a5c',
+    arbre: '#2a1c2c',
+    arbreClair: '#4a3042',
+    coussin: '#e0485a',
+    soleil: '#ff9a6a',
+    est: 0,
+  },
+  nuit: {
+    herbe: '#0a1226',
+    herbeClaire: '#131f3e',
+    sable: '#1d1932',
+    sableClair: '#2b2547',
+    courbe: '#2c3c6c',
+    arbre: '#0f2a2c',
+    arbreClair: '#1c4644',
+    coussin: '#b23048',
+    soleil: '#9b6bff',
+    est: 0.18,
+  },
+  aube: {
+    herbe: '#cdb39e',
+    herbeClaire: '#dcc3ad',
+    sable: '#e8d0b4',
+    sableClair: '#f5e4cc',
+    courbe: '#b2937c',
+    arbre: '#6c7a58',
+    arbreClair: '#8c9a70',
+    coussin: '#c43a40',
+    soleil: '#ffd8a0',
+    est: 0.85,
+  },
+  jour: {
+    herbe: '#d6cb98',
+    herbeClaire: '#e3d9aa',
+    sable: '#eedbae',
+    sableClair: '#f8ecca',
+    courbe: '#b4a476',
+    arbre: '#5e7a44',
+    arbreClair: '#7e9a5a',
+    coussin: '#c8323a',
+    soleil: '#fff4d0',
+    est: 0.4,
+  },
+};
+
 export const NIGHT_START = 0.25;
 export const NIGHT_END = 0.6;
 export const DAWN_AT = 0.85;
@@ -121,24 +199,34 @@ export function sandAt(fraction: number): SandPalette {
   return mixAt(SAND_PALETTES, ['sable', 'sableClair', 'ride'], fraction);
 }
 
-function mixAt<K extends string>(
-  palettes: Record<SunMoment, Record<K, string>>,
-  tokens: readonly K[],
-  fraction: number,
-): Record<K, string> {
+export function hillAt(fraction: number): HillPalette {
+  const { from, to, mix } = spanAt(fraction);
+  return {
+    ...mixAt(HILL_PALETTES, HILL_TOKENS, fraction),
+    est: HILL_PALETTES[from].est * (1 - mix) + HILL_PALETTES[to].est * mix,
+  };
+}
+
+function spanAt(fraction: number): { from: SunMoment; to: SunMoment; mix: number } {
   const t = clamp01(fraction);
   const next = Math.max(
     1,
     STOPS.findIndex(([at]) => at >= t),
   );
-  const [fromAt, fromMoment] = STOPS[next - 1] ?? [0, 'crepuscule'];
-  const [toAt, toMoment] = STOPS[next] ?? [1, 'jour'];
-  const from = palettes[fromMoment];
-  const to = palettes[toMoment];
-  const mix = (t - fromAt) / (toAt - fromAt);
+  const [fromAt, from] = STOPS[next - 1] ?? [0, 'crepuscule'];
+  const [toAt, to] = STOPS[next] ?? [1, 'jour'];
+  return { from, to, mix: (t - fromAt) / (toAt - fromAt) };
+}
+
+function mixAt<K extends string>(
+  palettes: Record<SunMoment, Record<K, string>>,
+  tokens: readonly K[],
+  fraction: number,
+): Record<K, string> {
+  const { from, to, mix } = spanAt(fraction);
   const mixed = {} as Record<K, string>;
   for (const token of tokens) {
-    mixed[token] = mixHex(from[token], to[token], mix);
+    mixed[token] = mixHex(palettes[from][token], palettes[to][token], mix);
   }
   return mixed;
 }

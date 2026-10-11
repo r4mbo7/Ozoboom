@@ -1,6 +1,6 @@
 import { type Container, Sprite } from 'pixi.js';
 import type { Frame } from './frame';
-import type { Layout, Tree } from './ground-layout';
+import type { Tree } from './ground-layout';
 import { crown, crownRim, shadow } from './ground-paint';
 import { darker, mixColor, shadowAt } from './ground-sun';
 import { setTint } from './util';
@@ -8,6 +8,24 @@ import { setTint } from './util';
 const LEAF_TEAL = { night: 0.08, day: 0.25 } as const;
 const SHADOW_BODY = 100;
 const SHADOW_THICKNESS = 68;
+
+export interface TreeTone {
+  readonly leaf: number;
+  readonly rim: number;
+  readonly rimAlpha: number;
+}
+
+function lakeTone({ palette, light }: Frame): TreeTone {
+  return {
+    leaf: mixColor(
+      darker(palette.sol, palette.texte),
+      palette.turquoise,
+      light.additive ? LEAF_TEAL.night : LEAF_TEAL.day,
+    ),
+    rim: light.additive ? palette.or : palette.turquoise,
+    rimAlpha: light.additive ? 0.32 : 0.2,
+  };
+}
 
 interface View {
   readonly tree: Tree;
@@ -22,7 +40,7 @@ function sprite(shape: { texture: Sprite['texture'] }): Sprite {
   return made;
 }
 
-// Dark discs off the dance floor. Their shadows turn with the sun of the set: long at dusk and dawn,
+// Dark discs off the dance floor, in the colours of the lake unless given others. Their shadows turn with the sun of the set: long at dusk and dawn,
 // short at noon, none at night.
 export function createTrees(parent: Container) {
   const shadowShape = shadow();
@@ -31,13 +49,13 @@ export function createTrees(parent: Container) {
   let views: View[] = [];
 
   return {
-    draw(layout: Layout): void {
+    draw(trees: readonly Tree[]): void {
       for (const { foot, crown: body, rim } of views) {
         foot.destroy();
         body.destroy();
         rim.destroy();
       }
-      views = layout.trees.map((tree) => {
+      views = trees.map((tree) => {
         const view = {
           tree,
           foot: sprite(shadowShape),
@@ -57,21 +75,16 @@ export function createTrees(parent: Container) {
         parent.addChild(body, rim);
       }
     },
-    style(frame: Frame): void {
-      const { palette, light } = frame;
+    style(frame: Frame, tone = lakeTone(frame)): void {
+      const { palette } = frame;
       const dark = darker(palette.sol, palette.texte);
-      const leaf = mixColor(
-        dark,
-        palette.turquoise,
-        light.additive ? LEAF_TEAL.night : LEAF_TEAL.day,
-      );
       const sun = shadowAt(frame.fraction);
       const dx = Math.cos(sun.angle);
       const dy = Math.sin(sun.angle);
       for (const { tree, foot, crown: body, rim } of views) {
-        setTint(body, leaf);
-        setTint(rim, light.additive ? palette.or : palette.turquoise);
-        rim.alpha = light.additive ? 0.32 : 0.2;
+        setTint(body, tone.leaf);
+        setTint(rim, tone.rim);
+        rim.alpha = tone.rimAlpha;
         setTint(foot, dark);
         foot.visible = sun.alpha > 0.002;
         const reach = (0.4 + sun.length) * tree.radius * 0.5;

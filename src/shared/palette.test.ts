@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HILL_PALETTES,
   PALETTE_TOKENS,
   SAND_PALETTES,
   SUN_PALETTES,
+  hillAt,
   lightAt,
   paletteAt,
   relativeLuminance,
@@ -107,5 +109,19 @@ describe('sandAt', () => {
     expect(sandAt(1)).toEqual(SAND_PALETTES.jour);
     expect(sandAt(0.725).sable).not.toBe(SAND_PALETTES.nuit.sable);
     expect(sandAt(0.725).sable).not.toBe(SAND_PALETTES.aube.sable);
+  });
+});
+
+describe('hillAt', () => {
+  it('lands on the hill of each moment and mixes between them, its east light too', () => {
+    expect(hillAt(0)).toEqual(HILL_PALETTES.crepuscule);
+    expect(hillAt(0.4)).toEqual(HILL_PALETTES.nuit);
+    expect(hillAt(0.85)).toEqual(HILL_PALETTES.aube);
+    expect(hillAt(1)).toEqual(HILL_PALETTES.jour);
+    expect(hillAt(0.925).herbe).not.toBe(HILL_PALETTES.aube.herbe);
+    expect(hillAt(0.925).est).toBeCloseTo(
+      (HILL_PALETTES.aube.est + HILL_PALETTES.jour.est) / 2,
+      10,
+    );
   });
 });

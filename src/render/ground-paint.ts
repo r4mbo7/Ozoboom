@@ -121,3 +121,26 @@ export function sandTile(seed: number): Texture {
     }
   });
 }
+
+// A white disc blurred like a Gaussian of `blur` radii: stretched by its sprite into a soft ellipse.
+export function softDisc(blur = 0.14): Shape {
+  const reach = 1 + 2.5 * blur;
+  const size = 512;
+  const radius = size / 2 / reach;
+  return paint(size, size, radius, (ctx) => {
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size / 2);
+    for (const [sigmas, alpha] of [
+      [-2, 0.977],
+      [-1, 0.841],
+      [0, 0.5],
+      [1, 0.159],
+      [2, 0.023],
+      [2.5, 0],
+    ] as const) {
+      gradient.addColorStop((1 + sigmas * blur) / reach, `rgb(255 255 255 / ${String(alpha)})`);
+    }
+    gradient.addColorStop(0, WHITE);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(-size / 2, -size / 2, size, size);
+  });
+}
