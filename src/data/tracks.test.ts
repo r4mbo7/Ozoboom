@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SETS } from './sets';
 import { SOIREE_OUVERTURE, TRACKS } from './tracks';
 
 function pitchClass(scale: readonly number[], degree: number): number {
@@ -80,5 +81,39 @@ describe('SOIREE_OUVERTURE', () => {
     );
 
     expect(changed).toEqual([2]);
+  });
+});
+
+describe('the Dome tracks', () => {
+  const dome = SETS.find((set) => set.id === 'dome');
+  const tracks = (dome?.trackIds ?? []).map((id) => TRACKS.find((track) => track.id === id));
+
+  it('plays the five tracks of the Dome in their own keys', () => {
+    expect(tracks.map((track) => track?.name)).toEqual([
+      'Sous la coupole',
+      'Route de la soie',
+      'Dub des champignons',
+      'La cérémonie',
+      'Mandala de feu',
+    ]);
+    expect(tracks.map((track) => (track?.rootMidi ?? 0) % 12)).toEqual([2, 4, 7, 5, 1]);
+    expect(tracks.map((track) => track?.scale[1])).toEqual([2, 1, 2, 2, 2]);
+  });
+
+  it('gives each one a kit of its own, whose hits fall inside their loops', () => {
+    for (const track of tracks) {
+      expect(track?.drums?.length, track?.id).toBeGreaterThan(0);
+      for (const drum of track?.drums ?? []) {
+        const label = `${track?.id ?? ''} ${drum.voice}`;
+        const steps = drum.hits.map(([step]) => step);
+        expect(steps, label).toEqual([...new Set(steps)].sort((a, b) => a - b));
+        expect(Math.min(...steps), label).toBeGreaterThanOrEqual(0);
+        expect(Math.max(...steps), label).toBeLessThan(drum.loopSteps);
+        expect(
+          drum.hits.every(([, gain]) => gain > 0 && gain <= 1),
+          label,
+        ).toBe(true);
+      }
+    }
   });
 });

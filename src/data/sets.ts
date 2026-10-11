@@ -199,6 +199,13 @@ const DOME_SPEAKER_SPOTS: Record<string, { x: number; y: number }> = {
 const DOME: SetDefinition = {
   ...MAIN_STAGE,
   id: 'dome',
+  trackIds: [
+    'sous-la-coupole',
+    'route-de-la-soie',
+    'dub-des-champignons',
+    'la-ceremonie',
+    'mandala-de-feu',
+  ],
   name: 'Le Dome',
   style: 'Downtempo, dub',
   bpm: tempoOf(DOME_TICKS_PER_BEAT).bpm,
