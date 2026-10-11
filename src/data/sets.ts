@@ -330,6 +330,7 @@ const AMBYSS: SetDefinition = {
   ...MAIN_STAGE,
   tiers: denserTiers(1.25),
   id: 'ambyss',
+  trackIds: ['premier-rayon'],
   name: 'Ambyss',
   style: 'Chillgressive, sunrise',
   bpm: tempoOf(AMBYSS_TICKS_PER_BEAT).bpm,

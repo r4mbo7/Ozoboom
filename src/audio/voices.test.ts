@@ -304,3 +304,54 @@ describe('dub and dome voices', () => {
     expect(softPeaks.peaks()).toEqual(loudPeaks.peaks().map((peak) => peak / 2));
   });
 });
+
+describe('ambyss voices', () => {
+  it('plucks a saw and its octave, with a share into the echo', () => {
+    const rig = probe();
+    const gains = spyGains(rig);
+
+    MUSIC_VOICES['sunrise-pluck'](contextOf(rig));
+
+    expect(rig.oscillators).toBe(2);
+    expect(gains.sends()).toEqual([0.35]);
+  });
+
+  it('bows three saws, with a vibrato only on long notes, and scales them with the part', () => {
+    const short = probe();
+    const long = probe();
+    const loud = probe();
+    const shortPeaks = spyGains(short);
+    const loudPeaks = spyGains(loud);
+
+    MUSIC_VOICES.strings(contextOf(short, { steps: 2 }));
+    MUSIC_VOICES.strings(contextOf(long, { steps: 8 }));
+    MUSIC_VOICES.strings(contextOf(loud, { steps: 2, gain: 1.6 }));
+
+    expect(short.oscillators).toBe(3);
+    expect(long.oscillators).toBe(6);
+    expect(loudPeaks.peaks()).toEqual(shortPeaks.peaks().map((peak) => peak * 1.6));
+  });
+
+  it('holds the ooh over the bar and stops it at the cut', () => {
+    const held = probe();
+    const cut = probe();
+    const sixteenth = sixteenthSeconds();
+
+    MUSIC_VOICES.ooh(contextOf(held, { steps: 16 }));
+    MUSIC_VOICES.ooh(contextOf(cut, { steps: 16, until: 2.8 }));
+
+    expect(held.oscillators).toBe(9);
+    expect(Math.max(...held.ends)).toBeGreaterThan(2.6 + 12 * sixteenth);
+    expect(Math.max(...cut.ends)).toBeCloseTo(2.8, 6);
+  });
+
+  it('sings the aah as a short stab of two voices', () => {
+    const rig = probe();
+    const sixteenth = sixteenthSeconds();
+
+    MUSIC_VOICES.aah(contextOf(rig, { steps: 2 }));
+
+    expect(rig.oscillators).toBe(6);
+    expect(Math.max(...rig.ends)).toBeLessThan(1 + 2 * sixteenth + 0.3);
+  });
+});

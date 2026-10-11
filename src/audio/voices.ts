@@ -1,7 +1,7 @@
 import type { MusicVoiceId } from '../data/types';
 import { type Tempo } from '../shared/tempo';
 import { sixteenthSeconds } from './clock';
-import { playNoise, playTone } from './synth';
+import { playNoise, playTone, type ToneSpec } from './synth';
 
 export interface MusicVoiceContext {
   out: AudioNode;
@@ -60,11 +60,17 @@ const BOWL_PARTIALS: readonly (readonly [
   [2.76, 0.02, 3, -0.35],
   [5.4, 0.008, 1.6, 0.35],
 ];
-// The vowel "aah": [formant hz, q, gain].
-const CHOIR_FORMANTS: readonly (readonly [hz: number, q: number, gain: number])[] = [
+// A vowel: [formant hz, q, gain].
+type Vowel = readonly (readonly [hz: number, q: number, gain: number])[];
+const VOWEL_A: Vowel = [
   [780, 5, 1],
   [1180, 7, 0.55],
   [2500, 9, 0.15],
+];
+const VOWEL_O: Vowel = [
+  [520, 6, 1],
+  [860, 7, 0.5],
+  [2400, 9, 0.08],
 ];
 const TOM_HZ = [190, 160, 130, 105];
 const GATE_TOP_HZ = 2200;
@@ -89,6 +95,26 @@ function held(ctx: MusicVoiceContext, steps: number, release: number, share = 0.
     0,
     Math.min(steps * sixteenthSeconds(ctx.tempo) * share, ctx.until - ctx.at - release),
   );
+}
+
+interface Singing extends Omit<ToneSpec, 'wave' | 'hz' | 'detune' | 'filter'> {
+  detunes: readonly number[];
+}
+
+function sing(out: AudioNode, at: number, hz: number, vowel: Vowel, singing: Singing) {
+  const { detunes, ...envelope } = singing;
+  for (const detune of detunes) {
+    for (const [formant, q, gain] of vowel) {
+      playTone(out, at, {
+        ...envelope,
+        wave: 'sawtooth',
+        hz,
+        detune,
+        gain: envelope.gain * gain,
+        filter: { type: 'bandpass', hz: formant, q },
+      });
+    }
+  }
 }
 
 function texturePan(position: number): number {
@@ -453,24 +479,15 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
     });
   },
   choir: ({ send, at, hz, steps, until, tempo }) => {
-    const sixteenth = sixteenthSeconds(tempo);
     const release = 0.8;
-    const hold = Math.max(0, Math.min(steps * sixteenth, until - at - 0.5 - release));
-    for (const detune of [-9, 0, 9]) {
-      for (const [formant, q, gain] of CHOIR_FORMANTS) {
-        playTone(send, at, {
-          wave: 'sawtooth',
-          hz,
-          detune,
-          gain: 0.03 * gain,
-          attack: 0.5,
-          hold,
-          release,
-          ...(steps >= 4 ? { vibrato: { hz: 5, cents: 14, delay: 0.3 } } : {}),
-          filter: { type: 'bandpass', hz: formant, q },
-        });
-      }
-    }
+    sing(send, at, hz, VOWEL_A, {
+      detunes: [-9, 0, 9],
+      gain: 0.03,
+      attack: 0.5,
+      hold: Math.max(0, Math.min(steps * sixteenthSeconds(tempo), until - at - 0.5 - release)),
+      release,
+      ...(steps >= 4 ? { vibrato: { hz: 5, cents: 14, delay: 0.3 } } : {}),
+    });
   },
   siren: ({ send, at, hz, steps, until, tempo }) => {
     const sixteenth = sixteenthSeconds(tempo);
@@ -693,5 +710,67 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         filter: { type: 'lowpass', hz: 1900, q: 1.2 },
       });
     }
+  },
+  'sunrise-pluck': (ctx) => {
+    const { out, at, hz, position, gain } = ctx;
+    const pan = position % 2 === 0 ? -0.4 : 0.4;
+    playTone(echoed(ctx, 0.35), at, {
+      wave: 'sawtooth',
+      hz,
+      gain: 0.034 * gain,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.24,
+      pan,
+      filter: { type: 'lowpass', hz: 3000, toHz: 420, glide: 0.18, q: 4 },
+    });
+    playTone(out, at, {
+      wave: 'square',
+      hz: hz * 2,
+      gain: 0.008 * gain,
+      attack: 0.002,
+      hold: 0.005,
+      release: 0.1,
+      pan,
+      filter: { type: 'lowpass', hz: 3200 },
+    });
+  },
+  strings: (ctx) => {
+    const { at, hz, steps, gain, light } = ctx;
+    const into = echoed(ctx, 0.3);
+    for (const detune of [-11, 0, 11]) {
+      playTone(into, at, {
+        wave: 'sawtooth',
+        hz,
+        detune,
+        gain: 0.019 * gain,
+        attack: 0.14,
+        hold: held(ctx, steps, 0.4),
+        release: 0.4,
+        pan: detune / 24,
+        ...(steps >= 4 ? { vibrato: { hz: 5.2, cents: 16, delay: 0.28 } } : {}),
+        filter: { type: 'lowpass', hz: light ? 2000 : 2800, q: 0.8 },
+      });
+    }
+  },
+  ooh: (ctx) => {
+    const { out, at, hz, steps, gain } = ctx;
+    sing(out, at, hz, VOWEL_O, {
+      detunes: [-9, 0, 9],
+      gain: 0.045 * gain,
+      attack: 0.8,
+      hold: held(ctx, steps, 1.6, 0.8),
+      release: 0.8,
+    });
+  },
+  aah: (ctx) => {
+    const { at, hz, steps, gain } = ctx;
+    sing(echoed(ctx, 0.5), at, hz, VOWEL_A, {
+      detunes: [-5, 5],
+      gain: 0.09 * gain,
+      attack: 0.02,
+      hold: held(ctx, steps, 0.27, 0.75),
+      release: 0.25,
+    });
   },
 };

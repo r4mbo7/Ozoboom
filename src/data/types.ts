@@ -370,7 +370,11 @@ export type MusicVoiceId =
   | 'sub-saw'
   | 'skank'
   | 'flute'
-  | 'melodica';
+  | 'melodica'
+  | 'sunrise-pluck'
+  | 'strings'
+  | 'ooh'
+  | 'aah';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
 // `kick` plays out of the break, `clap` only in the drop.
