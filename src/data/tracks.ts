@@ -425,6 +425,8 @@ export const GRENOUILLE_ACIDE: MusicTrack = {
   ],
 };
 
+const TOM_ROLL = [150, 125, 100, 82];
+
 function hitsAt(positions: readonly number[], gain = 1): DrumPart['hits'] {
   return positions.map((position) => [position, gain]);
 }
@@ -469,9 +471,9 @@ export const SOUS_LA_COUPOLE: MusicTrack = {
   chords: [0, 3, 0, -1],
   kick: { fromHz: 170, release: 0.3 },
   drums: [
-    { voice: 'kick', layer: 'kick', loopSteps: 16, hits: hitsAt([0], 0.9) },
-    { voice: 'kick', layer: 'clap', loopSteps: 16, hits: hitsAt([10]) },
-    { voice: 'rim', layer: 'kick', loopSteps: 16, hits: hitsAt([8], 0.7) },
+    { voice: 'kick', layer: 'kick', loopSteps: 16, hits: hitsAt([0], 0.8), in: 'rise' },
+    { voice: 'kick', layer: 'clap', loopSteps: 16, hits: hitsAt([0, 10]), in: 'drop' },
+    { voice: 'rim', layer: 'kick', loopSteps: 16, hits: hitsAt([8], 0.7), in: 'rise' },
     { voice: 'snare', layer: 'clap', loopSteps: 16, hits: hitsAt([8], 0.8) },
     { voice: 'rim', layer: 'clap', loopSteps: 32, hits: hitsAt([19, 30], 0.6), pan: 0.4 },
     {
@@ -611,8 +613,9 @@ export const ROUTE_DE_LA_SOIE: MusicTrack = {
     { voice: 'tek', layer: 'kick', loopSteps: 16, hits: hitsAt([6]), pan: -0.2 },
     { voice: 'tek', layer: 'clap', loopSteps: 16, hits: hitsAt([3, 5, 11, 15], 0.42), pan: 0.35 },
     { voice: 'tek', layer: 'clap', loopSteps: 16, hits: hitsAt([10, 14], 0.42), pan: -0.35 },
-    { voice: 'kick', layer: 'kick', loopSteps: 16, hits: hitsAt([0], 0.8) },
-    { voice: 'kick', layer: 'clap', loopSteps: 16, hits: hitsAt([10], 0.95) },
+    { voice: 'doum', layer: 'texture', loopSteps: 16, hits: hitsAt([0], 0.5), in: 'light' },
+    { voice: 'kick', layer: 'kick', loopSteps: 16, hits: hitsAt([0], 0.7), in: 'rise' },
+    { voice: 'kick', layer: 'clap', loopSteps: 16, hits: hitsAt([0, 10], 0.95), in: 'drop' },
     { voice: 'clap', layer: 'clap', loopSteps: 16, hits: hitsAt([8], 0.5) },
   ],
   parts: [
@@ -698,7 +701,21 @@ export const DUB_DES_CHAMPIGNONS: MusicTrack = {
     { voice: 'kick', layer: 'kick', loopSteps: 16, hits: hitsAt([8]) },
     { voice: 'kick', layer: 'clap', loopSteps: 16, hits: hitsAt([0]) },
     { voice: 'snare', layer: 'kick', loopSteps: 16, hits: hitsAt([8], 0.9) },
-    { voice: 'hat', layer: 'kick', loopSteps: 16, hits: hitsAt([2, 6, 10, 14], 0.9), pan: 0.2 },
+    {
+      voice: 'hat',
+      layer: 'kick',
+      loopSteps: 16,
+      hits: hitsAt([2, 6, 10, 14], 0.9),
+      pan: 0.2,
+      in: 'rise',
+    },
+    {
+      voice: 'hat-open',
+      layer: 'clap',
+      loopSteps: 16,
+      hits: hitsAt([2, 6, 10, 14], 0.9),
+      pan: 0.2,
+    },
     { voice: 'hat', layer: 'clap', loopSteps: 16, hits: hitsAt([1, 5, 9, 13], 0.6), pan: -0.4 },
     { voice: 'hat', layer: 'clap', loopSteps: 16, hits: hitsAt([3, 7, 11, 15], 0.6), pan: 0.4 },
     { voice: 'rim', layer: 'kick', loopSteps: 64, hits: hitsAt([62, 63], 0.8), pan: -0.3 },
@@ -817,8 +834,25 @@ export const LA_CEREMONIE: MusicTrack = {
   chords: [0, -2, 3, 4],
   kick: { fromHz: 170, release: 0.24 },
   drums: [
-    { voice: 'frame-drum', layer: 'texture', loopSteps: 16, hits: hitsAt([0], 0.55) },
+    {
+      voice: 'frame-drum',
+      layer: 'texture',
+      loopSteps: 16,
+      hits: hitsAt([0], 0.64),
+      in: 'light',
+      release: 0.6,
+    },
+    { voice: 'frame-drum', layer: 'kick', loopSteps: 16, hits: hitsAt([0], 0.55) },
     { voice: 'frame-drum', layer: 'kick', loopSteps: 16, hits: hitsAt([3], 0.32) },
+    { voice: 'tom', layer: 'kick', loopSteps: 16, hits: hitsAt([8], 0.4), hz: 96, in: 'rise' },
+    ...TOM_ROLL.map((hz, index): DrumPart => ({
+      voice: 'tom',
+      layer: 'clap',
+      loopSteps: 64,
+      hits: hitsAt([60 + index], 0.4),
+      hz,
+      release: 0.3,
+    })),
     {
       voice: 'rattle',
       layer: 'kick',
@@ -913,29 +947,47 @@ export const MANDALA_DE_FEU: MusicTrack = {
   chords: [0, -2, -4, -1],
   kick: { fromHz: 170, release: 0.28 },
   drums: [
-    {
-      voice: 'kick',
-      layer: 'kick',
-      loopSteps: 16,
-      hits: [
-        [0, 0.9],
-        [10, 0.4],
-      ],
-    },
+    { voice: 'kick', layer: 'kick', loopSteps: 16, hits: hitsAt([0, 10], 0.85), in: 'rise' },
+    { voice: 'snare', layer: 'kick', loopSteps: 16, hits: hitsAt([8], 0.7), in: 'rise' },
     {
       voice: 'kick',
       layer: 'clap',
       loopSteps: 16,
       hits: [
+        [0, 1],
         [2, 0.4],
         [5, 0.85],
         [8, 1],
+        [10, 0.4],
         [13, 0.85],
       ],
+      in: 'drop',
     },
     { voice: 'snare', layer: 'clap', loopSteps: 16, hits: hitsAt([4, 12], 0.7) },
     { voice: 'clap', layer: 'clap', loopSteps: 16, hits: hitsAt([4, 12], 0.35) },
-    { voice: 'hat', layer: 'kick', loopSteps: 16, hits: hitsAt([2, 6, 10, 14], 0.75), pan: 0.15 },
+    {
+      voice: 'hat',
+      layer: 'kick',
+      loopSteps: 16,
+      hits: hitsAt([4, 8, 12], 0.8),
+      pan: 0.2,
+      in: 'rise',
+    },
+    {
+      voice: 'hat-open',
+      layer: 'kick',
+      loopSteps: 16,
+      hits: hitsAt([2, 6, 10, 14], 0.8),
+      pan: 0.2,
+      in: 'rise',
+    },
+    {
+      voice: 'hat-open',
+      layer: 'clap',
+      loopSteps: 16,
+      hits: hitsAt([2, 6, 10, 14], 0.7),
+      pan: 0.15,
+    },
     {
       voice: 'shaker',
       layer: 'clap',

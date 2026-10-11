@@ -388,7 +388,18 @@ export interface MusicPart {
 }
 
 export type DrumVoiceId =
-  'kick' | 'snare' | 'rim' | 'clap' | 'hat' | 'shaker' | 'doum' | 'tek' | 'frame-drum' | 'rattle';
+  | 'kick'
+  | 'snare'
+  | 'rim'
+  | 'clap'
+  | 'hat'
+  | 'hat-open'
+  | 'shaker'
+  | 'doum'
+  | 'tek'
+  | 'frame-drum'
+  | 'rattle'
+  | 'tom';
 
 // One drum of a track's own kit: [sixteenth within the loop, gain] hits, gated by its layer.
 export interface DrumPart {
@@ -398,6 +409,12 @@ export interface DrumPart {
   hits: readonly (readonly [step: number, gain: number])[];
   // From -1 (left) to 1 (right). Absent means centred.
   pan?: number;
+  // Same meaning as on a music part: the segments in which the drum is heard.
+  in?: MusicPart['in'];
+  // Pitch of a `tom`, in Hz.
+  hz?: number;
+  // Ring of a tom, doum or frame drum, in seconds. Absent keeps the voice's own.
+  release?: number;
 }
 
 // A background track. Every track plays at the set's tempo and follows its buildups, breaks and

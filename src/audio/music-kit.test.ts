@@ -98,6 +98,18 @@ describe('the drum kit of a track', () => {
   });
 });
 
+describe('a drum kept to a segment', () => {
+  const kit = (heard: 'rise' | 'drop') =>
+    [{ voice: 'kick', layer: 'kick', loopSteps: 16, hits: [[0, 1]], in: heard }] as const;
+
+  it('plays in its own segment only', () => {
+    const rise = play({ ...SOIREE_OUVERTURE, drums: kit('rise') }, undefined).kicks;
+    const drop = play({ ...SOIREE_OUVERTURE, drums: kit('drop') }, undefined).kicks;
+
+    expect([rise, drop].sort()).toEqual([[], [0]]);
+  });
+});
+
 describe('the tempo of the set', () => {
   it('sets the beat to 621 ms at 18 ticks per beat', () => {
     const { kicks } = play(SOIREE_OUVERTURE, DOME_SET);

@@ -723,7 +723,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       for (const drum of track.drums) {
         const position = (sixteenth + 16 * bar) % drum.loopSteps;
         const hit = drum.hits.find(([hitStep]) => hitStep === position);
-        if (hit === undefined || !isOn(layers, drum.layer)) {
+        if (hit === undefined || !isOn(layers, drum.layer) || !partHeard(drum.in, current)) {
           continue;
         }
         DRUM_VOICES[drum.voice]({
@@ -731,6 +731,8 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
           at,
           gain: hit[1],
           pan: drum.pan,
+          hz: drum.hz,
+          release: drum.release,
           kick: {
             fromHz: track.kick.fromHz,
             toHz: keyHz(track, 0, 0),

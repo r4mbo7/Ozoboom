@@ -6,6 +6,8 @@ export interface DrumContext {
   at: number;
   gain: number;
   pan: number | undefined;
+  hz: number | undefined;
+  release: number | undefined;
   // The track's kick: it falls from `fromHz` to the key's root.
   kick: { fromHz: number; toHz: number; release: number };
 }
@@ -122,6 +124,16 @@ export const DRUM_VOICES: Record<DrumVoiceId, DrumVoice> = {
       filter: { type: 'highpass', hz: 7000 },
     });
   },
+  'hat-open'({ out, at, gain, pan }) {
+    playNoise(out, at, {
+      gain: 0.22 * gain,
+      attack: 0.001,
+      hold: 0,
+      release: 0.12,
+      pan,
+      filter: { type: 'highpass', hz: 7000 },
+    });
+  },
   shaker({ out, at, gain, pan }) {
     playNoise(out, at, {
       gain: 0.07 * gain,
@@ -143,7 +155,7 @@ export const DRUM_VOICES: Record<DrumVoiceId, DrumVoice> = {
     });
   },
   doum(ctx) {
-    tom(ctx, DOUM_HZ, 0.42 * ctx.gain, 0.32);
+    tom(ctx, DOUM_HZ, 0.42 * ctx.gain, ctx.release ?? 0.32);
   },
   tek({ out, at, gain, pan }) {
     playNoise(out, at, {
@@ -167,6 +179,9 @@ export const DRUM_VOICES: Record<DrumVoiceId, DrumVoice> = {
     });
   },
   'frame-drum'(ctx) {
-    tom(ctx, FRAME_DRUM_HZ, 0.55 * ctx.gain, 0.45);
+    tom(ctx, FRAME_DRUM_HZ, 0.55 * ctx.gain, ctx.release ?? 0.45);
+  },
+  tom(ctx) {
+    tom(ctx, ctx.hz ?? FRAME_DRUM_HZ, ctx.gain, ctx.release ?? 0.45);
   },
 };

@@ -116,4 +116,23 @@ describe('the Dome tracks', () => {
       }
     }
   });
+
+  it('shapes the dome kits after the validated prototypes', () => {
+    const drums = (id: string) => TRACKS.find((track) => track.id === id)?.drums ?? [];
+    const steps = (id: string, voice: string, heard?: string) =>
+      drums(id)
+        .filter((drum) => drum.voice === voice && drum.in === heard)
+        .flatMap((drum) => drum.hits.map(([step]) => step))
+        .sort((a, b) => a - b);
+
+    expect(steps('sous-la-coupole', 'rim', 'rise')).toEqual([8]);
+    expect(steps('sous-la-coupole', 'rim', 'drop')).toEqual([]);
+    expect(steps('route-de-la-soie', 'doum', 'light')).toEqual([0]);
+    expect(steps('dub-des-champignons', 'hat-open', undefined)).toEqual([2, 6, 10, 14]);
+    expect(steps('la-ceremonie', 'tom', undefined)).toEqual([60, 61, 62, 63]);
+    expect(steps('la-ceremonie', 'tom', 'rise')).toEqual([8]);
+    expect(steps('la-ceremonie', 'frame-drum', 'light')).toEqual([0]);
+    expect(steps('mandala-de-feu', 'kick', 'drop')).toEqual([0, 2, 5, 8, 10, 13]);
+    expect(steps('mandala-de-feu', 'kick', 'rise')).toEqual([0, 10]);
+  });
 });
