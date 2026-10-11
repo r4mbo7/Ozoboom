@@ -1,3 +1,4 @@
+import { rotate, unitFromAngle } from '../shared/angle';
 import { DEFAULT_BPM, TICKS_PER_BAR, tempoOf } from '../shared/tempo';
 import type { ObstacleDefinition, SetDefinition } from './types';
 
@@ -126,67 +127,147 @@ const MAIN_STAGE: SetDefinition = {
 
 const DOME_TICKS_PER_BEAT = 18;
 
-// The crown's posts first, then the giants' arms. Option F of the Dome mock-up (1200 x 900),
-// scaled by 10/9 around the core. Posts are 24 wide with 38 between two of them: the biggest player
-// (18) fits, the heavy bad vibes (20) do not. The four axes stay open for a boss (48). Arm stones
-// are 18 wide with the same 38 gaps and stop 70 short of each axis, under the joined hands.
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface CrownShape {
+  center: Point;
+  radius: number;
+  posts: number;
+  postRadius: number;
+  openEvery: number;
+}
+
+interface ArmsShape {
+  center: Point;
+  giants: number;
+  firstGiantRadians: number;
+  curve: readonly [Point, Point, Point, Point];
+  stoneRadius: number;
+  gap: number;
+  stonesPerSide: number;
+}
+
+// Posts on a circle, skipping every openEvery-th one: those gaps are the entrances.
+function crownObstacles(shape: CrownShape): ObstacleDefinition[] {
+  const obstacles: ObstacleDefinition[] = [];
+  for (let i = 1; i < shape.posts; i++) {
+    if (i % shape.openEvery === 0) {
+      continue;
+    }
+    const unit = unitFromAngle((i * 2 * Math.PI) / shape.posts);
+    obstacles.push({
+      x: Math.round(shape.center.x + shape.radius * unit.x),
+      y: Math.round(shape.center.y + shape.radius * unit.y),
+      radius: shape.postRadius,
+    });
+  }
+  return obstacles;
+}
+
+const ARM_SAMPLES = 400;
+
+function distance(a: Point, b: Point): number {
+  return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+}
+
+function bezierAt([p0, p1, p2, p3]: ArmsShape['curve'], t: number): Point {
+  const u = 1 - t;
+  const a = u * u * u;
+  const b = 3 * u * u * t;
+  const c = 3 * u * t * t;
+  const d = t * t * t;
+  return {
+    x: a * p0.x + b * p1.x + c * p2.x + d * p3.x,
+    y: a * p0.y + b * p1.y + c * p2.y + d * p3.y,
+  };
+}
+
+// Stones one chord apart along the curve, the first one on the giant's axis at the curve's start
+// distance, then stonesPerSide on each side of the axis (the curve and its mirror image).
+function armStones(shape: ArmsShape): Point[] {
+  const chord = 2 * shape.stoneRadius + shape.gap;
+  const curve = Array.from({ length: ARM_SAMPLES + 1 }, (_, i) =>
+    bezierAt(shape.curve, i / ARM_SAMPLES),
+  );
+  const stones: Point[] = [];
+  let last: Point = { x: shape.curve[0].x, y: 0 };
+  let next = 1;
+  while (stones.length < shape.stonesPerSide) {
+    const from = curve[next - 1];
+    const to = curve[next];
+    if (from === undefined || to === undefined) {
+      throw new Error('arm curve is too short for its stones');
+    }
+    const before = distance(from, last);
+    const after = distance(to, last);
+    if (after < chord) {
+      next++;
+      continue;
+    }
+    const along = (chord - before) / (after - before);
+    last = { x: from.x + (to.x - from.x) * along, y: from.y + (to.y - from.y) * along };
+    stones.push(last);
+  }
+  return stones;
+}
+
+// Each giant holds one arm either side of its axis, listed mirrored side first.
+function armsObstacles(shape: ArmsShape): ObstacleDefinition[] {
+  const stones = armStones(shape);
+  const axisStone = { x: shape.curve[0].x, y: 0 };
+  const obstacles: ObstacleDefinition[] = [];
+  for (let giant = 0; giant < shape.giants; giant++) {
+    const radians = shape.firstGiantRadians + (giant * 2 * Math.PI) / shape.giants;
+    const place = (point: Point): ObstacleDefinition => {
+      const world = rotate(point, radians);
+      return {
+        x: Math.round(shape.center.x + world.x),
+        y: Math.round(shape.center.y + world.y),
+        radius: shape.stoneRadius,
+      };
+    };
+    obstacles.push(place(axisStone));
+    for (const side of [-1, 1]) {
+      for (const stone of stones) {
+        obstacles.push(place({ x: stone.x, y: side * stone.y }));
+      }
+    }
+  }
+  return obstacles;
+}
+
+// Option F of the Dome mock-up (1200 x 900), scaled by 10/9 around the core. Posts are 24 wide with
+// 38 between two of them: the biggest player (18) fits, the heavy bad vibes (20) do not. The four
+// axes stay open for a boss (48). Arm stones are 18 wide with the same 38 gaps and stop 70 short of
+// each axis, under the joined hands.
+const DOME_SCALE = 10 / 9;
+const DOME_CENTER = { x: 800, y: 500 };
+
 const DOME_OBSTACLES: readonly ObstacleDefinition[] = [
-  { x: 1119, y: 585, radius: 24 },
-  { x: 1086, y: 665, radius: 24 },
-  { x: 1033, y: 733, radius: 24 },
-  { x: 965, y: 786, radius: 24 },
-  { x: 885, y: 819, radius: 24 },
-  { x: 715, y: 819, radius: 24 },
-  { x: 635, y: 786, radius: 24 },
-  { x: 567, y: 733, radius: 24 },
-  { x: 514, y: 665, radius: 24 },
-  { x: 481, y: 585, radius: 24 },
-  { x: 481, y: 415, radius: 24 },
-  { x: 514, y: 335, radius: 24 },
-  { x: 567, y: 267, radius: 24 },
-  { x: 635, y: 214, radius: 24 },
-  { x: 715, y: 181, radius: 24 },
-  { x: 885, y: 181, radius: 24 },
-  { x: 965, y: 214, radius: 24 },
-  { x: 1033, y: 267, radius: 24 },
-  { x: 1086, y: 335, radius: 24 },
-  { x: 1119, y: 415, radius: 24 },
-  { x: 487, y: 187, radius: 18 },
-  { x: 532, y: 128, radius: 18 },
-  { x: 584, y: 76, radius: 18 },
-  { x: 650, y: 42, radius: 18 },
-  { x: 722, y: 27, radius: 18 },
-  { x: 428, y: 232, radius: 18 },
-  { x: 376, y: 284, radius: 18 },
-  { x: 342, y: 350, radius: 18 },
-  { x: 327, y: 422, radius: 18 },
-  { x: 1113, y: 187, radius: 18 },
-  { x: 1172, y: 232, radius: 18 },
-  { x: 1224, y: 284, radius: 18 },
-  { x: 1258, y: 350, radius: 18 },
-  { x: 1273, y: 422, radius: 18 },
-  { x: 1068, y: 128, radius: 18 },
-  { x: 1016, y: 76, radius: 18 },
-  { x: 950, y: 42, radius: 18 },
-  { x: 878, y: 27, radius: 18 },
-  { x: 1113, y: 813, radius: 18 },
-  { x: 1068, y: 872, radius: 18 },
-  { x: 1016, y: 924, radius: 18 },
-  { x: 950, y: 958, radius: 18 },
-  { x: 878, y: 973, radius: 18 },
-  { x: 1172, y: 768, radius: 18 },
-  { x: 1224, y: 716, radius: 18 },
-  { x: 1258, y: 650, radius: 18 },
-  { x: 1273, y: 578, radius: 18 },
-  { x: 487, y: 813, radius: 18 },
-  { x: 428, y: 768, radius: 18 },
-  { x: 376, y: 716, radius: 18 },
-  { x: 342, y: 650, radius: 18 },
-  { x: 327, y: 578, radius: 18 },
-  { x: 532, y: 872, radius: 18 },
-  { x: 584, y: 924, radius: 18 },
-  { x: 650, y: 958, radius: 18 },
-  { x: 722, y: 973, radius: 18 },
+  ...crownObstacles({
+    center: DOME_CENTER,
+    radius: 330,
+    posts: 24,
+    postRadius: 24,
+    openEvery: 6,
+  }),
+  ...armsObstacles({
+    center: DOME_CENTER,
+    giants: 4,
+    firstGiantRadians: (-3 * Math.PI) / 4,
+    curve: [
+      { x: 398 * DOME_SCALE, y: -32 * DOME_SCALE },
+      { x: 432 * DOME_SCALE, y: -120 * DOME_SCALE },
+      { x: 392 * DOME_SCALE, y: -238 * DOME_SCALE },
+      { x: 297 * DOME_SCALE, y: -297 * DOME_SCALE },
+    ],
+    stoneRadius: 18,
+    gap: 38,
+    stonesPerSide: 4,
+  }),
 ];
 
 const DOME_SPEAKER_SPOTS: Record<string, { x: number; y: number }> = {
