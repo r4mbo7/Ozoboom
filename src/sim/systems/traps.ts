@@ -14,6 +14,7 @@ import {
   touches,
   wholeTicks,
 } from '../effects';
+import { touchesObstacle } from '../obstacles';
 import type { EnemyState, PlayerId, PlayerState, SimState, TrapState, Vec2 } from '../state';
 import { statValue, trapCapacity } from '../stats';
 import type { StepContext } from './types';
@@ -129,6 +130,7 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     y >= radius &&
     y <= arena.height - radius &&
     !overlaps(footprint, core, core.radius) &&
+    !touchesObstacle(footprint, set.obstacles ?? []) &&
     !state.traps.some((trap) => overlaps(footprint, trap, trapDefinition(content, trap).radius)) &&
     state.traps.length < trapCapacity(set, state);
   if (!fits) {

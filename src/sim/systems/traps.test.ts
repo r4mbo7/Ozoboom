@@ -157,6 +157,31 @@ describe('trap placement', () => {
     expect(state.traps.map((trap) => trap.kind)).toEqual(['subwoofer']);
   });
 
+  it('refuses a trap that overlaps an obstacle of the set, and accepts one that just touches it', () => {
+    const { content } = EFFECTS_OPTIONS;
+    const sets = content.sets.map((set) => ({
+      ...set,
+      obstacles: [{ x: 400, y: 450, radius: 24 }],
+    }));
+    const simulation = createSimulation({ ...EFFECTS_OPTIONS, content: { ...content, sets } });
+    const { state } = simulation;
+    const player = state.players[0];
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    player.hand = ['subwoofer', 'subwoofer'];
+
+    simulation.step([
+      actionsFor(
+        0,
+        placeAction('subwoofer', 400 + 24 + 24 - 1, 450),
+        placeAction('subwoofer', 400, 450 + 24 + 24),
+      ),
+    ]);
+
+    expect(state.traps.map(({ x, y }) => ({ x, y }))).toEqual([{ x: 400, y: 450 + 24 + 24 }]);
+  });
+
   it('refuses a new trap once the set limit is reached', () => {
     const { simulation, state } = game();
     const placements = Array.from({ length: 7 }, (_, i) =>
