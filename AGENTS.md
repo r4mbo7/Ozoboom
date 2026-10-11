@@ -71,6 +71,7 @@ pnpm check            # types, lint, format, tests, build : doit passer avant to
 pnpm test:watch       # tests en continu
 pnpm e2e              # tests navigateur, un checkout à la fois sur la machine
 pnpm contrast         # contraste de chaque écran à chaque moment (6 min), après un changement de couleur
+pnpm captures         # refait les captures de docs/captures : choix de la scène, quatre moments par scène (12 min)
 pnpm format           # formate tout
 ```
 

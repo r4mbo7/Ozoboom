@@ -107,12 +107,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const stage = document.createElement('div');
   stage.className = 'game-stage';
   root.append(stage);
-  const renderer = await createRenderer(
-    stage,
-    { calmMode: prefs.calmMode },
-    content,
-    dev.mode === 'fast',
-  );
+  const renderer = await createRenderer(stage, { calmMode: prefs.calmMode }, content, dev.light);
   const hub = createInputHub(stage);
   const audio = createAudioEngine({
     setOf: (setId) => content.sets.find((candidate) => candidate.id === setId),

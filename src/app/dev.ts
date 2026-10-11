@@ -8,6 +8,7 @@ import type { PlayerId, SimState } from '../sim/state';
 // Development modes, only behind the `dev` URL parameter, never by default:
 // - `?dev=fast`: a short set (one phrase per tier, one-bar break, weaker bad vibes, sturdier
 //   scene) played eight times faster and drawn light, to reach the end of a game in a browser test;
+//   `&crisp` draws it at full quality instead, for the captures of `scripts/captures.ts`;
 // - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
 //   weapons and a plugged speaker, to measure a frame. `&players=4` seats four players on one
 //   screen instead (one of each class, then the first again), three weapons each, camera on everyone.
@@ -23,6 +24,8 @@ export interface DevOptions {
   // Players of the bench, 1 unless `&players=` says up to 4.
   readonly players: number;
   readonly content: GameContent;
+  // Half resolution without antialiasing (`createRenderer`).
+  readonly light: boolean;
 }
 
 const FAST_SPEED = 8;
@@ -39,14 +42,20 @@ export function readDevOptions(search: string, content: GameContent): DevOptions
     return readDevOptions(`${search}&stages`, { ...content, sets: content.sets.slice(0, 1) });
   }
   if (mode === 'fast') {
-    return { mode, speed: FAST_SPEED, players: 1, content: fastContent(content) };
+    return {
+      mode,
+      speed: FAST_SPEED,
+      players: 1,
+      content: fastContent(content),
+      light: !params.has('crisp'),
+    };
   }
   if (mode === 'bench') {
     const asked = Number(params.get('players') ?? 1);
     const players = Number.isInteger(asked) ? Math.min(Math.max(asked, 1), MAX_BENCH_PLAYERS) : 1;
-    return { mode, speed: 1, players, content };
+    return { mode, speed: 1, players, content, light: false };
   }
-  return { mode: null, speed: 1, players: 1, content };
+  return { mode: null, speed: 1, players: 1, content, light: false };
 }
 
 // One of each class in the order of the content, then the first again: four players on one screen.

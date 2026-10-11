@@ -74,3 +74,12 @@ describe('the stages of a dev mode', () => {
     expect(readDevOptions('', two).content.sets).toHaveLength(2);
   });
 });
+
+describe('the drawing of a dev mode', () => {
+  it('draws the short set light, unless the URL asks it crisp', () => {
+    expect(readDevOptions('?dev=fast', CONTENT).light).toBe(true);
+    expect(readDevOptions('?dev=fast&crisp', CONTENT).light).toBe(false);
+    expect(readDevOptions('?dev=bench', CONTENT).light).toBe(false);
+    expect(readDevOptions('', CONTENT).light).toBe(false);
+  });
+});
