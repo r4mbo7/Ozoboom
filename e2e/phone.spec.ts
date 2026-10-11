@@ -29,6 +29,21 @@ test.describe('a phone held upright', () => {
     await page.getByRole('button', { name: 'Jouer', exact: true }).tap();
     await expectWholeIn(page.locator('.ui-classcard__name'), '.ui-classcard');
   });
+
+  for (const [mode, screen] of [
+    ['Jouer', 'Choix du perso'],
+    ['Jouer à plusieurs', 'Salon'],
+  ] as const) {
+    test(`asks to turn the phone sideways after « ${mode} »`, async ({ page }) => {
+      await page.goto('./?dev=fast');
+      await page.getByRole('button', { name: mode, exact: true }).tap();
+
+      const region = page.getByRole('region', { name: screen });
+
+      await expect(region.getByText('Tourne ton téléphone')).toBeVisible();
+      await expectWholeIn(region.locator('.ui-landscape__text'), '.ui-landscape');
+    });
+  }
 });
 
 test.describe('a phone held sideways', () => {
@@ -41,6 +56,16 @@ test.describe('a phone held sideways', () => {
     await page.getByRole('button', { name: 'Lancer le set' }).tap();
     await expect(page.locator('.ui-skill__status')).toHaveText('Prête');
     await expectWholeIn(page.locator('.ui-skill__name, .ui-skill__status'), '.ui-hud__bar');
+  });
+
+  test('picks a class without asking to turn the phone', async ({ page }) => {
+    await page.goto('./?dev=fast');
+    await page.getByRole('button', { name: 'Jouer', exact: true }).tap();
+
+    const region = page.getByRole('region', { name: 'Choix du perso' });
+
+    await expect(region.getByRole('radio', { name: 'Le Nounours' })).toBeVisible();
+    await expect(region.getByText('Tourne ton téléphone')).toBeHidden();
   });
 
   for (const screen of ['upgrade', 'fusion', 'relics', 'won']) {

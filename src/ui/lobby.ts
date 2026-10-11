@@ -1,6 +1,11 @@
 import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
 import type { PlayerId } from '../sim/state';
-import { type ClassInfo, type ClassStepper, createClassStepper } from './class-picker';
+import {
+  type ClassInfo,
+  type ClassStepper,
+  createClassStepper,
+  landscapeNotice,
+} from './class-picker';
 import { el, fillHint, setFlag, setText } from './dom';
 import {
   NAME_LENGTH,
@@ -219,7 +224,7 @@ export function createLobby(
   const hint = el('p', 'ui-hint');
 
   const body = el('div', 'ui-lobby__body');
-  body.append(header, error, entry, share, seatList, stagePanel, footer, hint);
+  body.append(header, landscapeNotice(), error, entry, share, seatList, stagePanel, footer, hint);
   element.append(body);
 
   const inputs = [codeInput, ...cards.map((card) => card.input)];

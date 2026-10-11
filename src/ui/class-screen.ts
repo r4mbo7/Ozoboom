@@ -1,5 +1,5 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
-import { type ClassInfo, classColor } from './class-picker';
+import { type ClassInfo, classColor, landscapeNotice } from './class-picker';
 import { el, fillHint, setText } from './dom';
 import { formatNumber, formatSeconds, formatTenth } from './format';
 import { stepClass } from './lobby-model';
@@ -149,7 +149,7 @@ export function createClassPicker(
   footer.append(confirm, back);
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-lobby__body');
-  body.append(header, hero, row, footer, hint);
+  body.append(header, landscapeNotice(), hero, row, footer, hint);
   element.append(body);
 
   let device: InputDevice | null = null;

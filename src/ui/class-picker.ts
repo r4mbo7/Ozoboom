@@ -1,5 +1,6 @@
 import type { ClassDefinition } from '../data/types';
 import { el, icon, setText } from './dom';
+import { PHONE } from './icons';
 import type { ClassPortrait } from './types';
 
 export type ClassInfo = Pick<
@@ -89,4 +90,16 @@ export function createClassStepper(
       }
     },
   };
+}
+
+// The style sheet shows it only on a touch screen held upright: the set is drawn for landscape.
+export function landscapeNotice(): HTMLElement {
+  const notice = el('p', 'ui-landscape');
+  const text = el('span', 'ui-landscape__text');
+  text.append(
+    el('strong', 'ui-landscape__title', 'Tourne ton téléphone'),
+    el('span', 'ui-landscape__detail', 'Le set se joue en paysage.'),
+  );
+  notice.append(icon('ui-landscape__icon', PHONE), text);
+  return notice;
 }

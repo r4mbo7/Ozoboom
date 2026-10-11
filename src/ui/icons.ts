@@ -9,6 +9,10 @@ export const PLUG =
 export const PAUSE =
   '<rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/>';
 
+export const PHONE =
+  '<rect x="7" y="2.5" width="10" height="19" rx="2.2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+  '<path d="M10.5 18.5h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+
 export const HEART =
   '<path d="M12 20.5s-8.2-4.7-8.2-10.6A4.7 4.7 0 0 1 12 7a4.7 4.7 0 0 1 8.2 2.9c0 5.9-8.2 10.6-8.2 10.6z" fill="currentColor"/>';
 
