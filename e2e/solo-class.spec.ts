@@ -4,6 +4,9 @@ import { collectConsoleErrors } from './game';
 test('Jouer plays the class chosen on the title, and the next visit proposes it again', async ({
   page,
 }) => {
+  // Without a GPU, the reload first frees the running game's WebGL context in software: on a busy
+  // machine the old page holds the tab blank for up to twenty seconds before the new one parses.
+  test.setTimeout(90_000);
   const errors = collectConsoleErrors(page);
   await page.goto('./?dev=fast');
   const picker = page.getByRole('radiogroup', { name: 'Ta classe' });
@@ -17,9 +20,9 @@ test('Jouer plays the class chosen on the title, and the next visit proposes it 
     { playerId: 0, name: null, classId: 'tank', device: null, local: true },
   ]);
 
-  await page.reload();
+  await page.reload({ waitUntil: 'commit' });
   await expect(
     page.getByRole('radiogroup', { name: 'Ta classe' }).getByRole('radio', { name: 'Le Nounours' }),
-  ).toBeChecked();
+  ).toBeChecked({ timeout: 60_000 });
   expect(errors).toEqual([]);
 });
