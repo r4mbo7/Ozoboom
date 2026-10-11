@@ -46,6 +46,15 @@ git log --format='%s%n%b' origin/main..origin/dev
 - Corps en français, court, comme les sorties précédentes (`gh pr list --base main --state merged`) : une ligne `Sortie X.Y de \`dev\` vers \`main\`.`, puis une puce par nouveauté que le joueur voit ou entend, avec ses `#N`. Les changements pour contributeurs (tests, outillage, docs) tiennent en une dernière puce, ou disparaissent s'ils sont mineurs.
 - Pas de tiret long.
 
+Puis les KPI depuis la sortie précédente, l'historique au-delà des 3 mois de rétention de Cloudflare. Depuis le worktree :
+
+```bash
+pnpm --silent kpi > <scratchpad>/kpi.md
+```
+
+- La commande réussit : coller `kpi.md` tel quel en fin de corps, il s'ouvre sur son titre `## KPI depuis le ...`.
+- `CLOUDFLARE_ACCOUNT_ID` ou `CLOUDFLARE_STATS_TOKEN` manque, ou la commande échoue : sortir quand même, sans tableau. Le corps finit par une section `## KPI` d'une ligne qui le signale, avec la raison.
+
 ## 4. Ouvrir la pull request
 
 ```bash
