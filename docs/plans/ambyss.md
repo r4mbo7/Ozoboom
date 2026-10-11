@@ -16,6 +16,10 @@ La maquette validée est hors du dépôt, sur la machine de Constantin : `.lavis
 | 2     | U1  | [#372 ui : la carte d'Ambyss dans « Choisis la scène »](https://github.com/r4mbo7/Ozoboom/issues/372)                      | C1            |
 | 2     | B1  | [#373 data : équilibrer Ambyss sans écran](https://github.com/r4mbo7/Ozoboom/issues/373)                                   | C1            |
 | 3     | P1  | [#374 app : assembler Ambyss, une partie complète, des captures et les docs](https://github.com/r4mbo7/Ozoboom/issues/374) | tout le reste |
+| 4     | R1  | [#375 data/ui/scripts : une scène de plus coûte moins](https://github.com/r4mbo7/Ozoboom/issues/375)                       | P1            |
+| 5     | R2  | [#376 render : le set dans la frame, un seul sol dessiné](https://github.com/r4mbo7/Ozoboom/issues/376)                    | R1            |
+
+Les vagues 4 et 5 viennent de la revue de code du jalon : aligner les scènes et réduire ce qu'en coûte une nouvelle.
 
 ## Règles
 
