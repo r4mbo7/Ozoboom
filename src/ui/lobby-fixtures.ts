@@ -3,6 +3,7 @@ import type { LobbyModel, LobbySeat, StageCard } from './types';
 export const STAGE_CARDS: readonly StageCard[] = [
   { setId: 'main', name: 'Main stage', style: 'Psytrance full-on', bpm: 145, decor: 'lake' },
   { setId: 'dome', name: 'Le Dome', style: 'Downtempo, dub', bpm: 96.7, decor: 'dome' },
+  { setId: 'ambyss', name: 'Ambyss', style: 'Chillgressive, sunrise', bpm: 116, decor: 'ambyss' },
 ];
 
 export const LOBBY_FIXTURES = [

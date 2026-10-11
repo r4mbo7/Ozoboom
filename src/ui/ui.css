@@ -1340,14 +1340,18 @@
 
 /* Stage cards */
 
+/* Cards share a row while each keeps room for its chips, and leave room for the chevron of the picked one. */
 .ui-stagecards {
   --stage-width: 300px;
+  --stage-min: 200px;
 
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   justify-content: center;
   gap: 16px calc(2 * var(--ui-chevron));
+  width: 100%;
+  padding-inline: var(--ui-chevron);
 }
 
 .ui-lobby__stage {
@@ -1367,7 +1371,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: min(100%, var(--stage-width));
+  flex: 1 1 0;
+  min-width: min(100%, var(--stage-min));
+  max-width: var(--stage-width);
   padding: 10px 10px 14px;
   border: 1.5px solid var(--ui-line);
   border-radius: var(--ui-radius);

@@ -23,10 +23,16 @@ test.describe('stage picker', () => {
     await page.goto('/dev/ui.html?stagepicker');
 
     const picker = page.getByRole('radiogroup', { name: 'Scènes' });
-    await expect(picker.getByRole('radio')).toHaveCount(2);
+    await expect(picker.getByRole('radio')).toHaveCount(3);
     await expect(picker.getByRole('radio', { name: /Le Dome/ })).toBeChecked();
     await expect(picker.getByRole('radio', { name: /Main stage/ })).toContainText('145 BPM');
     await expect(picker.getByRole('radio', { name: /Le Dome/ })).toContainText('96,7 BPM');
+    await expect(picker.getByRole('radio', { name: /Ambyss/ })).toContainText('116 BPM');
+
+    await tap(page, 'ArrowRight');
+    expect(lines).toContain('[ui] onChooseStage ambyss');
+    await expect(picker.getByRole('radio', { name: /Ambyss/ })).toBeChecked();
+    await tap(page, 'ArrowLeft');
 
     await tap(page, 'ArrowLeft');
     expect(lines).toContain('[ui] onChooseStage main');

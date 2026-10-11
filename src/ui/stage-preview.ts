@@ -120,6 +120,215 @@ const DOME = `
     <circle r="12" fill="${GARLAND}"/>
   </g>`;
 
+const DAWN = {
+  grass: '#cdb39e',
+  grassHigh: '#dcc3ad',
+  sand: '#e8d0b4',
+  sandLight: '#f5e4cc',
+  contour: '#b2937c',
+  tree: '#6c7a58',
+  treeLight: '#8c9a70',
+  cushion: '#c43a40',
+  canopy: '#e2a66a',
+  rope: '#8a6a50',
+  sun: '#ffd8a0',
+  gold: '#a8781f',
+  core: '#c98a12',
+};
+
+type Spot = readonly [number, number];
+
+function xy([x, y]: Spot): string {
+  return `${x.toFixed(1)} ${y.toFixed(1)}`;
+}
+
+// The arena's almonds, as in render/ambyss-layout: two circle arcs meeting at the east and west tips.
+function almond(halfWidth: number, halfHeight: number) {
+  const radius = (halfWidth * halfWidth + halfHeight * halfHeight) / (2 * halfHeight);
+  const spread = Math.asin(halfWidth / radius);
+  const arc = `A${radius.toFixed(1)} ${radius.toFixed(1)} 0 0 1`;
+  return {
+    path: `M${String(-halfWidth)} 0 ${arc} ${String(halfWidth)} 0 ${arc} ${String(-halfWidth)} 0 Z`,
+    edge(t: number, north: boolean): Spot {
+      const swing = -spread + 2 * spread * t;
+      const angle = north ? -Math.PI / 2 + swing : Math.PI / 2 - swing;
+      const center = north ? radius - halfHeight : halfHeight - radius;
+      return [radius * Math.cos(angle), center + radius * Math.sin(angle)];
+    },
+  };
+}
+
+const MASTS: readonly Spot[] = [
+  [-213, 0],
+  [213, 0],
+];
+
+// The hill rises in terraces towards the floor, each edged by a contour line.
+function terraces(filled: boolean): string {
+  return [8, 7, 6, 5, 4, 3, 2, 1, 0]
+    .map((step) => {
+      const fill = !filled || step > 5 ? 'none' : step > 2 ? DAWN.grassHigh : DAWN.sand;
+      return `<ellipse cx="${String(step * 6)}" cy="${String(step * 5)}" rx="${String(480 + step * 72)}" ry="${String(306 + step * 65)}" fill="${fill}"/>`;
+    })
+    .join('');
+}
+
+const TREES: readonly (readonly [number, number, number])[] = [
+  [-660, -400, 34],
+  [-600, -432, 26],
+  [-566, -378, 30],
+  [-650, -346, 22],
+  [604, -408, 32],
+  [656, -366, 26],
+  [584, -356, 22],
+  [-624, 418, 30],
+  [-562, 440, 26],
+  [-596, 382, 22],
+  [560, 402, 30],
+  [622, 430, 34],
+  [660, 376, 24],
+  [596, 356, 22],
+  [-10, -452, 26],
+  [42, -436, 22],
+  [-74, 448, 28],
+  [-24, 436, 22],
+];
+
+function tree([x, y, size]: readonly [number, number, number]): string {
+  const at = (dx: number, dy: number) => `cx="${String(x + dx)}" cy="${String(y + dy)}"`;
+  return `<circle ${at(-16, 3)} r="${String(size)}" fill="#000" opacity="0.2"/>
+    <circle ${at(0, 0)} r="${String(size)}" fill="${DAWN.tree}" stroke="#000" stroke-opacity="0.25" stroke-width="2"/>
+    <circle ${at(-size * 0.25, -size * 0.25)} r="${String(size * 0.42)}" fill="${DAWN.treeLight}" opacity="0.6"/>
+    <circle ${at(size * 0.22, size * 0.18)} r="${String(size * 0.34)}" fill="${DAWN.treeLight}" opacity="0.5"/>`;
+}
+
+// Red cushions in curved rows facing the core, with an aisle along each axis.
+const CUSHIONS = [0.44, 0.58, 0.72, 0.86]
+  .flatMap((ring) => {
+    const row = almond(400 * ring, 230 * ring);
+    const count = Math.round((400 * ring) / 14);
+    return [true, false].flatMap((north) =>
+      Array.from({ length: count }, (_, index) => row.edge((index + 0.5) / count, north)),
+    );
+  })
+  .filter(([x, y]) => Math.abs(x) > 24 && Math.abs(y) > 18)
+  .map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="8"/>`)
+  .join('');
+
+const CANOPY_ALMOND = almond(440, 255);
+const ANCHORS: readonly Spot[] = [
+  [-440, 0] as const,
+  [440, 0] as const,
+  ...[true, false].flatMap((north) =>
+    [1, 2, 3, 4, 5, 6].map((index) => CANOPY_ALMOND.edge(index / 7, north)),
+  ),
+].sort(([ax, ay], [bx, by]) => Math.atan2(ay, ax) - Math.atan2(by, bx));
+
+// The canopy's edge sags between its anchors, towards the core.
+const CANOPY = ANCHORS.map((anchor, index) => {
+  const next = ANCHORS[(index + 1) % ANCHORS.length] ?? anchor;
+  const sag: Spot = [((anchor[0] + next[0]) / 2) * 0.84, ((anchor[1] + next[1]) / 2) * 0.84];
+  return `${index === 0 ? `M${xy(anchor)} ` : ''}Q${xy(sag)} ${xy(next)}`;
+}).join(' ');
+
+const SEAMS = ANCHORS.map(([x, y]) => {
+  const [mx, my] = (x < 0 ? MASTS[0] : MASTS[1]) ?? [0, 0];
+  return `M${xy([mx, my])} Q${xy([(mx + x) / 2, (my + y) / 2 + (y < 0 ? 14 : -14)])} ${xy([x, y])}`;
+}).join(' ');
+
+// Two guy ropes per anchor, splayed outwards to their pegs in the slope.
+const GUYS = ANCHORS.flatMap((anchor) =>
+  [-0.12, 0.12].map((splay) => {
+    const angle = Math.atan2(anchor[1] * 1.6, anchor[0]) + splay;
+    return {
+      anchor,
+      peg: [anchor[0] + 80 * Math.cos(angle), anchor[1] + 80 * Math.sin(angle)] as const,
+      angle,
+    };
+  }),
+);
+const ROPES = GUYS.map(({ anchor, peg }) => `M${xy(anchor)} L${xy(peg)}`).join(' ');
+const PEGS = GUYS.map(
+  ({ peg, angle }) =>
+    `<rect x="-7" y="-7" width="14" height="14" rx="3" transform="translate(${xy(peg)}) rotate(${((angle * 180) / Math.PI).toFixed(0)})"/>`,
+).join('');
+
+const RAYS = Array.from({ length: 12 }, (_, index) => {
+  const angle = (index * Math.PI) / 6;
+  const reach = index % 2 === 0 ? 34 : 27;
+  return `M${xy([18 * Math.cos(angle), 18 * Math.sin(angle)])} L${xy([reach * Math.cos(angle), reach * Math.sin(angle)])}`;
+}).join(' ');
+
+// Cosmic streaks fall from the north-east, brightening towards their head.
+const STREAKS = (
+  [
+    [690, -440, 520, '#1f8a84'],
+    [800, -250, 360, '#6b3fd0'],
+    [480, -455, 290, '#b8246a'],
+  ] as const
+)
+  .map(([x, y, length, color]) => {
+    const along = (share: number): Spot => [
+      x + share * length * Math.cos(Math.PI * 0.8),
+      y + share * length * Math.sin(Math.PI * 0.8),
+    ];
+    const head = along(1);
+    return `<g stroke="${color}" fill="${color}">
+      <path d="M${xy([x, y])} L${xy(along(0.4))}" stroke-width="5" opacity="0.25"/>
+      <path d="M${xy(along(0.4))} L${xy(along(0.75))}" stroke-width="6" opacity="0.5"/>
+      <path d="M${xy(along(0.75))} L${xy(head)}" stroke-width="7" opacity="0.85"/>
+      <circle cx="${head[0].toFixed(1)}" cy="${head[1].toFixed(1)}" r="7" stroke="none"/>
+    </g>`;
+  })
+  .join('');
+
+// Soft light without a filter or a gradient, whose ids would clash between previews: thin, faint, nested layers.
+function glow(
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  color: string,
+  opacity: number,
+): string {
+  const layers = [1, 0.84, 0.68, 0.52, 0.36, 0.2]
+    .map(
+      (share) =>
+        `<ellipse cx="${String(cx)}" cy="${String(cy)}" rx="${String(rx * share)}" ry="${String(ry * share)}"/>`,
+    )
+    .join('');
+  return `<g fill="${color}" fill-opacity="${String(opacity)}">${layers}</g>`;
+}
+
+// Ambyss at dawn, from above, in the arena's units: the hill's terraces lit from the east, the almond floor and its
+// rows of red cushions, the see-through canopy on its two masts and guy ropes, the sun core and cosmic streaks.
+const AMBYSS = `
+  <rect width="160" height="90" fill="${DAWN.grass}"/>
+  <g transform="translate(80 45) scale(0.1)">
+    ${terraces(true)}
+    ${glow(760, -30, 520, 680, DAWN.sun, 0.09)}
+    <g stroke="${DAWN.contour}" stroke-width="6" opacity="0.8">${terraces(false)}</g>
+    <path d="M-400 0 C-540 12 -560 58 -830 84 M400 0 C540 -12 556 -46 830 -60" fill="none" stroke="${DAWN.sandLight}" stroke-width="28" stroke-linecap="round" opacity="0.6"/>
+    ${TREES.map(tree).join('')}
+    <path d="${almond(400, 230).path}" fill="${DAWN.sandLight}" stroke="${DAWN.sand}" stroke-width="14"/>
+    <g fill="${DAWN.cushion}" stroke="#000" stroke-opacity="0.3" stroke-width="1.5">${CUSHIONS}</g>
+    <path d="${ROPES}" stroke="${DAWN.rope}" stroke-width="4" opacity="0.85"/>
+    <g fill="${DAWN.rope}" stroke="#000" stroke-opacity="0.35" stroke-width="2">${PEGS}</g>
+    <path d="${CANOPY}" fill="${DAWN.rope}" opacity="0.12" transform="translate(12 14)"/>
+    <path d="${CANOPY}" fill="${DAWN.canopy}" fill-opacity="0.3"/>
+    <g fill="none" stroke="${DAWN.rope}" stroke-width="3.5" opacity="0.55"><path d="${SEAMS}"/><path d="M-213 0 H213"/></g>
+    <path d="${CANOPY}" fill="none" stroke="${DAWN.rope}" stroke-width="6" opacity="0.9"/>
+    ${MASTS.map(([x]) => `<circle cx="${String(x)}" r="16" fill="${DAWN.rope}" stroke="#000" stroke-opacity="0.4" stroke-width="3"/><circle cx="${String(x)}" r="6" fill="${DAWN.core}"/>`).join('')}
+    ${glow(0, 0, 130, 130, DAWN.core, 0.05)}
+    <circle r="50" fill="none" stroke="${DAWN.gold}" stroke-width="8" stroke-dasharray="248 66" transform="rotate(-90)"/>
+    <circle r="40" fill="none" stroke="${DAWN.gold}" stroke-width="2.5"/>
+    <path d="${RAYS}" stroke="${DAWN.core}" stroke-width="4.5" stroke-linecap="round"/>
+    <circle r="12" fill="${DAWN.core}"/>
+    <g fill="none" stroke-linecap="round">${STREAKS}</g>
+  </g>`;
+
+const PREVIEWS: Readonly<Record<DecorId, string>> = { lake: LAKE, dome: DOME, ambyss: AMBYSS };
+
 // A small picture of a stage, drawn by the interface for the picker and the lobby.
 export function stagePreview(decor: DecorId): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg');
@@ -127,6 +336,6 @@ export function stagePreview(decor: DecorId): SVGSVGElement {
   svg.setAttribute('class', 'ui-stage__preview');
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
-  svg.innerHTML = decor === 'dome' ? DOME : LAKE;
+  svg.innerHTML = PREVIEWS[decor];
   return svg;
 }
