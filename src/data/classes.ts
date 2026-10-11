@@ -25,7 +25,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       id: 'nova',
       name: 'Nova',
       description: 'Tu libères une onde de lumière qui repousse les bad vibes autour de toi.',
-      cooldownTicks: 4 * TICKS_PER_BAR,
+      cooldownTicks: 2 * TICKS_PER_BAR,
       effect: { kind: 'nova', damage: 40, radius: 150, knockback: 60 },
     },
   },
@@ -54,8 +54,8 @@ export const CLASSES: readonly ClassDefinition[] = [
       name: 'Charge',
       description:
         'Tu fonces devant toi, intouchable, et les bad vibes alentour ne voient plus que toi.',
-      cooldownTicks: 2 * TICKS_PER_BAR,
-      effect: { kind: 'dash', distance: 160, invulnerableTicks: 10, tauntRadius: 190 },
+      cooldownTicks: TICKS_PER_BAR,
+      effect: { kind: 'dash', distance: 160, invulnerableTicks: 10, tauntRadius: 160 },
     },
   },
   {
@@ -82,8 +82,8 @@ export const CLASSES: readonly ClassDefinition[] = [
       id: 'soin',
       name: 'Soin',
       description: 'Tu soignes ceux qui sont près de toi et tu répares un peu la scène.',
-      cooldownTicks: 9 * TICKS_PER_BAR,
-      effect: { kind: 'healPulse', amount: 30, radius: 160, coreRepair: 25 },
+      cooldownTicks: 4 * TICKS_PER_BAR + 2 * TICKS_PER_BEAT,
+      effect: { kind: 'healPulse', amount: 30, radius: 160, coreRepair: 10 },
     },
   },
 ];

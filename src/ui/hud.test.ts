@@ -37,7 +37,7 @@ describe('skillCharge', () => {
       charges.push(skillCharge(player, skill));
     }
 
-    expect(armed).toBe(79);
+    expect(armed).toBe(39);
     charges.forEach((charge, elapsed) => {
       expect(charge).toBeCloseTo(elapsed / armed, 12);
     });

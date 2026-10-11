@@ -143,10 +143,8 @@ describe('the roadie charge', () => {
     );
   });
 
-  it('stays a skill: at least two bars to recharge, a radius under 200', () => {
-    expect(find(CONTENT.classes, 'tank').skill.cooldownTicks).toBeGreaterThanOrEqual(
-      2 * TICKS_PER_BAR,
-    );
+  it('stays a skill: at least one bar to recharge, a radius under 200', () => {
+    expect(find(CONTENT.classes, 'tank').skill.cooldownTicks).toBeGreaterThanOrEqual(TICKS_PER_BAR);
     expect(tauntRadius).toBeLessThan(200);
   });
 });
@@ -159,9 +157,12 @@ describe('the roles of the three classes', () => {
     expect(care?.maxHp).toBeGreaterThan(vj?.maxHp ?? Infinity);
   });
 
-  it('let the care really repair the stage', () => {
+  it('let the care really repair the stage, at least 2 per bar of recharge', () => {
     const effect = care?.skill.effect;
+    const repair = effect?.kind === 'healPulse' ? effect.coreRepair : 0;
 
-    expect(effect?.kind === 'healPulse' ? effect.coreRepair : 0).toBeGreaterThanOrEqual(25);
+    expect(
+      (repair * TICKS_PER_BAR) / (care?.skill.cooldownTicks ?? Infinity),
+    ).toBeGreaterThanOrEqual(2);
   });
 });
