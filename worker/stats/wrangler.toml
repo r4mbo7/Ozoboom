@@ -1,0 +1,12 @@
+name = "ozoboom-stats"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[[analytics_engine_datasets]]
+binding = "GAMES"
+dataset = "ozoboom_games"
+
+[[ratelimits]]
+name = "RATE_LIMIT"
+namespace_id = "1002"
+simple = { limit = 10, period = 60 }

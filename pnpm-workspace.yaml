@@ -1,5 +1,6 @@
 packages:
   - worker/turn
+  - worker/stats
 allowBuilds:
   esbuild: true
   workerd: true
