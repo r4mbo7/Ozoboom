@@ -66,7 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     # The browsers and their system libraries come with the image, whose tag follows @playwright/test.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       options: --user 1001
     strategy:
       fail-fast: false
@@ -101,7 +101,7 @@ jobs:
     needs: e2e-build
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       options: --user 1001
     env:
       E2E_PREBUILT: '1'
