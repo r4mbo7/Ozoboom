@@ -1,12 +1,12 @@
 import { rotate, unitFromAngle } from '../shared/angle';
-import { DEFAULT_BPM, TICKS_PER_BAR, tempoOf } from '../shared/tempo';
+import { TICKS_PER_BAR } from '../shared/tempo';
 import type { ObstacleDefinition, SetDefinition, SpawnRule } from './types';
 
 const MAIN_STAGE: SetDefinition = {
   id: 'soiree-v0',
   name: 'Main stage',
   style: 'Psytrance full-on',
-  bpm: DEFAULT_BPM,
+  decor: 'lake',
   trackIds: ['soiree-ouverture', 'brume-du-lac', 'grenouille-acide', 'goa-des-etoiles'],
   arena: { width: 1600, height: 1000 },
   core: { radius: 56, maxHp: 500 },
@@ -316,7 +316,6 @@ const DOME: SetDefinition = {
   ],
   name: 'Le Dome',
   style: 'Downtempo, dub',
-  bpm: tempoOf(DOME_TICKS_PER_BEAT).bpm,
   ticksPerBeat: DOME_TICKS_PER_BEAT,
   decor: 'dome',
   obstacles: DOME_OBSTACLES,
@@ -333,7 +332,6 @@ const AMBYSS: SetDefinition = {
   trackIds: ['premier-rayon'],
   name: 'Ambyss',
   style: 'Chillgressive, sunrise',
-  bpm: tempoOf(AMBYSS_TICKS_PER_BEAT).bpm,
   ticksPerBeat: AMBYSS_TICKS_PER_BEAT,
   decor: 'ambyss',
   acoustics: { reverbSeconds: 1.6, wet: 0.18 },

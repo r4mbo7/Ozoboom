@@ -43,8 +43,10 @@ describe('stageTracks', () => {
     expect(stageTracks(TRACKS, ['c', 'a']).map((track) => track.id)).toEqual(['a', 'c']);
   });
 
-  it('keeps every track for a stage that names none, or none that exist', () => {
-    expect(stageTracks(TRACKS, undefined)).toEqual(TRACKS);
-    expect(stageTracks(TRACKS, ['nope'])).toEqual(TRACKS);
+  it('has nothing to play for a stage that names no known track', () => {
+    const tracks = stageTracks(TRACKS, ['nope']);
+
+    expect(tracks).toEqual([]);
+    expect(() => drawTrack(tracks, '', () => 0)).toThrow('No track to play');
   });
 });

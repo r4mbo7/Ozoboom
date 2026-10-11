@@ -15,6 +15,34 @@ describe('TRACKS', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('plays every track a stage names', () => {
+    const ids = new Set(TRACKS.map((track) => track.id));
+
+    for (const set of SETS) {
+      expect(set.trackIds.length, set.id).toBeGreaterThan(0);
+      expect(
+        set.trackIds.filter((id) => !ids.has(id)),
+        set.id,
+      ).toEqual([]);
+    }
+  });
+
+  it('keeps every drum hit inside its loop, once per step, at a gain up to 1', () => {
+    for (const track of TRACKS) {
+      for (const drum of track.drums ?? []) {
+        const label = `${track.id} ${drum.voice}`;
+        const steps = drum.hits.map(([step]) => step);
+        expect(steps, label).toEqual([...new Set(steps)].sort((a, b) => a - b));
+        expect(Math.min(...steps), label).toBeGreaterThanOrEqual(0);
+        expect(Math.max(...steps), label).toBeLessThan(drum.loopSteps);
+        expect(
+          drum.hits.every(([, gain]) => gain > 0 && gain <= 1),
+          label,
+        ).toBe(true);
+      }
+    }
+  });
+
   it('plays seven note scales that rise from the root within the octave', () => {
     for (const track of TRACKS) {
       for (const scale of [track.scale, track.themeScale ?? track.scale]) {
@@ -100,20 +128,9 @@ describe('the Dome tracks', () => {
     expect(tracks.map((track) => track?.scale[1])).toEqual([2, 1, 2, 2, 2]);
   });
 
-  it('gives each one a kit of its own, whose hits fall inside their loops', () => {
+  it('gives each one a kit of its own', () => {
     for (const track of tracks) {
       expect(track?.drums?.length, track?.id).toBeGreaterThan(0);
-      for (const drum of track?.drums ?? []) {
-        const label = `${track?.id ?? ''} ${drum.voice}`;
-        const steps = drum.hits.map(([step]) => step);
-        expect(steps, label).toEqual([...new Set(steps)].sort((a, b) => a - b));
-        expect(Math.min(...steps), label).toBeGreaterThanOrEqual(0);
-        expect(Math.max(...steps), label).toBeLessThan(drum.loopSteps);
-        expect(
-          drum.hits.every(([, gain]) => gain > 0 && gain <= 1),
-          label,
-        ).toBe(true);
-      }
     }
   });
 
@@ -139,7 +156,7 @@ describe('the Dome tracks', () => {
 
 describe('the Ambyss track', () => {
   const ambyss = SETS.find((set) => set.id === 'ambyss');
-  const track = TRACKS.find((candidate) => candidate.id === ambyss?.trackIds?.[0]);
+  const track = TRACKS.find((candidate) => candidate.id === ambyss?.trackIds[0]);
 
   it('plays only Premier rayon, in E major over vi-IV-I-V', () => {
     expect(ambyss?.trackIds).toEqual(['premier-rayon']);

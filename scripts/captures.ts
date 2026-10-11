@@ -235,11 +235,8 @@ try {
     await close(page, errors);
   }
 
-  for (const stage of [
-    { name: /Main stage/, moments: moments('moment-'), day: 'moment-4-jour-sunrise' },
-    { name: /Le Dome/, moments: moments('dome-moment-'), day: 'dome-moment-4-jour' },
-    { name: /Ambyss/, moments: moments('ambyss-moment-'), day: 'ambyss-moment-4-jour' },
-  ]) {
+  for (const [index, set] of CONTENT.sets.entries()) {
+    const prefix = index === 0 ? 'moment-' : `${set.id}-moment-`;
     const page = await newPage();
     const errors = collectConsoleErrors(page);
     // Against a stopped clock the music would schedule every note it thinks it missed: the set plays
@@ -254,7 +251,7 @@ try {
     await page.goto(url);
     const stages = page.getByRole('radiogroup', { name: 'Scènes' });
     await tapButtonUntil(page, PAD.A, () => stages.isVisible());
-    const radio = stages.getByRole('radio', { name: stage.name });
+    const radio = stages.getByRole('radio', { name: set.name });
     await tapButtonUntil(page, PAD.DpadRight, () => radio.isChecked());
     await tapButtonUntil(page, PAD.A, () =>
       page.getByRole('region', { name: 'Pièges' }).isVisible(),
@@ -308,7 +305,7 @@ try {
       throw new Error(`The set ended ${String(status)} before its dawn`);
     });
     ended.catch(() => undefined);
-    for (const moment of stage.moments) {
+    for (const moment of moments(prefix)) {
       await Promise.race([shoot(page, clock, moment), ended]);
     }
     await page.evaluate(() => {
@@ -320,7 +317,7 @@ try {
     }
     await page.addStyleTag({ content: '.ui-end { display: none !important; }' });
     await page.waitForTimeout(SETTLE_MS);
-    await save(await clock.held(() => still(page)), stage.day);
+    await save(await clock.held(() => still(page)), `${prefix}4-jour`);
     await clock.stop();
     await close(page, errors);
   }

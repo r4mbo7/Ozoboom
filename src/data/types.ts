@@ -274,7 +274,7 @@ export interface BombRules {
   radius: number;
 }
 
-// How a stage is drawn. Absent means 'lake', the main stage.
+// How a stage is drawn.
 export type DecorId = 'lake' | 'dome' | 'ambyss';
 
 // A round obstacle of the stage: it blocks players, bad vibes and shots.
@@ -289,14 +289,12 @@ export interface SetDefinition {
   name: string;
   // The music style shown on the stage's card. Absent means none.
   style?: string;
-  // Must equal the tempo of `ticksPerBeat` (`tempoOf`).
-  bpm: number;
   // Length of the stage's beat in ticks, the tick rate staying the same (ADR 0012). Absent means 12.
   ticksPerBeat?: number;
-  decor?: DecorId;
+  decor: DecorId;
   obstacles?: readonly ObstacleDefinition[];
-  // The tracks this stage draws from. Absent means every track.
-  trackIds?: readonly string[];
+  // The tracks this stage draws from.
+  trackIds: readonly string[];
   // The stage's room reverb. Absent means a dry stage.
   acoustics?: { reverbSeconds: number; wet: number };
   arena: { width: number; height: number };

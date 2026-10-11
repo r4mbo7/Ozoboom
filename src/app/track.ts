@@ -11,13 +11,11 @@ export function drawTrack(
   return pickOf(pool, Math.floor(random() * pool.length));
 }
 
-// The tracks a stage draws from: its own list, or all of them when it names none that exist.
 export function stageTracks(
   tracks: readonly MusicTrack[],
-  trackIds: readonly string[] | undefined,
+  trackIds: readonly string[],
 ): readonly MusicTrack[] {
-  const own = trackIds === undefined ? [] : tracks.filter((track) => trackIds.includes(track.id));
-  return own.length > 0 ? own : tracks;
+  return tracks.filter((track) => trackIds.includes(track.id));
 }
 
 // A track sent by another device that this one does not know plays as the first.

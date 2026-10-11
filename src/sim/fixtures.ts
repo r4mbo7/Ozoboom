@@ -38,7 +38,8 @@ export function stepAndRecord(simulation: Simulation, steps: number): TimedEvent
 export const FIXTURE_SET: SetDefinition = {
   id: 'fixture-set',
   name: 'Set de test',
-  bpm: 145,
+  decor: 'lake',
+  trackIds: [],
   arena: { width: 1600, height: 900 },
   core: { radius: 48, maxHp: 1000 },
   handSize: 2,

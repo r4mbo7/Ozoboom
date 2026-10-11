@@ -11,7 +11,8 @@ const REFERENCE_HASH = 'e96ebaed';
 const SPECIALS_SET: SetDefinition = {
   id: 'specials-fixture-set',
   name: 'Set de test des spéciaux',
-  bpm: 145,
+  decor: 'lake',
+  trackIds: [],
   arena: { width: 1600, height: 900 },
   core: { radius: 48, maxHp: 1000 },
   handSize: 2,

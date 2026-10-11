@@ -1,4 +1,5 @@
 import type { DecorId } from '../data/types';
+import { CANOPY_PALETTES, HILL_PALETTES, SAND_PALETTES, SUN_PALETTES } from '../shared/palette';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -13,9 +14,7 @@ const LAKE = `
   <path d="M46 64 L63 48 L80 64 L97 48 L114 64 M63 48 L80 33 L97 48 M80 33 V64" fill="none" stroke="#ffd27a" stroke-width="1.2" stroke-linejoin="round"/>
   <circle cx="80" cy="64" r="3.5" fill="#ffd27a"/>`;
 
-const SAND = '#211b2e';
-const FLOOR = '#322840';
-const RIDGE = '#463a5a';
+const { sable: SAND, sableClair: FLOOR, ride: RIDGE } = SAND_PALETTES.nuit;
 const WOOD = '#8a6038';
 const GARLAND = '#ffd27a';
 const GIANT_COLORS = ['#ff6fa8', '#3fd0c9', '#d9a441', '#7cf2b0'];
@@ -121,19 +120,19 @@ const DOME = `
   </g>`;
 
 const DAWN = {
-  grass: '#cdb39e',
-  grassHigh: '#dcc3ad',
-  sand: '#e8d0b4',
-  sandLight: '#f5e4cc',
-  contour: '#b2937c',
-  tree: '#6c7a58',
-  treeLight: '#8c9a70',
-  cushion: '#c43a40',
-  canopy: '#e2a66a',
-  rope: '#8a6a50',
-  sun: '#ffd8a0',
-  gold: '#a8781f',
-  core: '#c98a12',
+  grass: HILL_PALETTES.aube.herbe,
+  grassHigh: HILL_PALETTES.aube.herbeClaire,
+  sand: HILL_PALETTES.aube.sable,
+  sandLight: HILL_PALETTES.aube.sableClair,
+  contour: HILL_PALETTES.aube.courbe,
+  tree: HILL_PALETTES.aube.arbre,
+  treeLight: HILL_PALETTES.aube.arbreClair,
+  cushion: HILL_PALETTES.aube.coussin,
+  canopy: CANOPY_PALETTES.aube.toile,
+  rope: CANOPY_PALETTES.aube.corde,
+  sun: HILL_PALETTES.aube.soleil,
+  gold: SUN_PALETTES.jour.or,
+  core: SUN_PALETTES.jour.noyau,
 };
 
 type Spot = readonly [number, number];

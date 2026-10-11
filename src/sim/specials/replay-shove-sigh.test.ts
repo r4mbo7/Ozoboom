@@ -42,7 +42,8 @@ const WHINER_SIGH: EnemyDefinition = {
 const SHOVE_SIGH_SET: SetDefinition = {
   id: 'shove-sigh-set',
   name: 'Set de test',
-  bpm: 145,
+  decor: 'lake',
+  trackIds: [],
   arena: { width: 240, height: 240 },
   core: { radius: 20, maxHp: 1000 },
   handSize: 2,

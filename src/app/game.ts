@@ -20,6 +20,7 @@ import { createLocalSource } from '../net/local';
 import { GUEST_BUFFER_TICKS } from '../net/lockstep';
 import type { CameraFocus } from '../render/types';
 import type { PlayerSlot } from '../sim/initial-state';
+import { setTempo } from '../sim/lineup';
 import type { PlayerId } from '../sim/state';
 import {
   type ClassPickerModel,
@@ -84,8 +85,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     setId: definition.id,
     name: definition.name,
     style: definition.style ?? '',
-    bpm: definition.bpm,
-    decor: definition.decor ?? 'lake',
+    bpm: setTempo(definition).bpm,
+    decor: definition.decor,
   }));
   const storage = () => window.localStorage;
   const classIds = content.classes.map((definition) => definition.id);

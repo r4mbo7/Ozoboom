@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { CONTENT } from '../data/content';
+import { playBot } from './balance';
 import { botCommand } from './bot';
 import { COMBAT_OPTIONS } from './fixtures';
 import { createSimulation } from './index';
 import { hashState } from './replay';
 
 const TICKS = 1500;
+
+const STAGE_FINGERPRINTS: Readonly<Record<string, string>> = {
+  'soiree-v0': 'd497fb0d',
+  dome: 'f7cce676',
+  ambyss: '05e099eb',
+};
 
 function playDuo(seed: number) {
   const options = {
@@ -37,5 +45,14 @@ describe('the automatic player', () => {
 
   it('reaches another state from another seed', () => {
     expect(hashState(playDuo(4))).not.toBe(hashState(playDuo(3)));
+  });
+});
+
+describe.each(CONTENT.sets)('a short bot game on set $id', ({ id }) => {
+  it('keeps its fingerprint', () => {
+    const state = playBot(['mage', 'healer'], 3, CONTENT, TICKS, id);
+
+    expect(state.stats.kills).toBeGreaterThan(0);
+    expect(hashState(state)).toBe(STAGE_FINGERPRINTS[id]);
   });
 });

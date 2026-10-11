@@ -233,7 +233,8 @@ export const UI_FIXTURE_CONTENT: GameContent = {
     {
       id: 'soiree-fixture',
       name: 'Soirée fixture',
-      bpm: 145,
+      decor: 'lake',
+      trackIds: [],
       arena: { width: 1600, height: 1000 },
       core: { radius: 60, maxHp: 1000 },
       handSize: 2,

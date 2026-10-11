@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE, tempoOf } from '../../shared/tempo';
+import { TICKS_PER_BAR, TICKS_PER_BEAT, TICKS_PER_PHRASE } from '../../shared/tempo';
 import {
   FIXTURE_CONTENT,
   FIXTURE_OPTIONS,
@@ -70,7 +70,6 @@ describe('tempo', () => {
     const domeSet = {
       ...FIXTURE_SET,
       id: 'dome-fixture',
-      bpm: tempoOf(DOME_BEAT).bpm,
       ticksPerBeat: DOME_BEAT,
     };
     const domeOptions = {

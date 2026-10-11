@@ -142,7 +142,10 @@ export function createGround(ctx: RenderContext): Family {
       if (arena.width !== drawnWidth || arena.height !== drawnHeight || seed !== drawnSeed) {
         draw(arena, seed);
       }
-      const decor = ctx.decors.get(state.setId) ?? 'lake';
+      const decor = ctx.decors.get(state.setId);
+      if (decor === undefined) {
+        throw new Error(`unknown set "${state.setId}"`);
+      }
       const ground = grounds[decor];
       if (decor !== shown) {
         shown = decor;

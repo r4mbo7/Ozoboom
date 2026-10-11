@@ -3,7 +3,6 @@ import {
   BARS_PER_PHRASE,
   TICKS_PER_BAR,
   TICKS_PER_BEAT,
-  TICKS_PER_PHRASE,
   TICK_RATE_HZ,
   tempoOf,
 } from '../shared/tempo';
@@ -25,6 +24,8 @@ const positive = (value: number) => Number.isFinite(value) && value > 0;
 const nonNegative = (value: number) => Number.isFinite(value) && value >= 0;
 const atLeastOne = (value: number) => Number.isFinite(value) && value >= 1;
 const wholePositive = (value: number) => Number.isInteger(value) && value > 0;
+const distance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+  Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 
 function invalid(fields: Record<string, readonly [number, (value: number) => boolean]>): string[] {
   return Object.entries(fields)
@@ -373,8 +374,56 @@ describe('CONTENT numbers', () => {
 });
 
 describe.each(sets)('set $id', (set) => {
-  it('runs on the tick grid tempo', () => {
-    expect(set.bpm).toBeCloseTo(tempoOf(set.ticksPerBeat ?? TICKS_PER_BEAT).bpm, 9);
+  const center = { x: set.arena.width / 2, y: set.arena.height / 2 };
+  const main = sets[0];
+  const groups = (tiers: readonly TierDefinition[] = []) =>
+    tiers.flatMap((tier) => [...tier.spawns, ...(tier.dropSpawns ?? [])]);
+
+  it('draws every speaker whole inside the arena', () => {
+    for (const { id, x, y, radius } of set.speakers ?? []) {
+      expect(Math.min(x, y, set.arena.width - x, set.arena.height - y), id).toBeGreaterThanOrEqual(
+        radius * SPEAKER_REACH,
+      );
+    }
+  });
+
+  it('keeps the core, the drawn speakers and the arena edge clear of every obstacle', () => {
+    for (const obstacle of set.obstacles ?? []) {
+      expect(distance(obstacle, center) - obstacle.radius).toBeGreaterThan(set.core.radius);
+      expect(obstacle.x - obstacle.radius).toBeGreaterThanOrEqual(0);
+      expect(obstacle.y - obstacle.radius).toBeGreaterThanOrEqual(0);
+      expect(obstacle.x + obstacle.radius).toBeLessThanOrEqual(set.arena.width);
+      expect(obstacle.y + obstacle.radius).toBeLessThanOrEqual(set.arena.height);
+      for (const speaker of set.speakers ?? []) {
+        expect(distance(obstacle, speaker)).toBeGreaterThan(
+          obstacle.radius + speaker.radius * SPEAKER_REACH,
+        );
+      }
+    }
+  });
+
+  it('keeps the main stage speakers, tiers and bosses, with groups at least as dense', () => {
+    const shape = (tiers: readonly TierDefinition[] = []) =>
+      tiers.map(({ buildupPhrases, breakBars, bossId }) => [buildupPhrases, breakBars, bossId]);
+    const ours = groups(set.tiers);
+
+    expect(set.speakers?.map((speaker) => speaker.name)).toEqual(
+      main?.speakers?.map((speaker) => speaker.name),
+    );
+    expect(shape(set.tiers)).toEqual(shape(main?.tiers));
+    for (const [index, rule] of groups(main?.tiers).entries()) {
+      expect(ours[index]?.enemyId).toBe(rule.enemyId);
+      expect(ours[index]?.count).toBeGreaterThanOrEqual(rule.count);
+      expect(ours[index]?.everyBars).toBe(rule.everyBars);
+    }
+  });
+
+  it('packs more bad vibes in its groups when its bars last longer than the main stage ones', () => {
+    const total = (tiers?: readonly TierDefinition[]) =>
+      groups(tiers).reduce((sum, rule) => sum + rule.count, 0);
+    const longer = (set.ticksPerBeat ?? TICKS_PER_BEAT) > (main?.ticksPerBeat ?? TICKS_PER_BEAT);
+
+    expect(total(set.tiers) > total(main?.tiers)).toBe(longer);
   });
 
   it('has positive dimensions, core, economy and level curve', () => {
@@ -513,9 +562,10 @@ describe.each(sets)('set $id', (set) => {
   });
 
   it('lasts under ten minutes without its drops', () => {
+    const tempo = tempoOf(set.ticksPerBeat ?? TICKS_PER_BEAT);
     const ticks = set.tiers.reduce(
       (total, tier) =>
-        total + tier.buildupPhrases * TICKS_PER_PHRASE + tier.breakBars * TICKS_PER_BAR,
+        total + tier.buildupPhrases * tempo.ticksPerPhrase + tier.breakBars * tempo.ticksPerBar,
       0,
     );
 
@@ -656,7 +706,7 @@ describe('V0.1 scope', () => {
   it('has the soiree-v0 set at 145 BPM with two tiers of four phrases and a four bar break', () => {
     const set = sets.find((candidate) => candidate.id === 'soiree-v0');
 
-    expect(set?.bpm).toBe(145);
+    expect(tempoOf(set?.ticksPerBeat ?? TICKS_PER_BEAT).bpm).toBe(145);
     expect(set?.arena).toEqual({ width: 1600, height: 1000 });
     expect(set?.tiers.map((tier) => [tier.buildupPhrases, tier.breakBars])).toEqual([
       [4, 4],
@@ -684,8 +734,6 @@ describe('The Dome', () => {
   const passMin = 2 * Math.max(biggestPlayer, biggestOrdinary);
   const heavyMin = 2 * smallestHeavy;
   const bossMin = 2 * biggestBoss;
-  const distance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
-    Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
   const turn = (point: { x: number; y: number }) => {
     const dx = point.x - center.x;
     const dy = point.y - center.y;
@@ -708,7 +756,6 @@ describe('The Dome', () => {
 
   it('plays at two thirds of the main stage tempo in a long room', () => {
     expect(dome?.ticksPerBeat).toBe(18);
-    expect(dome?.bpm).toBe(tempoOf(18).bpm);
     expect(dome?.decor).toBe('dome');
     expect(dome?.acoustics?.reverbSeconds).toBeCloseTo(3.6, 1);
     expect(dome?.arena).toEqual(sets[0]?.arena);
@@ -770,51 +817,6 @@ describe('The Dome', () => {
       );
     }
   });
-
-  it('draws every speaker whole inside the arena', () => {
-    for (const { id, x, y, radius } of dome?.speakers ?? []) {
-      const reach = radius * SPEAKER_REACH;
-      expect(
-        Math.min(x, y, (dome?.arena.width ?? 0) - x, (dome?.arena.height ?? 0) - y),
-        id,
-      ).toBeGreaterThanOrEqual(reach);
-    }
-  });
-
-  it('keeps the core, the drawn speakers and the arena edge clear of every obstacle', () => {
-    for (const obstacle of obstacles) {
-      expect(distance(obstacle, center) - obstacle.radius).toBeGreaterThan(dome?.core.radius ?? 0);
-      expect(obstacle.x - obstacle.radius).toBeGreaterThanOrEqual(0);
-      expect(obstacle.y - obstacle.radius).toBeGreaterThanOrEqual(0);
-      expect(obstacle.x + obstacle.radius).toBeLessThanOrEqual(dome?.arena.width ?? 0);
-      expect(obstacle.y + obstacle.radius).toBeLessThanOrEqual(dome?.arena.height ?? 0);
-      for (const speaker of dome?.speakers ?? []) {
-        expect(distance(obstacle, speaker)).toBeGreaterThan(
-          obstacle.radius + speaker.radius * SPEAKER_REACH,
-        );
-      }
-    }
-  });
-
-  it('keeps the main stage speakers, names and tiers', () => {
-    expect(dome?.speakers?.map((speaker) => speaker.name)).toEqual(
-      sets[0]?.speakers?.map((speaker) => speaker.name),
-    );
-    expect(
-      dome?.tiers.map(({ buildupPhrases, breakBars, bossId }) => [
-        buildupPhrases,
-        breakBars,
-        bossId,
-      ]),
-    ).toEqual(
-      sets[0]?.tiers.map(({ buildupPhrases, breakBars, bossId }) => [
-        buildupPhrases,
-        breakBars,
-        bossId,
-      ]),
-    );
-    expect(sets[0]?.id).toBe('soiree-v0');
-  });
 });
 
 describe('Ambyss', () => {
@@ -824,46 +826,21 @@ describe('Ambyss', () => {
 
   it('plays at four fifths of the main stage tempo in the open air, on the same arena', () => {
     expect(ambyss?.ticksPerBeat).toBe(15);
-    expect(ambyss?.bpm).toBe(tempoOf(15).bpm);
     expect(ambyss?.decor).toBe('ambyss');
     expect(ambyss?.obstacles ?? []).toEqual([]);
     expect(ambyss?.acoustics?.reverbSeconds).toBeLessThan(2);
     expect(ambyss?.arena).toEqual(main?.arena);
-    expect(sets.map((set) => set.id).at(-1)).toBe('ambyss');
   });
 
-  it('draws every speaker whole inside the arena and clear of the canopy and its guy ropes', () => {
+  it('draws every speaker clear of the canopy and its guy ropes', () => {
     const ropes = { x: 520, y: 335 };
 
     expect(ambyss?.speakers).toHaveLength(4);
     for (const { id, x, y, radius } of ambyss?.speakers ?? []) {
       const reach = radius * SPEAKER_REACH;
-      expect(
-        Math.min(x, y, (ambyss?.arena.width ?? 0) - x, (ambyss?.arena.height ?? 0) - y),
-        id,
-      ).toBeGreaterThanOrEqual(reach);
       const nx = Math.max(0, Math.abs(x - center.x) - reach) / ropes.x;
       const ny = Math.max(0, Math.abs(y - center.y) - reach) / ropes.y;
       expect(nx * nx + ny * ny, id).toBeGreaterThan(1);
     }
-  });
-
-  it('keeps the main stage speakers, tiers and bosses, with denser groups for its longer bars', () => {
-    expect(ambyss?.speakers?.map((speaker) => speaker.name)).toEqual(
-      main?.speakers?.map((speaker) => speaker.name),
-    );
-    expect(ambyss?.tiers.map(({ bossId }) => bossId)).toEqual(
-      main?.tiers.map(({ bossId }) => bossId),
-    );
-    const groups = (set: typeof main) =>
-      (set?.tiers ?? []).flatMap((tier) => [...tier.spawns, ...(tier.dropSpawns ?? [])]);
-    const ours = groups(ambyss);
-    for (const [index, rule] of groups(main).entries()) {
-      expect(ours[index]?.count).toBeGreaterThanOrEqual(rule.count);
-      expect(ours[index]?.everyBars).toBe(rule.everyBars);
-    }
-    expect(ours.reduce((sum, rule) => sum + rule.count, 0)).toBeGreaterThan(
-      groups(main).reduce((sum, rule) => sum + rule.count, 0),
-    );
   });
 });
