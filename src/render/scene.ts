@@ -1,6 +1,5 @@
 import { Container, type Renderer as PixiRenderer } from 'pixi.js';
 import type { SetDefinition, SpecialEffect } from '../data/types';
-import type { PaletteToken } from '../shared/palette';
 import type { Arena, SimEvent, SimState, Vec2 } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
@@ -27,7 +26,7 @@ import { createGround } from './ground';
 import { createGroundWaves } from './ground-waves';
 import { type Layers, applyLight, createLayers } from './layers';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
-import { isPaletteToken } from './palette';
+import { classTokens } from './palette';
 import { createBombs } from './bombs';
 import { createLoots } from './loots';
 import { createPickups } from './pickups';
@@ -50,17 +49,6 @@ const CALM = { glowAlpha: 0.4, pulse: 0.3 };
 const SHAKE = { pixels: 7, ticks: TICKS_PER_BEAT / 2 };
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const SNAP_TICKS = 4 * TICKS_PER_BEAT;
-
-function classTokens(content: RenderContent): RenderContext['classTokens'] {
-  return new Map(
-    content.classes.map(({ id }): [string, PaletteToken] => {
-      if (!isPaletteToken(id)) {
-        throw new Error(`Class "${id}" has no palette token of the same name`);
-      }
-      return [id, id];
-    }),
-  );
-}
 
 export class Scene implements Renderer {
   private readonly pixi: PixiRenderer;
@@ -106,7 +94,7 @@ export class Scene implements Renderer {
       textures: this.textures,
       layers: this.layers,
       options: this.options,
-      classTokens: classTokens(content),
+      classTokens: classTokens(content.classes),
       behaviours: new Map(content.enemies.map((def) => [def.id, def.behaviour])),
       trapLooks: new Map(content.traps.map((def) => [def.id, def])),
       specials: new Map(

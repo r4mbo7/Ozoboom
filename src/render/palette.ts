@@ -34,3 +34,16 @@ export function writePixiPalette(into: PixiPalette, palette: SunPalette): void {
 export function isPaletteToken(id: string): id is PaletteToken {
   return (PALETTE_TOKENS as readonly string[]).includes(id);
 }
+
+export function classTokens(
+  classes: readonly { readonly id: string }[],
+): Map<string, PaletteToken> {
+  return new Map(
+    classes.map(({ id }): [string, PaletteToken] => {
+      if (!isPaletteToken(id)) {
+        throw new Error(`Class "${id}" has no palette token of the same name`);
+      }
+      return [id, id];
+    }),
+  );
+}
