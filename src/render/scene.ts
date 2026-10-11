@@ -21,6 +21,7 @@ import { createDropTrails } from './drop-trails';
 import { createEffects } from './effects';
 import { createEnemies } from './enemies';
 import { type Frame, advanceFrame, createFrame } from './frame';
+import { createGiants } from './giants';
 import { createGround } from './ground';
 import { createGroundWaves } from './ground-waves';
 import { type Layers, applyLight, createLayers } from './layers';
@@ -125,6 +126,7 @@ export class Scene implements Renderer {
     const enemies = createEnemies(ctx);
     this.families = [
       createGround(ctx),
+      createGiants(ctx, content.sets),
       createGroundWaves(ctx),
       createDome(ctx, this.sets),
       createSpeakers(ctx),
