@@ -3,7 +3,7 @@ import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { createFireflies } from './ground-fireflies';
-import { SOL_CLAIR_SHARE, layoutGround } from './ground-layout';
+import { OVERFLOW, SOL_CLAIR_SHARE, layoutGround } from './ground-layout';
 import { grainTile, patchTile } from './ground-paint';
 import { createSand } from './ground-sand';
 import { createTrees } from './ground-trees';
@@ -52,7 +52,10 @@ export function createGround(ctx: RenderContext): Family {
     styledAt = Number.NaN;
     const layout = layoutGround(seed, { width, height });
 
-    surface.clear().rect(0, 0, width, height).fill(WHITE);
+    surface
+      .clear()
+      .rect(-OVERFLOW, -OVERFLOW, width + 2 * OVERFLOW, height + 2 * OVERFLOW)
+      .fill(WHITE);
     release();
     tiles = [];
     for (const [tiling, texture] of [
@@ -61,8 +64,10 @@ export function createGround(ctx: RenderContext): Family {
     ] as const) {
       tiles.push(texture);
       tiling.texture = texture;
-      tiling.width = width;
-      tiling.height = height;
+      tiling.position.set(-OVERFLOW);
+      tiling.tilePosition.set(OVERFLOW);
+      tiling.width = width + 2 * OVERFLOW;
+      tiling.height = height + 2 * OVERFLOW;
     }
 
     const cx = width / 2;

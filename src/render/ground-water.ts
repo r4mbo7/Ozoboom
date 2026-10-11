@@ -3,7 +3,7 @@ import { nextFloat, seedRng } from '../shared/prng';
 import type { SimState } from '../sim/state';
 import type { RenderContext } from './context';
 import type { Frame } from './frame';
-import { LAKE_SKY_MIX, type Layout, shoreAt } from './ground-layout';
+import { LAKE_SKY_MIX, type Layout, OVERFLOW, shoreAt } from './ground-layout';
 import { mixColor } from './ground-sun';
 import { lerp } from './motion';
 import { add, lookup, setTint } from './util';
@@ -36,12 +36,12 @@ export function createWater(ctx: RenderContext, parent: Container) {
       layout = next;
       const { height } = next.arena;
       const contour: number[] = [];
-      for (let y = 0; y <= height; y += 20) {
+      for (let y = -OVERFLOW; y <= height + OVERFLOW; y += 20) {
         contour.push(shoreAt(next, y), y);
       }
       lake
         .clear()
-        .poly([0, 0, ...contour, 0, height])
+        .poly([-OVERFLOW, -OVERFLOW, ...contour, -OVERFLOW, height + OVERFLOW])
         .fill(WHITE);
       shore.clear().poly(contour, false).stroke({ width: 14, color: WHITE, alpha: 0.18 });
       shore.poly(contour, false).stroke({ width: 3, color: WHITE, alpha: 0.7 });

@@ -2,7 +2,7 @@ import { Container, Graphics, TilingSprite, type Texture } from 'pixi.js';
 import { sandAt } from '../shared/palette';
 import { nextFloat, seedRng } from '../shared/prng';
 import type { Frame } from './frame';
-import type { Layout } from './ground-layout';
+import { type Layout, OVERFLOW } from './ground-layout';
 import { sandTile } from './ground-paint';
 import { parseHexColor } from './palette';
 
@@ -39,9 +39,12 @@ export function createSand(parent: Container) {
       const radius = layout.floorRadius;
       const rng = seedRng((seed + 4001) >>> 0);
 
-      surface.clear().rect(0, 0, width, height).fill(WHITE);
+      surface
+        .clear()
+        .rect(-OVERFLOW, -OVERFLOW, width + 2 * OVERFLOW, height + 2 * OVERFLOW)
+        .fill(WHITE);
       dunes.clear();
-      const reach = Math.hypot(cx, cy) * 1.05;
+      const reach = Math.hypot(cx + OVERFLOW, cy + OVERFLOW) * 1.05;
       for (let ring = radius * 1.12; ring < reach; ring += radius * DUNE_STEP) {
         const phases = [nextFloat(rng) * TAU, nextFloat(rng) * TAU, nextFloat(rng) * TAU] as const;
         for (let step = 0; step <= SEGMENTS; step += 1) {
@@ -65,8 +68,10 @@ export function createSand(parent: Container) {
       release();
       tile = sandTile(seed);
       grain.texture = tile;
-      grain.width = width;
-      grain.height = height;
+      grain.position.set(-OVERFLOW);
+      grain.tilePosition.set(OVERFLOW);
+      grain.width = width + 2 * OVERFLOW;
+      grain.height = height + 2 * OVERFLOW;
 
       floor.clear().circle(cx, cy, radius).fill(WHITE);
       rim

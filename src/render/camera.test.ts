@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ARENA_MARGIN,
   type Bounds,
   type Camera,
   type EdgeMarker,
@@ -27,14 +26,14 @@ describe('camera', () => {
     expect(worldToScreen(camera, { x: 800, y: 500 })).toEqual({ x: 640, y: 400 });
   });
 
-  it('stops at the arena edges, margin included', () => {
+  it('stops exactly at the arena edges', () => {
     const camera = frameCamera({ x: -500, y: 5000 }, arena, 1280, 800);
 
     const topLeft = screenToWorld(camera, { x: 0, y: 0 });
     const bottomRight = screenToWorld(camera, { x: 1280, y: 800 });
 
-    expect(topLeft.x).toBeCloseTo(-ARENA_MARGIN, 6);
-    expect(bottomRight.y).toBeCloseTo(arena.height + ARENA_MARGIN, 6);
+    expect(topLeft.x).toBeCloseTo(0, 6);
+    expect(bottomRight.y).toBeCloseTo(arena.height, 6);
   });
 
   it('centers the arena on an axis wider than the arena', () => {
@@ -93,6 +92,7 @@ describe('camera', () => {
 const wide = { width: 3200, height: 1600 };
 const SCREEN = { width: 1280, height: 800 };
 const TICK_STEP = 0.25;
+const PLAYER_RADIUS = 14;
 const steps = (ticks: number) => Math.round(ticks / TICK_STEP);
 
 function boundsOf(points: readonly { x: number; y: number }[]): Bounds {
@@ -112,9 +112,9 @@ function onScreen(camera: Camera, point: { x: number; y: number }): boolean {
 describe('group camera', () => {
   it('backs off no further than the minimum share of the usual scale, and never closer', () => {
     const base = baseScale(SCREEN.height);
-    const alone = frameBounds({ minX: 800, minY: 500, maxX: 800, maxY: 500 }, arena, 1280, 800);
-    const far = frameBounds({ minX: -48, minY: -48, maxX: 1648, maxY: 1048 }, arena, 1280, 800);
-    const middle = frameBounds({ minX: 300, minY: 400, maxX: 1300, maxY: 600 }, arena, 1280, 800);
+    const alone = frameBounds({ minX: 1600, minY: 800, maxX: 1600, maxY: 800 }, wide, 1280, 800);
+    const far = frameBounds({ minX: 0, minY: 0, maxX: 3200, maxY: 1600 }, wide, 1280, 800);
+    const middle = frameBounds({ minX: 1100, minY: 700, maxX: 2100, maxY: 900 }, wide, 1280, 800);
 
     expect(alone.scale).toBe(base);
     expect(far.scale).toBeCloseTo(base * MIN_SCALE_SHARE, 9);
@@ -157,10 +157,10 @@ describe('group camera', () => {
     let camera = frameBounds(boundsOf([left, right]), arena, SCREEN.width, SCREEN.height);
 
     for (let step = 0; step < steps(120); step += 1) {
-      left.x = Math.max(left.x - 3 * TICK_STEP, 0);
-      left.y = Math.max(left.y - 3 * TICK_STEP, 0);
-      right.x = Math.min(right.x + 3 * TICK_STEP, arena.width);
-      right.y = Math.min(right.y + 3 * TICK_STEP, arena.height);
+      left.x = Math.max(left.x - 3 * TICK_STEP, PLAYER_RADIUS);
+      left.y = Math.max(left.y - 3 * TICK_STEP, PLAYER_RADIUS);
+      right.x = Math.min(right.x + 3 * TICK_STEP, arena.width - PLAYER_RADIUS);
+      right.y = Math.min(right.y + 3 * TICK_STEP, arena.height - PLAYER_RADIUS);
       camera = easeCamera(
         camera,
         frameBounds(boundsOf([left, right]), arena, SCREEN.width, SCREEN.height),

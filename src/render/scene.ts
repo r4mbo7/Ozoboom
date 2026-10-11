@@ -1,11 +1,12 @@
 import { Container, type Renderer as PixiRenderer } from 'pixi.js';
 import type { SetDefinition, SpecialEffect } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
-import type { SimEvent, SimState, Vec2 } from '../sim/state';
+import type { Arena, SimEvent, SimState, Vec2 } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
   type Bounds,
   type Camera,
+  centerInArena,
   easeCamera,
   frameBounds,
   frameCamera,
@@ -79,6 +80,7 @@ export class Scene implements Renderer {
   private beatTick = Number.NEGATIVE_INFINITY;
   private shakeTick = Number.NEGATIVE_INFINITY;
   private readonly focus = { x: 0, y: 0 };
+  private readonly view = { x: 0, y: 0 };
   private readonly bounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
   private focusKey = '';
   private settling = false;
@@ -178,7 +180,7 @@ export class Scene implements Renderer {
 
     this.frameWorld(state, alpha);
     frame.camera = this.camera;
-    this.placeWorld(frame.now);
+    this.placeWorld(frame.now, state.arena);
 
     for (const family of this.families) {
       family.update(state, alpha, frame);
@@ -269,8 +271,9 @@ export class Scene implements Renderer {
     }
   }
 
-  private placeWorld(now: number): void {
-    const { centerX, centerY, scale, screenWidth, screenHeight } = this.camera;
+  private placeWorld(now: number, arena: Arena): void {
+    const { camera, view } = this;
+    const { scale, screenWidth, screenHeight } = camera;
     let shakeX = 0;
     let shakeY = 0;
     const shake = (now - this.shakeTick) / SHAKE.ticks;
@@ -279,11 +282,15 @@ export class Scene implements Renderer {
       shakeX = Math.sin(now * 12.9) * strength;
       shakeY = Math.cos(now * 9.7) * strength;
     }
+    centerInArena(
+      camera,
+      arena,
+      camera.centerX - shakeX / scale,
+      camera.centerY - shakeY / scale,
+      view,
+    );
     const { world } = this.layers;
     world.scale.set(scale);
-    world.position.set(
-      screenWidth / 2 - centerX * scale + shakeX,
-      screenHeight / 2 - centerY * scale + shakeY,
-    );
+    world.position.set(screenWidth / 2 - view.x * scale, screenHeight / 2 - view.y * scale);
   }
 }

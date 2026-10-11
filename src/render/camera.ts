@@ -1,7 +1,6 @@
 import type { Arena, Vec2 } from '../sim/state';
 
 export const VIEW_HEIGHT = 720;
-export const ARENA_MARGIN = 48;
 export const GROUP_MARGIN = 140;
 export const MIN_SCALE_SHARE = 0.6;
 export const EASE_TICKS = 10;
@@ -36,8 +35,8 @@ function place(
   screenHeight: number,
 ): Camera {
   return {
-    centerX: clampAxis(x, screenWidth / scale / 2, arena.width),
-    centerY: clampAxis(y, Math.max(screenHeight, 1) / scale / 2, arena.height),
+    centerX: clampAxis(x, screenWidth / scale, arena.width),
+    centerY: clampAxis(y, Math.max(screenHeight, 1) / scale, arena.height),
     scale,
     screenWidth,
     screenHeight,
@@ -53,7 +52,8 @@ export function frameCamera(
   return place(focus.x, focus.y, baseScale(screenHeight), arena, screenWidth, screenHeight);
 }
 
-// Frames a box, margin included, backing off down to MIN_SCALE_SHARE of the usual scale.
+// Frames a box, margin included, backing off down to MIN_SCALE_SHARE of the usual scale, and never past
+// the scale at which the arena fills the screen.
 export function frameBounds(
   bounds: Bounds,
   arena: Arena,
@@ -64,7 +64,11 @@ export function frameBounds(
   const width = bounds.maxX - bounds.minX + 2 * GROUP_MARGIN;
   const height = bounds.maxY - bounds.minY + 2 * GROUP_MARGIN;
   const fit = Math.min(Math.max(screenWidth, 1) / width, Math.max(screenHeight, 1) / height);
-  const scale = Math.min(base, Math.max(base * MIN_SCALE_SHARE, fit));
+  const filled = Math.max(
+    Math.max(screenWidth, 1) / arena.width,
+    Math.max(screenHeight, 1) / arena.height,
+  );
+  const scale = Math.min(base, Math.max(base * MIN_SCALE_SHARE, fit, filled));
   return place(
     (bounds.minX + bounds.maxX) / 2,
     (bounds.minY + bounds.maxY) / 2,
@@ -95,10 +99,22 @@ export function isSettled(from: Camera, to: Camera): boolean {
   );
 }
 
-function clampAxis(value: number, halfExtent: number, size: number): number {
-  const low = halfExtent - ARENA_MARGIN;
-  const high = size + ARENA_MARGIN - halfExtent;
-  return low > high ? size / 2 : Math.min(Math.max(value, low), high);
+// The view's center nearest (x, y) that shows nothing past the arena, or its middle on an axis the screen
+// is larger than: a glide between framings or a shake may otherwise reveal the edge.
+export function centerInArena(
+  camera: Camera,
+  arena: Arena,
+  x: number,
+  y: number,
+  out: { x: number; y: number },
+): void {
+  const { scale, screenWidth, screenHeight } = camera;
+  out.x = clampAxis(x, screenWidth / scale, arena.width);
+  out.y = clampAxis(y, Math.max(screenHeight, 1) / scale, arena.height);
+}
+
+function clampAxis(value: number, extent: number, size: number): number {
+  return extent >= size ? size / 2 : Math.min(Math.max(value, extent / 2), size - extent / 2);
 }
 
 export interface EdgeMarker {

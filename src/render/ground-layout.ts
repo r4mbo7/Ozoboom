@@ -25,6 +25,8 @@ export const TREE_COUNT = 10;
 // Share of solClair laid over sol: the lawn, its lightest tufts, the dance floor.
 export const SOL_CLAIR_SHARE = { lawn: 0.3, tufts: 0.5, floor: 0.6 } as const;
 export const LAKE_SKY_MIX = 0.5;
+// How far the ground runs past the arena, for a screen wider than it at the usual scale (up to 32:9).
+export const OVERFLOW = 640;
 const LAKE_SHARE = 0.17;
 const SHORE_MARGIN = 70;
 const FLOOR_SHARE = 0.34;
