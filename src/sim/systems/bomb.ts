@@ -1,4 +1,5 @@
 import { barOfTick, isBarTick } from '../../shared/tempo';
+import { lookup } from '../content';
 import { hurtEnemy, touches } from '../effects';
 import type { StepContext } from './types';
 
@@ -41,8 +42,9 @@ export function dropBomb({ state, set, tempo }: StepContext, x: number, y: numbe
 }
 
 // The first player standing on a bomb sets it off: every bad vibe but the bosses takes a fatal hit
-// credited to that player, and `deaths` then drops their vibes and loots as for any kill.
-export function bombs({ state, set }: StepContext): void {
+// credited to that player, and `deaths` then drops their vibes and loots as for any kill. A zombie,
+// standing or down, loses its revives: it dies for good.
+export function bombs({ state, content, set }: StepContext): void {
   const rules = set.bomb;
   const lying = state.bombs;
   if (rules === undefined || lying === undefined) {
@@ -55,8 +57,17 @@ export function bombs({ state, set }: StepContext): void {
     );
     if (trigger !== undefined) {
       for (const enemy of state.enemies) {
-        if (!enemy.isBoss) {
+        if (enemy.isBoss) {
+          continue;
+        }
+        if (lookup(content.enemies, enemy.kind, 'enemy').special?.kind === 'revive') {
+          enemy.revivesLeft = 0;
+        }
+        if (enemy.downTicks === undefined) {
           hurtEnemy(state, enemy, enemy.hp, 1, trigger.id, null);
+        } else {
+          delete enemy.downTicks;
+          enemy.lastHitBy = trigger.id;
         }
       }
       const { id, x, y } = bomb;

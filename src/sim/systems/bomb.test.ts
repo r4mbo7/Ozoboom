@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SetDefinition } from '../../data/types';
+import type { EnemyDefinition, SetDefinition } from '../../data/types';
 import { TICKS_PER_BAR } from '../../shared/tempo';
 import {
   EFFECTS_CONTENT,
@@ -11,6 +11,18 @@ import {
 } from '../fixtures';
 import { createSimulation, type Simulation } from '../index';
 import type { BombState, PlayerState } from '../state';
+import { spawnEnemy } from './spawning';
+
+const [grump] = EFFECTS_CONTENT.enemies;
+if (grump === undefined) {
+  throw new Error('expected the grump enemy');
+}
+
+const ZOMBIE: EnemyDefinition = {
+  ...grump,
+  id: 'zombie',
+  special: { kind: 'revive', times: 1, hpRatio: 0.5, downBars: 2 },
+};
 
 const BOMB_SET: SetDefinition = {
   ...FIXTURE_SET,
@@ -28,7 +40,11 @@ function game(set = BOMB_SET): { simulation: Simulation; player: PlayerState } {
   const simulation = createSimulation({
     ...EFFECTS_OPTIONS,
     setId: set.id,
-    content: { ...EFFECTS_CONTENT, sets: [...EFFECTS_CONTENT.sets, set] },
+    content: {
+      ...EFFECTS_CONTENT,
+      enemies: [...EFFECTS_CONTENT.enemies, ZOMBIE],
+      sets: [...EFFECTS_CONTENT.sets, set],
+    },
   });
   const [player] = simulation.state.players;
   if (player === undefined) {
@@ -141,5 +157,22 @@ describe('bombs', () => {
     expect(died.every((event) => event.byPlayer === player.id)).toBe(true);
     expect(simulation.state.enemies.map((enemy) => enemy.id)).toEqual([boss.id]);
     expect(simulation.state.pickups.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('go off for good on zombies, standing or already down', () => {
+    const { simulation, player } = game();
+    const standing = spawnEnemy(simulation.state, ZOMBIE, 40, 40, false);
+    const down = spawnEnemy(simulation.state, ZOMBIE, 900, 600, false);
+    down.hp = 0;
+    down.downTicks = TICKS_PER_BAR;
+    down.revivesLeft = 0;
+    bombAt(simulation, player.x + player.radius + 19, player.y);
+
+    const recorded = stepAndRecord(simulation, 1).map(({ event }) => event);
+
+    const died = recorded.flatMap((event) => (event.type === 'enemyDied' ? [event] : []));
+    expect(died.map((event) => event.id).sort()).toEqual([standing.id, down.id].sort());
+    expect(died.every((event) => event.byPlayer === player.id)).toBe(true);
+    expect(simulation.state.enemies).toEqual([]);
   });
 });
