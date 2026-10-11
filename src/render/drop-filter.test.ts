@@ -29,12 +29,12 @@ describe('dropFilterIntensity', () => {
     expect(dropFilterIntensity({ ...clock(1), status: 'won' }, START + TICKS_PER_BAR + 10)).toBe(0);
   });
 
-  it('starts at 0 and rises over one bar to half strength on the first drop', () => {
+  it('starts at 0 and rises over one bar to three quarters strength on the first drop', () => {
     const first = clock(0);
 
     expect(dropFilterIntensity(first, START)).toBe(0);
-    expect(dropFilterIntensity(first, START + TICKS_PER_BAR / 2)).toBeCloseTo(0.25);
-    expect(dropFilterIntensity(first, START + TICKS_PER_BAR)).toBe(0.5);
+    expect(dropFilterIntensity(first, START + TICKS_PER_BAR / 2)).toBeCloseTo(0.375);
+    expect(dropFilterIntensity(first, START + TICKS_PER_BAR)).toBe(0.75);
   });
 
   it('holds the peak for a phrase, at full strength from the second drop', () => {

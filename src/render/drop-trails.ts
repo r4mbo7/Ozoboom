@@ -15,7 +15,8 @@ import type { Layers } from './layers';
 extensions.add(FilterSystem, FilterPipe);
 
 const BUFFER_SCALE = 0.5;
-const KEEP_PER_TICK = { low: 0.55, high: 0.88 };
+// The same at every intensity: a weaker drop leaves fainter echoes, not shorter trails.
+const KEEP_PER_TICK = 0.88;
 const MAX_STEP_TICKS = 4;
 const HUE_TURN_TICKS = 192;
 
@@ -111,8 +112,7 @@ export function createDropTrails(pixi: Renderer, layers: Layers) {
 
       previous.texture = read;
       previous.position.set(world.x - lastWorld.x, world.y - lastWorld.y);
-      const keep = KEEP_PER_TICK.low + (KEEP_PER_TICK.high - KEEP_PER_TICK.low) * frame.dropFilter;
-      previous.alpha = keep ** step;
+      previous.alpha = KEEP_PER_TICK ** step;
       echo.texture = shot;
       echo.alpha = echoAlpha(frame.dropFilter, night);
       echo.blendMode = night ? 'add' : 'normal';

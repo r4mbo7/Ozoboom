@@ -35,7 +35,7 @@ Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distingue
 
 « Nuit fondue », choisie le 2026-10-09 : chaque drop fait fondre le monde un temps, et les personnages restent nets.
 
-- Premier drop : rémanence à mi-force. Nos joueurs, leurs tirs et la scène laissent des échos dont la teinte tourne ; les bad vibes et leurs tirs n'en laissent jamais.
+- Premier drop : rémanence aux trois quarts de la force, avec des traînées aussi longues qu'au second drop, seulement plus pâles. Nos joueurs, leurs tirs et la scène laissent des échos dont la teinte tourne ; les bad vibes et leurs tirs n'en laissent jamais.
 - Second drop et suivants : rémanence à pleine force, et le sol ondule. La couche du sol se tord en vagues et ses traits passent par toutes les teintes ; rien d'autre ne se déforme.
 - Le filtre monte sur une mesure au début du drop, tient une phrase et retombe sur quatre mesures, jamais d'un coup. Au pic, le sol reste sombre : le 3:1 des silhouettes et le 4,5:1 du texte tiennent.
 - Le second drop tombe à l'aube : de jour, les échos passent en mélange normal, en aplat de teinte plus transparent, sans bord sombre qui virerait au gris ; le sol qui ondule garde sa clarté.
