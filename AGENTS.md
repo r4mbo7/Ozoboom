@@ -73,6 +73,7 @@ pnpm e2e              # tests navigateur, un checkout à la fois sur la machine
 pnpm contrast         # contraste de chaque écran à chaque moment (6 min), après un changement de couleur
 pnpm captures         # refait les captures de docs/captures : choix de la scène, quatre moments par scène (12 min)
 pnpm format           # formate tout
+pnpm kpi [AAAA-MM-JJ] # KPI d'usage depuis la dernière sortie (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_STATS_TOKEN en lecture seule)
 ```
 
 Un lint, un test ou une instabilité qui casse se répare, même sans lien avec le travail en cours.

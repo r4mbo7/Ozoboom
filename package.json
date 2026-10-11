@@ -23,7 +23,8 @@
     "e2e": "flock /tmp/ozoboom-e2e.lock playwright test",
     "contrast": "CONTRAST=1 flock /tmp/ozoboom-e2e.lock playwright test e2e/contrast.spec.ts --project=chromium",
     "captures": "node scripts/captures.ts",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build"
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build",
+    "kpi": "node scripts/kpi.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
