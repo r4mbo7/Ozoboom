@@ -12,6 +12,15 @@ export interface Vibrato {
   delay: number;
 }
 
+// Modulates the frequency by up to `depth` Hz, with an LFO sweeping from `hz` to `toHz` over `glide`.
+export interface Fm {
+  wave: OscillatorType;
+  hz: number;
+  toHz: number;
+  glide: number;
+  depth: number;
+}
+
 export interface FilterSpec {
   type: BiquadFilterType;
   hz: number;
@@ -27,6 +36,7 @@ export interface ToneSpec extends Envelope {
   glide?: number;
   detune?: number;
   vibrato?: Vibrato;
+  fm?: Fm;
   filter?: FilterSpec;
 }
 
@@ -103,6 +113,19 @@ function wobble(oscillator: OscillatorNode, at: number, end: number, vibrato: Vi
   lfo.stop(end);
 }
 
+function modulate(oscillator: OscillatorNode, at: number, end: number, fm: Fm): void {
+  const lfo = oscillator.context.createOscillator();
+  lfo.type = fm.wave;
+  lfo.frequency.setValueAtTime(fm.hz, at);
+  lfo.frequency.linearRampToValueAtTime(fm.toHz, at + fm.glide);
+  const depth = oscillator.context.createGain();
+  depth.gain.value = fm.depth;
+  lfo.connect(depth);
+  depth.connect(oscillator.frequency);
+  lfo.start(at);
+  lfo.stop(end);
+}
+
 function filtered(
   context: BaseAudioContext,
   source: AudioNode,
@@ -131,6 +154,9 @@ export function playTone(out: AudioNode, at: number, spec: ToneSpec): number {
   panned(amp, out, spec.pan);
   if (spec.vibrato !== undefined) {
     wobble(oscillator, at, end, spec.vibrato);
+  }
+  if (spec.fm !== undefined) {
+    modulate(oscillator, at, end, spec.fm);
   }
   oscillator.start(at);
   oscillator.stop(end);

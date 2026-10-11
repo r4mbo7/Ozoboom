@@ -433,6 +433,18 @@ function singles(pairs: readonly (readonly [step: number, degree: number])[]): M
   return pairs.map(([step, degree]) => [step, degree, 1]);
 }
 
+// A held sine under a saw that the bass filter opens.
+function subParts(
+  part: Omit<MusicPart, 'voice' | 'gain'>,
+  gain: number,
+  sawGain = gain,
+): MusicPart[] {
+  return [
+    { ...part, voice: 'sub', gain },
+    { ...part, voice: 'sub-saw', gain: sawGain },
+  ];
+}
+
 const COUPOLE_SPARKS = singles([
   [3, 9],
   [7, 11],
@@ -482,23 +494,36 @@ export const SOUS_LA_COUPOLE: MusicTrack = {
   ],
   parts: [
     {
-      voice: 'round-bass',
-      layer: 'clap',
-      loopSteps: 32,
+      voice: 'sub',
+      layer: 'bass',
+      loopSteps: 16,
       octave: 1,
       followsChord: true,
-      notes: [
-        [0, 0, 6],
-        [6, 0, 2],
-        [8, 2, 3],
-        [11, 1, 1],
-        [12, 0, 4],
-        [16, 0, 6],
-        [22, -1, 2],
-        [24, 0, 4],
-        [28, 4, 4],
-      ],
+      notes: [[0, 0, 16]],
+      in: 'rise',
+      gain: 0.75,
     },
+    ...subParts(
+      {
+        layer: 'bass',
+        loopSteps: 32,
+        octave: 1,
+        followsChord: true,
+        notes: [
+          [0, 0, 6],
+          [6, 0, 2],
+          [8, 2, 3],
+          [11, 1, 1],
+          [12, 0, 4],
+          [16, 0, 6],
+          [22, -1, 2],
+          [24, 0, 4],
+          [28, 4, 4],
+        ],
+        in: 'drop',
+      },
+      0.8,
+    ),
     {
       voice: 'bowl',
       layer: 'texture',
@@ -510,11 +535,21 @@ export const SOUS_LA_COUPOLE: MusicTrack = {
     },
     {
       voice: 'bowl',
-      layer: 'kick',
+      layer: 'texture',
+      loopSteps: 32,
+      octave: 3,
+      followsChord: true,
+      notes: [[0, 0, 1]],
+      in: 'rise',
+    },
+    {
+      voice: 'bowl',
+      layer: 'clap',
       loopSteps: 64,
       octave: 3,
       followsChord: true,
       notes: [[0, 0, 1]],
+      gain: 0.7,
     },
     {
       voice: 'droplet',
@@ -525,7 +560,7 @@ export const SOUS_LA_COUPOLE: MusicTrack = {
       notes: COUPOLE_SPARKS,
     },
     {
-      voice: 'ney',
+      voice: 'flute',
       layer: 'theme',
       loopSteps: 64,
       octave: 3,
@@ -658,6 +693,7 @@ export const DUB_DES_CHAMPIGNONS: MusicTrack = {
   scale: AEOLIAN,
   chords: [0, 0, -2, -1],
   kick: { fromHz: 160, release: 0.3 },
+  echo: { feedback: 0.55, ret: 0.45, tone: 2400 },
   drums: [
     { voice: 'kick', layer: 'kick', loopSteps: 16, hits: hitsAt([8]) },
     { voice: 'kick', layer: 'clap', loopSteps: 16, hits: hitsAt([0]) },
@@ -668,39 +704,42 @@ export const DUB_DES_CHAMPIGNONS: MusicTrack = {
     { voice: 'rim', layer: 'kick', loopSteps: 64, hits: hitsAt([62, 63], 0.8), pan: -0.3 },
   ],
   parts: [
+    ...subParts(
+      {
+        layer: 'bass',
+        loopSteps: 32,
+        octave: 0,
+        followsChord: true,
+        notes: [
+          [0, 0, 3],
+          [4, 4, 2],
+          [6, 2, 2],
+          [10, 0, 2],
+          [12, -1, 2],
+          [14, 0, 2],
+          [16, 0, 3],
+          [20, 4, 2],
+          [22, 5, 1],
+          [23, 4, 1],
+          [24, 2, 4],
+          [28, 0, 4],
+        ],
+      },
+      1.05,
+    ),
     {
-      voice: 'round-bass',
-      layer: 'bass',
-      loopSteps: 32,
-      octave: 0,
-      followsChord: true,
-      notes: [
-        [0, 0, 3],
-        [4, 4, 2],
-        [6, 2, 2],
-        [10, 0, 2],
-        [12, -1, 2],
-        [14, 0, 2],
-        [16, 0, 3],
-        [20, 4, 2],
-        [22, 5, 1],
-        [23, 4, 1],
-        [24, 2, 4],
-        [28, 0, 4],
-      ],
-    },
-    {
-      voice: 'round-bass',
+      voice: 'sub',
       layer: 'texture',
       loopSteps: 32,
       octave: 0,
       followsChord: true,
       notes: [[0, 0, 8]],
       in: 'light',
+      gain: 0.7,
     },
     ...[0, 2, 4].flatMap((degree): MusicPart[] => [
       {
-        voice: 'arp',
+        voice: 'skank',
         layer: 'kick',
         loopSteps: 16,
         octave: 3,
@@ -711,17 +750,18 @@ export const DUB_DES_CHAMPIGNONS: MusicTrack = {
         ]),
       },
       {
-        voice: 'arp',
+        voice: 'skank',
         layer: 'texture',
         loopSteps: 16,
         octave: 3,
         followsChord: true,
         notes: singles([[12, degree]]),
         in: 'light',
+        gain: 1.2,
       },
     ]),
     {
-      voice: 'mist-lead',
+      voice: 'melodica',
       layer: 'clap',
       loopSteps: 64,
       octave: 2,
@@ -799,19 +839,22 @@ export const LA_CEREMONIE: MusicTrack = {
     { voice: 'snare', layer: 'clap', loopSteps: 16, hits: hitsAt([8], 0.75) },
   ],
   parts: [
-    {
-      voice: 'round-bass',
-      layer: 'bass',
-      loopSteps: 16,
-      octave: 0,
-      followsChord: true,
-      notes: [
-        [0, 0, 6],
-        [6, 7, 2],
-        [8, 0, 4],
-        [12, 4, 4],
-      ],
-    },
+    ...subParts(
+      {
+        layer: 'bass',
+        loopSteps: 16,
+        octave: 0,
+        followsChord: true,
+        notes: [
+          [0, 0, 6],
+          [6, 7, 2],
+          [8, 0, 4],
+          [12, 4, 4],
+        ],
+      },
+      0.75,
+      1.34,
+    ),
     {
       voice: 'kalimba',
       layer: 'texture',
@@ -927,21 +970,38 @@ export const MANDALA_DE_FEU: MusicTrack = {
     },
   ],
   parts: [
-    {
-      voice: 'round-bass',
-      layer: 'bass',
-      loopSteps: 16,
-      octave: 1,
-      followsChord: true,
-      notes: [
-        [0, 0, 2],
-        [3, 0, 1],
-        [5, 0, 3],
-        [8, 0, 2],
-        [11, 2, 1],
-        [13, -1, 3],
-      ],
-    },
+    ...subParts(
+      {
+        layer: 'bass',
+        loopSteps: 16,
+        octave: 1,
+        followsChord: true,
+        notes: [
+          [0, 0, 8],
+          [10, 0, 4],
+        ],
+        in: 'rise',
+      },
+      0.8,
+    ),
+    ...subParts(
+      {
+        layer: 'bass',
+        loopSteps: 16,
+        octave: 1,
+        followsChord: true,
+        notes: [
+          [0, 0, 2],
+          [3, 0, 1],
+          [5, 0, 3],
+          [8, 0, 2],
+          [11, 2, 1],
+          [13, -1, 3],
+        ],
+        in: 'drop',
+      },
+      0.95,
+    ),
     {
       voice: 'goa-arp',
       layer: 'texture',
@@ -983,6 +1043,7 @@ export const MANDALA_DE_FEU: MusicTrack = {
       followsChord: true,
       notes: [[0, 0, 1]],
       in: 'light',
+      gain: 0.6,
     },
     {
       voice: 'bowl',
@@ -991,6 +1052,7 @@ export const MANDALA_DE_FEU: MusicTrack = {
       octave: 3,
       followsChord: true,
       notes: [[0, 0, 1]],
+      gain: 0.6,
     },
   ],
 };

@@ -7,6 +7,8 @@ export interface MusicVoiceContext {
   out: AudioNode;
   // The same bus, through the echo.
   send: AudioNode;
+  // The echo alone, for a voice that sends only part of itself into it.
+  echo: AudioNode;
   at: number;
   step: number;
   tempo: Tempo;
@@ -24,6 +26,8 @@ export interface MusicVoiceContext {
   slide: boolean;
   // The next note slides from this one.
   legato: boolean;
+  // The part's level.
+  gain: number;
 }
 
 export type MusicVoice = (ctx: MusicVoiceContext) => void;
@@ -67,6 +71,24 @@ const GATE_TOP_HZ = 2200;
 
 function sweepOf(step: number, tempo: Tempo): number {
   return 0.5 - 0.5 * Math.cos((2 * Math.PI * step) / (SWEEP_BARS * tempo.ticksPerBar));
+}
+
+function echoed(ctx: MusicVoiceContext, level: number): AudioNode {
+  const context = ctx.out.context;
+  const split = context.createGain();
+  const toEcho = context.createGain();
+  toEcho.gain.value = level;
+  split.connect(ctx.out);
+  split.connect(toEcho);
+  toEcho.connect(ctx.echo);
+  return split;
+}
+
+function held(ctx: MusicVoiceContext, steps: number, release: number, share = 0.85): number {
+  return Math.max(
+    0,
+    Math.min(steps * sixteenthSeconds(ctx.tempo) * share, ctx.until - ctx.at - release),
+  );
 }
 
 function texturePan(position: number): number {
@@ -463,15 +485,15 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       hold: seconds * 0.7,
       release: seconds * 0.3,
       pan: -0.2,
-      vibrato: { hz: 3.5, cents: 500, delay: 0 },
+      fm: { wave: 'sawtooth', hz: 2.2, toHz: 5, glide: seconds, depth: hz * 0.35 },
     });
   },
-  bowl: ({ send, at, hz }) => {
+  bowl: ({ send, at, hz, gain: level }) => {
     for (const [ratio, gain, release, pan] of BOWL_PARTIALS) {
       playTone(send, at, {
         wave: 'sine',
         hz: hz * ratio,
-        gain,
+        gain: gain * level,
         attack: 0.008,
         hold: 0.05,
         release,
@@ -594,5 +616,82 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       release: 0.18,
       filter: { type: 'bandpass', hz: hz * 2, q: 9 },
     });
+  },
+  sub: (ctx) => {
+    const { out, at, hz, gain, steps } = ctx;
+    playTone(out, at, {
+      wave: 'sine',
+      hz,
+      gain: 0.38 * gain,
+      attack: 0.006,
+      hold: held(ctx, steps, 0.12),
+      release: 0.12,
+    });
+  },
+  'sub-saw': (ctx) => {
+    const { out, at, hz, gain, steps, cutoff } = ctx;
+    playTone(out, at, {
+      wave: 'sawtooth',
+      hz,
+      gain: 0.12 * gain,
+      attack: 0.006,
+      hold: held(ctx, steps, 0.1),
+      release: 0.1,
+      filter: { type: 'lowpass', hz: cutoff, q: 2 },
+    });
+  },
+  skank: (ctx) => {
+    const { at, hz, position, gain, light } = ctx;
+    playTone(echoed(ctx, light ? 0.85 : 0.5), at, {
+      wave: 'square',
+      hz,
+      gain: 0.02 * gain,
+      attack: 0.002,
+      hold: 0.035,
+      release: 0.07,
+      pan: position < 8 ? -0.3 : 0.3,
+      filter: { type: 'lowpass', hz: 1500, q: 1.5 },
+    });
+  },
+  flute: (ctx) => {
+    const { out, at, hz, steps, cutoff, light } = ctx;
+    const level = light ? 0.85 : 1;
+    const vibrato = steps >= 4 ? { hz: 5, cents: 16, delay: 0.2 } : undefined;
+    playTone(echoed(ctx, 0.3), at, {
+      wave: 'triangle',
+      hz,
+      gain: 0.05 * level,
+      attack: 0.07,
+      hold: held(ctx, steps, 0.25),
+      release: 0.25,
+      ...(vibrato ? { vibrato } : {}),
+      filter: { type: 'lowpass', hz: cutoff },
+    });
+    playTone(out, at, {
+      wave: 'sine',
+      hz: hz * 2,
+      gain: 0.012 * level,
+      attack: 0.09,
+      hold: held(ctx, steps, 0.2, 0.8),
+      release: 0.2,
+    });
+  },
+  melodica: (ctx) => {
+    const { at, hz, steps } = ctx;
+    const vibrato = steps >= 3 ? { hz: 5.8, cents: 14, delay: 0.15 } : undefined;
+    const into = echoed(ctx, 0.4);
+    for (const detune of [-6, 6]) {
+      playTone(into, at, {
+        wave: 'square',
+        hz,
+        detune,
+        gain: 0.022,
+        attack: 0.03,
+        hold: held(ctx, steps, 0.1, 0.82),
+        release: 0.1,
+        ...(vibrato ? { vibrato } : {}),
+        filter: { type: 'lowpass', hz: 1900, q: 1.2 },
+      });
+    }
   },
 };

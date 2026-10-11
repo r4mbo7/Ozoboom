@@ -13,6 +13,7 @@ import {
   modeOf,
   musicCutoff,
   padCutoff,
+  partHeard,
   phraseAt,
   pulseGain,
   segmentAt,
@@ -240,5 +241,21 @@ describe('the scene in danger', () => {
     expect(musicCutoff(true, 0.05)).toBeCloseTo(Math.sqrt(380 * 3000));
     expect(musicCutoff(true, 0)).toBeCloseTo(380);
     expect(musicCutoff(latched(true, 0.12, CHOKE), 0.12)).toBe(20_000);
+  });
+});
+
+describe('partHeard', () => {
+  it.each([
+    [undefined, { buildup: true, break: true, drop: true }],
+    ['light', { buildup: false, break: true, drop: false }],
+    ['full', { buildup: true, break: false, drop: true }],
+    ['rise', { buildup: true, break: false, drop: false }],
+    ['drop', { buildup: false, break: false, drop: true }],
+  ] as const)('lets a part marked %s play in %j', (heard, expected) => {
+    expect({
+      buildup: partHeard(heard, 'buildup'),
+      break: partHeard(heard, 'break'),
+      drop: partHeard(heard, 'drop'),
+    }).toEqual(expected);
   });
 });

@@ -354,7 +354,12 @@ export type MusicVoiceId =
   | 'darbouka'
   | 'riq'
   | 'oud'
-  | 'ney';
+  | 'ney'
+  | 'sub'
+  | 'sub-saw'
+  | 'skank'
+  | 'flute'
+  | 'melodica';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
 // `kick` plays out of the break, `clap` only in the drop.
@@ -372,8 +377,11 @@ export interface MusicPart {
   // The degree is added to the chord root of the bar.
   followsChord: boolean;
   notes: MusicNotes;
-  // Absent: in and out of the break. `light`: only in the break, `full`: never in it.
-  in?: 'full' | 'light';
+  // Absent: in and out of the break. `light`: only in the break, `full`: never in it, `rise`: only
+  // in the buildup, `drop`: only in the drop.
+  in?: 'full' | 'light' | 'rise' | 'drop';
+  // Multiplies the voice's level. Absent means 1.
+  gain?: number;
   // Steps of the loop whose note is accented, or slides from the previous note.
   accents?: readonly number[];
   slides?: readonly number[];
@@ -404,6 +412,8 @@ export interface MusicTrack {
   // Chord root degree of each bar, cycled.
   chords: readonly number[];
   kick: { fromHz: number; release: number };
+  // Replaces the engine's echo: the feedback of the repeats, their tone in Hz and what returns.
+  echo?: { feedback: number; ret: number; tone: number };
   // Hz the pad's filter opens by at each bar of the break.
   padOpens?: number;
   parts: readonly MusicPart[];

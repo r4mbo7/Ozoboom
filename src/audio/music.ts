@@ -84,8 +84,11 @@ interface Bus {
   cutoff: number;
   output: GainNode;
   lead: GainNode;
+  echo: DelayNode;
   echoFeedback: GainNode;
   echoReturn: GainNode;
+  feedback: number;
+  ret: number;
   reverb: Reverb | null;
 }
 
@@ -107,6 +110,7 @@ const PAD_RELEASE = 0.6;
 const PAD_CUT_RELEASE = 0.05;
 const ECHO_FEEDBACK = 0.38;
 const ECHO_RETURN = 0.32;
+const ECHO_TONE = 2600;
 const CRASH_EVERY_BARS = 8;
 const NO_CUE: BreakCue = { roll: null, cut: false };
 const OPEN_HZ = 20_000;
@@ -273,6 +277,21 @@ function isOn(layers: Layers, layer: MusicLayer): boolean {
       return layers.lead && layers.theme;
     default:
       return layers[layer];
+  }
+}
+
+export function partHeard(heard: MusicPart['in'], segment: SetSegment): boolean {
+  switch (heard) {
+    case 'light':
+      return segment === 'break';
+    case 'full':
+      return segment !== 'break';
+    case 'rise':
+      return segment === 'buildup';
+    case 'drop':
+      return segment === 'drop';
+    case undefined:
+      return true;
   }
 }
 
@@ -545,11 +564,13 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     echo.delayTime.value = 3 * sixteenthLength();
     const echoTone = context.createBiquadFilter();
     echoTone.type = 'lowpass';
-    echoTone.frequency.value = 2600;
+    echoTone.frequency.value = track.echo?.tone ?? ECHO_TONE;
+    const feedback = track.echo?.feedback ?? ECHO_FEEDBACK;
+    const ret = track.echo?.ret ?? ECHO_RETURN;
     const echoFeedback = context.createGain();
-    echoFeedback.gain.value = ECHO_FEEDBACK;
+    echoFeedback.gain.value = feedback;
     const echoReturn = context.createGain();
-    echoReturn.gain.value = ECHO_RETURN;
+    echoReturn.gain.value = ret;
     lead.connect(input);
     lead.connect(echo);
     echo.connect(echoTone);
@@ -561,7 +582,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     if (reverb !== null) {
       input.connect(reverb.input);
     }
-    bus = { input, cutoff, output, lead, echoFeedback, echoReturn, reverb };
+    bus = { input, cutoff, output, lead, echo, echoFeedback, echoReturn, feedback, ret, reverb };
     return bus;
   }
 
@@ -581,8 +602,8 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   }
 
   function setEcho(target: Bus, at: number, open: boolean) {
-    target.echoFeedback.gain.setTargetAtTime(open ? ECHO_FEEDBACK : 0, at, 0.01);
-    target.echoReturn.gain.setTargetAtTime(open ? ECHO_RETURN : 0, at, 0.01);
+    target.echoFeedback.gain.setTargetAtTime(open ? target.feedback : 0, at, 0.01);
+    target.echoReturn.gain.setTargetAtTime(open ? target.ret : 0, at, 0.01);
   }
 
   function extinguish(at: number) {
@@ -736,7 +757,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       }
     }
     for (const part of track.parts) {
-      if (!isOn(layers, part.layer) || (part.in !== undefined && (part.in === 'light') !== light)) {
+      if (!isOn(layers, part.layer) || !partHeard(part.in, current)) {
         continue;
       }
       const position = (sixteenth + 16 * bar) % part.loopSteps;
@@ -749,6 +770,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       MUSIC_VOICES[part.voice]({
         out: input,
         send: target.lead,
+        echo: target.echo,
         at,
         step,
         tempo,
@@ -762,6 +784,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         accent: part.accents?.includes(position) ?? false,
         slide: part.slides?.includes(position) ?? false,
         legato: part.slides?.includes((position + 1) % part.loopSteps) ?? false,
+        gain: part.gain ?? 1,
       });
     }
     for (const id of layers.speakers) {

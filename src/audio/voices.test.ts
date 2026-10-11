@@ -43,6 +43,7 @@ const play = (voice: keyof typeof MUSIC_VOICES, overrides: Partial<MusicVoiceCon
   MUSIC_VOICES[voice]({
     out,
     send: out,
+    echo: out,
     at: 1,
     step: 0,
     tempo: MAIN_TEMPO,
@@ -56,6 +57,7 @@ const play = (voice: keyof typeof MUSIC_VOICES, overrides: Partial<MusicVoiceCon
     accent: false,
     slide: false,
     legato: false,
+    gain: 1,
     ...overrides,
   });
   return count();
@@ -130,6 +132,7 @@ function contextOf(rig: Probe, overrides: Partial<MusicVoiceContext> = {}): Musi
   return {
     out: rig.out,
     send: rig.send,
+    echo: rig.send,
     at: 1,
     step: 0,
     tempo: MAIN_TEMPO,
@@ -143,6 +146,7 @@ function contextOf(rig: Probe, overrides: Partial<MusicVoiceContext> = {}): Musi
     accent: false,
     slide: false,
     legato: false,
+    gain: 1,
     ...overrides,
   };
 }
@@ -204,5 +208,99 @@ describe('oriental voices', () => {
       4 * 0.85 * (sixteenthSeconds(domeTempo) - sixteenthSeconds()),
       6,
     );
+  });
+});
+
+function spyGains(rig: Probe) {
+  const nodes: { gain: { value: number } }[] = [];
+  const peaks: number[] = [];
+  const context = rig.out.context as unknown as {
+    createGain: () => { gain: { value: number; linearRampToValueAtTime: unknown } };
+  };
+  const create = context.createGain;
+  context.createGain = () => {
+    const node = create();
+    node.gain.linearRampToValueAtTime = (value: number) => peaks.push(value);
+    nodes.push(node);
+    return node;
+  };
+  return {
+    sends: () => nodes.map((node) => node.gain.value).filter((value) => value !== 0),
+    peaks: () => peaks,
+  };
+}
+
+describe('dub and dome voices', () => {
+  it('holds the sub for the length of its note and stops it at the cut', () => {
+    const held = probe();
+    const longer = probe();
+    const cut = probe();
+    const sixteenth = sixteenthSeconds();
+
+    MUSIC_VOICES.sub(contextOf(held, { steps: 4 }));
+    MUSIC_VOICES.sub(contextOf(longer, { steps: 12 }));
+    MUSIC_VOICES.sub(contextOf(cut, { steps: 12, until: 1 + sixteenth }));
+
+    expect(Math.max(...longer.ends) - Math.max(...held.ends)).toBeCloseTo(8 * 0.85 * sixteenth, 6);
+    expect(Math.max(...cut.ends)).toBeLessThan(1 + sixteenth + 0.12);
+  });
+
+  it('puts a saw above the sub, opened by the bass cutoff', () => {
+    const rig = probe();
+
+    MUSIC_VOICES['sub-saw'](contextOf(rig, { steps: 4 }));
+
+    expect(rig.oscillators).toBe(1);
+  });
+
+  it('plays the skank as one chord stab with a send into the echo, bigger in the break', () => {
+    const [drop, brk] = [false, true].map((light) => {
+      const rig = probe();
+      const gains = spyGains(rig);
+      MUSIC_VOICES.skank(contextOf(rig, { light }));
+      return { oscillators: rig.oscillators, send: gains.sends() };
+    });
+
+    expect(drop).toEqual({ oscillators: 1, send: [0.5] });
+    expect(brk).toEqual({ oscillators: 1, send: [0.85] });
+  });
+
+  it('gives the flute a breath of a harmonic and a vibrato only on long notes', () => {
+    const short = probe();
+    const long = probe();
+
+    MUSIC_VOICES.flute(contextOf(short, { steps: 2 }));
+    MUSIC_VOICES.flute(contextOf(long, { steps: 8 }));
+
+    expect(short.oscillators).toBe(2);
+    expect(long.oscillators).toBe(3);
+  });
+
+  it('plays the melodica as two detuned squares', () => {
+    const rig = probe();
+
+    MUSIC_VOICES.melodica(contextOf(rig, { steps: 2 }));
+
+    expect(rig.oscillators).toBe(2);
+  });
+
+  it('modulates the siren with a saw LFO', () => {
+    const rig = probe();
+
+    MUSIC_VOICES.siren(contextOf(rig, { steps: 12 }));
+
+    expect(rig.oscillators).toBe(2);
+  });
+
+  it('scales the bowl with the part level', () => {
+    const loud = probe();
+    const soft = probe();
+    const loudPeaks = spyGains(loud);
+    const softPeaks = spyGains(soft);
+
+    MUSIC_VOICES.bowl(contextOf(loud, { gain: 1 }));
+    MUSIC_VOICES.bowl(contextOf(soft, { gain: 0.5 }));
+
+    expect(softPeaks.peaks()).toEqual(loudPeaks.peaks().map((peak) => peak / 2));
   });
 });
