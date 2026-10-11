@@ -1,4 +1,5 @@
-import type { ObstacleDefinition } from '../data/types';
+import { SPEAKER_REACH } from '../data/sets';
+import type { ObstacleDefinition, SetDefinition } from '../data/types';
 
 export interface Point {
   x: number;
@@ -86,6 +87,14 @@ export function armPath(giant: GiantLayout, center: Point, arm: 0 | 1): ArmPath 
 
 export interface Disc extends Point {
   readonly radius: number;
+}
+
+// What the mushroom clusters keep off: the obstacles, and each speaker as far as its drawing reaches.
+export function keepClear(set: SetDefinition): Disc[] {
+  return [
+    ...(set.obstacles ?? []),
+    ...(set.speakers ?? []).map(({ x, y, radius }) => ({ x, y, radius: radius * SPEAKER_REACH })),
+  ];
 }
 
 // Mushrooms of a cluster land anywhere in a square of this spread, the largest cap included.

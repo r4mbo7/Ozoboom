@@ -7,12 +7,12 @@ import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import {
-  type Disc,
   type Point,
   SCALE,
   armPath,
   clearSpot,
   giantClusters,
+  keepClear,
   layGiants,
 } from './giants-layout';
 import { traceBody, traceThrough } from './giants-body';
@@ -157,7 +157,7 @@ export function createGiants(ctx: RenderContext, sets: readonly SetDefinition[])
     });
     shadows.fill({ color: 0x000000, alpha: 0.28 });
     root.addChild(...giants.map(({ lines }) => lines), shadows, caps, spots, halos);
-    const avoid: Disc[] = [...(set.obstacles ?? []), ...(set.speakers ?? [])];
+    const avoid = keepClear(set);
     for (const at of giantClusters(layout, center, avoid, GIANT_SPREAD)) {
       cluster(at, GIANT_SPREAD, rng);
     }

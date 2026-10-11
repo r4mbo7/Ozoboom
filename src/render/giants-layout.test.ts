@@ -1,6 +1,17 @@
+import { Graphics } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
-import { SETS } from '../data/sets';
-import { armPath, clearSpot, clusterReach, giantClusters, layGiants } from './giants-layout';
+import { SETS, SPEAKER_REACH } from '../data/sets';
+import { traceBody } from './giants-body';
+import {
+  type Point,
+  SCALE,
+  armPath,
+  clearSpot,
+  clusterReach,
+  giantClusters,
+  keepClear,
+  layGiants,
+} from './giants-layout';
 
 const dome = SETS.find((set) => set.id === 'dome');
 
@@ -48,9 +59,9 @@ describe('layGiants', () => {
     expect(stones).toHaveLength((dome?.obstacles?.length ?? 0) - posts);
   });
 
-  it('keeps two clusters per giant, clear of every speaker and obstacle', () => {
+  it('keeps two clusters per giant, clear of every drawn speaker and obstacle', () => {
     const center = { x: 800, y: 500 };
-    const avoid = [...(dome?.obstacles ?? []), ...(dome?.speakers ?? [])];
+    const avoid = dome === undefined ? [] : keepClear(dome);
 
     const clusters = giantClusters(layGiants(dome?.obstacles ?? [], center), center, avoid, 30);
 
@@ -70,5 +81,49 @@ describe('layGiants', () => {
     expect(clearSpot({ x: 500, y: 500 }, 60, [speaker])).toEqual({ x: 500, y: 500 });
     const moved = clearSpot({ x: 100, y: 100 }, 60, [speaker]);
     expect(Math.hypot(moved.x - 100, moved.y - 100)).toBeGreaterThanOrEqual(30 + clusterReach(60));
+  });
+
+  it('keeps every drawn speaker off the arm bands, the joined hands and the giants', () => {
+    const center = { x: 800, y: 500 };
+    const giants = layGiants(dome?.obstacles ?? [], center);
+    const body = new Graphics();
+    traceBody(body);
+    const torso = body.getLocalBounds();
+    const toSegment = (at: Point, from: Point, to: Point) => {
+      const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+      const along = Math.max(
+        0,
+        Math.min(
+          1,
+          ((at.x - from.x) * (to.x - from.x) + (at.y - from.y) * (to.y - from.y)) / length ** 2,
+        ),
+      );
+      return Math.hypot(
+        at.x - from.x - along * (to.x - from.x),
+        at.y - from.y - along * (to.y - from.y),
+      );
+    };
+
+    expect(dome?.speakers).toHaveLength(4);
+    for (const { id, x, y, radius } of dome?.speakers ?? []) {
+      const reach = radius * SPEAKER_REACH;
+      for (const giant of giants) {
+        for (const arm of [0, 1] as const) {
+          const { points } = armPath(giant, center, arm);
+          const band = Math.max(...giant.arms[arm].stones.map((stone) => stone.radius));
+          for (const [index, to] of points.slice(1).entries()) {
+            const from = points[index] ?? to;
+            expect(toSegment({ x, y }, from, to) - band, id).toBeGreaterThan(reach);
+          }
+        }
+        const dx = x - center.x;
+        const dy = y - center.y;
+        const out = (dx * Math.cos(giant.angle) + dy * Math.sin(giant.angle)) / SCALE;
+        const across = (dy * Math.cos(giant.angle) - dx * Math.sin(giant.angle)) / SCALE;
+        const gapX = Math.max(torso.minX - out, out - torso.maxX, 0);
+        const gapY = Math.max(torso.minY - across, across - torso.maxY, 0);
+        expect(Math.hypot(gapX, gapY) * SCALE, id).toBeGreaterThan(reach);
+      }
+    }
   });
 });

@@ -8,6 +8,7 @@ import {
   tempoOf,
 } from '../shared/tempo';
 import { CONTENT } from './content';
+import { SPEAKER_REACH } from './sets';
 import type { ObstacleDefinition, TierDefinition } from './types';
 
 const { classes, enemies, traps, upgrades, sets, bystanders = [] } = CONTENT;
@@ -743,17 +744,29 @@ describe('The Dome', () => {
     }
   });
 
-  it('keeps every speaker out of the passage a boss takes along an entrance axis', () => {
+  it('keeps every drawn speaker out of the passage a boss takes along an entrance axis', () => {
     const speakers = dome?.speakers ?? [];
 
     expect(speakers).toHaveLength(4);
     for (const speaker of speakers) {
       const offAxis = Math.min(Math.abs(speaker.x - center.x), Math.abs(speaker.y - center.y));
-      expect(offAxis - speaker.radius, speaker.id).toBeGreaterThanOrEqual(biggestBoss);
+      expect(offAxis - speaker.radius * SPEAKER_REACH, speaker.id).toBeGreaterThanOrEqual(
+        biggestBoss,
+      );
     }
   });
 
-  it('keeps the core, the speakers and the arena edge clear of every obstacle', () => {
+  it('draws every speaker whole inside the arena', () => {
+    for (const { id, x, y, radius } of dome?.speakers ?? []) {
+      const reach = radius * SPEAKER_REACH;
+      expect(
+        Math.min(x, y, (dome?.arena.width ?? 0) - x, (dome?.arena.height ?? 0) - y),
+        id,
+      ).toBeGreaterThanOrEqual(reach);
+    }
+  });
+
+  it('keeps the core, the drawn speakers and the arena edge clear of every obstacle', () => {
     for (const obstacle of obstacles) {
       expect(distance(obstacle, center) - obstacle.radius).toBeGreaterThan(dome?.core.radius ?? 0);
       expect(obstacle.x - obstacle.radius).toBeGreaterThanOrEqual(0);
@@ -761,7 +774,9 @@ describe('The Dome', () => {
       expect(obstacle.x + obstacle.radius).toBeLessThanOrEqual(dome?.arena.width ?? 0);
       expect(obstacle.y + obstacle.radius).toBeLessThanOrEqual(dome?.arena.height ?? 0);
       for (const speaker of dome?.speakers ?? []) {
-        expect(distance(obstacle, speaker)).toBeGreaterThan(obstacle.radius + speaker.radius);
+        expect(distance(obstacle, speaker)).toBeGreaterThan(
+          obstacle.radius + speaker.radius * SPEAKER_REACH,
+        );
       }
     }
   });

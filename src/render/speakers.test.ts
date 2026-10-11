@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SPEAKER_REACH } from '../data/sets';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import { SPEAKER_TOKENS, mixColor, plugShare, speakerToken } from './speaker-kit';
 import { SPEAKER_EXTENTS } from './speaker-leds';
@@ -40,6 +41,26 @@ describe('LED column and standby', () => {
       expect(leds.visible).toBe(true);
       expect(leds.position).toMatchObject({ x: def.x, y: def.y });
       expect(leds.getLocalBounds().minX).toBeGreaterThan(SPEAKER_EXTENTS[def.id] ?? Infinity);
+    }
+  });
+
+  it('keeps the LED column and the standby LED of every drawing within its reach', () => {
+    const ctx = context();
+
+    createSpeakers(ctx).update(stateWith(['off', 'off', 'off', 'off']), 0, frameAt(0.4));
+
+    for (const [index, def] of FIXTURE_SPEAKERS.entries()) {
+      const reach = 40 * SPEAKER_REACH;
+      const { minX, minY, maxX, maxY } = ledsOf(ctx, index).getLocalBounds();
+      const corners = [minX, maxX].flatMap((x) => [minY, maxY].map((y) => Math.hypot(x, y)));
+      expect(Math.max(...corners), def.id).toBeLessThanOrEqual(reach);
+      const standby = standbyOf(ctx, index);
+      const scale = def.radius / 40;
+      const { width } = standby.getLocalBounds();
+      expect(
+        Math.hypot(standby.x - def.x, standby.y - def.y) / scale + width / 2,
+        def.id,
+      ).toBeLessThanOrEqual(reach);
     }
   });
 

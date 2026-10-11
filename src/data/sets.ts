@@ -270,12 +270,17 @@ const DOME_OBSTACLES: readonly ObstacleDefinition[] = [
   }),
 ];
 
-// 400 from the core, a sixteenth of a turn past each entrance axis: between two posts, under an arm, off the passages.
+// How far a speaker's drawing reaches from its centre, as a share of its radius: up to 74 for a radius of 40 for the
+// tarp's pegs, 87 for its LED column and standby LED.
+export const SPEAKER_REACH = 2.2;
+
+// 674 from the core, either side of the east and west entrances, beyond the giants' arms: the crown and the arms
+// leave no room for a whole drawn speaker between them, nor do the arms and the arena's north and south edges.
 const DOME_SPEAKER_SPOTS: Record<string, { x: number; y: number }> = {
-  'dome-chill': { x: 953, y: 130 },
-  foret: { x: 1170, y: 653 },
-  'cercle-acid': { x: 647, y: 870 },
-  sub: { x: 430, y: 347 },
+  'dome-chill': { x: 1430, y: 260 },
+  foret: { x: 1430, y: 740 },
+  'cercle-acid': { x: 170, y: 740 },
+  sub: { x: 170, y: 260 },
 };
 
 // A bar lasts a third longer at the Dome, so the main stage's rules would send fewer bad vibes per
