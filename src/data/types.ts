@@ -275,7 +275,7 @@ export interface BombRules {
 }
 
 // How a stage is drawn. Absent means 'lake', the main stage.
-export type DecorId = 'lake' | 'dome';
+export type DecorId = 'lake' | 'dome' | 'ambyss';
 
 // A round obstacle of the stage: it blocks players, bad vibes and shots.
 export interface ObstacleDefinition {

@@ -275,32 +275,37 @@ const DOME_OBSTACLES: readonly ObstacleDefinition[] = [
 // tarp's pegs, 87 for its LED column and standby LED.
 export const SPEAKER_REACH = 2.2;
 
-// 674 from the core, either side of the east and west entrances, beyond the giants' arms: the crown and the arms
-// leave no room for a whole drawn speaker between them, nor do the arms and the arena's north and south edges.
-const DOME_SPEAKER_SPOTS: Record<string, { x: number; y: number }> = {
+// 674 from the core, either side of the east and west entrances: at the Dome, beyond the giants' arms, which
+// leave no room for a whole drawn speaker between them and the crown, nor between them and the arena's edges; at
+// Ambyss, beyond the canopy's guy ropes.
+const CORNER_SPEAKER_SPOTS: Record<string, { x: number; y: number }> = {
   'dome-chill': { x: 1430, y: 260 },
   foret: { x: 1430, y: 740 },
   'cercle-acid': { x: 170, y: 740 },
   sub: { x: 170, y: 260 },
 };
 
-// A bar lasts a third longer at the Dome, so the main stage's rules would send fewer bad vibes per
-// second: groups of several are made denser by `DOME_PRESSURE`, the one dial, to bring it back.
-// Single bad vibes stay as they are: the rules must keep a period that divides a phrase.
-const DOME_PRESSURE = 1.4;
+const inCorners = (speakers: SetDefinition['speakers']) =>
+  (speakers ?? []).map((speaker) => ({ ...speaker, ...CORNER_SPEAKER_SPOTS[speaker.id] }));
 
-const denser = (rules: readonly SpawnRule[]): SpawnRule[] =>
+// A slower stage's bars last longer, so the main stage's rules would send fewer bad vibes per second: groups of
+// several are made denser by the stage's pressure, its one dial, to bring it back. Single bad vibes stay as they
+// are: the rules must keep a period that divides a phrase.
+const denser = (rules: readonly SpawnRule[], pressure: number): SpawnRule[] =>
   rules.map((rule) =>
-    rule.count > 1 ? { ...rule, count: Math.round(rule.count * DOME_PRESSURE) } : rule,
+    rule.count > 1 ? { ...rule, count: Math.round(rule.count * pressure) } : rule,
   );
+
+const denserTiers = (pressure: number): SetDefinition['tiers'] =>
+  MAIN_STAGE.tiers.map((tier) => ({
+    ...tier,
+    spawns: denser(tier.spawns, pressure),
+    ...(tier.dropSpawns && { dropSpawns: denser(tier.dropSpawns, pressure) }),
+  }));
 
 const DOME: SetDefinition = {
   ...MAIN_STAGE,
-  tiers: MAIN_STAGE.tiers.map((tier) => ({
-    ...tier,
-    spawns: denser(tier.spawns),
-    ...(tier.dropSpawns && { dropSpawns: denser(tier.dropSpawns) }),
-  })),
+  tiers: denserTiers(1.4),
   id: 'dome',
   trackIds: [
     'sous-la-coupole',
@@ -316,10 +321,22 @@ const DOME: SetDefinition = {
   decor: 'dome',
   obstacles: DOME_OBSTACLES,
   acoustics: { reverbSeconds: 3.6, wet: 0.3 },
-  speakers: (MAIN_STAGE.speakers ?? []).map((speaker) => ({
-    ...speaker,
-    ...DOME_SPEAKER_SPOTS[speaker.id],
-  })),
+  speakers: inCorners(MAIN_STAGE.speakers),
 };
 
-export const SETS: readonly SetDefinition[] = [MAIN_STAGE, DOME];
+const AMBYSS_TICKS_PER_BEAT = 15;
+
+const AMBYSS: SetDefinition = {
+  ...MAIN_STAGE,
+  tiers: denserTiers(1.25),
+  id: 'ambyss',
+  name: 'Ambyss',
+  style: 'Chillgressive, sunrise',
+  bpm: tempoOf(AMBYSS_TICKS_PER_BEAT).bpm,
+  ticksPerBeat: AMBYSS_TICKS_PER_BEAT,
+  decor: 'ambyss',
+  acoustics: { reverbSeconds: 1.6, wet: 0.18 },
+  speakers: inCorners(MAIN_STAGE.speakers),
+};
+
+export const SETS: readonly SetDefinition[] = [MAIN_STAGE, DOME, AMBYSS];

@@ -816,3 +816,54 @@ describe('The Dome', () => {
     expect(sets[0]?.id).toBe('soiree-v0');
   });
 });
+
+describe('Ambyss', () => {
+  const ambyss = sets.find((set) => set.id === 'ambyss');
+  const main = sets[0];
+  const center = { x: (ambyss?.arena.width ?? 0) / 2, y: (ambyss?.arena.height ?? 0) / 2 };
+
+  it('plays at four fifths of the main stage tempo in the open air, on the same arena', () => {
+    expect(ambyss?.ticksPerBeat).toBe(15);
+    expect(ambyss?.bpm).toBe(tempoOf(15).bpm);
+    expect(ambyss?.decor).toBe('ambyss');
+    expect(ambyss?.obstacles ?? []).toEqual([]);
+    expect(ambyss?.acoustics?.reverbSeconds).toBeLessThan(2);
+    expect(ambyss?.arena).toEqual(main?.arena);
+    expect(sets.map((set) => set.id).at(-1)).toBe('ambyss');
+  });
+
+  it('draws every speaker whole inside the arena and clear of the canopy and its guy ropes', () => {
+    const ropes = { x: 520, y: 335 };
+
+    expect(ambyss?.speakers).toHaveLength(4);
+    for (const { id, x, y, radius } of ambyss?.speakers ?? []) {
+      const reach = radius * SPEAKER_REACH;
+      expect(
+        Math.min(x, y, (ambyss?.arena.width ?? 0) - x, (ambyss?.arena.height ?? 0) - y),
+        id,
+      ).toBeGreaterThanOrEqual(reach);
+      const nx = Math.max(0, Math.abs(x - center.x) - reach) / ropes.x;
+      const ny = Math.max(0, Math.abs(y - center.y) - reach) / ropes.y;
+      expect(nx * nx + ny * ny, id).toBeGreaterThan(1);
+    }
+  });
+
+  it('keeps the main stage speakers, tiers and bosses, with denser groups for its longer bars', () => {
+    expect(ambyss?.speakers?.map((speaker) => speaker.name)).toEqual(
+      main?.speakers?.map((speaker) => speaker.name),
+    );
+    expect(ambyss?.tiers.map(({ bossId }) => bossId)).toEqual(
+      main?.tiers.map(({ bossId }) => bossId),
+    );
+    const groups = (set: typeof main) =>
+      (set?.tiers ?? []).flatMap((tier) => [...tier.spawns, ...(tier.dropSpawns ?? [])]);
+    const ours = groups(ambyss);
+    for (const [index, rule] of groups(main).entries()) {
+      expect(ours[index]?.count).toBeGreaterThanOrEqual(rule.count);
+      expect(ours[index]?.everyBars).toBe(rule.everyBars);
+    }
+    expect(ours.reduce((sum, rule) => sum + rule.count, 0)).toBeGreaterThan(
+      groups(main).reduce((sum, rule) => sum + rule.count, 0),
+    );
+  });
+});

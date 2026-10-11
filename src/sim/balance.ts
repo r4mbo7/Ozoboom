@@ -5,7 +5,7 @@ import { botCommand } from './bot';
 import { createSimulation } from './index';
 import type { PlayerId, SimState } from './state';
 
-export const BALANCE_SET_IDS: readonly string[] = ['soiree-v0', 'dome'];
+export const BALANCE_SET_IDS: readonly string[] = ['soiree-v0', 'dome', 'ambyss'];
 export const BALANCE_SET_ID = 'soiree-v0';
 export const BALANCE_SEEDS: readonly number[] = Array.from({ length: 20 }, (_, index) => index + 1);
 
