@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CANOPY_PALETTES,
   HILL_PALETTES,
   PALETTE_TOKENS,
   SAND_PALETTES,
   SUN_PALETTES,
+  canopyAt,
   hillAt,
   lightAt,
   paletteAt,
   relativeLuminance,
   sandAt,
+  spanAt,
 } from './palette';
 
 const HEX = /^#[0-9a-f]{6}$/;
@@ -123,5 +126,24 @@ describe('hillAt', () => {
       (HILL_PALETTES.aube.est + HILL_PALETTES.jour.est) / 2,
       10,
     );
+  });
+});
+
+describe('canopyAt', () => {
+  it('lands on the canopy of each moment and mixes between them', () => {
+    expect(canopyAt(0)).toEqual(CANOPY_PALETTES.crepuscule);
+    expect(canopyAt(0.4)).toEqual(CANOPY_PALETTES.nuit);
+    expect(canopyAt(1)).toEqual(CANOPY_PALETTES.jour);
+    expect(canopyAt(0.725).toile).not.toBe(CANOPY_PALETTES.nuit.toile);
+    expect(canopyAt(0.725).toile).not.toBe(CANOPY_PALETTES.aube.toile);
+  });
+});
+
+describe('spanAt', () => {
+  it('names the two moments around an hour and how far it is between them', () => {
+    expect(spanAt(0)).toEqual({ from: 'crepuscule', to: 'nuit', mix: 0 });
+    expect(spanAt(0.4)).toMatchObject({ from: 'nuit', to: 'nuit' });
+    expect(spanAt(0.725)).toEqual({ from: 'nuit', to: 'aube', mix: 0.5 });
+    expect(spanAt(1)).toEqual({ from: 'aube', to: 'jour', mix: 1 });
   });
 });

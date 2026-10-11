@@ -25,7 +25,7 @@ const PANEL_TOKENS = ['mage', 'turquoise', 'or', 'healer'] as const;
 // fight, a ring of round posts as wide as the stage's obstacles. Drawn once white, then tinted.
 export function createDome(ctx: RenderContext, sets: ReadonlyMap<string, SetDefinition>): Family {
   const root = new Container();
-  ctx.layers.dome.addChild(root);
+  ctx.layers.decor.addChild(root);
   const panels = PANEL_TOKENS.map(() => new Graphics());
   const garland = [0, ...Array.from({ length: TWINKLE_GROUPS }, (_, i) => i + 1)].map(
     () => new Graphics(),

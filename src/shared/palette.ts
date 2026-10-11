@@ -175,6 +175,20 @@ export const HILL_PALETTES: Record<SunMoment, HillPalette> = {
   },
 };
 
+export interface CanopyPalette {
+  toile: string;
+  corde: string;
+  violet: string;
+}
+
+// The canopy of Ambyss: a violet sail at night, ochre by day, its ropes, and the violet of its painted spirals.
+export const CANOPY_PALETTES: Record<SunMoment, CanopyPalette> = {
+  crepuscule: { toile: '#c88a5a', corde: '#e0b090', violet: '#9b6bff' },
+  nuit: { toile: '#6a4a8a', corde: '#8a7aa8', violet: '#9b6bff' },
+  aube: { toile: '#e2a66a', corde: '#8a6a50', violet: '#6a3fc0' },
+  jour: { toile: '#e0a060', corde: '#8a6a48', violet: '#6a3fc0' },
+};
+
 export const NIGHT_START = 0.25;
 export const NIGHT_END = 0.6;
 export const DAWN_AT = 0.85;
@@ -199,6 +213,10 @@ export function sandAt(fraction: number): SandPalette {
   return mixAt(SAND_PALETTES, ['sable', 'sableClair', 'ride'], fraction);
 }
 
+export function canopyAt(fraction: number): CanopyPalette {
+  return mixAt(CANOPY_PALETTES, ['toile', 'corde', 'violet'], fraction);
+}
+
 export function hillAt(fraction: number): HillPalette {
   const { from, to, mix } = spanAt(fraction);
   return {
@@ -207,7 +225,7 @@ export function hillAt(fraction: number): HillPalette {
   };
 }
 
-function spanAt(fraction: number): { from: SunMoment; to: SunMoment; mix: number } {
+export function spanAt(fraction: number): { from: SunMoment; to: SunMoment; mix: number } {
   const t = clamp01(fraction);
   const next = Math.max(
     1,
