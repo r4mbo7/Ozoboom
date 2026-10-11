@@ -8,4 +8,6 @@ interface ImportMetaEnv {
   readonly VITE_PEER_SERVER?: string;
   // Base URL of the TURN Worker (ADR 0011); unset means STUN only.
   readonly VITE_TURN_URL?: string;
+  // Base URL of the stats Worker (ADR 0013); unset means no usage events are sent.
+  readonly VITE_STATS_URL?: string;
 }

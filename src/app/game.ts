@@ -13,6 +13,7 @@ import { createInputHub } from '../input';
 import type { DeviceId, InputSnapshot } from '../input/intents';
 import { createRenderer } from '../render';
 import { SUN_PALETTES } from '../shared/palette';
+import type { GameMode } from '../shared/stats';
 import { TICK_MS } from '../shared/tempo';
 import { parseJoinCode } from '../net/code';
 import { createLocalSource } from '../net/local';
@@ -52,6 +53,7 @@ import { createPauseScreen } from './pause';
 import { loadPrefs, savePref } from './prefs';
 import { createSeats, type LaunchedSeats } from './seats';
 import { soundOf, type Screen } from './sound';
+import { createGameStats, outcomeOf, sendGameEvent } from './stats';
 import { createToast } from './toast';
 import { drawTrack, stageTracks, trackOf } from './track';
 import { countVisit } from './visits';
@@ -161,6 +163,11 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
                 },
         );
   const toast = createToast(root);
+  const stats = createGameStats((event) => {
+    sendGameEvent(event, import.meta.env.VITE_STATS_URL, window.location.search, (url, data) =>
+      navigator.sendBeacon(url, data),
+    );
+  });
   renderer.setOptions({ focus: match.focus });
 
   const ui = createUi(root, {
@@ -477,7 +484,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     ui.showStagePicker({ stages, stageId });
   }
 
-  function beginGame(trackId: string): void {
+  // An online guest counts nothing: the host counts the game for everyone.
+  function beginGame(trackId: string, mode: GameMode | null): void {
     void audio.start();
     audio.setTrack(trackOf(TRACKS, trackId));
     prefs.trackId = trackId;
@@ -491,6 +499,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     fade.classList.remove('defeat-fade--on');
     ui.showGame();
     applySound();
+    if (mode !== null) {
+      stats.start(match.session.state, {
+        mode,
+        device: view.merged.device,
+        version: __APP_RELEASE__,
+      });
+    }
   }
 
   function rememberStage(): void {
@@ -502,14 +517,14 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     rememberStage();
     launched = null;
     setMatch(soloMatch());
-    beginGame(nextTrackId());
+    beginGame(nextTrackId(), 'solo');
   }
 
   function launch(seated: LaunchedSeats): void {
     rememberStage();
     launched = seated;
     setMatch(newMatch(seated.slots, seated.locals, TOGETHER_FOCUS));
-    beginGame(nextTrackId());
+    beginGame(nextTrackId(), 'local');
     audio.cue('launch');
   }
 
@@ -546,11 +561,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     );
     paused = false;
     pause.hide();
-    beginGame(started.start.trackId);
+    beginGame(started.start.trackId, started.role === 'host' ? 'online' : null);
   }
 
   // A game that cannot go on: nothing steps any more, and the notice offers the way out.
   function interrupt(next: Interruption): void {
+    stats.end(match.session.state, 'interrupted');
     interruption = next;
     paused = false;
     pause.hide();
@@ -582,6 +598,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
 
   // Back to the title as on a fresh load: no end screen, a new idle game behind the title.
   function quit(): void {
+    stats.end(match.session.state, 'quit');
     paused = false;
     pause.hide();
     played = false;
@@ -714,6 +731,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     const { status } = session.state;
     if (screen === 'game' && (status === 'won' || status === 'lost')) {
       online.matchEnded();
+      stats.end(session.state, outcomeOf(session.state));
       endingLeft = endingTicks(status);
       if (endingLeft === 0) {
         openEnd();

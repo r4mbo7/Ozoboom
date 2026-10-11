@@ -37,7 +37,7 @@ Deux événements, et aucun autre. Une partie lancée envoie `start`, puis au pl
 | `players` | 1 à 4                                                                                                  | oui     | oui   | K3         |
 | `classes` | identifiants de classe des joueurs, triés, joints par `+`                                              | oui     | oui   | K4         |
 | `device`  | périphérique de la machine qui envoie : `keyboardMouse`, `gamepad`, `touch`                            | oui     | oui   | K8         |
-| `version` | `APP_VERSION`                                                                                          | oui     | oui   | K9         |
+| `version` | numéro de sortie `__APP_RELEASE__` (`1.5`), pas le SHA                                                 | oui     | oui   | K9         |
 | `outcome` | `won`, `core` (noyau détruit), `downed` (tous à terre), `quit`, `interrupted` (partie en ligne coupée) | non     | oui   | K2, K6, K7 |
 | `tier`    | palier atteint, entier                                                                                 | non     | oui   | K5         |
 | `seconds` | durée de jeu en secondes entières, depuis les ticks de la sim                                          | non     | oui   | K6         |
