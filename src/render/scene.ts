@@ -15,6 +15,7 @@ import {
 import { createBystanders } from './bystanders';
 import type { Family, RenderContent, RenderContext } from './context';
 import { createCore } from './core';
+import { createDome } from './dome';
 import { createClassEffects } from './class-effects';
 import { createDropTrails } from './drop-trails';
 import { createEffects } from './effects';
@@ -125,6 +126,7 @@ export class Scene implements Renderer {
     this.families = [
       createGround(ctx),
       createGroundWaves(ctx),
+      createDome(ctx, this.sets),
       createSpeakers(ctx),
       createCore(ctx),
       traps,

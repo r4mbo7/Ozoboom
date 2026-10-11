@@ -5,6 +5,7 @@ export interface Layers {
   readonly world: Container;
   readonly screen: Container;
   readonly ground: Container;
+  readonly dome: Container;
   readonly echoes: Container;
   readonly speakers: Container;
   readonly glow: Container;
@@ -34,6 +35,7 @@ export function createLayers(stage: Container): Layers {
   return {
     world,
     ground: layer(world),
+    dome: layer(world),
     echoes: layer(world),
     speakers: layer(world),
     glow: layer(world),
