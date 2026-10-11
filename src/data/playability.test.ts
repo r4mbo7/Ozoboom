@@ -102,12 +102,12 @@ describe('circus weapons at level 1', () => {
   }
 
   it.each(baseWeapons.filter((weapon) => damagePerBar(weapon) !== undefined))(
-    'deals a quarter to half of the mage attack per bar for $id',
+    'deals a third to two thirds of the mage attack per bar for $id',
     (weapon) => {
       const perBar = damagePerBar(weapon) ?? 0;
 
-      expect(perBar).toBeGreaterThanOrEqual(mageDamagePerBar / 4);
-      expect(perBar).toBeLessThanOrEqual(mageDamagePerBar / 2);
+      expect(perBar).toBeGreaterThanOrEqual(mageDamagePerBar / 3);
+      expect(perBar).toBeLessThanOrEqual((mageDamagePerBar * 2) / 3);
     },
   );
 

@@ -125,7 +125,6 @@ describe('skillCooldownTicks', () => {
       throw new Error('expected the Boucle VJ upgrade');
     }
     applyModifiers(player, loop.modifiers);
-    applyModifiers(player, loop.modifiers);
 
     const ticks = skillCooldownTicks(player, { cooldownTicks: 192 });
 

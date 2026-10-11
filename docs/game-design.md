@@ -98,6 +98,7 @@ Du matériel de festival, trouvé dans les loots, qui agit sur le temps musical.
 ## Progression dans la partie
 
 - Expérience partagée entre les joueurs : les vibes ramassées vont à toute l'équipe, tout le monde monte de niveau en même temps, chacun choisit son amélioration. **Tranché le 2026-10-05.**
+- Peu d'offres, mais fortes : une offre interrompt le jeu, elle doit compter. Deux fois moins de niveaux qu'avant le 2026-10-11 ; une amélioration vaut deux des anciennes, un agrès arrive une fois et demie plus fort et plafonne au niveau 3, aussi fort qu'avant au maximum. **Tranché le 2026-10-11.**
 - Améliorations de quatre familles : classe (compétences), générique (vitesse, portée, vie), défense (pièges), relique (uniques, lâchées par les boss). Des synergies entre familles font les grosses parties.
 - Raretés : commun, rare, légendaire, la même amélioration avec de plus gros chiffres. Une offre tire trois améliorations différentes, puis la rareté de chacune selon le Volume : le Volume 2 ouvre les rares, le Volume 3 les légendaires ([ADR 0010](adr/0010-la-rarete-se-tire-apres-la-carte.md)). **Tranché le 2026-10-08.**
 - Pas de méta-progression entre parties dans les premières versions. Un déblocage cosmétique est envisageable plus tard.
