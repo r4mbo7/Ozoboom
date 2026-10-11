@@ -8,6 +8,12 @@ export function formatNumber(value: number): string {
   return integer.format(value);
 }
 
+const tenth = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+
+export function formatTempo(bpm: number): string {
+  return `${tenth.format(bpm)}\u00a0BPM`;
+}
+
 export function formatDuration(ticks: number): string {
   const totalSeconds = Math.floor(Math.max(0, ticks) / TICK_RATE_HZ);
   const minutes = Math.floor(totalSeconds / 60);

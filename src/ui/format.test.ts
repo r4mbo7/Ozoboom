@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { TICK_RATE_HZ } from '../shared/tempo';
 import { fixtureState } from './fixtures';
-import { endStats, formatDuration, formatNumber, formatPercent, ratio } from './format';
+import {
+  endStats,
+  formatDuration,
+  formatNumber,
+  formatPercent,
+  formatTempo,
+  ratio,
+} from './format';
 
 describe('formatDuration', () => {
   it('shows minutes and zero-padded seconds', () => {
@@ -14,6 +21,13 @@ describe('formatDuration', () => {
 describe('formatNumber', () => {
   it('groups thousands the French way', () => {
     expect(formatNumber(1873)).toBe('1\u202f873');
+  });
+});
+
+describe('formatTempo', () => {
+  it('writes the tempo to a tenth with a decimal comma', () => {
+    expect(formatTempo(290 / 3)).toBe('96,7\u00a0BPM');
+    expect(formatTempo(145)).toBe('145\u00a0BPM');
   });
 });
 

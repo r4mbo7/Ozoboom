@@ -1,5 +1,6 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { el, fillHint } from './dom';
+import { formatTempo } from './format';
 import { stepClass } from './lobby-model';
 import { promptsFor } from './prompts';
 import { stagePreview } from './stage-preview';
@@ -33,7 +34,7 @@ function card(stage: StageCard, onChoose: (setId: string) => void, readonly: () 
   const meta = el('span', 'ui-stage__meta');
   meta.append(
     el('span', 'ui-stage__chip', stage.style),
-    el('span', 'ui-stage__chip', `${String(stage.bpm)} BPM`),
+    el('span', 'ui-stage__chip', formatTempo(stage.bpm)),
   );
   node.append(stagePreview(stage.decor), el('span', 'ui-stage__name', stage.name), meta);
   node.addEventListener('click', (event) => {

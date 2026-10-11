@@ -91,7 +91,8 @@
 .ui-button[aria-current],
 .ui-button:focus-visible,
 .ui-field[aria-current],
-.ui-classpick[aria-current] {
+.ui-classpick[aria-current],
+.ui-stagecards[aria-current] .ui-stage[aria-checked='true'] {
   outline: none;
   border-color: var(--turquoise);
   box-shadow:
@@ -99,7 +100,8 @@
     0 0 calc(30px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 40%, transparent);
 }
 
-:is(.ui-button, .ui-field, .ui-classpick)[aria-current]::before {
+:is(.ui-button, .ui-field, .ui-classpick)[aria-current]::before,
+.ui-stagecards[aria-current] .ui-stage[aria-checked='true']::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -1104,6 +1106,10 @@
   width: 260px;
 }
 
+.ui-lobby__actions .ui-button--primary:not([aria-current], :focus-visible) {
+  border-color: var(--ui-line);
+}
+
 .ui-button[aria-disabled='true'] {
   border-style: dashed;
   background: transparent;
@@ -1158,15 +1164,7 @@
   flex-wrap: wrap;
   align-items: stretch;
   justify-content: center;
-  gap: 16px;
-  padding: 6px;
-  border: 1.5px solid transparent;
-  border-radius: calc(var(--ui-radius) + 6px);
-}
-
-.ui-stagecards[aria-current] {
-  border-color: var(--turquoise);
-  box-shadow: 0 0 0 2px var(--turquoise);
+  gap: 16px calc(2 * var(--ui-chevron));
 }
 
 .ui-lobby__stage {
@@ -1182,6 +1180,7 @@
 }
 
 .ui-stage {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1197,7 +1196,8 @@
   cursor: pointer;
   transition:
     border-color 120ms ease-out,
-    background-color 120ms ease-out;
+    background-color 120ms ease-out,
+    box-shadow 120ms ease-out;
 }
 
 .ui-stage:hover {
@@ -1221,9 +1221,10 @@
   border-color: var(--ui-line);
 }
 
-.ui-stage__preview {
+.ui .ui-stage__preview {
   display: block;
   width: 100%;
+  height: auto;
   aspect-ratio: 16 / 9;
   border-radius: calc(var(--ui-radius) - 6px);
 }

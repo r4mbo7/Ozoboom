@@ -26,6 +26,7 @@ test.describe('stage picker', () => {
     await expect(picker.getByRole('radio')).toHaveCount(2);
     await expect(picker.getByRole('radio', { name: /Le Dome/ })).toBeChecked();
     await expect(picker.getByRole('radio', { name: /Main stage/ })).toContainText('145 BPM');
+    await expect(picker.getByRole('radio', { name: /Le Dome/ })).toContainText('96,7 BPM');
 
     await tap(page, 'ArrowLeft');
     expect(lines).toContain('[ui] onChooseStage main');
@@ -87,6 +88,8 @@ test.describe('stage in the app', () => {
   test('Jouer opens the choice, launches the picked scene and proposes it again', async ({
     page,
   }) => {
+    // Without a GPU, reloading a page that runs a set takes up to twenty seconds on a busy machine.
+    test.setTimeout(90_000);
     const errors = collectConsoleErrors(page);
     await page.goto('./?dev=fast&stages');
     await page.getByRole('button', { name: 'Jouer', exact: true }).click();
@@ -107,7 +110,7 @@ test.describe('stage in the app', () => {
     await page.reload();
     await page.getByRole('button', { name: 'Jouer', exact: true }).click();
     await expect(stages.getByRole('radio').last()).toBeChecked();
-    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Retour au titre' }).click();
     await expect(page.getByRole('button', { name: 'Jouer', exact: true })).toBeVisible();
     expect(errors).toEqual([]);
   });
