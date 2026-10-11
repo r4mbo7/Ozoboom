@@ -42,6 +42,14 @@ Chaque classe a sa couleur et sa silhouette : un joueur daltonien doit distingue
 - Le filtre est rendu seulement : il ne change ni l'heure, ni le tempo, ni la simulation.
 - Mode calme : pas de rémanence, ondulation lente sans cycle de teintes.
 
+### Le filtre cosmique d'Ambyss
+
+« Traces et voiles », choisi le 2026-10-11 : permanent à Ambyss, rendu seulement, peint sur le décor et sous tout ce qui bouge.
+
+- Traces : sur chaque temps, une ou deux traces fines, comme dans une chambre à brouillard, partent du ciel de l'est en diagonale, s'enroulent deux fois et s'effacent en une mesure ; irisées la nuit, plus sombres le jour.
+- Voiles : six voiles de lumière larges glissent lentement, inclinés de 36°, un passage par phrase ; pêche au crépuscule, violets et turquoise la nuit, dorés à l'aube.
+- Jamais sur les bad vibes ni sur l'interface : le 3:1 des silhouettes et le 4,5:1 du texte tiennent. Mode calme : pas de traces, voiles immobiles.
+
 ## Formes
 
 - Vue de dessus, 2D, tout dessiné par le code, sans fichier d'image. La lisibilité d'une centaine d'entités prime sur le détail.
@@ -70,12 +78,13 @@ Le tempo est celui de la scène ([ADR 0012](adr/0012-le-tempo-est-une-donnee-de-
 | ---------- | ------------------------------ | -------- | ---------------- | ------------------- |
 | Main stage | **145 BPM**, full-on psytrance | 413,8 ms | 1,655 s          | 26,5 s              |
 | Le Dome    | **96,7 BPM**, les 2/3 de 145   | 620,7 ms | 2,48 s           | 39,7 s              |
+| Ambyss     | **116 BPM**, les 4/5 de 145    | 517,2 ms | 2,07 s           | 33,1 s              |
 
 Tout ce qui bouge est calé dessus : le noyau pulse sur le kick, les pièges tirent sur le temps, les vagues arrivent sur la mesure, le boss sur le drop. Les durées d'animation s'expriment en temps et en mesures, pas en millisecondes. `setTempo(set)` de `src/sim/lineup.ts` donne ces conversions pour la scène jouée. L'heure, elle, avance avec le set entier : lente, elle ne pulse jamais.
 
 ## Son
 
-- Musique : chaque scène a ses morceaux. Main stage : psytrance (full-on ou progressive, 140 à 150 BPM). Dome : downtempo, dub et psybient à 96,7 BPM, avec darbouka, riq, ney, oud, kalimba, chœur, sirène dub et bol chantant, sous une réverbe de coupole de 3,6 s. En couches qui s'épaississent avec les vagues et se vident au break avant le drop. En V0, la musique est synthétisée dans le navigateur (Web Audio), ce qui règle la question des droits et du poids.
+- Musique : chaque scène a ses morceaux. Main stage : psytrance (full-on ou progressive, 140 à 150 BPM). Dome : downtempo, dub et psybient à 96,7 BPM, avec darbouka, riq, ney, oud, kalimba, chœur, sirène dub et bol chantant, sous une réverbe de coupole de 3,6 s. Ambyss : chillgressive de lever du soleil à 116 BPM, « Premier rayon » en mi majeur (vi-IV-I-V), kick doux, basse en contretemps, arpège pluck, cordes qui pleurent au break et doublées à l'octave au drop, chœur, sous une réverbe de plein air courte et claire de 1,6 s. En couches qui s'épaississent avec les vagues et se vident au break avant le drop. En V0, la musique est synthétisée dans le navigateur (Web Audio), ce qui règle la question des droits et du poids.
 - Effets : courts, tonals, dans la gamme du morceau. Les ennemis sont sourds (bruits mats, étouffés), les joueurs brillants (sons synthétiques, aigus).
 - Droits : uniquement des pistes libres (CC0, CC-BY) ou composées pour le jeu. Aucun morceau commercial.
 

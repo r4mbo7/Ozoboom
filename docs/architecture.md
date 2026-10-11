@@ -13,7 +13,7 @@ Les choix ci-dessous découlent des piliers de `vision.md`. Les décisions coût
 
 ## Le tick est une subdivision du temps musical
 
-Un temps à 145 BPM vaut 12 ticks, donc la simulation tourne à **29 Hz** (`TICK_RATE_HZ`), une mesure vaut 48 ticks et une phrase 768. Chaque set peut allonger son temps (`SetDefinition.ticksPerBeat`) : le Dome en compte 18, soit 96,7 BPM, au même pas de 29 Hz. Temps, mesures, phrases et drops tombent sur des ticks entiers : aucune dérive, aucun flottant dans le rythme. Les durées écrites en ticks dans les données restent en temps réel. Le rendu, lui, tourne à la fréquence de l'écran et interpole. Les constantes et `tempoOf` sont dans `src/shared/tempo.ts`.
+Un temps à 145 BPM vaut 12 ticks, donc la simulation tourne à **29 Hz** (`TICK_RATE_HZ`), une mesure vaut 48 ticks et une phrase 768. Chaque set peut allonger son temps (`SetDefinition.ticksPerBeat`) : le Dome en compte 18, soit 96,7 BPM, Ambyss 15, soit 116 BPM, au même pas de 29 Hz. Temps, mesures, phrases et drops tombent sur des ticks entiers : aucune dérive, aucun flottant dans le rythme. Les durées écrites en ticks dans les données restent en temps réel. Le rendu, lui, tourne à la fréquence de l'écran et interpole. Les constantes et `tempoOf` sont dans `src/shared/tempo.ts`.
 
 ## Organisation du code
 

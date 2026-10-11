@@ -179,6 +179,7 @@ export async function tiltLeftStick(page: Page, x: number, y: number): Promise<v
 export async function repeatUntil(
   action: () => Promise<void>,
   done: () => Promise<boolean>,
+  timeout = 30_000,
 ): Promise<void> {
   await expect
     .poll(
@@ -186,7 +187,7 @@ export async function repeatUntil(
         await action();
         return done();
       },
-      { timeout: 30_000 },
+      { timeout },
     )
     .toBe(true);
 }
@@ -195,8 +196,9 @@ export async function tapButtonUntil(
   page: Page,
   button: number,
   done: () => Promise<boolean>,
+  timeout?: number,
 ): Promise<void> {
-  await repeatUntil(() => tapButton(page, button), done);
+  await repeatUntil(() => tapButton(page, button), done, timeout);
 }
 
 // A fusion swaps a gear at its maximum level (5, for every base gear) for its fused form at level
@@ -234,7 +236,7 @@ export async function readGame(page: Page): Promise<GameSummary | null> {
   }, FUSED_LEVELS);
 }
 
-// A seed whose short set the player of `playWithPad` wins, on the main stage and at the Dome.
+// A seed whose short set the player of `playWithPad` wins, on the main stage, at the Dome and at Ambyss.
 // Some seeds are lost by it: a random one would make its games pass or fail by chance.
 export const PAD_SEED = 1;
 
@@ -243,10 +245,12 @@ export const PAD_SEED = 1;
 // ones. It plays after every step of the game, so that a loaded machine, which draws fewer frames,
 // does not change how it plays. Every level offer is taken with the pad, until the game ends.
 // `start` opens the game once the player is seated, so that it plays from the first step: with a
-// fixed seed (`&seed=`), the whole game is then the same on every run.
+// fixed seed (`&seed=`), the whole game is then the same on every run. `menuMs` bounds each level
+// offer: a page drawn in software at full quality can take seconds a frame.
 export async function playWithPad(
   page: Page,
   start: () => Promise<void> = () => Promise.resolve(),
+  menuMs = 30_000,
 ): Promise<{ status: SimState['status'] | undefined; upgrades: number }> {
   await page.evaluate(() => {
     const game = window.ozoboom;
@@ -303,11 +307,12 @@ export async function playWithPad(
   let status = (await readGame(page))?.status;
   while (status !== 'won' && status !== 'lost') {
     if (status === 'choosingUpgrade') {
-      await expect(firstCard).toHaveAttribute('aria-current', 'true');
+      await expect(firstCard).toHaveAttribute('aria-current', 'true', { timeout: menuMs });
       await tapButtonUntil(
         page,
         PAD.DpadRight,
         async () => (await firstCard.getAttribute('aria-current')) === null,
+        menuMs,
       );
       // Two levels at once present two offers in a row: a choice shows as one more upgrade, not as a status.
       const chosen = (await readGame(page))?.choices ?? 0;
@@ -315,6 +320,7 @@ export async function playWithPad(
         page,
         PAD.A,
         async () => ((await readGame(page))?.choices ?? 0) > chosen,
+        menuMs,
       );
       upgrades += 1;
     }

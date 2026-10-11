@@ -227,8 +227,8 @@ try {
     await page.goto(url);
     const stages = page.getByRole('radiogroup', { name: 'Scènes' });
     await pressUntil(page, 'Enter', () => stages.isVisible());
-    const dome = stages.getByRole('radio', { name: /Le Dome/ });
-    await pressUntil(page, 'ArrowRight', () => dome.isChecked());
+    const ambyss = stages.getByRole('radio', { name: /Ambyss/ });
+    await pressUntil(page, 'ArrowRight', () => ambyss.isChecked());
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(SETTLE_MS);
     await save(await page.screenshot(), 'ecran-choisis-la-scene');
@@ -238,6 +238,7 @@ try {
   for (const stage of [
     { name: /Main stage/, moments: moments('moment-'), day: 'moment-4-jour-sunrise' },
     { name: /Le Dome/, moments: moments('dome-moment-'), day: 'dome-moment-4-jour' },
+    { name: /Ambyss/, moments: moments('ambyss-moment-'), day: 'ambyss-moment-4-jour' },
   ]) {
     const page = await newPage();
     const errors = collectConsoleErrors(page);
@@ -291,7 +292,7 @@ try {
       },
       setOf(content, setId).tiers.length - 1,
     );
-    const played = playWithPad(page).catch(async (error: unknown) => {
+    const played = playWithPad(page, undefined, WAIT_MS).catch(async (error: unknown) => {
       const offers = await page.evaluate(() => {
         const state = window.ozoboom?.state;
         const player = state?.players[0];
