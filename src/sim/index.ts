@@ -7,6 +7,7 @@ import { setTempo } from './lineup';
 import { SpatialHash } from './spatial-hash';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
+import { bombCarriers, bombs } from './systems/bomb';
 import { bystanders } from './systems/bystanders';
 import { deaths } from './systems/deaths';
 import { enemyAttacks } from './systems/enemy-attacks';
@@ -59,6 +60,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     skills,
     spawning,
     lootCarriers,
+    bombCarriers,
     enemySteering,
     placedTotems,
     specials,
@@ -67,6 +69,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     traps,
     speakers,
     enemyAttacks,
+    bombs,
     deaths,
     pickups,
     loots,

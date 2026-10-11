@@ -266,6 +266,14 @@ export interface LootRules {
   first: string;
 }
 
+// Every `everyBars` bars, the next bad vibe to spawn carries a bomb; killed, it drops it, and a
+// player stepping on it clears the floor of every bad vibe but the bosses.
+export interface BombRules {
+  everyBars: number;
+  lifetimeBars: number;
+  radius: number;
+}
+
 // How a stage is drawn. Absent means 'lake', the main stage.
 export type DecorId = 'lake' | 'dome';
 
@@ -298,6 +306,8 @@ export interface SetDefinition {
   startingHand: readonly string[];
   // Absent means no loot.
   loot?: LootRules;
+  // Absent means no bomb.
+  bomb?: BombRules;
   maxTraps: number;
   levelCurve: { baseVibes: number; vibesPerLevel: number };
   pickups: { lifetimeTicks: number; speed: number };

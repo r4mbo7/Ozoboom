@@ -89,6 +89,7 @@ Du matériel de festival, trouvé dans les loots, qui agit sur le temps musical.
 | Stroboscope      | étourdit sur le drop                                |
 
 - Toutes les 12 mesures (environ 20 s), une bad vibe qui entre sur la piste porte un loot et se voit de loin. Tuée, elle le lâche. Un boss lâche un loot par joueur. Un loot au sol disparaît au bout de 16 mesures.
+- Toutes les 64 mesures (environ 1 min 45 sur la main stage), une bad vibe porte une bombe. Tuée, elle la lâche pour 16 mesures ; un joueur qui marche dessus fait tomber toutes les bad vibes de la piste sauf les boss, avec leurs vibes et leurs loots.
 - Le piège du loot est tiré au sort quand il tombe, et son icône se voit sur la caisse. Les chances sont les mêmes pour toutes les classes ; le Caisson est le plus courant, et le premier loot de la partie est toujours un Caisson.
 - Celui qui ramasse le loot porte le piège, deux au plus : les mains pleines, les loots restent au sol. Chaque joueur commence avec un Caisson de basse en main.
 - La touche de pose pose le piège choisi devant soi. Devant un piège posé, elle le reprend en main : n'importe quel joueur peut ainsi déplacer n'importe quel piège.

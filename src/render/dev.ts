@@ -98,6 +98,11 @@ if (player !== undefined && params.has('trapRadius')) {
   applyModifiers(player, [{ stat: 'trapRadiusMul', mul: count('trapRadius', 1) }]);
 }
 state.setId = params.get('set') ?? state.setId;
+if (params.has('bomb')) {
+  const [x, y] = [state.core.x - 160, state.core.y + 120];
+  state.bombs = [{ id: 9000, ticksLeft: 10_000, x, y, prevX: x, prevY: y }];
+  state.enemies.slice(0, 2).forEach((enemy) => (enemy.carriesBomb = true));
+}
 const found = SETS.find((candidate) => candidate.id === state.setId);
 if (found === undefined) {
   throw new Error(`Missing set ${state.setId}`);

@@ -65,6 +65,10 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
   if (queued.includes('coreHit')) {
     events.push({ type: 'coreHit', damage: 5 });
   }
+  const [bomb] = state.bombs ?? [];
+  if (queued.includes('bomb') && bomb !== undefined) {
+    events.push({ type: 'bombExploded', id: bomb.id, playerId: 0, x: bomb.x, y: bomb.y });
+  }
   if (queued.includes('speakerPlugged')) {
     for (const speaker of state.speakers ?? []) {
       if (speaker.plugged) {

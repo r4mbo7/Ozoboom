@@ -28,6 +28,7 @@ import { createGroundWaves } from './ground-waves';
 import { type Layers, applyLight, createLayers } from './layers';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { isPaletteToken } from './palette';
+import { createBombs } from './bombs';
 import { createLoots } from './loots';
 import { createPickups } from './pickups';
 import { createMarkers } from './markers';
@@ -136,6 +137,7 @@ export class Scene implements Renderer {
       traps,
       createPickups(ctx),
       createLoots(ctx),
+      createBombs(ctx),
       createBystanders(ctx),
       enemies,
       createSpecials(ctx),
@@ -262,9 +264,10 @@ export class Scene implements Renderer {
     const { tick } = state;
     if (event.type === 'beat') {
       this.beatTick = tick;
-    } else if (event.type === 'coreHit' && this.flashLimiter.tryStart(tick)) {
-      this.frame.flashTick = tick;
+    } else if (event.type === 'bombExploded') {
       this.shakeTick = tick;
+    } else if (event.type === 'coreHit' && this.flashLimiter.tryStart(tick)) {
+      this.frame.flashTick = this.shakeTick = tick;
     }
     for (const family of this.families) {
       family.onEvent?.(event, state, this.frame);

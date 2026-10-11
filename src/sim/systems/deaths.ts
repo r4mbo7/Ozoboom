@@ -2,6 +2,7 @@ import { lookup } from '../content';
 import { drawRelics } from '../draw';
 import { SPECIALS } from '../specials';
 import type { PickupKind, SimState } from '../state';
+import { dropBomb } from './bomb';
 import { dropLoot } from './loot';
 import { isLastTier } from './set-progress';
 import type { StepContext } from './types';
@@ -52,6 +53,9 @@ export function deaths(ctx: StepContext): void {
     }
     if (enemy.carriesLoot === true) {
       dropLoot(ctx, enemy.x, enemy.y);
+    }
+    if (enemy.carriesBomb === true) {
+      dropBomb(ctx, enemy.x, enemy.y);
     }
     if (enemy.isBoss) {
       state.players.forEach((_, index) => {

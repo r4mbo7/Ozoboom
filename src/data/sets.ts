@@ -13,6 +13,7 @@ const MAIN_STAGE: SetDefinition = {
   handSize: 2,
   startingHand: ['caisson-de-basse'],
   loot: { everyBars: 12, lifetimeBars: 16, radius: 16, first: 'caisson-de-basse' },
+  bomb: { everyBars: 64, lifetimeBars: 16, radius: 20 },
   maxTraps: 6,
   levelCurve: { baseVibes: 10, vibesPerLevel: 16 },
   pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },

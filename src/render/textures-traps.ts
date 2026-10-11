@@ -110,3 +110,37 @@ export function crate(): Shape {
     ctx.stroke();
   });
 }
+
+// Where the fuse of `bomb()` ends, in texture pixels from its center: the spark sits there.
+export const BOMB_FUSE_TIP = { x: 16, y: -23 } as const;
+
+// A round bomb with a capped fuse, dark inside a light double rim: its shape alone tells it from
+// the square flight case of a loot.
+export function bomb(): Shape {
+  return paint(64, 64, 20, (ctx) => {
+    glow(ctx, WHITE, 6);
+    ctx.fillStyle = SHADE_DEEP;
+    circle(ctx, 14, -2, 5);
+    ctx.fill();
+    ctx.strokeStyle = WHITE;
+    doubleStroke(ctx, 6, 2);
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(-2, 5, 8, Math.PI * 1.05, Math.PI * 1.45);
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(8.5, -5.5);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = WHITE;
+    ctx.beginPath();
+    ctx.roundRect(-5, -5, 10, 7, 1.5);
+    ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(11, -9);
+    ctx.quadraticCurveTo(20, -13, BOMB_FUSE_TIP.x, BOMB_FUSE_TIP.y);
+    ctx.stroke();
+  });
+}

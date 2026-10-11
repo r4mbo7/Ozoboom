@@ -19,7 +19,7 @@ import { type PlayerTextures, playerTextures } from './textures-players';
 import { type ClassFxTextures, createClassFxTextures } from './textures-class';
 import { type NameTextures, createNameTextures } from './textures-names';
 import { createSpeakerShapes } from './textures-speakers';
-import { crate, trap } from './textures-traps';
+import { bomb, crate, trap } from './textures-traps';
 import {
   type WeaponTextures,
   createWeaponTextures,
@@ -38,6 +38,7 @@ export interface Textures {
   readonly streak: Shape;
   readonly vibes: Shape;
   readonly crate: Shape;
+  readonly bomb: Shape;
   readonly players: PlayerTextures;
   readonly names: NameTextures;
   readonly arrow: Shape;
@@ -152,6 +153,7 @@ export function createTextures(): Textures {
       ctx.fill();
     }),
     crate: crate(),
+    bomb: bomb(),
     players: playerTextures(),
     core: paint(256, 256, 96, (ctx) => {
       ctx.fillStyle = SHADE_DEEP;

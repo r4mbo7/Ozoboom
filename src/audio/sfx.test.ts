@@ -107,6 +107,8 @@ const soundingEvents: readonly [SimEvent, SfxName][] = [
   [{ type: 'bystanderHelped', id: 1, kind: 'festivalier', x: 0, y: 0 }, 'bystanderHelped'],
   [{ type: 'lootDropped', id: 1, trapId: 'laser', x: 0, y: 0 }, 'lootDropped'],
   [{ type: 'lootCollected', id: 1, playerId: 0, trapId: 'laser', x: 0, y: 0 }, 'lootCollected'],
+  [{ type: 'bombDropped', id: 1, x: 0, y: 0 }, 'bombDropped'],
+  [{ type: 'bombExploded', id: 1, playerId: 0, x: 0, y: 0 }, 'bombExploded'],
   [{ type: 'bystanderLost', id: 1, kind: 'festivalier', x: 0, y: 0 }, 'bystanderLost'],
   [{ type: 'volumeChanged', volume: 2 }, 'volumeUp'],
 ];

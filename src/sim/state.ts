@@ -139,6 +139,8 @@ export interface EnemyState extends Positioned {
   hpWatermark?: number;
   // Carries a loot it drops when it dies.
   carriesLoot?: boolean;
+  // Carries a bomb it drops when it dies.
+  carriesBomb?: boolean;
   // Mâle alpha: its last step, which faces the hits it takes at `damageMul`.
   front?: { x: number; y: number; damageMul: number };
 }
@@ -211,6 +213,11 @@ export interface LootState extends Positioned {
   ticksLeft: number;
 }
 
+export interface BombState extends Positioned {
+  id: EntityId;
+  ticksLeft: number;
+}
+
 export interface BystanderState extends Positioned {
   id: EntityId;
   kind: string;
@@ -276,6 +283,8 @@ export type SimEvent =
       x: number;
       y: number;
     }
+  | { type: 'bombDropped'; id: EntityId; x: number; y: number }
+  | { type: 'bombExploded'; id: EntityId; playerId: PlayerId; x: number; y: number }
   | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyRevived'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'vibesStolen'; id: EntityId; kind: string; x: number; y: number }
@@ -335,6 +344,11 @@ export interface SimState {
   // The bar a loot falls due next, then whether no bad vibe carries it yet.
   nextLootBar?: number;
   lootDue?: boolean;
+  // Optional like `loots`, and created with the first bomb dropped.
+  bombs?: BombState[];
+  // The bar a bomb falls due next, then whether no bad vibe carries it yet.
+  nextBombBar?: number;
+  bombDue?: boolean;
   volume?: number;
   speakers?: SpeakerState[];
   placed?: PlacedState[];

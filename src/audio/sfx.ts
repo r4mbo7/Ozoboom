@@ -39,6 +39,8 @@ export type SfxName =
   | 'bystanderLost'
   | 'lootDropped'
   | 'lootCollected'
+  | 'bombDropped'
+  | 'bombExploded'
   | 'volumeUp'
   | 'skillCharge'
   | 'skillHeal'
@@ -157,6 +159,8 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     lootDropped: { perFrame: 1, concurrent: 2, seconds: 0.4 },
     lootCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
+    bombDropped: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+    bombExploded: { perFrame: 1, concurrent: 1, seconds: 1.6 },
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.3 },
     skillHeal: { perFrame: 1, concurrent: 2, seconds: 0.7 },
@@ -201,6 +205,8 @@ export function sfxOf(
     case 'playerReviving':
     case 'lootDropped':
     case 'lootCollected':
+    case 'bombDropped':
+    case 'bombExploded':
       return event.type;
     case 'skillUsed': {
       const classId = players.find((player) => player.id === event.playerId)?.classId;
@@ -588,6 +594,56 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
         hold: 0.04,
         release: 0.16,
         filter: { type: 'lowpass', hz: 2400 },
+      });
+    });
+  },
+  // A bomb lands: a heavy thud and a low root that swells, a warning more than a reward.
+  bombDropped: (out, at, _variant, key) => {
+    playNoise(out, at, {
+      gain: 0.25,
+      attack: 0.002,
+      hold: 0.03,
+      release: 0.18,
+      filter: { type: 'lowpass', hz: 320, q: 2 },
+    });
+    playTone(out, at, {
+      wave: 'sine',
+      hz: keyHz(key, 0, 2),
+      toHz: keyHz(key, 0, 3),
+      glide: 0.35,
+      gain: 0.18,
+      attack: 0.01,
+      hold: 0.15,
+      release: 0.25,
+    });
+  },
+  // The floor clears: a sub drop on the root under a closing roar, then the tonic chord rings out.
+  bombExploded: (out, at, _variant, key) => {
+    playNoise(out, at, {
+      gain: 0.36,
+      attack: 0.003,
+      hold: 0.08,
+      release: 1.1,
+      filter: { type: 'lowpass', hz: 4000, toHz: 180, glide: 1, q: 1.2 },
+    });
+    playTone(out, at, {
+      wave: 'sine',
+      hz: keyHz(key, 0, 3),
+      toHz: keyHz(key, 0, 1),
+      glide: 0.6,
+      gain: 0.4,
+      attack: 0.003,
+      hold: 0.2,
+      release: 0.7,
+    });
+    [0, 2, 4].forEach((degree, index) => {
+      playTone(out, at + 0.12 + index * 0.05, {
+        wave: 'triangle',
+        hz: keyHz(key, degree, 5),
+        gain: 0.06,
+        attack: 0.01,
+        hold: 0.25,
+        release: 0.9,
       });
     });
   },

@@ -411,6 +411,21 @@ describe.each(sets)('set $id', (set) => {
     expect(traps.map((trap) => trap.id)).toContain(loot.first);
   });
 
+  it('drops bombs on whole bars', () => {
+    const { bomb } = set;
+    if (bomb === undefined) {
+      return;
+    }
+
+    expect(
+      invalid({
+        everyBars: [bomb.everyBars, wholePositive],
+        lifetimeBars: [bomb.lifetimeBars, wholePositive],
+        radius: [bomb.radius, positive],
+      }),
+    ).toEqual([]);
+  });
+
   it('starts every hand with known traps it can hold', () => {
     expect(set.startingHand.length).toBeLessThanOrEqual(set.handSize);
     expect(set.startingHand.filter((id) => !traps.some((trap) => trap.id === id))).toEqual([]);
