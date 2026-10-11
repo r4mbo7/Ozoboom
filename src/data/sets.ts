@@ -1,6 +1,6 @@
 import { rotate, unitFromAngle } from '../shared/angle';
 import { DEFAULT_BPM, TICKS_PER_BAR, tempoOf } from '../shared/tempo';
-import type { ObstacleDefinition, SetDefinition } from './types';
+import type { ObstacleDefinition, SetDefinition, SpawnRule } from './types';
 
 const MAIN_STAGE: SetDefinition = {
   id: 'soiree-v0',
@@ -277,8 +277,23 @@ const DOME_SPEAKER_SPOTS: Record<string, { x: number; y: number }> = {
   'cercle-acid': { x: 800, y: 910 },
 };
 
+// A bar lasts a third longer at the Dome, so the main stage's rules would send fewer bad vibes per
+// second: groups of several are made denser by `DOME_PRESSURE`, the one dial, to bring it back.
+// Single bad vibes stay as they are: the rules must keep a period that divides a phrase.
+const DOME_PRESSURE = 1.4;
+
+const denser = (rules: readonly SpawnRule[]): SpawnRule[] =>
+  rules.map((rule) =>
+    rule.count > 1 ? { ...rule, count: Math.round(rule.count * DOME_PRESSURE) } : rule,
+  );
+
 const DOME: SetDefinition = {
   ...MAIN_STAGE,
+  tiers: MAIN_STAGE.tiers.map((tier) => ({
+    ...tier,
+    spawns: denser(tier.spawns),
+    ...(tier.dropSpawns && { dropSpawns: denser(tier.dropSpawns) }),
+  })),
   id: 'dome',
   trackIds: [
     'sous-la-coupole',

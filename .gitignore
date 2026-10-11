@@ -18,7 +18,7 @@ coverage/
 /playwright/.cache/
 .lavish/
 .review/
-balance.md
+balance-*.md
 
 # Reference photos and recordings of the Dome, other people's work
 /dome/

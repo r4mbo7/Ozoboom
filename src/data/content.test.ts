@@ -761,7 +761,19 @@ describe('The Dome', () => {
     expect(dome?.speakers?.map((speaker) => speaker.name)).toEqual(
       sets[0]?.speakers?.map((speaker) => speaker.name),
     );
-    expect(dome?.tiers).toEqual(sets[0]?.tiers);
+    expect(
+      dome?.tiers.map(({ buildupPhrases, breakBars, bossId }) => [
+        buildupPhrases,
+        breakBars,
+        bossId,
+      ]),
+    ).toEqual(
+      sets[0]?.tiers.map(({ buildupPhrases, breakBars, bossId }) => [
+        buildupPhrases,
+        breakBars,
+        bossId,
+      ]),
+    );
     expect(sets[0]?.id).toBe('soiree-v0');
   });
 });

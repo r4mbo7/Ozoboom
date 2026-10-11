@@ -5,6 +5,7 @@ import { botCommand } from './bot';
 import { createSimulation } from './index';
 import type { PlayerId, SimState } from './state';
 
+export const BALANCE_SET_IDS: readonly string[] = ['soiree-v0', 'dome'];
 export const BALANCE_SET_ID = 'soiree-v0';
 export const BALANCE_SEEDS: readonly number[] = Array.from({ length: 20 }, (_, index) => index + 1);
 
@@ -31,9 +32,10 @@ export function playBot(
   seed: number,
   content: GameContent = CONTENT,
   maxTicks = MAX_TICKS,
+  setId = BALANCE_SET_ID,
 ): SimState {
   const players = team.map((classId, index) => ({ id: PLAYER_IDS[index] ?? 0, classId }));
-  const simulation = createSimulation({ seed, setId: BALANCE_SET_ID, content, players });
+  const simulation = createSimulation({ seed, setId, content, players });
   const { state } = simulation;
   while (state.tick < maxTicks && state.status !== 'won' && state.status !== 'lost') {
     simulation.step(players.map((player) => botCommand(state, content, player.id)));
@@ -54,8 +56,9 @@ export function playTeam(
   team: readonly string[],
   seeds: readonly number[] = BALANCE_SEEDS,
   content: GameContent = CONTENT,
+  setId = BALANCE_SET_ID,
 ): TeamResult {
-  const results = seeds.map((seed) => resultOf(playBot(team, seed, content)));
+  const results = seeds.map((seed) => resultOf(playBot(team, seed, content, MAX_TICKS, setId)));
   const mean = (pick: (result: GameResult) => number) =>
     results.reduce((sum, result) => sum + pick(result), 0) / results.length;
   return {
