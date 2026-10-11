@@ -1,6 +1,7 @@
 import { type Page, expect, test } from '@playwright/test';
 import {
   PAD,
+  PAD_SEED,
   collectConsoleErrors,
   playWithPad,
   plugFakeGamepad,
@@ -146,15 +147,15 @@ test('plays a whole game with the keyboard only, from the title to a restart', a
 test('plays a whole game with a gamepad only, to the sunrise and a restart', async ({ page }) => {
   const errors = collectConsoleErrors(page);
   await plugFakeGamepad(page);
-  await page.goto('./?dev=fast');
+  await page.goto(`./?dev=fast&seed=${String(PAD_SEED)}`);
   const hud = page.getByRole('region', { name: 'Pièges' });
-  await tapButtonUntil(page, PAD.A, () => hud.isVisible());
-
   const pause = page.getByRole('dialog', { name: 'Pause' });
-  await tapButtonUntil(page, PAD.Start, () => pause.isVisible());
-  await tapButtonUntil(page, PAD.Start, () => pause.isHidden());
 
-  const { status, upgrades } = await playWithPad(page);
+  const { status, upgrades } = await playWithPad(page, async () => {
+    await tapButtonUntil(page, PAD.A, () => hud.isVisible());
+    await tapButtonUntil(page, PAD.Start, () => pause.isVisible());
+    await tapButtonUntil(page, PAD.Start, () => pause.isHidden());
+  });
   const end = page.getByRole('region', { name: 'Fin de partie' });
   expect(status).toBe('won');
   await expect(end).toBeVisible();

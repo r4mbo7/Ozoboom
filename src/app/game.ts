@@ -368,7 +368,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     focus: CameraFocus,
   ): Match {
     return createMatch({
-      seed: crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
+      seed: dev.seed ?? crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
       setId: stageId,
       content,
       slots,

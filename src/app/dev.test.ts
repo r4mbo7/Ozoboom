@@ -83,3 +83,17 @@ describe('the drawing of a dev mode', () => {
     expect(readDevOptions('', CONTENT).light).toBe(false);
   });
 });
+
+describe('the seed of a dev mode', () => {
+  it('reads a fixed seed from the URL in a dev mode only, random otherwise', () => {
+    expect(readDevOptions('?dev=fast&seed=42', CONTENT).seed).toBe(42);
+    expect(readDevOptions('?dev=bench&seed=4294967295', CONTENT).seed).toBe(4294967295);
+    expect(readDevOptions('?dev=fast', CONTENT).seed).toBeNull();
+    expect(readDevOptions('?dev=fast&seed=-1', CONTENT).seed).toBeNull();
+    expect(readDevOptions('?dev=fast&seed=4294967296', CONTENT).seed).toBeNull();
+    expect(readDevOptions('?dev=fast&seed=x', CONTENT).seed).toBeNull();
+    expect(readDevOptions('?dev=fast&seed=', CONTENT).seed).toBeNull();
+    expect(readDevOptions('?dev=fast&seed=1e3', CONTENT).seed).toBeNull();
+    expect(readDevOptions('?seed=42', CONTENT).seed).toBeNull();
+  });
+});

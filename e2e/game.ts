@@ -234,12 +234,19 @@ export async function readGame(page: Page): Promise<GameSummary | null> {
   }, FUSED_LEVELS);
 }
 
+// A seed whose short set the player of `playWithPad` wins, on the main stage and at the Dome.
+// Some seeds are lost by it: a random one would make its games pass or fail by chance.
+export const PAD_SEED = 1;
+
 // A player in the page drives the fake gamepad: aims the right stick at the nearest bad vibe and
 // fires, picks up the vibes and the loots, stays by the scene, places traps and novas the close
 // ones. It plays after every step of the game, so that a loaded machine, which draws fewer frames,
 // does not change how it plays. Every level offer is taken with the pad, until the game ends.
+// `start` opens the game once the player is seated, so that it plays from the first step: with a
+// fixed seed (`&seed=`), the whole game is then the same on every run.
 export async function playWithPad(
   page: Page,
+  start: () => Promise<void> = () => Promise.resolve(),
 ): Promise<{ status: SimState['status'] | undefined; upgrades: number }> {
   await page.evaluate(() => {
     const game = window.ozoboom;
@@ -288,6 +295,7 @@ export async function playWithPad(
       }
     };
   });
+  await start();
 
   const upgrade = page.getByRole('region', { name: 'Choix d’amélioration' });
   const firstCard = upgrade.getByRole('button').first();

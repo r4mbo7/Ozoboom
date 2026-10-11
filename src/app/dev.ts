@@ -13,6 +13,7 @@ import type { PlayerId, SimState } from '../sim/state';
 //   weapons and a plugged speaker, to measure a frame. `&players=4` seats four players on one
 //   screen instead (one of each class, then the first again), three weapons each, camera on everyone.
 // Both play on the first stage only, so that « Jouer » starts at once; `&stages` keeps every stage.
+// Both draw the seed of every game at random, unless `&seed=` fixes it to replay the same game.
 // Both expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
 // A browser test's player set in `window.ozoboom.onStep` plays after every step of the game, and the
 // next step reads what it did on the devices, however few frames a loaded machine draws.
@@ -26,9 +27,12 @@ export interface DevOptions {
   readonly content: GameContent;
   // Half resolution without antialiasing (`createRenderer`).
   readonly light: boolean;
+  // The seed of every game, drawn at random when null.
+  readonly seed: number | null;
 }
 
 const FAST_SPEED = 8;
+const MAX_SEED = 0xffffffff;
 const FAST_HP = { boss: 0.05, wave: 0.5, core: 8 };
 export const BENCH_ENEMIES = 300;
 
@@ -48,14 +52,24 @@ export function readDevOptions(search: string, content: GameContent): DevOptions
       players: 1,
       content: fastContent(content),
       light: !params.has('crisp'),
+      seed: readSeed(params),
     };
   }
   if (mode === 'bench') {
     const asked = Number(params.get('players') ?? 1);
     const players = Number.isInteger(asked) ? Math.min(Math.max(asked, 1), MAX_BENCH_PLAYERS) : 1;
-    return { mode, speed: 1, players, content, light: false };
+    return { mode, speed: 1, players, content, light: false, seed: readSeed(params) };
   }
-  return { mode: null, speed: 1, players: 1, content, light: false };
+  return { mode: null, speed: 1, players: 1, content, light: false, seed: null };
+}
+
+function readSeed(params: URLSearchParams): number | null {
+  const asked = params.get('seed');
+  if (asked === null || !/^\d+$/.test(asked)) {
+    return null;
+  }
+  const seed = Number(asked);
+  return seed <= MAX_SEED ? seed : null;
 }
 
 // One of each class in the order of the content, then the first again: four players on one screen.
