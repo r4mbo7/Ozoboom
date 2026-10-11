@@ -10,7 +10,7 @@ const HAND_SIZE = 2;
 const OUTWARD = { x: -1, y: 0 };
 const REACH = 300;
 const [CAISSON, LASER] = CONTENT.traps as [TrapDefinition, TrapDefinition];
-const HOLDING = { ...PLAYER, hand: [{ trapId: CAISSON.id }, { trapId: LASER.id }] };
+const HOLDING = { ...PLAYER, hand: [CAISSON.id, LASER.id] };
 
 // A camera whose screen origin is the world point (100, 50), at zoom 1.
 const toWorld = (point: Vec2): Vec2 => ({ x: point.x + 100, y: point.y + 50 });
@@ -202,12 +202,7 @@ describe('Controls', () => {
     const controls = new Controls(HAND_SIZE, OUTWARD);
     controls.frame(snapshot({ selectTrap: 1, placeTrap: true }));
 
-    const command = controls.command(
-      { ...PLAYER, hand: [{ trapId: LASER.id }] },
-      toWorld,
-      [],
-      REACH,
-    );
+    const command = controls.command({ ...PLAYER, hand: [LASER.id] }, toWorld, [], REACH);
 
     expect(command.actions).toEqual([expect.objectContaining({ trapId: LASER.id })]);
   });

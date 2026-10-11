@@ -7,7 +7,6 @@ import {
   drawTo,
   healPlayersOnBar,
   hurtEnemy,
-  keepWhere,
   markEnemy,
   markedDamageMul,
   shockwave,
@@ -89,11 +88,6 @@ export function traps(ctx: StepContext): void {
     enemy.stunTicks = Math.max(0, enemy.stunTicks - 1);
   }
   fireAll(false);
-
-  for (const trap of state.traps) {
-    takeHeavyBlows(state, content, trap);
-  }
-  removeBrokenTraps(state);
 }
 
 // A trap on the spot is taken back when a hand is free; free ground takes the trap placed.
@@ -106,7 +100,7 @@ function useTrapSpot(ctx: StepContext, player: PlayerState, action: PlaceTrap | 
   if (under !== undefined) {
     if ((player.hand?.length ?? 0) < set.handSize) {
       state.traps.splice(state.traps.indexOf(under), 1);
-      (player.hand ??= []).push({ trapId: under.kind, hp: under.hp });
+      (player.hand ??= []).push(under.kind);
       const { id, kind, x, y } = under;
       state.events.push({ type: 'trapTaken', id, kind, playerId: player.id, x, y });
     }
@@ -119,9 +113,8 @@ function useTrapSpot(ctx: StepContext, player: PlayerState, action: PlaceTrap | 
 
 function placeTrap({ state, content, set }: StepContext, player: PlayerState, action: PlaceTrap) {
   const definition = content.traps.get(action.trapId);
-  const held = player.hand?.findIndex(({ trapId }) => trapId === action.trapId) ?? -1;
-  const trap = player.hand?.[held];
-  if (definition === undefined || trap === undefined) {
+  const held = player.hand?.indexOf(action.trapId) ?? -1;
+  if (definition === undefined || held < 0) {
     return;
   }
 
@@ -153,8 +146,6 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     prevX: x,
     prevY: y,
     direction: facing(action, player),
-    hp: trap.hp ?? definition.hp,
-    cooldown: 0,
   });
   player.hand?.splice(held, 1);
   state.events.push({ type: 'trapPlaced', id, kind: definition.id, x, y });
@@ -254,48 +245,6 @@ function inBeam(enemy: EnemyState, trap: Emitter, length: number, halfWidth: num
   return (
     along >= -enemy.radius && along <= length + enemy.radius && across <= halfWidth + enemy.radius
   );
-}
-
-function takeHeavyBlows(state: SimState, content: ResolvedContent, trap: TrapState): void {
-  if (trap.cooldown > 0) {
-    trap.cooldown -= 1;
-    if (trap.cooldown > 0) {
-      return;
-    }
-  }
-  const { radius } = trapDefinition(content, trap);
-  let nextBlow = 0;
-  for (const enemy of state.enemies) {
-    if (enemy.hp <= 0 || enemy.stunTicks > 0 || !touches(enemy, trap, radius)) {
-      continue;
-    }
-    const definition = lookup(content.enemies, enemy.kind, 'enemy');
-    if (definition.behaviour !== 'heavy' && !enemy.isBoss) {
-      continue;
-    }
-    trap.hp -= enemy.damage;
-    nextBlow =
-      nextBlow === 0
-        ? definition.attackCooldownTicks
-        : Math.min(nextBlow, definition.attackCooldownTicks);
-  }
-  trap.cooldown = nextBlow;
-}
-
-function removeBrokenTraps(state: SimState): void {
-  keepWhere(state.traps, (trap) => {
-    if (trap.hp > 0) {
-      return true;
-    }
-    state.events.push({
-      type: 'trapDestroyed',
-      id: trap.id,
-      kind: trap.kind,
-      x: trap.x,
-      y: trap.y,
-    });
-    return false;
-  });
 }
 
 function trapDefinition(content: ResolvedContent, trap: TrapState): TrapDefinition {

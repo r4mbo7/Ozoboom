@@ -168,7 +168,7 @@ export class Controls {
       player,
       toWorld,
       heldAim: this.heldAim,
-      trapId: player.hand?.[heldSlot(this.trapIndex, player.hand.length)]?.trapId,
+      trapId: player.hand?.[heldSlot(this.trapIndex, player.hand.length)],
       placeTrap: this.placeTrap,
       upgradeId: this.upgradeId,
       assist,

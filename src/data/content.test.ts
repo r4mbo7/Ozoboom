@@ -338,7 +338,6 @@ describe('CONTENT numbers', () => {
     expect(
       invalid({
         radius: [trap.radius, positive],
-        hp: [trap.hp, positive],
         lootWeight: [trap.lootWeight, positive],
         ...effectFields(trap.effect),
       }),

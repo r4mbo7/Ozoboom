@@ -258,27 +258,27 @@ export function playTeam(): { state: SimState; downs: number; revives: number } 
 export const REPLAY_SCRIPTS: readonly ReplayScript[] = [
   {
     id: 'reference',
-    hash: '440034c5',
+    hash: 'bc779efe',
     run: () => runScript(DUO, referenceCommands(2000)),
   },
   {
     id: 'speaker',
-    hash: '5b317ed6',
+    hash: '33bc3386',
     run: () => runScript(SPEAKER_GAME, speakerCommands()),
   },
   {
     id: 'relic',
-    hash: 'db4e5eae',
+    hash: 'aa76aafe',
     run: () => runScript(RELIC_GAME, relicCommands()),
   },
   {
     id: 'thrown',
-    hash: 'b2dd571a',
+    hash: '7395496a',
     run: () => playThrown().simulation.state,
   },
   {
     id: 'team',
-    hash: '76c8eaf6',
+    hash: '242f4886',
     run: () => playTeam().state,
   },
 ];

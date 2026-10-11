@@ -111,7 +111,7 @@ describe('volumeCrans', () => {
 
 describe('handTiles', () => {
   const definitions = new Map(UI_FIXTURE_CONTENT.traps.map((trap) => [trap.id, trap]));
-  const player = fixturePlayer({ x: 760, y: 500, hand: [{ trapId: 'laser' }] });
+  const player = fixturePlayer({ x: 760, y: 500, hand: ['laser'] });
 
   function field(count: number, underfoot = false): SimState {
     const far = Array.from({ length: count }, (_, index) => ({
@@ -150,7 +150,7 @@ describe('trapToTake', () => {
   const under = fixtureState({ traps: [{ ...fixtureTrap(9, 'laser'), x: 760, y: 500 }] });
 
   it('names the trap under the player when a hand is free', () => {
-    const player = fixturePlayer({ x: 760, y: 500, hand: [{ trapId: 'caisson-de-basse' }] });
+    const player = fixturePlayer({ x: 760, y: 500, hand: ['caisson-de-basse'] });
 
     expect(trapToTake(definitions, under, player, 2)).toBe('laser');
   });
@@ -159,7 +159,7 @@ describe('trapToTake', () => {
     const full = fixturePlayer({
       x: 760,
       y: 500,
-      hand: [{ trapId: 'caisson-de-basse' }, { trapId: 'laser' }],
+      hand: ['caisson-de-basse', 'laser'],
     });
     const away = fixturePlayer({ x: 100, y: 800, hand: [] });
 

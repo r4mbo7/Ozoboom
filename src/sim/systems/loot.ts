@@ -90,7 +90,7 @@ export function loots({ state, set }: StepContext): void {
         touches(player, loot, statValue(player, 'lootRadiusMul', rules.radius)),
     );
     if (taker !== undefined) {
-      (taker.hand ??= []).push({ trapId: loot.trapId });
+      (taker.hand ??= []).push(loot.trapId);
       const { id, trapId, x, y } = loot;
       state.events.push({ type: 'lootCollected', id, playerId: taker.id, trapId, x, y });
       continue;

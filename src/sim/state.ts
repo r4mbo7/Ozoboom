@@ -60,12 +60,6 @@ export interface WeaponSlot {
   trail?: number[];
 }
 
-export interface HeldTrap {
-  trapId: string;
-  // Life left of a trap taken back from the field; absent means a new trap, at full life.
-  hp?: number;
-}
-
 export interface PlayerState extends Positioned {
   id: PlayerId;
   classId: string;
@@ -99,8 +93,8 @@ export interface PlayerState extends Positioned {
   // Set by dazzle, decremented by `specials`.
   dazzledTicks?: number;
   weapons?: WeaponSlot[];
-  // Traps carried, oldest first, at most `SetDefinition.handSize`.
-  hand?: HeldTrap[];
+  // Trap ids carried, oldest first, at most `SetDefinition.handSize`.
+  hand?: string[];
   // Fused forms already taken: a recipe serves once per player.
   fused?: string[];
   name?: string;
@@ -182,8 +176,6 @@ export interface TrapState extends Positioned {
   kind: string;
   ownerId: PlayerId;
   direction: Vec2;
-  hp: number;
-  cooldown: number;
 }
 
 export interface SpeakerState {
@@ -274,7 +266,6 @@ export type SimEvent =
   | { type: 'trapPlaced'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapFired'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapTaken'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
-  | { type: 'trapDestroyed'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'pickupCollected'; playerId: PlayerId; kind: PickupKind; amount: number }
   | { type: 'lootDropped'; id: EntityId; trapId: string; x: number; y: number }
   | {

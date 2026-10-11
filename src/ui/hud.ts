@@ -452,7 +452,7 @@ export function createHud(): Hud {
       setFlag(tile, 'blocked', view.trapId !== null && !view.available);
     });
     const taken = trapToTake(trapDefinitions, state, player, tiles.length);
-    const held = player.hand?.[selected]?.trapId;
+    const held = player.hand?.[selected];
     const name = (id: string | null | undefined) =>
       id === null || id === undefined ? '' : (trapDefinitions.get(id)?.name ?? '');
     setText(trapName, taken === null ? name(held) : `Reprendre : ${name(taken)}`);

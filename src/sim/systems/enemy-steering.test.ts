@@ -134,8 +134,6 @@ describe('enemy steering', () => {
       prevX: core.x + 5,
       prevY: 200,
       direction: { x: 1, y: 0 },
-      hp: 100,
-      cooldown: 0,
     });
     const trap = traps[0];
 
@@ -159,8 +157,6 @@ describe('enemy steering', () => {
       prevX: core.x,
       prevY: 200,
       direction: { x: 1, y: 0 },
-      hp: 100,
-      cooldown: 0,
     });
 
     steps(simulation, 100);

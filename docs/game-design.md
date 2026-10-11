@@ -91,8 +91,8 @@ Du matériel de festival, trouvé dans les loots, qui agit sur le temps musical.
 - Toutes les 12 mesures (environ 20 s), une bad vibe qui entre sur la piste porte un loot et se voit de loin. Tuée, elle le lâche. Un boss lâche un loot par joueur. Un loot au sol disparaît au bout de 16 mesures.
 - Le piège du loot est tiré au sort quand il tombe, et son icône se voit sur la caisse. Les chances sont les mêmes pour toutes les classes ; le Caisson est le plus courant, et le premier loot de la partie est toujours un Caisson.
 - Celui qui ramasse le loot porte le piège, deux au plus : les mains pleines, les loots restent au sol. Chaque joueur commence avec un Caisson de basse en main.
-- La touche de pose pose le piège choisi devant soi. Devant un piège posé, elle le reprend en main, avec la vie qui lui reste : n'importe quel joueur peut ainsi déplacer n'importe quel piège.
-- Nombre d'emplacements limité, un de plus par niveau de Volume, et autant de plus que la Rallonge en donne à chaque joueur de l'équipe. Les lourds peuvent pousser ou casser un piège.
+- La touche de pose pose le piège choisi devant soi. Devant un piège posé, elle le reprend en main : n'importe quel joueur peut ainsi déplacer n'importe quel piège.
+- Nombre d'emplacements limité, un de plus par niveau de Volume, et autant de plus que la Rallonge en donne à chaque joueur de l'équipe. Les lourds poussent les pièges, rien ne les casse : un piège n'a pas de vie. **Tranché le 2026-10-11.**
 - La barre du bas montre les deux pièges en main, sans autre compteur.
 
 ## Progression dans la partie

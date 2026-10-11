@@ -16,11 +16,7 @@ function ribbonArena(markedTicks = MARKED_TICKS, length = 200) {
     thrownWeapon('ribbon', { kind: 'ribbon', length, markedTicks }, BACKBEATS),
   );
   for (const player of simulation.state.players) {
-    player.hand = [
-      { trapId: FIXTURE_LURE.id },
-      { trapId: FIXTURE_LURE.id },
-      { trapId: FIXTURE_LURE.id },
-    ];
+    player.hand = [FIXTURE_LURE.id, FIXTURE_LURE.id, FIXTURE_LURE.id];
   }
   return { simulation };
 }

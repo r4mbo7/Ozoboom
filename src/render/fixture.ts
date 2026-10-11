@@ -201,8 +201,6 @@ function createTraps(state: SimState, showcase: boolean): TrapState[] {
         kind,
         ownerId: 0,
         direction: { x: Math.cos(angle), y: Math.sin(angle) },
-        hp: 100,
-        cooldown: 0,
       },
       state.core.x + Math.cos(angle) * distance,
       state.core.y + Math.sin(angle) * distance,

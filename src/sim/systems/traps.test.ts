@@ -23,7 +23,7 @@ function game(setId = 'fixture-set'): {
     throw new Error('expected one player');
   }
   player.hand = EFFECTS_OPTIONS.content.traps.flatMap(({ id }) =>
-    Array.from({ length: 8 }, () => ({ trapId: id })),
+    Array.from({ length: 8 }, () => id),
   );
   return { simulation, state: simulation.state, player };
 }
@@ -59,7 +59,7 @@ function firedTicks(recorded: readonly TimedEvent[]): number[] {
 describe('trap placement', () => {
   it('places a trap from the hand and announces it', () => {
     const { simulation, state, player } = game();
-    player.hand = [{ trapId: 'mister' }, { trapId: 'subwoofer' }];
+    player.hand = ['mister', 'subwoofer'];
 
     simulation.step([place('subwoofer', 400, 450)]);
 
@@ -73,11 +73,9 @@ describe('trap placement', () => {
         prevX: 400,
         prevY: 450,
         direction: { x: 1, y: 0 },
-        hp: 100,
-        cooldown: 0,
       },
     ]);
-    expect(player.hand).toEqual([{ trapId: 'mister' }]);
+    expect(player.hand).toEqual(['mister']);
     expect(state.events).toContainEqual({
       type: 'trapPlaced',
       id: 1,
@@ -107,7 +105,7 @@ describe('trap placement', () => {
     [
       'the player does not hold',
       (_, player) => {
-        player.hand = [{ trapId: 'mister' }];
+        player.hand = ['mister'];
         return placeAction('subwoofer', 400, 450);
       },
     ],
@@ -207,20 +205,19 @@ describe('trap placement', () => {
 describe('taking a trap back', () => {
   const take = (x: number, y: number): PlayerAction => ({ type: 'takeTrap', x, y });
 
-  it('takes the trap under the spot back into the hand, with the life it has left', () => {
+  it('takes the trap under the spot back into the hand', () => {
     const { simulation, state, player } = game();
-    player.hand = [{ trapId: 'subwoofer' }];
+    player.hand = ['subwoofer'];
     simulation.step([place('subwoofer', 400, 450)]);
     const [placed] = state.traps;
     if (placed === undefined) {
       throw new Error('expected a placed trap');
     }
-    placed.hp = 40;
 
     simulation.step([actionsFor(0, take(405, 445))]);
 
     expect(state.traps).toEqual([]);
-    expect(player.hand).toEqual([{ trapId: 'subwoofer', hp: 40 }]);
+    expect(player.hand).toEqual(['subwoofer']);
     expect(state.events).toContainEqual({
       type: 'trapTaken',
       id: placed.id,
@@ -231,29 +228,20 @@ describe('taking a trap back', () => {
     });
   });
 
-  it('places a trap taken back with the life it had', () => {
-    const { simulation, state, player } = game();
-    player.hand = [{ trapId: 'subwoofer', hp: 40 }];
-
-    simulation.step([place('subwoofer', 400, 450)]);
-
-    expect(state.traps.map((trap) => trap.hp)).toEqual([40]);
-  });
-
   it('takes the trap back when a placement lands on it', () => {
     const { simulation, state, player } = game();
-    player.hand = [{ trapId: 'subwoofer' }, { trapId: 'beam' }];
+    player.hand = ['subwoofer', 'beam'];
     simulation.step([place('subwoofer', 400, 450)]);
 
     simulation.step([place('beam', 400, 450)]);
 
     expect(state.traps).toEqual([]);
-    expect(player.hand).toEqual([{ trapId: 'beam' }, { trapId: 'subwoofer', hp: 100 }]);
+    expect(player.hand).toEqual(['beam', 'subwoofer']);
   });
 
   it('leaves the trap in place when both hands are full or the player is down', () => {
     const { simulation, state, player } = game();
-    player.hand = [{ trapId: 'subwoofer' }, { trapId: 'beam' }, { trapId: 'beam' }];
+    player.hand = ['subwoofer', 'beam', 'beam'];
     simulation.step([place('subwoofer', 400, 450)]);
     simulation.step([actionsFor(0, take(400, 450))]);
     player.hand = [];
@@ -283,7 +271,7 @@ describe('taking a trap back', () => {
     simulation.step([actionsFor(1, take(400, 450))]);
 
     expect(state.traps).toEqual([]);
-    expect(other.hand).toEqual([{ trapId: 'subwoofer', hp: 100 }]);
+    expect(other.hand).toEqual(['subwoofer']);
   });
 });
 
@@ -415,7 +403,7 @@ describe('trap effects', () => {
     if (first === undefined || second === undefined) {
       throw new Error('expected two players');
     }
-    first.hand = [{ trapId: 'mister' }];
+    first.hand = ['mister'];
     first.hp = 95;
     second.hp = 0;
     second.downed = true;
@@ -502,62 +490,18 @@ describe('bosses against traps', () => {
 });
 
 describe('heavy enemies against traps', () => {
-  function bouncerAgainstMister(stunned = false): {
-    simulation: Simulation;
-    state: SimState;
-    recorded: TimedEvent[];
-  } {
+  it('push a trap they touch, but neither a heavy nor a boss ever breaks it', () => {
     const { simulation, state } = game();
     const bouncer = placeEnemy(state, 'bouncer', 400 + 16 + 20 - 1, 450);
     bouncer.speed = 0;
-    if (stunned) {
-      frozen(bouncer);
-    }
-    simulation.step([place('mister', 400, 450)]);
-    const recorded = stepAndRecord(simulation, 108);
-    return { simulation, state, recorded };
-  }
-
-  it('a heavy in contact hits the trap for its damage at its attack rate until it breaks', () => {
-    const { recorded, state } = bouncerAgainstMister();
-
-    expect(recorded.filter(({ event }) => event.type === 'trapDestroyed')).toEqual([
-      { tick: 109, event: { type: 'trapDestroyed', id: 2, kind: 'mister', x: 400, y: 450 } },
-    ]);
-    expect(state.traps).toEqual([]);
-  });
-
-  it('a heavy hits once on contact and again after its attack cooldown', () => {
-    const { simulation, state } = game();
-    const bouncer = placeEnemy(state, 'bouncer', 400 + 16 + 20 - 1, 450);
-    bouncer.speed = 0;
-
-    simulation.step([place('mister', 400, 450)]);
-    const afterContact = state.traps[0]?.hp;
-    stepAndRecord(simulation, 35);
-    const beforeSecondBlow = state.traps[0]?.hp;
-    simulation.step([]);
-
-    expect([afterContact, beforeSecondBlow, state.traps[0]?.hp]).toEqual([35, 35, 20]);
-  });
-
-  it('a stunned heavy does not hit the trap', () => {
-    const { state } = bouncerAgainstMister(true);
-
-    expect(state.traps[0]?.hp).toBe(50);
-  });
-
-  it('a boss hits the trap, a rusher does not', () => {
-    const { simulation, state } = game();
-    const boss = placeEnemy(state, 'curfew', 400 + 16 + 40 - 1, 450);
+    const boss = placeEnemy(state, 'curfew', 1000 + 16 + 40 - 1, 200);
     boss.speed = 0;
-    const rusher = placeEnemy(state, 'grump', 1000, 200 + 16 + 12 - 1);
-    rusher.speed = 0;
 
     simulation.step([
       actionsFor(0, placeAction('mister', 400, 450), placeAction('mister', 1000, 200)),
     ]);
+    stepAndRecord(simulation, 200);
 
-    expect(state.traps.map((trap) => trap.hp)).toEqual([20, 50]);
+    expect(state.traps.map((trap) => trap.kind)).toEqual(['mister', 'mister']);
   });
 });

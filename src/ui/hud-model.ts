@@ -128,7 +128,7 @@ export function handTiles(
   const free =
     state.traps.length < capacity && trapAt(definitions, state.traps, player) === undefined;
   return Array.from({ length: handSize }, (_, index) => {
-    const trapId = player.hand?.[index]?.trapId ?? null;
+    const trapId = player.hand?.[index] ?? null;
     return { trapId, available: trapId !== null && free };
   });
 }

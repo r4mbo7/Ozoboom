@@ -111,7 +111,6 @@ export interface TrapDefinition {
   name: string;
   description: string;
   radius: number;
-  hp: number;
   cadence: TrapCadence;
   effect: TrapEffect;
   // Odds of this trap in a loot against the other traps, the same for every class.

@@ -113,7 +113,7 @@ function createPlayer(
     downed: false,
     invulnerableTicks: 0,
     weapons: [],
-    hand: set.startingHand.map((trapId) => ({ trapId })),
+    hand: [...set.startingHand],
     ...(slot.name === undefined ? {} : { name: slot.name }),
   };
 }
