@@ -82,7 +82,7 @@ export const CLASSES: readonly ClassDefinition[] = [
       id: 'soin',
       name: 'Soin',
       description: 'Tu soignes ceux qui sont près de toi et tu répares un peu la scène.',
-      cooldownTicks: 6 * TICKS_PER_BAR,
+      cooldownTicks: 9 * TICKS_PER_BAR,
       effect: { kind: 'healPulse', amount: 30, radius: 160, coreRepair: 25 },
     },
   },
