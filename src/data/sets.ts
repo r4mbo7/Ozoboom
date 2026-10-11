@@ -270,11 +270,12 @@ const DOME_OBSTACLES: readonly ObstacleDefinition[] = [
   }),
 ];
 
+// 400 from the core, a sixteenth of a turn past each entrance axis: between two posts, under an arm, off the passages.
 const DOME_SPEAKER_SPOTS: Record<string, { x: number; y: number }> = {
-  'dome-chill': { x: 800, y: 90 },
-  foret: { x: 1210, y: 500 },
-  sub: { x: 390, y: 500 },
-  'cercle-acid': { x: 800, y: 910 },
+  'dome-chill': { x: 953, y: 130 },
+  foret: { x: 1170, y: 653 },
+  'cercle-acid': { x: 647, y: 870 },
+  sub: { x: 430, y: 347 },
 };
 
 // A bar lasts a third longer at the Dome, so the main stage's rules would send fewer bad vibes per

@@ -744,6 +744,16 @@ describe('The Dome', () => {
     }
   });
 
+  it('keeps every speaker out of the passage a boss takes along an entrance axis', () => {
+    const speakers = dome?.speakers ?? [];
+
+    expect(speakers).toHaveLength(4);
+    for (const speaker of speakers) {
+      const offAxis = Math.min(Math.abs(speaker.x - center.x), Math.abs(speaker.y - center.y));
+      expect(offAxis - speaker.radius, speaker.id).toBeGreaterThanOrEqual(biggestBoss);
+    }
+  });
+
   it('keeps the core, the speakers and the arena edge clear of every obstacle', () => {
     for (const obstacle of obstacles) {
       expect(distance(obstacle, center) - obstacle.radius).toBeGreaterThan(dome?.core.radius ?? 0);
