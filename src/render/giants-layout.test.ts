@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SETS } from '../data/sets';
-import { armPath, layGiants } from './giants-layout';
+import { armPath, clearSpot, clusterReach, giantClusters, layGiants } from './giants-layout';
 
 const dome = SETS.find((set) => set.id === 'dome');
 
@@ -46,5 +46,29 @@ describe('layGiants', () => {
     );
 
     expect(stones).toHaveLength((dome?.obstacles?.length ?? 0) - posts);
+  });
+
+  it('keeps two clusters per giant, clear of every speaker and obstacle', () => {
+    const center = { x: 800, y: 500 };
+    const avoid = [...(dome?.obstacles ?? []), ...(dome?.speakers ?? [])];
+
+    const clusters = giantClusters(layGiants(dome?.obstacles ?? [], center), center, avoid, 30);
+
+    expect(clusters).toHaveLength(8);
+    for (const at of clusters) {
+      for (const disc of avoid) {
+        expect(Math.hypot(at.x - disc.x, at.y - disc.y)).toBeGreaterThanOrEqual(
+          disc.radius + clusterReach(30),
+        );
+      }
+    }
+  });
+
+  it('moves a corner cluster off a speaker and leaves a free one alone', () => {
+    const speaker = { x: 100, y: 100, radius: 30 };
+
+    expect(clearSpot({ x: 500, y: 500 }, 60, [speaker])).toEqual({ x: 500, y: 500 });
+    const moved = clearSpot({ x: 100, y: 100 }, 60, [speaker]);
+    expect(Math.hypot(moved.x - 100, moved.y - 100)).toBeGreaterThanOrEqual(30 + clusterReach(60));
   });
 });

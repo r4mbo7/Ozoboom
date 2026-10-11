@@ -83,3 +83,80 @@ export function armPath(giant: GiantLayout, center: Point, arm: 0 | 1): ArmPath 
     underTorso: stones.filter((stone) => offset(stone) <= shoulderOffset),
   };
 }
+
+export interface Disc extends Point {
+  readonly radius: number;
+}
+
+// Mushrooms of a cluster land anywhere in a square of this spread, the largest cap included.
+export function clusterReach(spread: number): number {
+  return ((spread / 2) * Math.SQRT2 + 13) * SCALE;
+}
+
+const CLUSTER_RADIUS = 372 * SCALE;
+const CLUSTER_ARC = (24 * Math.PI) / 180;
+const NUDGE = (1.5 * Math.PI) / 180;
+const MAX_NUDGES = 14;
+const GRID = 20 * SCALE;
+const GRID_RINGS = 8;
+
+function clearance(at: Point, reach: number, avoid: readonly Disc[]): number {
+  return Math.min(
+    ...avoid.map((disc) => Math.hypot(at.x - disc.x, at.y - disc.y) - disc.radius - reach),
+    Infinity,
+  );
+}
+
+// The first candidate whose cluster clears every disc; when none does, the one that clears them best.
+function firstClear(candidates: readonly Point[], reach: number, avoid: readonly Disc[]): Point {
+  let best = candidates[0] ?? { x: 0, y: 0 };
+  let bestClearance = -Infinity;
+  for (const candidate of candidates) {
+    const room = clearance(candidate, reach, avoid);
+    if (room >= 0) {
+      return candidate;
+    }
+    if (room > bestClearance) {
+      best = candidate;
+      bestClearance = room;
+    }
+  }
+  return best;
+}
+
+// Two clusters per giant, a fifteenth of a turn either side of its axis, slid along the arc off any disc to avoid.
+export function giantClusters(
+  giants: readonly GiantLayout[],
+  center: Point,
+  avoid: readonly Disc[],
+  spread: number,
+): Point[] {
+  const reach = clusterReach(spread);
+  const nudges = Array.from({ length: MAX_NUDGES * 2 + 1 }, (_, index) =>
+    index === 0 ? 0 : (index % 2 === 1 ? 1 : -1) * Math.ceil(index / 2),
+  );
+  return giants.flatMap((giant) =>
+    [-1, 1].map((side) => {
+      const around = nudges.map((nudge) => {
+        const angle = giant.angle + side * CLUSTER_ARC + nudge * NUDGE;
+        return {
+          x: center.x + Math.cos(angle) * CLUSTER_RADIUS,
+          y: center.y + Math.sin(angle) * CLUSTER_RADIUS,
+        };
+      });
+      return firstClear(around, reach, avoid);
+    }),
+  );
+}
+
+// A corner cluster keeps its spot unless a disc covers it: then the nearest clear spot on a grid around it.
+export function clearSpot(at: Point, spread: number, avoid: readonly Disc[]): Point {
+  const around: Point[] = [];
+  for (let dy = -GRID_RINGS; dy <= GRID_RINGS; dy += 1) {
+    for (let dx = -GRID_RINGS; dx <= GRID_RINGS; dx += 1) {
+      around.push({ x: at.x + dx * GRID, y: at.y + dy * GRID });
+    }
+  }
+  around.sort((a, b) => Math.hypot(a.x - at.x, a.y - at.y) - Math.hypot(b.x - at.x, b.y - at.y));
+  return firstClear(around, clusterReach(spread), avoid);
+}

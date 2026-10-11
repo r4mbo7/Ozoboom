@@ -6,7 +6,15 @@ import { setTempo } from '../sim/lineup';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { type Point, SCALE, armPath, layGiants } from './giants-layout';
+import {
+  type Disc,
+  type Point,
+  SCALE,
+  armPath,
+  clearSpot,
+  giantClusters,
+  layGiants,
+} from './giants-layout';
 import { traceBody, traceThrough } from './giants-body';
 import { add, setTint } from './util';
 
@@ -21,6 +29,8 @@ const CORNERS: readonly Point[] = [
   { x: 1110, y: 250 },
   { x: 1110, y: 650 },
 ];
+const GIANT_SPREAD = 30;
+const CORNER_SPREAD = 60;
 const DAY_ALPHA = 0.9;
 const HAND = 6 * SCALE;
 const KNOT_HALO = 46;
@@ -147,19 +157,13 @@ export function createGiants(ctx: RenderContext, sets: readonly SetDefinition[])
     });
     shadows.fill({ color: 0x000000, alpha: 0.28 });
     root.addChild(...giants.map(({ lines }) => lines), shadows, caps, spots, halos);
-    for (const giant of layout) {
-      for (const offset of [-24, 24]) {
-        const angle = giant.angle + (offset * Math.PI) / 180;
-        const at = {
-          x: center.x + Math.cos(angle) * 372 * SCALE,
-          y: center.y + Math.sin(angle) * 372 * SCALE,
-        };
-        cluster(at, 30, rng);
-      }
+    const avoid: Disc[] = [...(set.obstacles ?? []), ...(set.speakers ?? [])];
+    for (const at of giantClusters(layout, center, avoid, GIANT_SPREAD)) {
+      cluster(at, GIANT_SPREAD, rng);
     }
     for (const corner of CORNERS) {
       const at = { x: center.x + (corner.x - 600) * SCALE, y: center.y + (corner.y - 450) * SCALE };
-      cluster(at, 60, rng);
+      cluster(clearSpot(at, CORNER_SPREAD, avoid), CORNER_SPREAD, rng);
     }
     styledAt = Number.NaN;
     styledAdditive = null;
