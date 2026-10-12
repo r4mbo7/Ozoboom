@@ -380,7 +380,10 @@ export type MusicVoiceId =
   | 'glide-sub'
   | 'bansuri'
   | 'bird'
-  | 'wind';
+  | 'wind'
+  | 'drone'
+  | 'felt'
+  | 'cello';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
 // `kick` plays out of the break, `clap` only in the drop.

@@ -325,7 +325,7 @@ const AMBYSS: SetDefinition = {
   ...MAIN_STAGE,
   tiers: denserTiers(1.25),
   id: 'ambyss',
-  trackIds: ['premier-rayon', 'sous-la-voile'],
+  trackIds: ['premier-rayon', 'sous-la-voile', 'les-quatre-marches'],
   name: 'Ambyss',
   style: 'Chillgressive, sunrise',
   ticksPerBeat: AMBYSS_TICKS_PER_BEAT,

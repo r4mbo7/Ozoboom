@@ -242,3 +242,45 @@ describe('Sous la voile', () => {
     expect(flutes[0]?.notes.length).toBeLessThan(flutes[1]?.notes.length ?? 0);
   });
 });
+
+describe('Les quatre marches', () => {
+  const track = TRACKS.find((candidate) => candidate.id === 'les-quatre-marches');
+  const parts = (voice: string) => (track?.parts ?? []).filter((part) => part.voice === voice);
+
+  it('plays at Ambyss in A minor, the bass one step down every two bars', () => {
+    expect(SETS.find((set) => set.id === 'ambyss')?.trackIds).toContain('les-quatre-marches');
+    expect((track?.rootMidi ?? 0) % 12).toBe(9);
+    expect(track?.scale).toEqual([0, 2, 3, 5, 7, 8, 10]);
+    expect(track?.chords).toEqual([0, 0, -1, -1, -2, -2, -3, -3]);
+  });
+
+  it('bounces its echo and softens its build', () => {
+    expect(track?.echo?.wide).toBe(true);
+    expect(track?.build).toBe('soft');
+  });
+
+  it('holds a halo on the root, the fourth and the fifth while the bass walks down', () => {
+    const still = parts('halo').filter((part) => part.layer === 'texture' && !part.followsChord);
+
+    expect(still.map((part) => part.notes[0]?.[1])).toEqual([0, 3, 4]);
+    expect(parts('sub').every((part) => part.followsChord)).toBe(true);
+  });
+
+  it('beats a heart on the low tom instead of a kick until the drop', () => {
+    const drums = track?.drums ?? [];
+    const heard = (voice: string, when: string) =>
+      drums.filter((drum) => drum.voice === voice && drum.in === when).length;
+
+    expect([heard('kick', 'rise'), heard('kick', 'drop')]).toEqual([0, 1]);
+    expect(heard('tom', 'rise')).toBe(2);
+    expect(drums.some((drum) => drum.voice === 'snare' || drum.voice === 'hat')).toBe(false);
+  });
+
+  it('sings the theme on the fifth and the fourth, the cello doubled by a voice', () => {
+    const theme = (track?.parts ?? []).filter((part) => part.layer === 'theme');
+
+    expect(theme.map((part) => part.voice)).toEqual(['cello', 'ooh']);
+    expect(theme[0]?.notes.slice(0, 3).map(([, degree]) => degree)).toEqual([4, 6, 3]);
+    expect(theme[1]?.notes).toEqual(theme[0]?.notes);
+  });
+});

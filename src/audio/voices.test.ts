@@ -447,6 +447,44 @@ describe('psychill voices', () => {
   });
 });
 
+describe('ambient voices', () => {
+  it('swells the drone as four partials, silent at the cut', () => {
+    const held = probe();
+    const cut = probe();
+
+    MUSIC_VOICES.drone(contextOf(held, { steps: 32 }));
+    MUSIC_VOICES.drone(contextOf(cut, { steps: 32, until: 2.5 }));
+
+    expect(held.oscillators).toBe(4);
+    expect(Math.max(...held.ends)).toBeGreaterThan(1 + 32 * sixteenthSeconds());
+    expect(Math.max(...cut.ends)).toBeCloseTo(2.5, 6);
+  });
+
+  it('strikes the felt piano with a thump of noise, a share of it into the echo', () => {
+    const rig = probe();
+    const gains = spyGains(rig);
+
+    MUSIC_VOICES.felt(contextOf(rig));
+
+    expect([rig.oscillators, rig.sources]).toEqual([2, 1]);
+    expect(gains.sends()).toEqual([0.3]);
+  });
+
+  it('bows the cello with a vibrato only on long notes, and stops it at the cut', () => {
+    const short = probe();
+    const long = probe();
+    const cut = probe();
+
+    MUSIC_VOICES.cello(contextOf(short, { steps: 4 }));
+    MUSIC_VOICES.cello(contextOf(long, { steps: 8 }));
+    MUSIC_VOICES.cello(contextOf(cut, { steps: 24, until: 2.1 }));
+
+    expect(short.oscillators).toBe(3);
+    expect(long.oscillators).toBe(5);
+    expect(Math.max(...cut.ends)).toBeCloseTo(2.1, 6);
+  });
+});
+
 describe('psychill drums', () => {
   const hit = (rig: Probe, hz?: number) => ({
     out: rig.out,

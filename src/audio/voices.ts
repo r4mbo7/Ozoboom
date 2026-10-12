@@ -93,6 +93,18 @@ const HALO_PARTIALS: readonly (readonly [
   [8, 2, 0.0045, -1],
   [8, -3, 0.0045, 1],
 ];
+const DRONE_PARTIALS: readonly (readonly [
+  wave: OscillatorType,
+  ratio: number,
+  detune: number,
+  gain: number,
+  pan: number,
+])[] = [
+  ['triangle', 1, -5, 0.17, -0.8],
+  ['triangle', 1, 5, 0.17, 0.8],
+  ['sine', 2, 3, 0.06, 0.15],
+  ['sine', 3, -2, 0.028, -0.15],
+];
 const BIRD_HZ = [2600, 3400, 2150, 3900, 2950];
 // One gust on each side, their filters crossing: [from hz, to hz, pan, seconds late].
 const WIND_GUSTS = [
@@ -1002,5 +1014,75 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         filter: { type: 'bandpass', hz, toHz, glide: seconds * 0.8, q: 0.9 },
       });
     }
+  },
+  drone: (ctx) => {
+    const { out, at, hz, steps, gain } = ctx;
+    const envelope = swell(ctx, at, steps * sixteenthSeconds(ctx.tempo), 1.4, 1.6);
+    for (const [wave, ratio, detune, level, pan] of DRONE_PARTIALS) {
+      playTone(out, at, {
+        wave,
+        hz: hz * ratio,
+        detune,
+        gain: level * gain,
+        ...envelope,
+        pan,
+        filter: { type: 'lowpass', hz: 900, q: 0.5 },
+      });
+    }
+  },
+  felt: (ctx) => {
+    const { out, at, hz, position, gain } = ctx;
+    const pan = position % 4 < 2 ? -0.25 : 0.25;
+    const into = echoed(ctx, 0.3);
+    playTone(into, at, {
+      wave: 'triangle',
+      hz,
+      gain: 0.17 * gain,
+      attack: 0.006,
+      hold: 0.02,
+      release: 1.4,
+      pan,
+      filter: { type: 'lowpass', hz: 1700, toHz: 480, glide: 0.5, q: 0.7 },
+    });
+    playTone(into, at, {
+      wave: 'sine',
+      hz: hz * 2,
+      detune: 4,
+      gain: 0.032 * gain,
+      attack: 0.006,
+      hold: 0.01,
+      release: 0.6,
+      pan,
+    });
+    playNoise(out, at, {
+      gain: 0.012 * gain,
+      attack: 0.002,
+      hold: 0.002,
+      release: 0.03,
+      pan,
+      filter: { type: 'lowpass', hz: 900 },
+    });
+  },
+  cello: (ctx) => {
+    const { at, hz, steps, gain } = ctx;
+    const attack = 0.24;
+    const release = 0.55;
+    const hold = held(ctx, steps, attack + release, 0.96);
+    const into = echoed(ctx, 0.25);
+    for (const detune of [-7, 7]) {
+      playTone(into, at, {
+        wave: 'sawtooth',
+        hz,
+        detune,
+        gain: 0.085 * gain,
+        attack,
+        hold,
+        release,
+        pan: detune / 20,
+        ...(steps >= 6 ? { vibrato: { hz: 5, cents: 18, delay: 0.5 } } : {}),
+        filter: { type: 'lowpass', hz: 1250, q: 1.4 },
+      });
+    }
+    playTone(into, at, { wave: 'triangle', hz, gain: 0.055 * gain, attack, hold, release });
   },
 };
