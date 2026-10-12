@@ -3,9 +3,10 @@ import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { DrumPart, MusicTrack, SetDefinition } from '../data/types';
 import { FIXTURE_OPTIONS, FIXTURE_SET } from '../sim/fixtures';
 import { createSimulation } from '../sim/index';
+import { TICKS_PER_BAR } from '../shared/tempo';
 import { TICK_SECONDS } from './clock';
 import { createMusic } from './music';
-import { fillImpulse } from './reverb';
+import { createReverb, fillImpulse, type Acoustics } from './reverb';
 
 const anyNode: unknown = new Proxy(() => undefined, {
   get: (_, key) => (key === Symbol.toPrimitive ? () => 0 : key === 'then' ? undefined : anyNode),
@@ -17,10 +18,16 @@ interface Rig {
   out: AudioNode;
   starts: number[];
   convolvers: number;
+  delays: number;
 }
 
 function rig(): Rig {
-  const result: Rig = { out: undefined as unknown as AudioNode, starts: [], convolvers: 0 };
+  const result: Rig = {
+    out: undefined as unknown as AudioNode,
+    starts: [],
+    convolvers: 0,
+    delays: 0,
+  };
   const node = (extra: object = {}): unknown =>
     new Proxy(
       { context, connect: (to: unknown) => to, disconnect: () => undefined, ...extra },
@@ -36,6 +43,10 @@ function rig(): Rig {
       createBufferSource: source,
       createConvolver: () => {
         result.convolvers += 1;
+        return node();
+      },
+      createDelay: () => {
+        result.delays += 1;
         return node();
       },
     },
@@ -59,7 +70,7 @@ const DOME_SET: SetDefinition = {
   acoustics: { reverbSeconds: 3, wet: 0.4 },
 };
 
-function play(track: MusicTrack, set: SetDefinition | undefined) {
+function play(track: MusicTrack, set: SetDefinition | undefined, breakBarsLeft?: number) {
   const rigged = rig();
   const { out, starts } = rigged;
   const kicks: number[] = [];
@@ -70,8 +81,19 @@ function play(track: MusicTrack, set: SetDefinition | undefined) {
     onKickScheduled: (tick) => kicks.push(tick),
   });
   const { state } = createSimulation(FIXTURE_OPTIONS);
+  if (breakBarsLeft !== undefined) {
+    state.tick = 4 * TICKS_PER_BAR;
+    state.set.segment = 'break';
+    state.set.segmentStartTick = (breakBarsLeft - 4) * TICKS_PER_BAR + state.tick;
+  }
   music.update(state, 0, 0);
-  return { kicks, sounds: starts.length, starts, convolvers: () => rigged.convolvers };
+  return {
+    kicks,
+    sounds: starts.length,
+    starts,
+    convolvers: () => rigged.convolvers,
+    delays: () => rigged.delays,
+  };
 }
 
 describe('the drum kit of a track', () => {
@@ -142,5 +164,72 @@ describe('the dome reverb', () => {
     const peak = (from: number, until: number) =>
       Math.max(...samples.slice(from, until).map(Math.abs));
     expect(peak(2000, 2100)).toBeLessThan(peak(100, 200) * 0.01);
+  });
+});
+
+describe('the echo of a track', () => {
+  const echo = { feedback: 0.5, ret: 0.5, tone: 2400 };
+
+  it('repeats through one delay, and bounces between two when the track asks for a wide echo', () => {
+    const narrow = play({ ...SOIREE_OUVERTURE, echo }, undefined).delays();
+    const wide = play({ ...SOIREE_OUVERTURE, echo: { ...echo, wide: true } }, undefined).delays();
+
+    expect([narrow, wide]).toEqual([1, 2]);
+  });
+});
+
+describe('a soft build', () => {
+  it('leaves the snare roll and the saw of the riser out of the bar before the drop', () => {
+    const loud = play(SOIREE_OUVERTURE, undefined, 1).sounds;
+    const soft = play({ ...SOIREE_OUVERTURE, build: 'soft' }, undefined, 1).sounds;
+
+    expect(soft).toBeLessThan(loud);
+  });
+
+  it('plays the buildup like any other track', () => {
+    const loud = play(SOIREE_OUVERTURE, undefined).sounds;
+    const soft = play({ ...SOIREE_OUVERTURE, build: 'soft' }, undefined).sounds;
+
+    expect(soft).toBe(loud);
+  });
+});
+
+describe('the filters of a room', () => {
+  function filtersOf(acoustics: Acoustics): (readonly [string, number])[] {
+    const filters: { type: string; frequency: { value: number } }[] = [];
+    const node = () => ({
+      type: '',
+      frequency: { value: 0 },
+      gain: { value: 0 },
+      buffer: null,
+      connect: (to: unknown) => to,
+      disconnect: () => undefined,
+    });
+    const context = {
+      sampleRate: 8000,
+      createGain: node,
+      createConvolver: node,
+      createBiquadFilter: () => {
+        const filter = node();
+        filters.push(filter);
+        return filter;
+      },
+      createBuffer: (_channels: number, length: number) => ({
+        getChannelData: () => new Float32Array(length),
+      }),
+    };
+    createReverb({ context } as unknown as AudioNode, acoustics);
+    return filters.map((filter) => [filter.type, filter.frequency.value]);
+  }
+
+  it('lets everything into the room of a set that names no filter', () => {
+    expect(filtersOf({ reverbSeconds: 1, wet: 0.3 })).toEqual([]);
+  });
+
+  it('keeps the lows out of the room and darkens its tail when the set asks', () => {
+    expect(filtersOf({ reverbSeconds: 1, wet: 0.3, lowCutHz: 220, toneHz: 5200 })).toEqual([
+      ['highpass', 220],
+      ['lowpass', 5200],
+    ]);
   });
 });

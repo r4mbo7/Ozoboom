@@ -63,8 +63,24 @@ export function createReverb(out: AudioNode, acoustics: Acoustics): Reverb {
   convolver.buffer = impulseOf(context, acoustics.reverbSeconds);
   const wet = context.createGain();
   wet.gain.value = acoustics.wet;
-  input.connect(convolver);
-  convolver.connect(wet);
+  let source: AudioNode = input;
+  if (acoustics.lowCutHz !== undefined) {
+    const lowCut = context.createBiquadFilter();
+    lowCut.type = 'highpass';
+    lowCut.frequency.value = acoustics.lowCutHz;
+    source.connect(lowCut);
+    source = lowCut;
+  }
+  source.connect(convolver);
+  let tail: AudioNode = convolver;
+  if (acoustics.toneHz !== undefined) {
+    const tone = context.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.value = acoustics.toneHz;
+    tail.connect(tone);
+    tail = tone;
+  }
+  tail.connect(wet);
   wet.connect(out);
   return {
     input,

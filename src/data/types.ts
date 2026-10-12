@@ -295,8 +295,9 @@ export interface SetDefinition {
   obstacles?: readonly ObstacleDefinition[];
   // The tracks this stage draws from.
   trackIds: readonly string[];
-  // The stage's room reverb. Absent means a dry stage.
-  acoustics?: { reverbSeconds: number; wet: number };
+  // The stage's room reverb. Absent means a dry stage. `lowCutHz` keeps the lows out of the room,
+  // `toneHz` darkens its tail.
+  acoustics?: { reverbSeconds: number; wet: number; lowCutHz?: number; toneHz?: number };
   arena: { width: number; height: number };
   core: { radius: number; maxHp: number };
   // Traps a player carries at most, and those each player starts the game with.
@@ -443,7 +444,10 @@ export interface MusicTrack {
   chords: readonly number[];
   kick: { fromHz: number; release: number };
   // Replaces the engine's echo: the feedback of the repeats, their tone in Hz and what returns.
-  echo?: { feedback: number; ret: number; tone: number };
+  // `wide` bounces the repeats from left to right.
+  echo?: { feedback: number; ret: number; tone: number; wide?: boolean };
+  // `soft`: no snare roll before the drop, a low and quiet riser, a gentler fall into the break.
+  build?: 'soft';
   // Hz the pad's filter opens by at each bar of the break.
   padOpens?: number;
   parts: readonly MusicPart[];

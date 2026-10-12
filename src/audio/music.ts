@@ -107,12 +107,14 @@ const EXTINCTION_SECONDS = 1.6;
 const BUS_TAIL_SECONDS = 2;
 const RISER_LOW_HZ = 300;
 const RISER_HIGH_HZ = 7000;
+const SOFT_RISER_HIGH_HZ = 1800;
 const PAD_HZ = 900;
 const PAD_RELEASE = 0.6;
 const PAD_CUT_RELEASE = 0.05;
 const ECHO_FEEDBACK = 0.38;
 const ECHO_RETURN = 0.32;
 const ECHO_TONE = 2600;
+const ECHO_SPREAD = 0.85;
 const CRASH_EVERY_BARS = 8;
 const NO_CUE: BreakCue = { roll: null, cut: false };
 const OPEN_HZ = 20_000;
@@ -420,26 +422,31 @@ function pad(
   }
 }
 
-function riser(out: AudioNode, from: number, until: number, progress: number, key: MusicKey) {
+function riser(out: AudioNode, from: number, until: number, progress: number, track: MusicTrack) {
   const seconds = until - from;
   const done = Math.min(1, Math.max(0, progress));
+  const soft = track.build === 'soft';
+  const high = soft ? SOFT_RISER_HIGH_HZ : RISER_HIGH_HZ;
   playNoise(out, from, {
-    gain: 0.15,
+    gain: soft ? 0.05 : 0.15,
     attack: seconds,
     hold: 0,
     release: 0.03,
     filter: {
       type: 'bandpass',
-      hz: RISER_LOW_HZ * (RISER_HIGH_HZ / RISER_LOW_HZ) ** done,
-      toHz: RISER_HIGH_HZ,
+      hz: RISER_LOW_HZ * (high / RISER_LOW_HZ) ** done,
+      toHz: high,
       glide: seconds,
       q: 1.5,
     },
   });
+  if (soft) {
+    return;
+  }
   playTone(out, from, {
     wave: 'sawtooth',
-    hz: keyHz(key, 0, 2) * 4 ** done,
-    toHz: keyHz(key, 0, 4),
+    hz: keyHz(track, 0, 2) * 4 ** done,
+    toHz: keyHz(track, 0, 4),
     glide: seconds,
     gain: 0.03,
     attack: seconds,
@@ -449,15 +456,15 @@ function riser(out: AudioNode, from: number, until: number, progress: number, ke
   });
 }
 
-function downlifter(out: AudioNode, at: number) {
+function downlifter(out: AudioNode, at: number, soft: boolean) {
   playNoise(out, at, {
-    gain: 0.2,
+    gain: soft ? 0.07 : 0.2,
     attack: 0.005,
     hold: 0.1,
     release: 2.4,
     filter: { type: 'bandpass', hz: 6000, toHz: 300, glide: 2.4, q: 1.2 },
   });
-  crash(out, at, 0.09);
+  crash(out, at, soft ? 0.03 : 0.09);
 }
 
 function impact(out: AudioNode, at: number) {
@@ -576,9 +583,24 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     lead.connect(input);
     lead.connect(echo);
     echo.connect(echoTone);
-    echoTone.connect(echoFeedback);
+    if (track.echo?.wide === true) {
+      const left = context.createStereoPanner();
+      left.pan.value = -ECHO_SPREAD;
+      const right = context.createStereoPanner();
+      right.pan.value = ECHO_SPREAD;
+      const second = context.createDelay(1);
+      second.delayTime.value = 3 * sixteenthLength();
+      echoTone.connect(left);
+      left.connect(echoReturn);
+      echoTone.connect(second);
+      second.connect(right);
+      right.connect(echoReturn);
+      second.connect(echoFeedback);
+    } else {
+      echoTone.connect(echoFeedback);
+      echoTone.connect(echoReturn);
+    }
     echoFeedback.connect(echo);
-    echoTone.connect(echoReturn);
     echoReturn.connect(input);
     const reverb = acoustics === undefined ? null : createReverb(output, acoustics);
     if (reverb !== null) {
@@ -749,7 +771,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     if (layers.kick && sixteenth === 0 && bar % CRASH_EVERY_BARS === 0 && step !== dropTick) {
       crash(input, at, 0.07);
     }
-    if (cue.roll !== null && dropTick !== null) {
+    if (cue.roll !== null && dropTick !== null && track.build !== 'soft') {
       const left = dropTick - step;
       if (left % Math.max(cue.roll, stepTicks()) === 0) {
         const { ticksPerBeat, ticksPerBar } = tempo;
@@ -892,7 +914,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         if (entered && previous !== null && set.segment === 'drop') {
           impact(target.input, at);
         } else if (entered && previous !== null && set.segment === 'break') {
-          downlifter(target.input, at);
+          downlifter(target.input, at, track.build === 'soft');
         }
         sustain(target, state, currentTime, clock);
       }
