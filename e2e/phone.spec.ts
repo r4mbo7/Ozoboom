@@ -1,4 +1,5 @@
 import { type Locator, expect, test } from './test';
+import { cardsDealt } from './game';
 
 async function expectWholeIn(texts: Locator, frame: string): Promise<void> {
   for (const text of await texts.all()) {
@@ -73,6 +74,7 @@ test.describe('a phone held sideways', () => {
       await page.goto(`/dev/ui.html?screen=${screen}`);
       const menu = page.locator('.ui-upgrade:not([hidden]), .ui-end:not([hidden])');
       await expect(menu.locator('button').first()).toBeVisible();
+      await cardsDealt(page);
 
       const overflow = await menu.evaluate((node) => ({
         x: node.scrollWidth - node.clientWidth,
@@ -91,6 +93,7 @@ test.describe('a short and narrow window', () => {
     await page.goto('/dev/ui.html?screen=relics');
     const menu = page.locator('.ui-upgrade');
     await expect(menu.locator('button').first()).toBeVisible();
+    await cardsDealt(page);
 
     const overflow = await menu.evaluate((node) => node.scrollWidth - node.clientWidth);
 

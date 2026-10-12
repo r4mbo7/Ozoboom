@@ -41,8 +41,6 @@ type EventName =
   | 'coreHit'
   | 'trapShockwave'
   | 'trapBeam'
-  | 'levelUp'
-  | 'upgradeChosen'
   | 'skillUsed'
   | 'skillCharge'
   | 'skillHeal'
@@ -54,12 +52,21 @@ type EventName =
   | 'gameWon'
   | 'gameLost';
 
-const CUES: readonly Cue[] = ['seatTaken', 'seatFreed', 'launch'];
+const LOBBY_CUES: readonly Cue[] = ['seatTaken', 'seatFreed', 'launch'];
 const CUE_LABELS: Readonly<Record<Cue, string>> = {
   seatTaken: 'place prise',
   seatFreed: 'place libérée',
   launch: 'lancement',
+  cardDealt: 'carte posée',
+  cardsReady: 'surbrillance',
+  cardRare: 'carte rare',
+  cardLegendary: 'carte légendaire',
+  upgradeChosen: 'choix',
+  mateChose: 'choix d’un ami',
+  cardFlight: 'envol',
+  cardLanded: 'arrivée',
 };
+const CUES = Object.keys(CUE_LABELS) as Cue[];
 
 const DEV_SKILLS: Readonly<Record<string, string>> = {
   'dev-nova': 'nova',
@@ -102,8 +109,6 @@ const EVENT_LABELS: Readonly<Record<EventName, string>> = {
   coreHit: 'coreHit',
   trapShockwave: 'trapFired caisson',
   trapBeam: 'trapFired laser',
-  levelUp: 'levelUp',
-  upgradeChosen: 'upgradeChosen',
   skillUsed: 'skillUsed',
   skillCharge: 'skillUsed charge',
   skillHeal: 'skillUsed soin',
@@ -132,10 +137,6 @@ function eventOf(name: EventName, id: number): SimEvent {
       return { type: 'trapFired', id, kind: 'shockwave', x: 0, y: 0 };
     case 'trapBeam':
       return { type: 'trapFired', id, kind: 'beam', x: 0, y: 0 };
-    case 'levelUp':
-      return { type: 'levelUp', playerId: 0, level: 2 };
-    case 'upgradeChosen':
-      return { type: 'upgradeChosen', playerId: 0, upgradeId: 'dev' };
     case 'skillUsed':
       return { type: 'skillUsed', playerId: 0 };
     case 'skillCharge':
@@ -542,7 +543,7 @@ async function renderSounds(): Promise<SoundsReport> {
     id += 1;
     at += name === 'playerReviving' ? 2 * (60 / 145) + 0.6 : SOUNDS_SPACING;
   }
-  for (const cue of CUES) {
+  for (const cue of LOBBY_CUES) {
     sfx.beginFrame();
     sfx.cue(cue, at);
     at += cue === 'launch' ? 0 : SOUNDS_SPACING * 0.7;

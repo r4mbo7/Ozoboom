@@ -102,6 +102,10 @@ Tout ce qui bouge est calé dessus : le noyau pulse sur le kick, les pièges tir
 - Les menus par-dessus la partie (amélioration, pause, fin) n'éblouissent pas : de jour, leur fond plafonne sa clarté et vire au sable chaud.
 - Diégétique quand c'est possible : la vie du noyau est le VU-mètre de la scène, le déroulé des vagues est le line-up du soir, la classe est le bracelet du festivalier.
 - Peu d'éléments, grands et lisibles à distance : en coop on lit l'écran d'un ami.
+- Monter de niveau se fête, en temps de la scène : le voile monte sur un temps, les cartes tombent une à une sur les notes de la gamme, la rare puis la légendaire en dernier avec leur reflet, et la musique passe sous l'eau jusqu'au dernier choix.
+- Le choix claque sur un temps, puis la carte file vers sa place : l'agrès, sinon l'anneau de niveau ; sur un écran partagé, le bracelet du joueur. À plusieurs, la carte choisie attend au centre de son panneau et toutes partent ensemble.
+- Une carte se lit de loin : un médaillon de géométrie sacrée, le rang en perles.
+- En mode calme rien ne bouge dans ce menu : cartes posées d'un coup, liseré fixe, perle gagnée au trait épais, choix envoyé aussitôt, emplacement qui s'allume. Les sons restent.
 - Entièrement navigable à la manette et au tactile, pas seulement à la souris.
 
 ## Ton et écriture

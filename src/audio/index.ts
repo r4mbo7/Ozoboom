@@ -175,13 +175,13 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       }
       latest = state;
     },
-    cue(name) {
+    cue(name, variant = 0) {
       if (running === null || isRealtimeStalled(running.context)) {
         return;
       }
       // Cues come from the lobby, where no update runs to open the frame.
       running.sfx.beginFrame();
-      running.sfx.cue(name, running.context.currentTime);
+      running.sfx.cue(name, running.context.currentTime, variant);
     },
     setMuted(value) {
       muted = value;

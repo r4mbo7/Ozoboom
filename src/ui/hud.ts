@@ -2,7 +2,7 @@ import type { ClassDefinition, GameContent, SetDefinition, TrapDefinition } from
 import { setFraction } from '../sim/lineup';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
-import type { PlayerState, SimState } from '../sim/state';
+import type { PlayerId, PlayerState, SimState } from '../sim/state';
 import { trapCapacity } from '../sim/stats';
 import { beatPeriodMs } from '../shared/tempo';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
@@ -34,6 +34,9 @@ import { cssName } from './sun';
 export interface Hud {
   readonly element: HTMLElement;
   update(state: SimState, frame: UiFrame, content: GameContent): void;
+  // Where what a player gains shows: their bracelet on a shared screen, else the slot of the circus
+  // weapon or the level ring of the player of this screen. Null for a player the HUD does not show.
+  landing(playerId: PlayerId, weaponId: string | null): HTMLElement | null;
   reset(): void;
 }
 
@@ -158,6 +161,8 @@ export function createHud(): Hud {
   let helpSeen = false;
   let helpWasShown = false;
   let shownLevel: Pick<PlayerState, 'level' | 'vibes'> | null = null;
+  let shownPlayer: PlayerId | null = null;
+  let braceleted: readonly PlayerState[] = [];
 
   function build(content: GameContent, setId: string): void {
     builtFor = content;
@@ -402,6 +407,7 @@ export function createHud(): Hud {
     while (braceletViews.length > shown.length) {
       braceletViews.pop()?.element.remove();
     }
+    braceleted = shown;
     shown.forEach((player, index) => {
       const definition = content.classes.find((entry) => entry.id === player.classId) ?? null;
       const local = frame.players.find((entry) => entry.playerId === player.id);
@@ -428,6 +434,7 @@ export function createHud(): Hud {
     const snapshot = local?.snapshot ?? frame.snapshot;
     const player = state.players.find((candidate) => candidate.id === local?.playerId);
     setFlag(element, 'no-player', player === undefined);
+    shownPlayer = player?.id ?? null;
     if (player === undefined) {
       return;
     }
@@ -490,6 +497,16 @@ export function createHud(): Hud {
   return {
     element,
     update,
+    landing(playerId, weaponId) {
+      if (element.dataset.multi !== undefined) {
+        const worn = braceleted.findIndex((player) => player.id === playerId);
+        return braceletViews[worn]?.element ?? null;
+      }
+      if (playerId !== shownPlayer) {
+        return null;
+      }
+      return chips.find((chip) => chip.dataset.weapon === weaponId) ?? level;
+    },
     reset() {
       selectedTrap = 0;
       previousGameplay = null;

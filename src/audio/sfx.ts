@@ -15,8 +15,14 @@ export type SfxName =
   | 'coreHit'
   | 'trapSub'
   | 'trapBreath'
-  | 'levelUp'
+  | 'cardDealt'
+  | 'cardsReady'
+  | 'cardRare'
+  | 'cardLegendary'
   | 'upgradeChosen'
+  | 'mateChose'
+  | 'cardFlight'
+  | 'cardLanded'
   | 'skillUsed'
   | 'gameWon'
   | 'gameLost'
@@ -104,12 +110,6 @@ const SKILL_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
   }) as [string, SfxName][],
 );
 
-const CUE_SFX: Readonly<Record<Cue, SfxName>> = {
-  seatTaken: 'seatTaken',
-  seatFreed: 'seatFreed',
-  launch: 'launch',
-};
-
 export interface SfxPlayer {
   readonly id: number;
   readonly classId: string;
@@ -149,8 +149,14 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     coreHit: { perFrame: 1, concurrent: 1, seconds: 0.36 },
     trapSub: { perFrame: 1, concurrent: 2, seconds: 0.3 },
     trapBreath: { perFrame: 1, concurrent: 2, seconds: 0.16 },
-    levelUp: { perFrame: 1, concurrent: 1, seconds: 0.45 },
-    upgradeChosen: { perFrame: 1, concurrent: 1, seconds: 0.3 },
+    cardDealt: { perFrame: 1, concurrent: 4, seconds: 0.2 },
+    cardsReady: { perFrame: 1, concurrent: 1, seconds: 0.3 },
+    cardRare: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    cardLegendary: { perFrame: 1, concurrent: 1, seconds: 0.6 },
+    upgradeChosen: { perFrame: 1, concurrent: 2, seconds: 0.6 },
+    mateChose: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    cardFlight: { perFrame: 1, concurrent: 2, seconds: beat * 0.8 },
+    cardLanded: { perFrame: 1, concurrent: 2, seconds: 0.16 },
     skillUsed: { perFrame: 1, concurrent: 2, seconds: 0.3 },
     gameWon: { perFrame: 1, concurrent: 1, seconds: 2 },
     gameLost: { perFrame: 1, concurrent: 1, seconds: 2 },
@@ -205,8 +211,6 @@ export function sfxOf(
     case 'enemyHit':
     case 'enemyDied':
     case 'coreHit':
-    case 'levelUp':
-    case 'upgradeChosen':
     case 'gameWon':
     case 'gameLost':
     case 'weaponGained':
@@ -294,9 +298,12 @@ type Voice = (
   key: MusicKey,
   vibes?: number,
   progress?: number,
+  // The beat of the set, in seconds, for a sound that lasts as long as a motion counted in beats.
+  beat?: number,
 ) => void;
 
 const DIED_DEGREES = [4, 3, 0, 5];
+const DEALT_DEGREES = [0, 2, 4, 5];
 const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
 
 const VOICES: Readonly<Record<SfxName, Voice>> = {
@@ -393,28 +400,130 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 2600, q: 0.8 },
     });
   },
-  levelUp: (out, at, _variant, key) => {
-    [0, 3, 4, 7].forEach((degree, index) => {
-      playTone(out, at + index * 0.07, {
-        wave: 'triangle',
-        hz: keyHz(key, degree, 4),
-        gain: 0.16,
+  // A card lands: one note of the scale per card, over the rustle of its fall.
+  cardDealt: (out, at, turn, key) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, DEALT_DEGREES[turn % DEALT_DEGREES.length] ?? 0, 4),
+      gain: 0.15,
+      attack: 0.005,
+      hold: 0.04,
+      release: 0.2,
+    });
+    playNoise(out, at, {
+      gain: 0.05,
+      attack: 0.001,
+      hold: 0,
+      release: 0.07,
+      filter: { type: 'bandpass', hz: 1800, q: 1 },
+    });
+  },
+  // The highlight arrives: the octave closes the phrase the cards began.
+  cardsReady: (out, at, _variant, key) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, 7, 4),
+      gain: 0.17,
+      attack: 0.005,
+      hold: 0.04,
+      release: 0.3,
+    });
+  },
+  cardRare: (out, at, _variant, key) => {
+    [4, 7].forEach((degree, index) => {
+      playTone(out, at + index * 0.06, {
+        wave: 'sine',
+        hz: keyHz(key, degree, 5),
+        gain: 0.11,
         attack: 0.005,
         hold: 0.04,
-        release: 0.15,
+        release: 0.32,
       });
     });
   },
+  cardLegendary: (out, at, _variant, key) => {
+    [0, 2, 4, 7, 9].forEach((degree, index) => {
+      playTone(out, at + index * 0.055, {
+        wave: 'triangle',
+        hz: keyHz(key, degree, 5),
+        gain: 0.11,
+        attack: 0.005,
+        hold: 0.04,
+        release: 0.4,
+      });
+    });
+    playNoise(out, at, {
+      gain: 0.04,
+      attack: 0.001,
+      hold: 0,
+      release: 0.6,
+      filter: { type: 'highpass', hz: 7000, q: 1 },
+    });
+  },
+  // The choice slams: a kick, then the full chord of the key.
   upgradeChosen: (out, at, _variant, key) => {
-    [4, 7].forEach((degree, index) => {
-      playTone(out, at + index * 0.09, {
+    for (const degree of [0, 2, 4, 7]) {
+      for (const [wave, gain] of [
+        ['sawtooth', 0.04],
+        ['triangle', 0.1],
+      ] as const) {
+        playTone(out, at + 0.07, {
+          wave,
+          hz: keyHz(key, degree, 4),
+          gain,
+          attack: 0.005,
+          hold: 0.08,
+          release: 0.5,
+        });
+      }
+    }
+    playTone(out, at, {
+      wave: 'sine',
+      hz: 160,
+      toHz: 50,
+      glide: 0.1,
+      gain: 0.4,
+      attack: 0.002,
+      hold: 0.03,
+      release: 0.14,
+    });
+    playNoise(out, at + 0.07, {
+      gain: 0.08,
+      attack: 0.001,
+      hold: 0,
+      release: 0.18,
+      filter: { type: 'highpass', hz: 5000, q: 1 },
+    });
+  },
+  mateChose: (out, at, _variant, key) => {
+    [2, 4].forEach((degree, index) => {
+      playTone(out, at + index * 0.08, {
         wave: 'sine',
         hz: keyHz(key, degree, 4),
-        gain: 0.2,
-        attack: 0.004,
-        hold: 0.03,
-        release: 0.2,
+        gain: 0.09,
+        attack: 0.005,
+        hold: 0.04,
+        release: 0.25,
       });
+    });
+  },
+  cardFlight: (out, at, _variant, _key, _vibes, _progress, beat = beatSeconds()) => {
+    playNoise(out, at, {
+      gain: 0.09,
+      attack: 0.001,
+      hold: 0,
+      release: beat * 0.8,
+      filter: { type: 'bandpass', hz: 2600, toHz: 500, glide: beat * 0.8, q: 1.4 },
+    });
+  },
+  cardLanded: (out, at, _variant, key) => {
+    playTone(out, at, {
+      wave: 'sine',
+      hz: keyHz(key, 7, 5),
+      gain: 0.13,
+      attack: 0.002,
+      hold: 0.02,
+      release: 0.14,
     });
   },
   skillUsed: (out, at, _variant, key) => {
@@ -1062,7 +1171,7 @@ export interface Sfx {
     core?: SfxCore,
     enemies?: readonly SfxEnemy[],
   ): void;
-  cue(cue: Cue, now: number): void;
+  cue(cue: Cue, now: number, variant?: number): void;
   beginFrame(): void;
   setHitSound(enabled: boolean): void;
   setKey(key: SfxKey): void;
@@ -1120,10 +1229,9 @@ export function createSfx(
         VOICES.vibesCollected(out, note.at, degree, key, note.vibes, progress);
       }
     },
-    cue(cue, now) {
-      const name = CUE_SFX[cue];
-      if (limiter.tryAcquire(name, now)) {
-        VOICES[name](out, now, 0, key);
+    cue(cue, now, variant = 0) {
+      if (limiter.tryAcquire(cue, now)) {
+        VOICES[cue](out, now, variant, key, undefined, undefined, beatSeconds(tempo));
       }
     },
     beginFrame() {

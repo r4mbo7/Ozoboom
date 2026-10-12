@@ -98,6 +98,20 @@ export function familyIcon(family: UpgradeFamily): string {
 
 const STROKE = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"';
 
+// A card's pictogram in a medallion of sacred geometry, six circles in a flower: drawn in a box of 84.
+export function medallion(glyph: string): string {
+  const petals = Array.from({ length: 6 }, (_, petal) => {
+    const angle = (petal * Math.PI) / 3;
+    return `<circle cx="${(42 + 19 * Math.cos(angle)).toFixed(1)}" cy="${(42 + 19 * Math.sin(angle)).toFixed(1)}" r="19"/>`;
+  }).join('');
+  return (
+    '<g fill="none" stroke="currentColor"><circle cx="42" cy="42" r="40" stroke-width="1.5"/>' +
+    '<circle cx="42" cy="42" r="36" stroke-width="0.8" opacity="0.6"/>' +
+    `<g stroke-width="0.8" opacity="0.32">${petals}</g></g>` +
+    `<svg x="24" y="24" width="36" height="36" viewBox="0 0 24 24">${glyph}</svg>`
+  );
+}
+
 export function weaponIcon(effect: WeaponEffect): string {
   switch (effect.kind) {
     case 'sweep':

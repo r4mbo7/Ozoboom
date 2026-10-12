@@ -3,7 +3,19 @@ import type { SimState } from '../sim/state';
 
 export type Mood = 'set' | 'menu';
 
-export type Cue = 'seatTaken' | 'seatFreed' | 'launch';
+export type Cue =
+  | 'seatTaken'
+  | 'seatFreed'
+  | 'launch'
+  // The upgrade menu: a card dealt (its turn as variant), the highlight, a rare card, a choice, a flight.
+  | 'cardDealt'
+  | 'cardsReady'
+  | 'cardRare'
+  | 'cardLegendary'
+  | 'upgradeChosen'
+  | 'mateChose'
+  | 'cardFlight'
+  | 'cardLanded';
 
 export interface AudioEngine {
   start(): Promise<void>;
@@ -16,6 +28,7 @@ export interface AudioEngine {
   setMood(mood: Mood): void;
   // The track of what is scheduled from now on: called when a game begins.
   setTrack(track: MusicTrack): void;
-  cue(name: Cue): void;
+  // The variant picks among the notes of a cue that has several.
+  cue(name: Cue, variant?: number): void;
   destroy(): void;
 }

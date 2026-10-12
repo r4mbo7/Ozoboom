@@ -10,6 +10,7 @@ import {
   dropTickOf,
   latched,
   layersFor,
+  diveCutoff,
   modeOf,
   musicCutoff,
   padCutoff,
@@ -162,6 +163,21 @@ describe('modeOf', () => {
   it('switches to the ending on victory and defeat', () => {
     expect(modeOf('won')).toBe('won');
     expect(modeOf('lost')).toBe('lost');
+  });
+});
+
+describe('diveCutoff', () => {
+  it('leaves the music open while the set runs and once it is over', () => {
+    expect(diveCutoff('running')).toBe(20_000);
+    expect(diveCutoff('won')).toBe(20_000);
+    expect(diveCutoff('lost')).toBe(20_000);
+  });
+
+  it('closes the music while a card is chosen, less deep than a scene that chokes', () => {
+    const dive = diveCutoff('choosingUpgrade');
+
+    expect(dive).toBeLessThan(3000);
+    expect(dive).toBeGreaterThan(2 * musicCutoff(true, 0));
   });
 });
 

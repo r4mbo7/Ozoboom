@@ -32,10 +32,10 @@ async function frames(page: Page, count = 2): Promise<void> {
   );
 }
 
-// Proving that a held direction does nothing takes time: the menu ignores everything for 500 ms
-// after it opens, then a held direction repeats after 400 ms and every 120 ms. This watches the
-// menu over the game's own clock past all of it, and over enough frames that a slow machine polls
-// the input as many times as a fast one would, and counts every move of its selection.
+// Proving that a held direction does nothing takes time: a menu takes input once it shows its
+// selection, then a held direction repeats after 400 ms and every 120 ms. This watches the menu
+// over the game's own clock past all of it, and over enough frames that a slow machine polls the
+// input as many times as a fast one would, and counts every move of its selection.
 function selectionMovesWhileHeld(menu: Locator): Promise<number> {
   return menu.evaluate(
     (node) =>
@@ -104,7 +104,7 @@ test('a left stick held at a level up leaves the first card selected until it co
 
   await levelUp(page);
 
-  await expect(upgrade).toBeVisible();
+  await expect(cards.first()).toHaveAttribute('aria-current', 'true');
   expect(await selectionMovesWhileHeld(upgrade)).toBe(0);
   await expect(cards.first()).toHaveAttribute('aria-current', 'true');
   await setLeftStick(page, 0);
@@ -131,7 +131,7 @@ test('an arrow key held at a level up leaves the first card selected until it is
 
   await levelUp(page);
 
-  await expect(upgrade).toBeVisible();
+  await expect(cards.first()).toHaveAttribute('aria-current', 'true');
   expect(await selectionMovesWhileHeld(upgrade)).toBe(0);
   await expect(cards.first()).toHaveAttribute('aria-current', 'true');
   await page.keyboard.up('ArrowRight');

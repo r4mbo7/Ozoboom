@@ -191,6 +191,9 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       onChooseUpgrade(playerId, upgradeId) {
         match.chooseUpgrade(playerId, upgradeId);
       },
+      onUpgradeCue(cue, variant) {
+        audio.cue(cue, variant);
+      },
       onToggleCalmMode(enabled) {
         prefs.calmMode = enabled;
         renderer.setOptions({ calmMode: enabled });

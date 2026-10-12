@@ -116,11 +116,14 @@ const ui = createUi(
     onChooseUpgrade(playerId, upgradeId) {
       console.info('[ui] onChooseUpgrade', playerId, upgradeId);
       const pendingUpgrades = state.pendingUpgrades.filter((offer) => offer.playerId !== playerId);
-      if (current === 'offers' && pendingUpgrades.length > 0) {
-        state = { ...state, pendingUpgrades };
-      } else {
-        open('game');
-      }
+      state = {
+        ...state,
+        pendingUpgrades,
+        status: pendingUpgrades.length > 0 ? 'choosingUpgrade' : 'running',
+      };
+    },
+    onUpgradeCue(cue, variant) {
+      console.info('[ui] onUpgradeCue', cue, variant);
     },
     onToggleCalmMode(enabled) {
       console.info('[ui] onToggleCalmMode', enabled);
@@ -342,6 +345,19 @@ window.addEventListener('keydown', (event) => {
     open('relics');
   } else if (event.code === 'F9') {
     open('fusion');
+  } else if (event.code === 'KeyO') {
+    // A player of another screen takes the first card of their offer.
+    const offer = state.pendingUpgrades.find((pending) => pending.playerId >= localCount);
+    const upgradeId = offer?.options[0];
+    if (offer !== undefined && upgradeId !== undefined) {
+      const pendingUpgrades = state.pendingUpgrades.filter((pending) => pending !== offer);
+      state = {
+        ...state,
+        pendingUpgrades,
+        status: pendingUpgrades.length > 0 ? 'choosingUpgrade' : 'running',
+        events: [{ type: 'upgradeChosen', playerId: offer.playerId, upgradeId }],
+      };
+    }
   } else if (event.code === 'KeyV') {
     state = { ...state, events: [{ type: 'volumeChanged', volume: state.volume ?? 0 }] };
   } else if (/^F[1-5]$/.test(event.code)) {

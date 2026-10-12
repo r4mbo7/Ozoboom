@@ -71,11 +71,24 @@ export interface EndSession {
   role: 'host' | 'guest';
 }
 
+// A sound of the upgrade menu, played when the menu shows what it tells.
+export type UpgradeCue =
+  | 'cardDealt'
+  | 'cardsReady'
+  | 'cardRare'
+  | 'cardLegendary'
+  | 'upgradeChosen'
+  | 'mateChose'
+  | 'cardFlight'
+  | 'cardLanded';
+
 export interface UiCallbacks {
   onStart(): void;
   onRestart(): void;
   onQuit(): void;
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
+  // The variant is the turn of a dealt card, 0 for the other cues.
+  onUpgradeCue?(cue: UpgradeCue, variant: number): void;
   onToggleCalmMode(enabled: boolean): void;
   onToggleMute(muted: boolean): void;
   // From 1 to `VOLUME_STEPS`.

@@ -1,6 +1,7 @@
 import { type Locator, type Page, expect as baseExpect, test } from './test';
 import {
   PAD,
+  cardsDealt,
   collectConsoleErrors,
   playSolo,
   plugFakeGamepad,
@@ -60,6 +61,7 @@ async function openUpgrade(page: Page): Promise<Locator> {
   const upgrade = page.getByRole('region', { name: 'Choix d’amélioration' });
   await expect(upgrade).toBeVisible();
   await expect(upgrade.getByRole('button')).toHaveCount(3);
+  await cardsDealt(page);
   return upgrade;
 }
 

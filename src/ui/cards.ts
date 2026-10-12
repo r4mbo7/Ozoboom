@@ -1,5 +1,5 @@
 import type { GameContent, Rarity, UpgradeFamily, WeaponDefinition } from '../data/types';
-import type { PlayerState, UpgradeOffer } from '../sim/state';
+import type { PlayerId, PlayerState, SimEvent, UpgradeOffer } from '../sim/state';
 import { upgradeForm } from '../sim/stats';
 
 export const SIXTEENTHS_PER_BAR = 16;
@@ -19,6 +19,13 @@ const RARITY_LABEL: Record<Rarity, string | null> = {
 
 export type CardTint = 'common' | 'rare' | 'legendary' | 'relic' | 'fusion';
 
+// The rank a card gives, out of how many: one pearl per rank, and the words that say it.
+export interface Pearls {
+  rank: number;
+  max: number;
+  label: string;
+}
+
 interface CardBase {
   id: string;
   name: string;
@@ -32,6 +39,8 @@ export interface UpgradeCard extends CardBase {
   family: UpgradeFamily;
   label: string;
   rank: string;
+  // A relic comes once, from a boss: it has no rank to tell.
+  pearls: Pearls | null;
 }
 
 export interface WeaponCard extends CardBase {
@@ -39,6 +48,7 @@ export interface WeaponCard extends CardBase {
   weapon: WeaponDefinition;
   label: string;
   rank: string;
+  pearls: Pearls;
   // One entry per sixteenth note of the bar, or `continuous`.
   steps: readonly boolean[] | 'continuous';
   // Above one, the weapon fires on one bar out of that many.
@@ -74,12 +84,15 @@ export function stepsOf(weapon: WeaponDefinition): readonly boolean[] | 'continu
   return Array.from({ length: SIXTEENTHS_PER_BAR }, (_, step) => steps.includes(step));
 }
 
-// A relic comes once, from a boss: it has no rank to tell.
-function rankOf(family: UpgradeFamily, stacks: number, maxStacks: number): string {
+function pearlsOf(unit: string, rank: number, max: number): Pearls {
+  return { rank, max, label: `${unit} ${String(rank)} sur ${String(max)}` };
+}
+
+function rankOf(family: UpgradeFamily, stacks: number): string {
   if (family === 'relic') {
     return '';
   }
-  return stacks === 0 ? 'Nouveau' : `Rang ${String(stacks + 1)} sur ${String(maxStacks)}`;
+  return stacks === 0 ? 'Nouveau' : `Rang ${String(stacks + 1)}`;
 }
 
 export function cardFor(
@@ -104,7 +117,8 @@ export function cardFor(
       description: upgradeForm(upgrade, rarity).description,
       family: upgrade.family,
       label: className === undefined ? label : `${label} · ${className}`,
-      rank: rankOf(upgrade.family, stacks, upgrade.maxStacks),
+      rank: rankOf(upgrade.family, stacks),
+      pearls: upgrade.family === 'relic' ? null : pearlsOf('Rang', stacks + 1, upgrade.maxStacks),
       tint: upgrade.family === 'relic' || offer.kind === 'relic' ? 'relic' : rarity,
       rarityLabel: upgrade.family === 'relic' ? null : RARITY_LABEL[rarity],
     };
@@ -143,11 +157,60 @@ export function cardFor(
     weapon,
     label: className === undefined ? 'Agrès' : `Agrès · ${className}`,
     rank: level === 0 ? 'Nouveau' : `Niveau ${String(level + 1)}`,
+    pearls: pearlsOf('Niveau', level + 1, weapon.maxLevel),
     steps: stepsOf(weapon),
     everyBars: weapon.rhythm === 'continuous' ? 1 : weapon.rhythm.everyBars,
     tint: 'common',
     rarityLabel: null,
   };
+}
+
+export function cardName(id: string, content: GameContent): string {
+  return (
+    content.upgrades.find((entry) => entry.id === id)?.name ??
+    content.weapons?.find((entry) => entry.id === id)?.name ??
+    id
+  );
+}
+
+export type Celebrated = 'rare' | 'legendary';
+
+export interface Dealt {
+  // The place of the card in its offer.
+  index: number;
+  delayMs: number;
+  celebrated: Celebrated | null;
+}
+
+const DEAL_STAGGER_MS = 150;
+const DEAL_SPAN_MS = 300;
+const CELEBRATED: Partial<Record<CardTint, number>> = { rare: 1, legendary: 2 };
+
+// The cards fall one by one inside the grace of the menu, the rarest last.
+export function dealOf(tints: readonly CardTint[]): Dealt[] {
+  const stagger = Math.min(DEAL_STAGGER_MS, DEAL_SPAN_MS / Math.max(1, tints.length - 1));
+  return tints
+    .map((tint, index) => ({ tint, index }))
+    .sort((a, b) => (CELEBRATED[a.tint] ?? 0) - (CELEBRATED[b.tint] ?? 0))
+    .map(({ tint, index }, turn) => ({
+      index,
+      delayMs: turn * stagger,
+      celebrated: tint === 'rare' || tint === 'legendary' ? tint : null,
+    }));
+}
+
+// The card a player has just taken, whatever its kind.
+export function pickOf(event: SimEvent): { playerId: PlayerId; cardId: string } | null {
+  switch (event.type) {
+    case 'upgradeChosen':
+      return { playerId: event.playerId, cardId: event.upgradeId };
+    case 'weaponGained':
+      return { playerId: event.playerId, cardId: event.weaponId };
+    case 'weaponEvolved':
+      return { playerId: event.playerId, cardId: event.resultId };
+    default:
+      return null;
+  }
 }
 
 function listOf(names: readonly string[]): string {
@@ -157,16 +220,34 @@ function listOf(names: readonly string[]): string {
     : `${names.slice(0, -1).join(', ')} et ${last}`;
 }
 
+// A player of another screen: still choosing, or the name of the card taken.
+export interface RemoteChoice {
+  name: string;
+  classId: string;
+  picked: string | null;
+}
+
+export interface WaitChip {
+  text: string;
+  // Once the choice is made, the chip takes the colour and the mark of that class.
+  classId: string | null;
+}
+
 export interface Waiting {
-  // One line per remote player who still has an offer.
-  choosing: string[];
+  // One chip per remote player of this offer.
+  chips: WaitChip[];
   // Once every player of this screen has chosen: who the set waits for.
   waiting: string | null;
 }
 
-export function waitingFor(remote: readonly string[], localsDone: boolean): Waiting {
+export function waitingFor(remote: readonly RemoteChoice[], localsDone: boolean): Waiting {
+  const choosing = remote.filter((player) => player.picked === null).map((player) => player.name);
   return {
-    choosing: remote.map((name) => `${name} choisit…`),
-    waiting: remote.length > 0 && localsDone ? `En attente de ${listOf(remote)}` : null,
+    chips: remote.map((player) =>
+      player.picked === null
+        ? { text: `${player.name} choisit…`, classId: null }
+        : { text: `${player.name} : ${player.picked}`, classId: player.classId },
+    ),
+    waiting: choosing.length > 0 && localsDone ? `En attente de ${listOf(choosing)}` : null,
   };
 }

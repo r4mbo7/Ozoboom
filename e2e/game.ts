@@ -192,6 +192,30 @@ export async function repeatUntil(
     .toBe(true);
 }
 
+// The cards of an offer fall one by one before it takes any input: once they are on the page,
+// wait until they have all landed and stand still before measuring them. A busy machine draws
+// the fall seconds after the menu has counted it.
+export async function cardsDealt(page: Page): Promise<void> {
+  await expect(page.locator('.ui-offer[data-state="dealing"]')).toHaveCount(0, { timeout: 30_000 });
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll('.ui-card')].every(
+            (card) => card.getAnimations().length === 0,
+          ),
+        ),
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+}
+
+export function logsOf(page: Page): string[] {
+  const logs: string[] = [];
+  page.on('console', (message) => logs.push(message.text()));
+  return logs;
+}
+
 export async function tapButtonUntil(
   page: Page,
   button: number,

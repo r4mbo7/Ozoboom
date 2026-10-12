@@ -5,6 +5,7 @@ import {
   LATE_TOLERANCE_SECONDS,
   LOOKAHEAD_SECONDS,
   barSeconds,
+  beatSeconds,
   firstStepAtOrAfter,
   follow,
   sixteenthSeconds,
@@ -121,6 +122,10 @@ const OPEN_HZ = 20_000;
 const CHOKED_HZ = 380;
 const CHOKE_TOP_HZ = 3000;
 const CHOKE_SMOOTHING = 0.12;
+const DIVE_HZ = 900;
+// In decibels, for a low-pass: the peak that makes the closing heard as a sweep.
+const DIVE_Q = 6;
+const DIVE_OPEN_SECONDS = 0.01;
 const PULSE_GLIDE = 0.12;
 
 export function latched(on: boolean, life: number, threshold: Threshold): boolean {
@@ -145,6 +150,12 @@ export function musicCutoff(choke: boolean, life: number): number {
   return choke
     ? CHOKED_HZ * (CHOKE_TOP_HZ / CHOKED_HZ) ** (Math.max(0, life) / CHOKE.below)
     : OPEN_HZ;
+}
+
+// Under water while a card is chosen: shallower than the choke and resonant, a filter sweep and not
+// a scene that dies.
+export function diveCutoff(status: GameStatus): number {
+  return status === 'choosingUpgrade' ? DIVE_HZ : OPEN_HZ;
 }
 
 export function modeOf(status: GameStatus): MusicMode {
@@ -542,7 +553,13 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   const context = out.context;
   const level = context.createGain();
   const fader = createFader(level.gain, context, 1, () => barSeconds(tempo));
-  level.connect(out);
+  const dive = context.createBiquadFilter();
+  dive.type = 'lowpass';
+  dive.frequency.value = OPEN_HZ;
+  dive.Q.value = DIVE_Q;
+  level.connect(dive);
+  dive.connect(out);
+  let dived = OPEN_HZ;
   let bus: Bus | null = null;
   let last: SimState | null = null;
   let endsAt = 0;
@@ -628,6 +645,18 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   function setEcho(target: Bus, at: number, open: boolean) {
     target.echoFeedback.gain.setTargetAtTime(open ? target.feedback : 0, at, 0.01);
     target.echoReturn.gain.setTargetAtTime(open ? target.ret : 0, at, 0.01);
+  }
+
+  // Closes over one beat, like a break, and opens at once when the set resumes.
+  function diveTo(cutoff: number, at: number) {
+    if (cutoff !== dived) {
+      dived = cutoff;
+      dive.frequency.setTargetAtTime(
+        cutoff,
+        at,
+        cutoff < OPEN_HZ ? beatSeconds(tempo) / 4 : DIVE_OPEN_SECONDS,
+      );
+    }
   }
 
   function extinguish(at: number) {
@@ -864,6 +893,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         anchor = null;
         followedTick = -1;
       }
+      diveTo(diveCutoff(state.status), currentTime);
       const nextMode = modeOf(state.status);
       if (nextMode !== mode) {
         mode = nextMode;

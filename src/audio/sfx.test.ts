@@ -76,8 +76,6 @@ const soundingEvents: readonly [SimEvent, SfxName][] = [
   [{ type: 'coreHit', damage: 2 }, 'coreHit'],
   [{ type: 'trapFired', id: 4, kind: 'caisson-de-basse', x: 0, y: 0 }, 'trapSub'],
   [{ type: 'trapFired', id: 5, kind: 'laser', x: 0, y: 0 }, 'trapBreath'],
-  [{ type: 'levelUp', playerId: 0, level: 2 }, 'levelUp'],
-  [{ type: 'upgradeChosen', playerId: 0, upgradeId: 'x' }, 'upgradeChosen'],
   [{ type: 'skillUsed', playerId: 0 }, 'skillUsed'],
   [{ type: 'skillUsed', playerId: 1 }, 'skillCharge'],
   [{ type: 'skillUsed', playerId: 2 }, 'skillHeal'],
@@ -152,6 +150,8 @@ describe('sfxOf', () => {
       weaponHit('inconnu'),
       { type: 'enemyShot', id: 1, kind: 'filmeur', x: 0, y: 0 },
       { type: 'speakerPlugged', speakerId: 'sub' },
+      { type: 'levelUp', playerId: 0, level: 2 },
+      { type: 'upgradeChosen', playerId: 0, upgradeId: 'x' },
       { type: 'futureEvent' } as unknown as SimEvent,
     ];
 
@@ -452,8 +452,20 @@ describe('the sounds of the team and of a revive', () => {
   });
 });
 
-describe('the lobby cues', () => {
-  const cues = ['seatTaken', 'seatFreed', 'launch'] as const;
+describe('the cues of the lobby and of the upgrade menu', () => {
+  const cues = [
+    'seatTaken',
+    'seatFreed',
+    'launch',
+    'cardDealt',
+    'cardsReady',
+    'cardRare',
+    'cardLegendary',
+    'upgradeChosen',
+    'mateChose',
+    'cardFlight',
+    'cardLanded',
+  ] as const;
 
   it.each(cues)('sounds %s once, within its limit', (cue) => {
     const { out, peaks } = recordingOutput();
@@ -477,6 +489,45 @@ describe('the lobby cues', () => {
     sfx.cue(cue, 1);
 
     expect(peaks.reduce((sum, peak) => sum + peak, 0) * 0.45).toBeLessThan(0.5);
+  });
+
+  it('climbs the scale card after card, then closes on the octave when the highlight comes', () => {
+    const { out, tones } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf);
+
+    [0, 1, 2].forEach((turn) => {
+      sfx.beginFrame();
+      sfx.cue('cardDealt', 1 + turn * 0.15, turn);
+    });
+    sfx.cue('cardsReady', 1.5);
+
+    expect(tones).toHaveLength(4);
+    expect([...tones].sort((a, b) => a - b)).toEqual(tones);
+    expect(tones[3]).toBeCloseTo(2 * (tones[0] ?? 0));
+  });
+
+  it('lets the three cards of an offer ring over one another', () => {
+    const { out, tones } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf);
+
+    [0, 1, 2].forEach((turn) => {
+      sfx.beginFrame();
+      sfx.cue('cardDealt', 1 + turn * 0.15, turn);
+    });
+
+    expect(tones).toHaveLength(3);
+  });
+
+  it('plays a full chord for a choice, where a friend only gets two soft notes', () => {
+    const mine = recordingOutput();
+    const theirs = recordingOutput();
+
+    createSfx(mine.out, trapEffectOf).cue('upgradeChosen', 1);
+    createSfx(theirs.out, trapEffectOf).cue('mateChose', 1);
+
+    expect(new Set(mine.tones).size).toBe(5);
+    expect(theirs.tones).toHaveLength(2);
+    expect(Math.max(...theirs.peaks)).toBeLessThan(Math.max(...mine.peaks));
   });
 });
 

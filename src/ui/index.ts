@@ -166,8 +166,15 @@ export function createUi(
     },
   });
   const hud = createHud();
-  const upgrade = createUpgradeOverlay((playerId, upgradeId) => {
-    callbacks.onChooseUpgrade(playerId, upgradeId);
+  const upgrade = createUpgradeOverlay({
+    calm: () => calmMode || prefersCalmMode(),
+    choose(playerId, upgradeId) {
+      callbacks.onChooseUpgrade(playerId, upgradeId);
+    },
+    cue(cue, variant) {
+      callbacks.onUpgradeCue?.(cue, variant);
+    },
+    landing: (playerId, weaponId) => hud.landing(playerId, weaponId),
   });
   const end = createEnd(
     () => {
@@ -253,6 +260,7 @@ export function createUi(
   container.append(
     hud.element,
     upgrade.element,
+    upgrade.effects,
     end.element,
     title.element,
     classPicker.element,

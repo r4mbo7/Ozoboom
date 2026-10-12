@@ -1,11 +1,8 @@
-import { type Locator, type Page, expect, test } from './test';
-import { collectConsoleErrors, repeatUntil } from './game';
+import { type Locator, type Page, expect as baseExpect, test } from './test';
+import { collectConsoleErrors, logsOf, repeatUntil } from './game';
 
-function logsOf(page: Page): string[] {
-  const logs: string[] = [];
-  page.on('console', (message) => logs.push(message.text()));
-  return logs;
-}
+// A machine busy with other browsers draws a frame of a menu in seconds: every wait is patient.
+const expect = baseExpect.configure({ timeout: 30_000 });
 
 async function currentIndex(cards: Locator): Promise<number> {
   return cards.evaluateAll((nodes) =>
@@ -114,8 +111,9 @@ test.describe('offers side by side', () => {
     await expect(panels.nth(1)).toHaveAttribute('data-state', 'choosing');
     await expect(first.nth(1)).toContainText('Choisi');
     expect(await currentIndex(second)).toBe(2);
-    expect(logs).toContain('[ui] onChooseUpgrade 0 baskets-de-feu');
-    expect(logs.filter((line) => line.startsWith('[ui] onChooseUpgrade'))).toHaveLength(1);
+    await expect
+      .poll(() => logs.filter((line) => line.startsWith('[ui] onChooseUpgrade')))
+      .toEqual(['[ui] onChooseUpgrade 0 baskets-de-feu']);
     expect(errors).toEqual([]);
   });
 
@@ -138,6 +136,44 @@ test.describe('offers side by side', () => {
 
     await expect(status).toHaveText('En attente de Inès');
     await expect(page.locator('.ui-offers__chip')).toHaveText(['Inès choisit…']);
+  });
+
+  test('announce the card a friend took, in the colour of their class', async ({ page }) => {
+    const logs = logsOf(page);
+    await page.goto('/dev/ui.html?screen=offers');
+    const chip = page.locator('.ui-offers__chip');
+    await expect(chip).toHaveText(['Inès choisit…']);
+    await expect(chip).not.toHaveAttribute('data-done', '');
+
+    await page.keyboard.press('KeyO');
+
+    await expect(chip).toHaveText(['Inès : Baskets de feu']);
+    await expect(chip).toHaveAttribute('data-done', '');
+    await expect(chip.locator('svg')).toBeVisible();
+    expect(logs).toContain('[ui] onUpgradeCue mateChose 0');
+    await expect(page.locator('.ui-offer:visible')).toHaveCount(2);
+  });
+
+  test('send every chosen card to the bracelet of its player once all have chosen', async ({
+    page,
+  }) => {
+    const logs = logsOf(page);
+    await page.goto('/dev/ui.html?screen=offers');
+    await expect(page.locator('.ui-offer:visible')).toHaveCount(2);
+    await page.keyboard.press('KeyO');
+    await expect(page.locator('.ui-offers__chip')).toHaveAttribute('data-done', '');
+
+    await repeatUntil(
+      async () => {
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Space');
+      },
+      () => page.locator('.ui-upgrade').isHidden(),
+    );
+
+    const cues = (name: string) => logs.filter((line) => line === `[ui] onUpgradeCue ${name} 0`);
+    await expect.poll(() => cues('cardLanded')).toHaveLength(2);
+    expect(cues('cardFlight')).toHaveLength(1);
   });
 
   test('stay a single panel, as before, for one player', async ({ page }) => {
