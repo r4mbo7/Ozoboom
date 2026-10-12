@@ -745,7 +745,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         detune,
         gain: 0.019 * gain,
         attack: 0.14,
-        hold: held(ctx, steps, 0.4),
+        hold: held(ctx, steps, 0.14 + 0.4),
         release: 0.4,
         pan: detune / 24,
         ...(steps >= 4 ? { vibrato: { hz: 5.2, cents: 16, delay: 0.28 } } : {}),

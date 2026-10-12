@@ -345,6 +345,15 @@ describe('ambyss voices', () => {
     expect(Math.max(...cut.ends)).toBeCloseTo(2.8, 6);
   });
 
+  it('stops the strings at the cut, their slow attack included', () => {
+    const cut = probe();
+
+    MUSIC_VOICES.strings(contextOf(cut, { steps: 8, until: 1.8 }));
+
+    expect(cut.oscillators).toBeGreaterThan(0);
+    expect(Math.max(...cut.ends)).toBeCloseTo(1.8, 6);
+  });
+
   it('sings the aah as a short stab of two voices', () => {
     const rig = probe();
     const sixteenth = sixteenthSeconds();
