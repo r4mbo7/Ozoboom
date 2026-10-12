@@ -28,6 +28,30 @@ export interface LookInput {
   sinceSkill: number;
 }
 
+// Every field is written before a look reads it.
+export function createLookInput(): LookInput {
+  return {
+    player: undefined as unknown as PlayerState,
+    x: 0,
+    y: 0,
+    angle: 0,
+    scale: 1,
+    color: 0,
+    teint: 0,
+    frame: undefined as unknown as Frame,
+    dt: 0,
+    speed: 0,
+    moving: 0,
+    heading: 0,
+    beatIndex: 0,
+    sinceBeat: 0,
+    fireCount: 0,
+    sinceFire: Infinity,
+    sinceHit: Infinity,
+    sinceSkill: Infinity,
+  };
+}
+
 export interface Look {
   // Returns how high the player is lifted, 0 on the ground, for the shadow.
   place(input: LookInput): number;

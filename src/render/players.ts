@@ -10,16 +10,16 @@ import { createParasolLook } from './look-parasol';
 import { createPoiLook } from './look-poi';
 import { lerp } from './motion';
 import { TAU } from './paint';
-import type { Look, LookInput, Spawn } from './player-look';
+import { PlayerGlow } from './player-glow';
+import { type Look, type Spawn, createLookInput } from './player-look';
 import { PlayerTag, ReviveLog } from './player-tags';
-import { PLAYER_LOOKS, type PlayerLook, REFERENCE } from './textures-players';
+import { CONTOUR_RING, PLAYER_LOOKS, type PlayerLook, REFERENCE } from './textures-players';
 import { add, hide, lookup, setTint } from './util';
 import { ViewPool } from './views';
 
 const LOOKS: ReadonlyMap<string, PlayerLook> = new Map(Object.entries(PLAYER_LOOKS));
 const TEINTS = [0xf1c9a5, 0xd9a07a, 0xa86f4c, 0x7a4a31];
 const DOWNED_TINT = 0x8e8e98;
-const CONTOUR_RING = 58;
 const CONTOUR_MARGIN = 4;
 const MAX_STEP_TICKS = 3;
 const NEVER = Number.NEGATIVE_INFINITY;
@@ -41,6 +41,7 @@ interface PlayerView {
   heading: number;
   readonly looks: Partial<Record<PlayerLook, Look>>;
   readonly halo: Sprite;
+  readonly glow: PlayerGlow;
   readonly tag: PlayerTag;
   readonly shadow: Sprite;
   readonly lying: Sprite;
@@ -83,6 +84,7 @@ export function createPlayers(ctx: RenderContext): Family {
       heading: 0,
       looks: {},
       halo: add(layers.glow, textures.halo),
+      glow: new PlayerGlow(ctx, marks),
       tag: new PlayerTag(ctx, rings, tags),
       shadow: add(ground, t.looks.poi.shadow),
       lying: add(bodies, t.looks.poi.downed),
@@ -94,6 +96,7 @@ export function createPlayers(ctx: RenderContext): Family {
       view.lastNow = NEVER;
       view.moving = 0;
       view.tag.hide();
+      view.glow.reset();
       hide(view.halo, view.shadow, view.lying, view.aim, view.contour);
       for (const look of Object.values(view.looks)) {
         look.hide();
@@ -102,26 +105,7 @@ export function createPlayers(ctx: RenderContext): Family {
     },
   );
 
-  const input: LookInput = {
-    player: undefined as unknown as PlayerState,
-    x: 0,
-    y: 0,
-    angle: 0,
-    scale: 1,
-    color: 0,
-    teint: 0,
-    frame: undefined as unknown as Frame,
-    dt: 0,
-    speed: 0,
-    moving: 0,
-    heading: 0,
-    beatIndex: 0,
-    sinceBeat: 0,
-    fireCount: 0,
-    sinceFire: Infinity,
-    sinceHit: Infinity,
-    sinceSkill: Infinity,
-  };
+  const input = createLookInput();
 
   function momentsOf(id: PlayerId): Moments {
     let found = moments.get(id);
@@ -133,7 +117,7 @@ export function createPlayers(ctx: RenderContext): Family {
   }
 
   return {
-    onEvent(event: SimEvent, state: SimState): void {
+    onEvent(event: SimEvent, state: SimState, frame: Frame): void {
       revives.onEvent(event, state.tick);
       switch (event.type) {
         case 'beat':
@@ -151,6 +135,9 @@ export function createPlayers(ctx: RenderContext): Family {
           break;
         case 'skillUsed':
           momentsOf(event.playerId).skill = state.tick;
+          break;
+        case 'pickupCollected':
+          views.peek(event.playerId)?.glow.collect(state.tick, frame.tempo);
           break;
         default:
           break;
@@ -207,6 +194,7 @@ export function createPlayers(ctx: RenderContext): Family {
         );
 
         const downed = player.downed;
+        const bounce = view.glow.place(player, x, y, lookTextures.extent * scale, frame);
         const dt =
           view.lastNow === NEVER ? 0 : Math.min(MAX_STEP_TICKS, Math.max(0, now - view.lastNow));
         view.lastNow = now;
@@ -234,7 +222,7 @@ export function createPlayers(ctx: RenderContext): Family {
           input.x = x;
           input.y = y;
           input.angle = angle;
-          input.scale = scale;
+          input.scale = scale * bounce;
           input.color = color;
           input.teint = teintOf(player);
           input.frame = frame;

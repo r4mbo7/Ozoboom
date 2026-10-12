@@ -28,6 +28,9 @@ import {
 
 export { REFERENCE } from './textures-looks';
 
+// Radius of the ring drawn in the contour piece, in its own pixels.
+export const CONTOUR_RING = 58;
+
 export type PlayerLook = 'poi' | 'bag' | 'parasol';
 
 // The classes are content, their look is not: a class with no entry here fails loud in the scene.
@@ -166,7 +169,7 @@ const PIECES = {
     (ctx) => {
       ctx.lineWidth = 3;
       ctx.strokeStyle = WHITE;
-      circle(ctx, 58);
+      circle(ctx, CONTOUR_RING);
       ctx.stroke();
     },
   ],
