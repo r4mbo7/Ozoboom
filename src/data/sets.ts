@@ -325,12 +325,12 @@ const AMBYSS: SetDefinition = {
   ...MAIN_STAGE,
   tiers: denserTiers(1.25),
   id: 'ambyss',
-  trackIds: ['premier-rayon', 'sous-la-voile', 'les-quatre-marches'],
+  trackIds: ['sous-la-voile', 'les-quatre-marches'],
   name: 'Ambyss',
-  style: 'Chillgressive, sunrise',
+  style: 'Psychill, ambient',
   ticksPerBeat: AMBYSS_TICKS_PER_BEAT,
   decor: 'ambyss',
-  acoustics: { reverbSeconds: 1.6, wet: 0.18 },
+  acoustics: { reverbSeconds: 4.5, wet: 0.5, lowCutHz: 220, toneHz: 5200 },
   speakers: inCorners(MAIN_STAGE.speakers),
 };
 

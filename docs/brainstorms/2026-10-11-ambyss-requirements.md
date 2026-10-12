@@ -7,7 +7,7 @@ topic: ambyss
 
 ## Cadre
 
-Le 2026-10-11, Constantin ajoute une troisième scène, Ambyss, en référence à la scène Ambyss d'Ozora : la scène de l'éveil, en plein air au sommet d'une petite butte, où l'on s'assoit sur des coussins, où l'on lâche prise et où l'on pleure au lever du soleil. Le visuel est l'option B « La voile tendue », retenue parmi trois maquettes, avec le filtre cosmique « traces et voiles ». La musique est « Premier rayon », retenu parmi quatre prototypes. Les maquettes sont hors du dépôt : `.lavish/ambyss/index.html`.
+Le 2026-10-11, Constantin ajoute une troisième scène, Ambyss, en référence à la scène Ambyss d'Ozora : la scène de l'éveil, en plein air au sommet d'une petite butte, où l'on s'assoit sur des coussins, où l'on lâche prise et où l'on pleure au lever du soleil. Le visuel est l'option B « La voile tendue », retenue parmi trois maquettes, avec le filtre cosmique « traces et voiles ». La musique était « Premier rayon » ; le 2026-10-12, Constantin la remplace par deux morceaux écrits d'après ses enregistrements de référence, « Sous la voile » et « Les quatre marches ». Les maquettes sont hors du dépôt : `.lavish/ambyss/index.html` et `.lavish/ambyss-musiques/index.html`.
 
 Ambyss est un troisième set (`SetDefinition`), comme le Dome : des données, sans `if` de scène dans la logique. Au plus simple en cas de doute.
 
@@ -18,12 +18,12 @@ Ambyss est un troisième set (`SetDefinition`), comme le Dome : des données, sa
 - R1. Une arène aux dimensions de la main stage, le noyau au centre, sans obstacle et sans pente : la butte n'est qu'un décor.
 - R2. Les paliers, les boss et les enceintes annexes de la main stage. Les enceintes sont replacées hors de la toile.
 - R3. Ambyss joue à 116 BPM, les 4/5 de 145 : un temps vaut 15 ticks (ADR 0012). Les règles d'apparition de la main stage sont rendues plus denses pour garder le même nombre de bad vibes par seconde, comme au Dome.
-- R4. Une réverbe de plein air, courte et claire, réglée dans le set.
+- R4. Une réverbe longue de 4,5 s, sans le grave, réglée dans le set : celle des enregistrements de référence.
 
 **Musique**
 
-- R5. Un morceau synthétisé, transcrit du prototype de `.lavish/ambyss/index.html` : « Premier rayon », chillgressive de lever du soleil en mi majeur, suite vi-IV-I-V. Kick doux sur les 4 temps, basse en contretemps, arpège pluck, cordes qui pleurent au break, une octave plus haut au drop, chœur au break.
-- R6. Ambyss tire ses morceaux parmi les siens : un seul pour l'instant.
+- R5. Deux morceaux synthétisés, écrits à mi-tempo (pouls ressenti de 58), à l'écho large et sans roulement de caisse claire avant le drop. « Sous la voile » : psychill en do dorien, basse qui glisse, tambours accordés, nappe d'harmoniques, maillets à échos, flûte bansuri. « Les quatre marches » : ambient en la mineur, basse qui descend La, Sol, Fa, Mi sous une nappe immobile, battement de cœur, piano feutré, voix doublée au violoncelle.
+- R6. Ambyss tire ses morceaux parmi les siens : ces deux-là.
 
 **Décor : la voile tendue**
 

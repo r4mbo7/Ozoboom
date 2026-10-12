@@ -161,7 +161,7 @@ Les nombres sont des points de départ, à régler dans `src/data/` en jouant.
 | ---------- | ---------------------------------- | ------------------------------------------------------- | --------------------------------------- |
 | Main stage | psytrance full-on, 145 BPM         | rive du lac                                             | aucun                                   |
 | Le Dome    | downtempo, dub, psybient, 96,7 BPM | coupole de bois sur le sable, quatre géants champignons | poteaux de la couronne, bras des géants |
-| Ambyss     | chillgressive, sunrise, 116 BPM    | butte, piste en amande à coussins, toile tendue         | aucun                                   |
+| Ambyss     | psychill, ambient, 116 BPM         | butte, piste en amande à coussins, toile tendue         | aucun                                   |
 
 - Même arène, même noyau, mêmes paliers et boss ; au Dome et à Ambyss, les quatre enceintes sont replacées dans les coins.
 - Au Dome, tout ce qui se compte en temps, en mesures et en phrases dure moitié plus ; les durées en ticks restent en temps réel ([ADR 0012](adr/0012-le-tempo-est-une-donnee-de-la-scene.md)). Ses vagues de groupe sont plus denses pour garder la pression par seconde.

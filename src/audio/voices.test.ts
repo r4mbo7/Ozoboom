@@ -307,32 +307,6 @@ describe('dub and dome voices', () => {
 });
 
 describe('ambyss voices', () => {
-  it('plucks a saw and its octave, with a share into the echo', () => {
-    const rig = probe();
-    const gains = spyGains(rig);
-
-    MUSIC_VOICES['sunrise-pluck'](contextOf(rig));
-
-    expect(rig.oscillators).toBe(2);
-    expect(gains.sends()).toEqual([0.35]);
-  });
-
-  it('bows three saws, with a vibrato only on long notes, and scales them with the part', () => {
-    const short = probe();
-    const long = probe();
-    const loud = probe();
-    const shortPeaks = spyGains(short);
-    const loudPeaks = spyGains(loud);
-
-    MUSIC_VOICES.strings(contextOf(short, { steps: 2 }));
-    MUSIC_VOICES.strings(contextOf(long, { steps: 8 }));
-    MUSIC_VOICES.strings(contextOf(loud, { steps: 2, gain: 1.6 }));
-
-    expect(short.oscillators).toBe(3);
-    expect(long.oscillators).toBe(6);
-    expect(loudPeaks.peaks()).toEqual(shortPeaks.peaks().map((peak) => peak * 1.6));
-  });
-
   it('holds the ooh over the bar and stops it at the cut', () => {
     const held = probe();
     const cut = probe();
@@ -344,25 +318,6 @@ describe('ambyss voices', () => {
     expect(held.oscillators).toBe(9);
     expect(Math.max(...held.ends)).toBeGreaterThan(2.6 + 12 * sixteenth);
     expect(Math.max(...cut.ends)).toBeCloseTo(2.8, 6);
-  });
-
-  it('stops the strings at the cut, their slow attack included', () => {
-    const cut = probe();
-
-    MUSIC_VOICES.strings(contextOf(cut, { steps: 8, until: 1.8 }));
-
-    expect(cut.oscillators).toBeGreaterThan(0);
-    expect(Math.max(...cut.ends)).toBeCloseTo(1.8, 6);
-  });
-
-  it('sings the aah as a short stab of two voices', () => {
-    const rig = probe();
-    const sixteenth = sixteenthSeconds();
-
-    MUSIC_VOICES.aah(contextOf(rig, { steps: 2 }));
-
-    expect(rig.oscillators).toBe(6);
-    expect(Math.max(...rig.ends)).toBeLessThan(1 + 2 * sixteenth + 0.3);
   });
 });
 

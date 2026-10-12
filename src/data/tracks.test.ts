@@ -154,37 +154,13 @@ describe('the Dome tracks', () => {
   });
 });
 
-describe('Premier rayon', () => {
-  const ambyss = SETS.find((set) => set.id === 'ambyss');
-  const track = TRACKS.find((candidate) => candidate.id === ambyss?.trackIds[0]);
-
-  it('plays at Ambyss in E major over vi-IV-I-V', () => {
-    expect(ambyss?.trackIds).toContain('premier-rayon');
-    expect(track?.name).toBe('Premier rayon');
-    expect((track?.rootMidi ?? 0) % 12).toBe(4);
-    expect(track?.scale).toEqual([0, 2, 4, 5, 7, 9, 11]);
-    expect(track?.chords).toEqual([5, 3, 0, 4]);
-  });
-
-  it('keeps a soft kick on the four beats, silent in the break', () => {
-    const kicks = (heard: string) =>
-      (track?.drums ?? [])
-        .filter((drum) => drum.voice === 'kick' && drum.in === heard)
-        .flatMap((drum) => drum.hits.map(([step]) => step));
-
-    expect(kicks('drop')).toEqual([0, 4, 8, 12]);
-    expect(kicks('rise')).toEqual([0, 4, 8, 12]);
-    expect(track?.drums?.every((drum) => drum.in === 'rise' || drum.in === 'drop')).toBe(true);
-  });
-
-  it('cries the strings louder in the break, and doubles them an octave up in the drop', () => {
-    const strings = (track?.parts ?? []).filter((part) => part.voice === 'strings');
-
-    expect(strings.map((part) => [part.in, part.octave, part.gain])).toEqual([
-      ['light', 3, 1.6],
-      ['drop', 3, 1],
-      ['drop', 4, 0.45],
+describe('the Ambyss tracks', () => {
+  it('plays Sous la voile and Les quatre marches, and no longer Premier rayon', () => {
+    expect(SETS.find((set) => set.id === 'ambyss')?.trackIds).toEqual([
+      'sous-la-voile',
+      'les-quatre-marches',
     ]);
+    expect(TRACKS.map((track) => track.id)).not.toContain('premier-rayon');
   });
 });
 

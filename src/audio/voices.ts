@@ -764,48 +764,6 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       });
     }
   },
-  'sunrise-pluck': (ctx) => {
-    const { out, at, hz, position, gain } = ctx;
-    const pan = position % 2 === 0 ? -0.4 : 0.4;
-    playTone(echoed(ctx, 0.35), at, {
-      wave: 'sawtooth',
-      hz,
-      gain: 0.085 * gain,
-      attack: 0.002,
-      hold: 0.01,
-      release: 0.24,
-      pan,
-      filter: { type: 'lowpass', hz: 3000, toHz: 420, glide: 0.18, q: 4 },
-    });
-    playTone(out, at, {
-      wave: 'square',
-      hz: hz * 2,
-      gain: 0.008 * gain,
-      attack: 0.002,
-      hold: 0.005,
-      release: 0.1,
-      pan,
-      filter: { type: 'lowpass', hz: 3200 },
-    });
-  },
-  strings: (ctx) => {
-    const { at, hz, steps, gain, light } = ctx;
-    const into = echoed(ctx, 0.3);
-    for (const detune of [-11, 0, 11]) {
-      playTone(into, at, {
-        wave: 'sawtooth',
-        hz,
-        detune,
-        gain: 0.019 * gain,
-        attack: 0.14,
-        hold: held(ctx, steps, 0.14 + 0.4),
-        release: 0.4,
-        pan: detune / 24,
-        ...(steps >= 4 ? { vibrato: { hz: 5.2, cents: 16, delay: 0.28 } } : {}),
-        filter: { type: 'lowpass', hz: light ? 2000 : 2800, q: 0.8 },
-      });
-    }
-  },
   ooh: (ctx) => {
     const { out, at, hz, steps, gain } = ctx;
     sing(out, at, hz, VOWEL_O, {
@@ -814,16 +772,6 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       attack: 0.8,
       hold: held(ctx, steps, 1.6, 0.8),
       release: 0.8,
-    });
-  },
-  aah: (ctx) => {
-    const { at, hz, steps, gain } = ctx;
-    sing(echoed(ctx, 0.5), at, hz, VOWEL_A, {
-      detunes: [-5, 5],
-      gain: 0.09 * gain,
-      attack: 0.02,
-      hold: held(ctx, steps, 0.27, 0.75),
-      release: 0.25,
     });
   },
   bubble: (ctx) => {

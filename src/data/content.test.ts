@@ -824,11 +824,17 @@ describe('Ambyss', () => {
   const main = sets[0];
   const center = { x: (ambyss?.arena.width ?? 0) / 2, y: (ambyss?.arena.height ?? 0) / 2 };
 
-  it('plays at four fifths of the main stage tempo in the open air, on the same arena', () => {
+  it('plays at four fifths of the main stage tempo in a long reverb, on the same arena', () => {
     expect(ambyss?.ticksPerBeat).toBe(15);
     expect(ambyss?.decor).toBe('ambyss');
     expect(ambyss?.obstacles ?? []).toEqual([]);
-    expect(ambyss?.acoustics?.reverbSeconds).toBeLessThan(2);
+    expect(ambyss?.acoustics).toEqual({
+      reverbSeconds: 4.5,
+      wet: 0.5,
+      lowCutHz: 220,
+      toneHz: 5200,
+    });
+    expect(ambyss?.style).toBe('Psychill, ambient');
     expect(ambyss?.arena).toEqual(main?.arena);
   });
 
