@@ -144,3 +144,14 @@ export class DamageTally {
     this.tallies.clear();
   }
 }
+
+export const HEAVY_SHARE = 0.5;
+export const HOLD_TICKS = 2;
+
+// A heavy hit takes at one go this share of the full life of a bad vibe, and leaves it standing.
+export function isHeavy(
+  hit: EnemyHit,
+  enemy: { readonly hp: number; readonly maxHp: number } | undefined,
+): boolean {
+  return enemy !== undefined && enemy.hp > 0 && hit.damage >= HEAVY_SHARE * enemy.maxHp;
+}

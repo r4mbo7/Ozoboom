@@ -9,6 +9,7 @@ import {
   type Tallied,
   contactOf,
   crackStage,
+  isHeavy,
 } from './hit-marks';
 
 const HIT = { type: 'enemyHit', id: 7, damage: 4, x: 100, y: 50 } as const;
@@ -131,5 +132,23 @@ describe('DamageTally', () => {
     shown(tally, NUMBER_GAP_TICKS);
 
     expect(tally.size).toBe(0);
+  });
+});
+
+describe('isHeavy', () => {
+  it('counts a hit that takes half the full life of a bad vibe still standing', () => {
+    const hit = { ...HIT, damage: 15 };
+
+    const heavy = isHeavy(hit, { hp: 15, maxHp: 30 });
+
+    expect(heavy).toBe(true);
+  });
+
+  it('leaves out a lighter hit, a bad vibe it finished and one that already left', () => {
+    const light = isHeavy({ ...HIT, damage: 14 }, { hp: 16, maxHp: 30 });
+    const finished = isHeavy({ ...HIT, damage: 30 }, { hp: 0, maxHp: 30 });
+    const gone = isHeavy({ ...HIT, damage: 30 }, undefined);
+
+    expect([light, finished, gone]).toEqual([false, false, false]);
   });
 });

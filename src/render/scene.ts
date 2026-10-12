@@ -132,7 +132,7 @@ export class Scene implements Renderer {
       createBombs(ctx),
       createBystanders(ctx),
       enemies,
-      createWounds(ctx, (id) => enemies.tiltOf(id)),
+      createWounds(ctx, (id) => enemies.poseOf(id)),
       createSpecials(ctx),
       createProjectiles(ctx),
       createWeapons(ctx),
@@ -141,7 +141,7 @@ export class Scene implements Renderer {
       createMarkers(ctx),
       createStageMarker(ctx),
       createEffects(ctx, (id) => traps.reachOf(id)),
-      createHits(ctx, (id) => enemies.radiusOf(id)),
+      createHits(ctx, enemies),
       createClassEffects(ctx, (id, untilTick) => {
         enemies.blink(id, untilTick);
       }),

@@ -20,6 +20,7 @@ export const FIXTURE_CLASSES: RenderContent['classes'] = [
 export type FixtureEvent =
   | 'beat'
   | 'enemyHit'
+  | 'heavyHit'
   | 'enemyDied'
   | 'coreHit'
   | 'speakerPlugged'

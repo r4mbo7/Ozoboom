@@ -1,10 +1,9 @@
 import { Container, Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
-import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { SimEvent, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import { Farewells, type FarewellHooks } from './enemy-deaths';
-import { Particles } from './effects';
+import { createBurst } from './enemy-burst';
 import { picker } from './faces';
 import { frontGlintOf, glintAlpha, glintStart, placeGlint } from './front-glint';
 import { type Frame, createFrame } from './frame';
@@ -26,14 +25,24 @@ const ZS = 3;
 const BLINK_MIX = { normal: 0.65, calm: 0.35 };
 const GLINT_SIZE = 1.2;
 const GUARD_GRAY = 0.4;
-const COLORS: readonly PaletteToken[] = ['mage', 'tank', 'healer', 'or', 'turquoise'];
+
+// How a bad vibe was last drawn: what is laid over its mask follows it.
+export interface EnemyPose {
+  readonly x: number;
+  readonly y: number;
+  readonly tilt: number;
+  readonly radius: number;
+}
 
 interface EnemyView {
   readonly sprite: Sprite;
   zs: Sprite[] | null;
   heading: number;
+  x: number;
+  y: number;
   tilt: number;
   radius: number;
+  holdUntil: number;
   boss: boolean;
   blinkUntil: number;
   glint: Sprite | null;
@@ -42,8 +51,9 @@ interface EnemyView {
 
 export interface EnemiesFamily extends Family {
   blink(id: number, untilTick: number): void;
-  radiusOf(id: number): number | undefined;
-  tiltOf(id: number): number | undefined;
+  // A mask stays where it was drawn until that tick: the stop of a heavy hit.
+  hold(id: number, untilTick: number): void;
+  poseOf(id: number): EnemyPose | undefined;
 }
 
 const warnUnknown = (message: string): void => {
@@ -68,16 +78,18 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       sprite: add(bodies, masks.smile),
       zs: null,
       heading: Math.PI / 2,
+      x: 0,
+      y: 0,
       tilt: 0,
       radius: 1,
+      holdUntil: Number.NEGATIVE_INFINITY,
       boss: false,
       blinkUntil: Number.NEGATIVE_INFINITY,
       glint: null,
       glintStart: Number.NEGATIVE_INFINITY,
     }),
     (view) => {
-      view.blinkUntil = Number.NEGATIVE_INFINITY;
-      view.glintStart = Number.NEGATIVE_INFINITY;
+      view.blinkUntil = view.glintStart = view.holdUntil = Number.NEGATIVE_INFINITY;
       hide(view.sprite, ...(view.zs ?? []));
       if (view.glint !== null) {
         view.glint.visible = false;
@@ -89,41 +101,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
     sprite.visible = false;
     return sprite;
   });
-  const shards = new Particles(layers.fx, textures.shard, 600);
-  const puffs = new Particles(layers.fx, textures.halo, 96);
-
-  function burst(x: number, y: number, id: number, boss: boolean, now: number, frame: Frame) {
-    const count = boss ? 28 : 12;
-    const reach = boss ? 140 : 42;
-    const offset = (id * 0.618) % 1;
-    for (let index = 0; index < count; index += 1) {
-      const angle = ((index + offset) / count) * TAU;
-      const distance = reach * (0.6 + 0.4 * ((index * 7) % 5) * 0.25);
-      shards.spawn({
-        now,
-        duration: TICKS_PER_BEAT,
-        x,
-        y,
-        dx: Math.cos(angle) * distance,
-        dy: Math.sin(angle) * distance,
-        fromRadius: boss ? 11 : 7,
-        toRadius: boss ? 7 : 4,
-        tint: frame.palette[COLORS[(index + id) % COLORS.length] ?? 'or'],
-        peak: 1,
-        spin: angle + Math.PI,
-      });
-    }
-    puffs.spawn({
-      now,
-      duration: TICKS_PER_BEAT / 2,
-      x,
-      y,
-      fromRadius: boss ? 60 : 16,
-      toRadius: boss ? 160 : 40,
-      tint: frame.palette[COLORS[id % COLORS.length] ?? 'or'],
-      peak: 0.8,
-    });
-  }
+  const colors = createBurst(layers, textures);
 
   function dreams(view: EnemyView, x: number, y: number, strength: number, frame: Frame): void {
     const zs = (view.zs ??= Array.from({ length: ZS }, () => add(sleepers, textures.masks.drowsy)));
@@ -181,7 +159,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       sprite.visible = false;
     },
     burst(farewell) {
-      burst(farewell.x, farewell.y, farewell.id, farewell.boss, latest.now, latest);
+      colors.burst(farewell.x, farewell.y, farewell.id, farewell.boss, latest.now, latest);
     },
   };
 
@@ -192,8 +170,13 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         view.blinkUntil = Math.max(view.blinkUntil, untilTick);
       }
     },
-    radiusOf: (id) => views.peek(id)?.radius,
-    tiltOf: (id) => views.peek(id)?.tilt,
+    hold(id: number, untilTick: number): void {
+      const view = views.peek(id);
+      if (view !== undefined) {
+        view.holdUntil = untilTick;
+      }
+    },
+    poseOf: (id) => views.peek(id),
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, calm } = frame;
       const downTint = mixColor(palette.badVibeRim, DOWN_GRAY, DOWN_MIX);
@@ -230,8 +213,9 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
             : tint,
         );
         sprite.visible = true;
-        const x = lerp(enemy.prevX, enemy.x, alpha);
-        const y = lerp(enemy.prevY, enemy.y, alpha);
+        const held = frame.now < view.holdUntil;
+        const x = (view.x = held ? view.x : lerp(enemy.prevX, enemy.x, alpha));
+        const y = (view.y = held ? view.y : lerp(enemy.prevY, enemy.y, alpha));
         sprite.position.set(x, y);
         const size = (enemy.radius / mask.radius) * (down ? 1 : 1 + BEAT_SWELL * frame.pulse);
         sprite.scale.set(size, down ? size * FLAT : size);
@@ -256,8 +240,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
 
       latest = frame;
       farewells.update(frame.now, calm, hooks);
-      shards.update(frame.now);
-      puffs.update(frame.now);
+      colors.update(frame.now);
     },
     onEvent(event: SimEvent, state: SimState, frame: Frame): void {
       const guarded = frontGlintOf(event);
@@ -289,8 +272,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         sprite.visible = false;
       };
       farewells.clear(hideSprite);
-      shards.clear();
-      puffs.clear();
+      colors.clear();
     },
     destroy(): void {
       layers.enemies.destroy({ children: true });

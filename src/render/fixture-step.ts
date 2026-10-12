@@ -131,6 +131,9 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
   if (queued.includes('enemyHit')) {
     hitNearestEnemy(state, events, 0.25);
   }
+  if (queued.includes('heavyHit')) {
+    hitNearestEnemy(state, events, 0.5);
+  }
 
   for (let index = 0; index < state.enemies.length; index += 1) {
     const enemy = state.enemies[index];

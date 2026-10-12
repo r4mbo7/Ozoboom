@@ -2,9 +2,9 @@ import { Container, type Sprite } from 'pixi.js';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { EntityId, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
+import type { EnemyPose } from './enemies';
 import type { Frame } from './frame';
 import { crackStage } from './hit-marks';
-import { lerp } from './motion';
 import { add } from './util';
 import { ViewPool } from './views';
 
@@ -19,10 +19,10 @@ interface Wound {
   since: number;
 }
 
-// The cracks a hurt bad vibe wears, drawn over its mask. `tiltOf` is how far that mask leans.
+// The cracks a hurt bad vibe wears, laid over its mask where `poseOf` says it was drawn.
 export function createWounds(
   ctx: RenderContext,
-  tiltOf: (id: EntityId) => number | undefined,
+  poseOf: (id: EntityId) => EnemyPose | undefined,
 ): Family {
   const { cracks } = ctx.textures.masks;
   const [first] = cracks;
@@ -40,12 +40,13 @@ export function createWounds(
   );
 
   return {
-    update(state: SimState, alpha: number, frame: Frame): void {
+    update(state: SimState, _alpha: number, frame: Frame): void {
       views.begin();
       for (const enemy of state.enemies) {
         const stage = (enemy.downTicks ?? 0) > 0 ? 0 : crackStage(enemy.hp, enemy.maxHp);
         const shape = cracks[stage - 1];
-        if (shape === undefined) {
+        const pose = poseOf(enemy.id);
+        if (shape === undefined || pose === undefined) {
           continue;
         }
         const view = views.acquire(enemy.id);
@@ -58,8 +59,8 @@ export function createWounds(
         const age = (frame.now - view.since) / POP_TICKS;
         const pop = frame.calm || age < 0 || age >= 1 ? 0 : POP * (1 - age) * (1 - age);
         sprite.visible = true;
-        sprite.position.set(lerp(enemy.prevX, enemy.x, alpha), lerp(enemy.prevY, enemy.y, alpha));
-        sprite.rotation = (tiltOf(enemy.id) ?? 0) + enemy.id * TURN;
+        sprite.position.set(pose.x, pose.y);
+        sprite.rotation = pose.tilt + enemy.id * TURN;
         sprite.scale.set((enemy.radius / shape.radius) * (1 + pop));
       }
       views.end();
