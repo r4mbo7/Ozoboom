@@ -44,6 +44,7 @@ import { createTraps } from './traps';
 import type { CameraFocus, RenderOptions, Renderer } from './types';
 import { byId, lookup } from './util';
 import { createWeapons } from './weapons';
+import { createWounds } from './wounds';
 
 export type { RenderContent } from './context';
 
@@ -131,6 +132,7 @@ export class Scene implements Renderer {
       createBombs(ctx),
       createBystanders(ctx),
       enemies,
+      createWounds(ctx, (id) => enemies.tiltOf(id)),
       createSpecials(ctx),
       createProjectiles(ctx),
       createWeapons(ctx),

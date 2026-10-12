@@ -69,6 +69,11 @@ const sheet = params.has('sheet') ? count('sheet', 32) : null;
 if (sheet !== null) {
   layMasks(state, sheet, (params.get('pose') ?? 'awake') as SheetPose);
 }
+if (params.has('hurt')) {
+  for (const enemy of state.enemies) {
+    enemy.hp = enemy.maxHp * (1 - count('hurt', 0));
+  }
+}
 if (params.has('speakers')) {
   layStacks(state, (params.get('speakers') ?? '').split(',') as SpeakerPose[]);
 }

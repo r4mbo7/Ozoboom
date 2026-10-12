@@ -4,14 +4,17 @@ import {
   FACE_RADIUS,
   NEUTRAL,
   NEUTRAL_FACE,
+  cracks,
   drowsyZ,
   smile,
   type Face,
   type Pose,
 } from './faces';
+import { CRACK_STAGES } from './hit-marks';
 import type { Ctx, Shape } from './paint';
 
 const CELL = 144;
+const CRACK_STAGE_LIST = Array.from({ length: CRACK_STAGES }, (_, index) => index + 1);
 const BOSS_SCALE = 2;
 
 export interface Mask {
@@ -29,6 +32,8 @@ export interface MaskSet {
   readonly smile: Shape;
   readonly bossSmile: Shape;
   readonly drowsy: Shape;
+  // One per stage of a hurt mask, each holding the cracks of the stages before it.
+  readonly cracks: readonly Shape[];
   destroy(): void;
 }
 
@@ -99,6 +104,11 @@ export function createMasks(): MaskSet {
     ...small.flatMap(([, face]) => poseCells(face)),
     { draw: smile },
     { draw: drowsyZ },
+    ...CRACK_STAGE_LIST.map((stage): Cell => ({
+      draw: (ctx) => {
+        cracks(ctx, stage);
+      },
+    })),
   ];
   const largeCells = [...large.flatMap(([, face]) => poseCells(face)), { draw: smile }];
   const smallTextures = atlas(smallCells, CELL, 1);
@@ -134,12 +144,14 @@ export function createMasks(): MaskSet {
     throw new Error('Mask atlas is missing a texture');
   }
   masks.delete(NEUTRAL);
+  const crackTextures = smallTextures.slice(smallEnd + 2, smallEnd + 2 + CRACK_STAGES);
   return {
     masks,
     neutral,
     smile: { texture: smileTexture, radius: FACE_RADIUS },
     bossSmile: { texture: bossSmileTexture, radius: FACE_RADIUS * BOSS_SCALE },
     drowsy: { texture: drowsyTexture, radius: 9 },
+    cracks: crackTextures.map((texture) => ({ texture, radius: FACE_RADIUS })),
     destroy() {
       for (const texture of [...smallTextures, ...largeTextures]) {
         texture.destroy(false);

@@ -11,7 +11,7 @@ import {
 import { bavard, fatigue, filmeur, neutral, zombie } from './faces-2';
 import { batterieAPlat, couvreFeu } from './faces-bosses';
 
-export { FACE_RADIUS, NEUTRAL, type Face, type Pose } from './face-kit';
+export { FACE_RADIUS, NEUTRAL, cracks, type Face, type Pose } from './face-kit';
 export { drowsyZ, smile } from './faces-2';
 
 const MAIN = { boss: false, loopBeats: 1 };

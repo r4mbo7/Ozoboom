@@ -32,6 +32,7 @@ interface EnemyView {
   readonly sprite: Sprite;
   zs: Sprite[] | null;
   heading: number;
+  tilt: number;
   radius: number;
   boss: boolean;
   blinkUntil: number;
@@ -42,6 +43,7 @@ interface EnemyView {
 export interface EnemiesFamily extends Family {
   blink(id: number, untilTick: number): void;
   radiusOf(id: number): number | undefined;
+  tiltOf(id: number): number | undefined;
 }
 
 const warnUnknown = (message: string): void => {
@@ -66,6 +68,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       sprite: add(bodies, masks.smile),
       zs: null,
       heading: Math.PI / 2,
+      tilt: 0,
       radius: 1,
       boss: false,
       blinkUntil: Number.NEGATIVE_INFINITY,
@@ -189,9 +192,8 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         view.blinkUntil = Math.max(view.blinkUntil, untilTick);
       }
     },
-    radiusOf(id: number): number | undefined {
-      return views.peek(id)?.radius;
-    },
+    radiusOf: (id) => views.peek(id)?.radius,
+    tiltOf: (id) => views.peek(id)?.tilt,
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, calm } = frame;
       const downTint = mixColor(palette.badVibeRim, DOWN_GRAY, DOWN_MIX);
@@ -233,7 +235,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         sprite.position.set(x, y);
         const size = (enemy.radius / mask.radius) * (down ? 1 : 1 + BEAT_SWELL * frame.pulse);
         sprite.scale.set(size, down ? size * FLAT : size);
-        sprite.rotation = down ? 0 : LEAN * Math.cos(view.heading);
+        sprite.rotation = view.tilt = down ? 0 : LEAN * Math.cos(view.heading);
         view.radius = enemy.radius;
         view.boss = enemy.isBoss;
         const shine = down ? 0 : glintAlpha(frame.now, view.glintStart, calm);

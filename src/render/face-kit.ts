@@ -1,4 +1,4 @@
-import type { PaletteToken } from '../shared/palette';
+import { type PaletteToken, SUN_PALETTES } from '../shared/palette';
 import { SHADE_SOFT, TAU, WHITE, circle, type Ctx } from './paint';
 
 export const FACE_RADIUS = 40;
@@ -202,4 +202,27 @@ export function mouthArc(
   ctx.lineWidth = width;
   ctx.strokeStyle = color;
   ctx.stroke();
+}
+
+type Crack = readonly [PaletteToken, ...(readonly [number, number])[]];
+
+const CRACKS: readonly Crack[] = [
+  ['mage', [-24, -14], [-16, -11], [-14, -4], [-7, -3], [-5, 3]],
+  ['turquoise', [17, 22], [12, 15], [15, 10], [8, 6]],
+  ['or', [7, -27], [4, -19], [9, -14], [3, -8]],
+];
+
+// The cracks of a hurt mask, one more per stage, kept inside every body. Painted in the colors of
+// the night whatever the hour: they glow on the dark body, like the burst they announce.
+export function cracks(ctx: Ctx, stage: number): void {
+  for (const [token, ...points] of CRACKS.slice(0, stage)) {
+    const color = SUN_PALETTES.nuit[token];
+    ctx.globalAlpha = 0.45;
+    stroke(ctx, color, 6, ...points);
+    ctx.globalAlpha = 1;
+    stroke(ctx, color, 2.2, ...points);
+    ctx.globalAlpha = 0.7;
+    stroke(ctx, WHITE, 0.8, ...points);
+  }
+  ctx.globalAlpha = 1;
 }

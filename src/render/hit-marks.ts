@@ -64,3 +64,14 @@ export class SparkBudget {
     }
   }
 }
+
+export const CRACK_STAGES = 3;
+
+// 0 while unhurt, then one more crack for each third of its life a bad vibe has lost.
+export function crackStage(hp: number, maxHp: number): number {
+  if (hp >= maxHp) {
+    return 0;
+  }
+  const lost = ((maxHp - Math.max(hp, 0)) * CRACK_STAGES) / maxHp;
+  return Math.min(CRACK_STAGES, Math.ceil(lost - 1e-9));
+}

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { SPARK_GAP_TICKS, SPARKS_PER_TICK, SparkBudget, contactOf } from './hit-marks';
+import {
+  CRACK_STAGES,
+  SPARK_GAP_TICKS,
+  SPARKS_PER_TICK,
+  SparkBudget,
+  contactOf,
+  crackStage,
+} from './hit-marks';
 
 const HIT = { type: 'enemyHit', id: 7, damage: 4, x: 100, y: 50 } as const;
 
@@ -49,5 +56,27 @@ describe('SparkBudget', () => {
     budget.clear();
 
     expect(budget.tryStart(7, 0)).toBe(true);
+  });
+});
+
+describe('crackStage', () => {
+  it('leaves an unhurt bad vibe whole', () => {
+    const stage = crackStage(30, 30);
+
+    expect(stage).toBe(0);
+  });
+
+  it('opens one more crack for each third of its life a bad vibe has lost', () => {
+    const lives = [29, 20, 19, 10, 9, 1];
+
+    const stages = lives.map((hp) => crackStage(hp, 30));
+
+    expect(stages).toEqual([1, 1, 2, 2, 3, 3]);
+  });
+
+  it('never goes past the last stage, even below zero', () => {
+    const stage = crackStage(-5, 30);
+
+    expect(stage).toBe(CRACK_STAGES);
   });
 });
