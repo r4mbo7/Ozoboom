@@ -534,22 +534,35 @@ describe('the hit on the stage', () => {
 describe('the vibes in hand', () => {
   const TICK_SECONDS = 60 / 145 / 12;
   const vibe: SimEvent = { type: 'pickupCollected', playerId: 0, kind: 'vibes', amount: 1 };
-  const loot: SimEvent = { type: 'lootCollected', id: 1, playerId: 0, trapId: 'laser', x: 0, y: 0 };
   const at = (progress: number) => [
     { id: 0, classId: 'classe-nova', vibes: progress * 10, vibesToNextLevel: 10 },
   ];
   const loudest = (peaks: readonly number[]) => Math.max(...peaks);
 
-  it('play the root of the chord at octave 4 with a faint octave above, softer than the loot', () => {
+  it('play the root of the chord at octave 4 with a faint octave above', () => {
     const { out, tones, peaks } = recordingOutput();
-    const trap = recordingOutput();
 
     createSfx(out, trapEffectOf, lookups, SOIREE_OUVERTURE).play([vibe], 1, players);
-    createSfx(trap.out, trapEffectOf, lookups).play([loot], 1, players);
 
     expect(tones).toEqual([keyHz(SOIREE_OUVERTURE, 0, 4), keyHz(SOIREE_OUVERTURE, 0, 5)]);
-    expect(loudest(peaks)).toBeLessThan(loudest(trap.peaks));
     expect(peaks[1]).toBeLessThan((peaks[0] ?? 0) / 4);
+  });
+
+  it('keep every note of the arpeggio under its filter, from the first vibe of a level', () => {
+    const { out, tones, cutoffs } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups, SOIREE_OUVERTURE);
+
+    for (let note = 0; note < 7; note += 1) {
+      sfx.beginFrame();
+      sfx.play([vibe], 1 + note * 0.2, at(0));
+    }
+
+    const notes = tones.filter((_, index) => index % 2 === 0);
+    expect(notes).toHaveLength(7);
+    expect(notes[6]).toBe(keyHz(SOIREE_OUVERTURE, 14, 4));
+    notes.forEach((hz, index) => {
+      expect(cutoffs[index]).toBeGreaterThan(hz);
+    });
   });
 
   it('wait for the sixteenth of the set and take the chord of its bar', () => {

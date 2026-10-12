@@ -617,20 +617,22 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
   // Vibes in hand, on a sixteenth of the track: soft and short, louder with the vibes it merges,
   // opening as the level fills, a fifth on top once it is near.
   vibesCollected: (out, at, degree, key, vibes = 1, progress = 0) => {
-    const gain = 0.04 + 0.01 * vibes;
+    const gain = 0.07 + 0.008 * vibes;
+    const hz = keyHz(key, degree, 4);
     playTone(out, at, {
       wave: 'triangle',
-      hz: keyHz(key, degree, 4),
+      hz,
       gain,
       attack: 0.003,
       hold: 0.02,
       release: 0.12,
-      filter: { type: 'lowpass', hz: 1100 + 5600 * progress * progress },
+      // The cutoff follows the note: a fixed one silenced the top of the arpeggio.
+      filter: { type: 'lowpass', hz: hz * (1.6 + 4.4 * progress) },
     });
     playTone(out, at, {
       wave: 'sine',
       hz: keyHz(key, degree, 5),
-      gain: gain * (0.08 + 0.5 * progress),
+      gain: gain * (0.08 + 0.3 * progress),
       attack: 0.002,
       hold: 0.01,
       release: 0.09,
@@ -639,7 +641,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       playTone(out, at, {
         wave: 'sine',
         hz: keyHz(key, degree + 4, 4),
-        gain: gain * 0.55,
+        gain: gain * 0.35,
         attack: 0.003,
         hold: 0.02,
         release: 0.14,
