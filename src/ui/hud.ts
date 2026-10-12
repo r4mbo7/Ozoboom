@@ -4,6 +4,7 @@ import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
 import type { PlayerState, SimState } from '../sim/state';
 import { trapCapacity } from '../sim/stats';
+import { beatPeriodMs } from '../shared/tempo';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
@@ -15,6 +16,7 @@ import {
   gearSlots,
   handTiles,
   isNight,
+  levelReading,
   plugHelp,
   rosterOf,
   skillCharge,
@@ -23,7 +25,7 @@ import {
   volumeCrans,
 } from './hud-model';
 import { HEART, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
-import { type LineupSlot, lineupCursor, lineupSlots, setOf } from '../sim/lineup';
+import { type LineupSlot, lineupCursor, lineupSlots, setOf, setTempo } from '../sim/lineup';
 import { heldSlot, selectTrap } from './navigation';
 import { promptsFor } from './prompts';
 import { createWho, fillWho } from './who';
@@ -155,10 +157,12 @@ export function createHud(): Hud {
   let beat = false;
   let helpSeen = false;
   let helpWasShown = false;
+  let shownLevel: Pick<PlayerState, 'level' | 'vibes'> | null = null;
 
   function build(content: GameContent, setId: string): void {
     builtFor = content;
     set = setOf(content, setId);
+    setVar(element, '--beat', `${beatPeriodMs(setTempo(set).bpm).toFixed(1)}ms`);
     slots = [];
     slotDefs = lineupSlots(set);
     const groups: HTMLElement[] = [];
@@ -347,6 +351,27 @@ export function createHud(): Hud {
     updateSun(setFraction(set, state));
   }
 
+  function updateLevel(player: PlayerState): void {
+    const reading = levelReading(shownLevel, player);
+    if (shownLevel === null || reading.levelled) {
+      levelRing.dataset.restart = '';
+      setVar(levelRing, '--level-fill', '0');
+      // Reading the style commits the empty ring: the fill then glides up from it, not back to it.
+      void getComputedStyle(levelRing).getPropertyValue('--level-fill');
+      delete levelRing.dataset.restart;
+    }
+    shownLevel = { level: player.level, vibes: player.vibes };
+    setText(levelNumber, String(player.level));
+    setVar(levelRing, '--level-fill', String(reading.fill));
+    setFlag(level, 'near', reading.near);
+    if (reading.gained) {
+      levelRing.dataset.gain = levelRing.dataset.gain === 'a' ? 'b' : 'a';
+    }
+    if (reading.levelled) {
+      levelRing.dataset.burst = levelRing.dataset.burst === 'a' ? 'b' : 'a';
+    }
+  }
+
   function updateLife(player: PlayerState): void {
     const fraction = ratio(player.hp, player.maxHp);
     setVar(lifeBar, '--fill', String(fraction));
@@ -411,8 +436,7 @@ export function createHud(): Hud {
       buildSkills(definition, snapshot.device);
     }
 
-    setText(levelNumber, String(player.level));
-    setVar(levelRing, '--fill', String(ratio(player.vibes, player.vibesToNextLevel)));
+    updateLevel(player);
     level.title = `Niveau ${String(player.level)} : ${formatNumber(player.vibes)} vibes sur ${formatNumber(player.vibesToNextLevel)}`;
     updateLife(player);
 
@@ -469,6 +493,9 @@ export function createHud(): Hud {
     reset() {
       selectedTrap = 0;
       previousGameplay = null;
+      shownLevel = null;
+      delete levelRing.dataset.gain;
+      delete levelRing.dataset.burst;
     },
   };
 }

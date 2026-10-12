@@ -18,6 +18,7 @@ import {
   gearSlots,
   handTiles,
   isNight,
+  levelReading,
   playerLabel,
   plugHelp,
   rosterOf,
@@ -326,5 +327,51 @@ describe('dropReading', () => {
     const reading = dropReading(SET, fixtureForScreen('won'), UI_FIXTURE_CONTENT);
 
     expect(reading).toEqual({ label: 'Sunrise', value: '', dropping: false });
+  });
+});
+
+describe('levelReading', () => {
+  const shown = { level: 4, vibes: 30 };
+
+  it('fills with the vibes gathered towards the next level', () => {
+    const ring = levelReading(shown, { level: 4, vibes: 30, vibesToNextLevel: 60 });
+
+    expect(ring).toEqual({ fill: 0.5, gained: false, levelled: false, near: false });
+  });
+
+  it('reacts to vibes coming in', () => {
+    const ring = levelReading(shown, { level: 4, vibes: 31, vibesToNextLevel: 60 });
+
+    expect(ring.gained).toBe(true);
+    expect(ring.levelled).toBe(false);
+  });
+
+  it('announces the level once the fill passes four fifths', () => {
+    const below = levelReading(shown, { level: 4, vibes: 47, vibesToNextLevel: 60 });
+    const reached = levelReading(shown, { level: 4, vibes: 48, vibesToNextLevel: 60 });
+
+    expect(below.near).toBe(false);
+    expect(reached.near).toBe(true);
+  });
+
+  it('marks a level gained, even when fewer vibes are left over than before', () => {
+    const ring = levelReading(shown, { level: 5, vibes: 2, vibesToNextLevel: 65 });
+
+    expect(ring.gained).toBe(true);
+    expect(ring.levelled).toBe(true);
+    expect(ring.near).toBe(false);
+  });
+
+  it('stays still on the first reading of a run', () => {
+    const ring = levelReading(null, { level: 1, vibes: 9, vibesToNextLevel: 10 });
+
+    expect(ring).toEqual({ fill: 0.9, gained: false, levelled: false, near: true });
+  });
+
+  it('stays still when the reading goes back to an earlier level', () => {
+    const ring = levelReading(shown, { level: 1, vibes: 0, vibesToNextLevel: 10 });
+
+    expect(ring.gained).toBe(false);
+    expect(ring.levelled).toBe(false);
   });
 });

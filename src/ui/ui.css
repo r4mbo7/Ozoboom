@@ -1805,10 +1805,18 @@
   border-left: 1px solid var(--ui-line);
 }
 
+@property --level-fill {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
 .ui-level {
-  --fill: 0;
+  --level-fill: 0;
+  --level-glide: --level-fill 240ms ease-out;
 
   display: grid;
+  position: relative;
   flex: none;
   place-items: center;
   width: 52px;
@@ -1816,9 +1824,62 @@
   border-radius: 50%;
   background: conic-gradient(
     var(--or),
-    var(--turquoise) calc(var(--fill) * 360deg),
-    color-mix(in srgb, var(--texte) 14%, transparent) calc(var(--fill) * 360deg)
+    var(--turquoise) calc(var(--level-fill) * 360deg),
+    color-mix(in srgb, var(--texte) 14%, transparent) calc(var(--level-fill) * 360deg)
   );
+  transition: var(--level-glide);
+}
+
+.ui-level[data-restart] {
+  transition: none;
+}
+
+.ui-level::before,
+.ui-level::after {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  content: '';
+}
+
+.ui-level::before {
+  inset: -1px;
+  border: 2px solid var(--or);
+}
+
+.ui-level::after {
+  top: -1.5px;
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  background: var(--texte);
+  box-shadow: 0 0 calc(10px * var(--ui-halo)) 1px var(--noyau);
+  transform: rotate(calc(var(--level-fill) * 1turn));
+  transform-origin: 4px 27.5px;
+}
+
+.ui-level[data-gain='a'] {
+  animation: ui-level-gain-a 220ms ease-out;
+}
+
+.ui-level[data-gain='b'] {
+  animation: ui-level-gain-b 220ms ease-out;
+}
+
+.ui-level[data-gain='a']::after {
+  animation: ui-level-spark-a 400ms ease-out;
+}
+
+.ui-level[data-gain='b']::after {
+  animation: ui-level-spark-b 400ms ease-out;
+}
+
+.ui-level[data-burst='a']::before {
+  animation: ui-level-burst-a 700ms ease-out;
+}
+
+.ui-level[data-burst='b']::before {
+  animation: ui-level-burst-b 700ms ease-out;
 }
 
 .ui-level__number {
@@ -2861,6 +2922,10 @@
   animation: ui-glow var(--beat) ease-out infinite;
 }
 
+.ui-hud__level[data-near] {
+  animation: ui-level-beat var(--beat) ease-out infinite;
+}
+
 @keyframes ui-kick {
   from {
     filter: brightness(1.3);
@@ -2915,6 +2980,57 @@
   }
 }
 
+@keyframes ui-level-gain-a {
+  from {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes ui-level-gain-b {
+  from {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes ui-level-spark-a {
+  from {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-level-spark-b {
+  from {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-level-burst-a {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(1.9);
+  }
+}
+
+@keyframes ui-level-burst-b {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(1.9);
+  }
+}
+
+@keyframes ui-level-beat {
+  from {
+    filter: brightness(1.3);
+    transform: scale(1.05);
+  }
+}
+
 @keyframes ui-turn-phone {
   0%,
   25% {
@@ -2942,6 +3058,10 @@
 .calm > .ui *::after {
   animation: none !important;
   transition: none !important;
+}
+
+.calm > .ui .ui-level:not([data-restart]) {
+  transition: var(--level-glide) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -67,6 +67,26 @@ const SPEAKER_TOKENS: Readonly<Record<string, PaletteToken>> = {
 
 const FALLBACK_TOKENS: readonly PaletteToken[] = ['healer', 'turquoise', 'or', 'mage'];
 
+const NEAR_LEVEL = 0.8;
+
+export interface LevelReading {
+  fill: number;
+  gained: boolean;
+  levelled: boolean;
+  near: boolean;
+}
+
+export function levelReading(
+  shown: Pick<PlayerState, 'level' | 'vibes'> | null,
+  player: Pick<PlayerState, 'level' | 'vibes' | 'vibesToNextLevel'>,
+): LevelReading {
+  const fill = ratio(player.vibes, player.vibesToNextLevel);
+  const levelled = shown !== null && player.level > shown.level;
+  const gained =
+    levelled || (shown !== null && player.level === shown.level && player.vibes > shown.vibes);
+  return { fill, gained, levelled, near: fill >= NEAR_LEVEL };
+}
+
 export const GEAR_SLOTS = 3;
 
 export function speakerToken(id: string, index: number): PaletteToken {
