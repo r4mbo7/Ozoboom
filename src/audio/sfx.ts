@@ -1,10 +1,12 @@
 import { SOIREE_OUVERTURE } from '../data/tracks';
+import type { MusicTrack } from '../data/types';
 import type { SimEvent } from '../sim/state';
 import type { Cue } from './types';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
-import { beatSeconds } from './clock';
-import { keyHz, type MusicKey } from './scale';
+import { beatSeconds, type Anchor } from './clock';
+import { chordRootOfBar, keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
+import { createVibeArp } from './vibe-arp';
 
 export type SfxName =
   | 'playerFired'
@@ -39,6 +41,7 @@ export type SfxName =
   | 'bystanderLost'
   | 'lootDropped'
   | 'lootCollected'
+  | 'vibesCollected'
   | 'bombDropped'
   | 'bombExploded'
   | 'volumeUp'
@@ -110,7 +113,11 @@ const CUE_SFX: Readonly<Record<Cue, SfxName>> = {
 export interface SfxPlayer {
   readonly id: number;
   readonly classId: string;
+  readonly vibes?: number;
+  readonly vibesToNextLevel?: number;
 }
+
+export type SfxKey = MusicKey & Pick<MusicTrack, 'chords'>;
 
 export interface SfxCore {
   readonly hp: number;
@@ -159,6 +166,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     lootDropped: { perFrame: 1, concurrent: 2, seconds: 0.4 },
     lootCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
+    vibesCollected: { perFrame: 1, concurrent: 2, seconds: 0.15 },
     bombDropped: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     bombExploded: { perFrame: 1, concurrent: 1, seconds: 1.6 },
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
@@ -208,6 +216,8 @@ export function sfxOf(
     case 'bombDropped':
     case 'bombExploded':
       return event.type;
+    case 'pickupCollected':
+      return 'vibesCollected';
     case 'skillUsed': {
       const classId = players.find((player) => player.id === event.playerId)?.classId;
       const kind = classId === undefined ? undefined : lookups.skillKindOf?.(classId);
@@ -268,7 +278,14 @@ export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): S
   };
 }
 
-type Voice = (out: AudioNode, at: number, variant: number, key: MusicKey) => void;
+type Voice = (
+  out: AudioNode,
+  at: number,
+  variant: number,
+  key: MusicKey,
+  vibes?: number,
+  progress?: number,
+) => void;
 
 const DIED_DEGREES = [4, 3, 0, 5];
 const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
@@ -596,6 +613,38 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
         filter: { type: 'lowpass', hz: 2400 },
       });
     });
+  },
+  // Vibes in hand, on a sixteenth of the track: soft and short, louder with the vibes it merges,
+  // opening as the level fills, a fifth on top once it is near.
+  vibesCollected: (out, at, degree, key, vibes = 1, progress = 0) => {
+    const gain = 0.04 + 0.01 * vibes;
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, degree, 4),
+      gain,
+      attack: 0.003,
+      hold: 0.02,
+      release: 0.12,
+      filter: { type: 'lowpass', hz: 1100 + 5600 * progress * progress },
+    });
+    playTone(out, at, {
+      wave: 'sine',
+      hz: keyHz(key, degree, 5),
+      gain: gain * (0.08 + 0.5 * progress),
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.09,
+    });
+    if (progress > 0.8) {
+      playTone(out, at, {
+        wave: 'sine',
+        hz: keyHz(key, degree + 4, 4),
+        gain: gain * 0.55,
+        attack: 0.003,
+        hold: 0.02,
+        release: 0.14,
+      });
+    }
   },
   // A bomb lands: a heavy thud and a low root that swells, a warning more than a reward.
   bombDropped: (out, at, _variant, key) => {
@@ -995,27 +1044,46 @@ export interface Sfx {
   ): void;
   cue(cue: Cue, now: number): void;
   beginFrame(): void;
-  setKey(key: MusicKey): void;
+  setKey(key: SfxKey): void;
   setTempo(tempo: Tempo): void;
+  // The clock the set is scheduled on, null when none plays: the vibes fall on its sixteenths.
+  setClock(anchor: Anchor | null): void;
+}
+
+function levelProgress(player: SfxPlayer | undefined): number {
+  const needed = player?.vibesToNextLevel ?? 0;
+  return needed > 0 ? Math.min((player?.vibes ?? 0) / needed, 1) : 0;
 }
 
 export function createSfx(
   out: AudioNode,
   trapEffectOf: TrapEffectOf,
   lookups: SfxLookups = {},
-  initialKey: MusicKey = SOIREE_OUVERTURE,
+  initialKey: SfxKey = SOIREE_OUVERTURE,
 ): Sfx {
   let key = initialKey;
   let limiter = createSfxLimiter(SFX_LIMITS);
-  let beat = MAIN_TEMPO.ticksPerBeat;
+  let tempo = MAIN_TEMPO;
+  let clock: Anchor | null = null;
+  let progress = 0;
+  const arp = createVibeArp();
   return {
     play(events, now, players = [], core = FULL_CORE) {
+      let vibes = 0;
       for (const event of events) {
         const name = sfxOf(event, trapEffectOf, lookups, players);
-        if (name !== null && limiter.tryAcquire(name, now)) {
+        if (event.type === 'pickupCollected') {
+          vibes += 1;
+          progress = levelProgress(players.find((player) => player.id === event.playerId));
+        } else if (name !== null && limiter.tryAcquire(name, now)) {
           const variant = name === 'coreHit' ? coreHitDegree(core) : 'id' in event ? event.id : 0;
           VOICES[name](out, now, variant, key);
         }
+      }
+      const note = arp.collect(vibes, now, tempo, clock);
+      if (note !== null && limiter.tryAcquire('vibesCollected', note.at)) {
+        const degree = chordRootOfBar(key.chords, note.bar) + note.degree;
+        VOICES.vibesCollected(out, note.at, degree, key, note.vibes, progress);
       }
     },
     cue(cue, now) {
@@ -1031,10 +1099,13 @@ export function createSfx(
       key = next;
     },
     setTempo(next) {
-      if (next.ticksPerBeat !== beat) {
-        beat = next.ticksPerBeat;
+      if (next.ticksPerBeat !== tempo.ticksPerBeat) {
+        tempo = next;
         limiter = createSfxLimiter(sfxLimitsFor(next));
       }
+    },
+    setClock(anchor) {
+      clock = anchor;
     },
   };
 }

@@ -5,6 +5,8 @@ test('loads the self-hosted fonts and never leaves the origin during a game', as
   page,
   baseURL,
 }) => {
+  // Without a GPU, the title alone takes fifteen seconds to show on a busy machine.
+  test.setTimeout(90_000);
   const errors = collectConsoleErrors(page);
   const origin = new URL(baseURL ?? 'http://localhost').origin;
   const foreign: string[] = [];

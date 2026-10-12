@@ -72,6 +72,8 @@ export interface Music {
   setTrack(track: MusicTrack): void;
   // The tempo of the set it plays, the main stage's before any set.
   tempo(): Tempo;
+  // The clock the set is scheduled on, null when none plays.
+  clock(): Anchor | null;
 }
 
 export interface Threshold {
@@ -826,6 +828,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     },
     tempo() {
       return tempo;
+    },
+    clock() {
+      return anchor;
     },
     update(state, now, currentTime) {
       last = state;

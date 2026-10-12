@@ -107,6 +107,7 @@ const soundingEvents: readonly [SimEvent, SfxName][] = [
   [{ type: 'bystanderHelped', id: 1, kind: 'festivalier', x: 0, y: 0 }, 'bystanderHelped'],
   [{ type: 'lootDropped', id: 1, trapId: 'laser', x: 0, y: 0 }, 'lootDropped'],
   [{ type: 'lootCollected', id: 1, playerId: 0, trapId: 'laser', x: 0, y: 0 }, 'lootCollected'],
+  [{ type: 'pickupCollected', playerId: 0, kind: 'vibes', amount: 1 }, 'vibesCollected'],
   [{ type: 'bombDropped', id: 1, x: 0, y: 0 }, 'bombDropped'],
   [{ type: 'bombExploded', id: 1, playerId: 0, x: 0, y: 0 }, 'bombExploded'],
   [{ type: 'bystanderLost', id: 1, kind: 'festivalier', x: 0, y: 0 }, 'bystanderLost'],
@@ -228,9 +229,15 @@ interface FakeParam {
 
 // Records the loudest envelope of every voice that reaches the output, which is all the synth
 // needs: oscillators and noise are normalised to 1, so the envelope gain is the voice's peak.
-function recordingOutput(): { out: AudioNode; peaks: number[]; tones: number[] } {
+function recordingOutput(): {
+  out: AudioNode;
+  peaks: number[];
+  tones: number[];
+  cutoffs: number[];
+} {
   const peaks: number[] = [];
   const tones: number[] = [];
+  const cutoffs: number[] = [];
   const param = (onRamp?: (value: number) => void, onSet?: (value: number) => void): FakeParam => ({
     value: 0,
     setValueAtTime: (value) => onSet?.(value),
@@ -251,7 +258,8 @@ function recordingOutput(): { out: AudioNode; peaks: number[]; tones: number[] }
         stop: () => undefined,
       }),
     createBufferSource: () => node({ start: () => undefined, stop: () => undefined }),
-    createBiquadFilter: () => node({ frequency: param(), Q: param() }),
+    createBiquadFilter: () =>
+      node({ frequency: param(undefined, (value) => cutoffs.push(value)), Q: param() }),
     createStereoPanner: () => node({ pan: param() }),
     createGain: () => {
       let peak = 0;
@@ -269,7 +277,7 @@ function recordingOutput(): { out: AudioNode; peaks: number[]; tones: number[] }
     },
   };
   out.context = context;
-  return { out: out as AudioNode, peaks, tones };
+  return { out: out as AudioNode, peaks, tones, cutoffs };
 }
 
 const everyEvent: readonly SimEvent[] = [
@@ -520,5 +528,77 @@ describe('the hit on the stage', () => {
 
     expect(tones).toHaveLength(2);
     expect(SFX_LIMITS.coreHit).toEqual({ perFrame: 1, concurrent: 1, seconds: 0.36 });
+  });
+});
+
+describe('the vibes in hand', () => {
+  const TICK_SECONDS = 60 / 145 / 12;
+  const vibe: SimEvent = { type: 'pickupCollected', playerId: 0, kind: 'vibes', amount: 1 };
+  const loot: SimEvent = { type: 'lootCollected', id: 1, playerId: 0, trapId: 'laser', x: 0, y: 0 };
+  const at = (progress: number) => [
+    { id: 0, classId: 'classe-nova', vibes: progress * 10, vibesToNextLevel: 10 },
+  ];
+  const loudest = (peaks: readonly number[]) => Math.max(...peaks);
+
+  it('play the root of the chord at octave 4 with a faint octave above, softer than the loot', () => {
+    const { out, tones, peaks } = recordingOutput();
+    const trap = recordingOutput();
+
+    createSfx(out, trapEffectOf, lookups, SOIREE_OUVERTURE).play([vibe], 1, players);
+    createSfx(trap.out, trapEffectOf, lookups).play([loot], 1, players);
+
+    expect(tones).toEqual([keyHz(SOIREE_OUVERTURE, 0, 4), keyHz(SOIREE_OUVERTURE, 0, 5)]);
+    expect(loudest(peaks)).toBeLessThan(loudest(trap.peaks));
+    expect(peaks[1]).toBeLessThan((peaks[0] ?? 0) / 4);
+  });
+
+  it('wait for the sixteenth of the set and take the chord of its bar', () => {
+    const { out, tones } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups, SOIREE_OUVERTURE);
+    const tick = (count: number) => 10 + count * TICK_SECONDS;
+    sfx.setClock({ tick: 0, time: 10 });
+    sfx.play([], tick(45.25), players);
+
+    sfx.play([vibe], tick(46.25), players);
+    const before = [...tones];
+    sfx.play([], tick(47.25), players);
+
+    expect(before).toEqual([]);
+    expect(SOIREE_OUVERTURE.chords[1]).toBe(1);
+    expect(tones[0]).toBe(keyHz(SOIREE_OUVERTURE, 1, 4));
+  });
+
+  it('sound once, louder, when several land on one sixteenth, up to five', () => {
+    const peakOf = (count: number) => {
+      const { out, peaks } = recordingOutput();
+      const sfx = createSfx(out, trapEffectOf, lookups);
+      sfx.play(
+        Array.from({ length: count }, () => vibe),
+        1,
+        players,
+      );
+      return { voices: peaks.length, peak: loudest(peaks) };
+    };
+
+    const [one, five, nine] = [1, 5, 9].map(peakOf);
+
+    expect(five?.voices).toBe(one?.voices);
+    expect(five?.peak).toBeGreaterThan(one?.peak ?? 0);
+    expect(nine).toEqual(five);
+  });
+
+  it('open their filter as the level fills, and add a fifth past 80 %', () => {
+    const heard = (progress: number) => {
+      const { out, tones, cutoffs } = recordingOutput();
+      createSfx(out, trapEffectOf, lookups, SOIREE_OUVERTURE).play([vibe], 1, at(progress));
+      return { tones, cutoff: cutoffs[0] ?? 0 };
+    };
+
+    const [empty, most, near] = [0, 0.8, 0.9].map(heard);
+
+    expect(most?.cutoff).toBeGreaterThan(empty?.cutoff ?? 0);
+    expect(near?.cutoff).toBeGreaterThan(most?.cutoff ?? 0);
+    expect(most?.tones).toHaveLength(2);
+    expect(near?.tones[2]).toBe(keyHz(SOIREE_OUVERTURE, 4, 4));
   });
 });

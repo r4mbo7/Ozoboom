@@ -121,6 +121,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     if (now !== null) {
       music.update(state, now, context.currentTime);
       sfx.setTempo(music.tempo());
+      sfx.setClock(music.clock());
     }
     sfx.beginFrame();
     applyMood();
