@@ -9,6 +9,7 @@ import {
   coreHitDegree,
   createSfx,
   createSfxLimiter,
+  enemyHitDegree,
   sfxOf,
   type SfxLookups,
   type SfxName,
@@ -613,5 +614,31 @@ describe('the vibes in hand', () => {
     expect(near?.cutoff).toBeGreaterThan(most?.cutoff ?? 0);
     expect(most?.tones).toHaveLength(2);
     expect(near?.tones[2]).toBe(keyHz(SOIREE_OUVERTURE, 4, 4));
+  });
+});
+
+describe('the hit on a bad vibe', () => {
+  const hit: SimEvent = { type: 'enemyHit', id: 1, damage: 3, x: 0, y: 0 };
+
+  it.each([
+    [30, 0],
+    [15, 4],
+    [1, 7],
+    [0, 7],
+  ])('reads %i of 30 life left as degree %i', (hp, degree) => {
+    expect(enemyHitDegree({ hp, maxHp: 30 })).toBe(degree);
+  });
+
+  it('sings its highest once the bad vibe has left the state', () => {
+    expect(enemyHitDegree(undefined)).toBe(7);
+  });
+
+  it('rings at the degree of the life lost, in octave 4 of the track key', () => {
+    const { out, tones } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups, SOIREE_OUVERTURE);
+
+    sfx.play([hit], 1, players, undefined, [{ id: 1, hp: 15, maxHp: 30 }]);
+
+    expect(tones).toEqual([keyHz(SOIREE_OUVERTURE, 4, 4)]);
   });
 });

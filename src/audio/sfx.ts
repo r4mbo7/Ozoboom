@@ -130,12 +130,21 @@ export function coreHitDegree(core: SfxCore): number {
   return Math.round((core.hp / core.maxHp) * 7);
 }
 
+export interface SfxEnemy extends SfxCore {
+  readonly id: number;
+}
+
+// The hit climbs the scale as the bad vibe loses its life, up to the octave once it is gone.
+export function enemyHitDegree(enemy: SfxCore | undefined): number {
+  return enemy === undefined ? 7 : Math.round((1 - Math.max(enemy.hp, 0) / enemy.maxHp) * 7);
+}
+
 // What follows the beat of the set (the fans, the revive pulse) is throttled to it.
 export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> {
   const beat = beatSeconds(tempo);
   return {
     playerFired: { perFrame: 1, concurrent: 3, seconds: 0.09 },
-    enemyHit: { perFrame: 2, concurrent: 4, seconds: 0.04 },
+    enemyHit: { perFrame: 2, concurrent: 4, seconds: 0.1 },
     enemyDied: { perFrame: 3, concurrent: 6, seconds: 0.24 },
     coreHit: { perFrame: 1, concurrent: 1, seconds: 0.36 },
     trapSub: { perFrame: 1, concurrent: 2, seconds: 0.3 },
@@ -304,13 +313,21 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'highpass', hz: 500 },
     });
   },
-  enemyHit: (out, at) => {
+  enemyHit: (out, at, degree, key) => {
     playNoise(out, at, {
-      gain: 0.35,
+      gain: 0.3,
       attack: 0.001,
       hold: 0.004,
       release: 0.03,
       filter: { type: 'lowpass', hz: 900, q: 1 },
+    });
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, degree, 4),
+      gain: 0.14,
+      attack: 0.002,
+      hold: 0.012,
+      release: 0.09,
     });
   },
   enemyDied: (out, at, variant, key) => {
@@ -1043,6 +1060,7 @@ export interface Sfx {
     now: number,
     players?: readonly SfxPlayer[],
     core?: SfxCore,
+    enemies?: readonly SfxEnemy[],
   ): void;
   cue(cue: Cue, now: number): void;
   beginFrame(): void;
@@ -1055,6 +1073,16 @@ export interface Sfx {
 function levelProgress(player: SfxPlayer | undefined): number {
   const needed = player?.vibesToNextLevel ?? 0;
   return needed > 0 ? Math.min((player?.vibes ?? 0) / needed, 1) : 0;
+}
+
+function variantOf(event: SimEvent, core: SfxCore, enemies: readonly SfxEnemy[]): number {
+  if (event.type === 'coreHit') {
+    return coreHitDegree(core);
+  }
+  if (event.type === 'enemyHit') {
+    return enemyHitDegree(enemies.find((enemy) => enemy.id === event.id));
+  }
+  return 'id' in event ? event.id : 0;
 }
 
 export function createSfx(
@@ -1070,7 +1098,7 @@ export function createSfx(
   let progress = 0;
   const arp = createVibeArp();
   return {
-    play(events, now, players = [], core = FULL_CORE) {
+    play(events, now, players = [], core = FULL_CORE, enemies = []) {
       let vibes = 0;
       for (const event of events) {
         const name = sfxOf(event, trapEffectOf, lookups, players);
@@ -1078,8 +1106,7 @@ export function createSfx(
           vibes += 1;
           progress = levelProgress(players.find((player) => player.id === event.playerId));
         } else if (name !== null && limiter.tryAcquire(name, now)) {
-          const variant = name === 'coreHit' ? coreHitDegree(core) : 'id' in event ? event.id : 0;
-          VOICES[name](out, now, variant, key);
+          VOICES[name](out, now, variantOf(event, core, enemies), key);
         }
       }
       const note = arp.collect(vibes, now, tempo, clock);
