@@ -29,6 +29,7 @@ import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { classTokens } from './palette';
 import { createBombs } from './bombs';
 import { createLoots } from './loots';
+import { createPickupBursts } from './pickup-bursts';
 import { createPickups } from './pickups';
 import { createMarkers } from './markers';
 import { createStageMarker } from './stage-marker';
@@ -124,6 +125,7 @@ export class Scene implements Renderer {
       createCore(ctx),
       traps,
       createPickups(ctx),
+      createPickupBursts(ctx),
       createLoots(ctx),
       createBombs(ctx),
       createBystanders(ctx),
