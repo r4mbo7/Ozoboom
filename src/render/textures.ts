@@ -19,6 +19,7 @@ import { type PlayerTextures, playerTextures } from './textures-players';
 import { type ClassFxTextures, createClassFxTextures } from './textures-class';
 import { type NameTextures, createNameTextures } from './textures-names';
 import { createSpeakerShapes } from './textures-speakers';
+import { comet } from './textures-pickups';
 import { bomb, crate, trap } from './textures-traps';
 import {
   type WeaponTextures,
@@ -37,6 +38,8 @@ export interface Textures {
   readonly shard: Shape;
   readonly streak: Shape;
   readonly vibes: Shape;
+  readonly cometHead: Shape;
+  readonly cometTail: Shape;
   readonly crate: Shape;
   readonly bomb: Shape;
   readonly players: PlayerTextures;
@@ -152,6 +155,8 @@ export function createTextures(): Textures {
       circle(ctx, 3);
       ctx.fill();
     }),
+    cometHead: comet('head'),
+    cometTail: comet('tail'),
     crate: crate(),
     bomb: bomb(),
     players: playerTextures(),
