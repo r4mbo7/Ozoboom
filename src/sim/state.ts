@@ -205,6 +205,8 @@ export interface PickupState extends Positioned {
   kind: PickupKind;
   amount: number;
   ticksLeft: number;
+  // Lobbed by a speaker and not landed yet: `x`, `y` is where it lands, nobody can take it.
+  flight?: { ticksLeft: number; ticks: number; fromX: number; fromY: number };
 }
 
 export interface LootState extends Positioned {
@@ -362,6 +364,8 @@ export interface SimState {
   bombDue?: boolean;
   volume?: number;
   speakers?: SpeakerState[];
+  // Ticks left of the shower of `SetDefinition.vibeRain`.
+  vibeRainTicks?: number;
   placed?: PlacedState[];
   // The sides of the current window of `SetDefinition.sidedWaves`, drawn at its first rule spawn;
   // no sides means a window from anywhere.

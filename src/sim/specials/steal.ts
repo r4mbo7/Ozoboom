@@ -83,7 +83,7 @@ function nearestVibesPickup(state: SimState, enemy: EnemyState): PickupState | u
   let nearestSquared = Infinity;
   for (const pickup of state.pickups) {
     const squared = distanceSquared(enemy, pickup);
-    if (squared < nearestSquared) {
+    if (pickup.flight === undefined && squared < nearestSquared) {
       nearest = pickup;
       nearestSquared = squared;
     }

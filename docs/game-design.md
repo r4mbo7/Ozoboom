@@ -110,6 +110,7 @@ Du matériel de festival, trouvé dans les loots, qui agit sur le temps musical.
 
 - Quatre stacks éteints au bord de l'arène : le Dôme chill, la Forêt, le Sub, le Cercle acid. Un joueur qui reste deux mesures dedans la branche, sans menu. Indestructibles.
 - Chaque enceinte branchée ajoute un niveau de **Volume**, commun à l'équipe et définitif jusqu'au sunrise.
+- Brancher une enceinte déclenche une averse de vibes de 8 mesures : chaque enceinte branchée en lance 4 par mesure vers le noyau, un quart de vibe chacune. Un branchement pendant l'averse la relance au nouveau Volume. **Tranché le 2026-10-12.**
 
 | Par niveau de Volume | Coût, immédiat                    | Gain, cumulatif                           |
 | -------------------- | --------------------------------- | ----------------------------------------- |

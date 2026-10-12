@@ -7,6 +7,15 @@ import type { StepContext } from './types';
 export function pickups({ state, content, set }: StepContext): void {
   let kept = 0;
   for (const pickup of state.pickups) {
+    if (pickup.flight !== undefined) {
+      pickup.flight.ticksLeft -= 1;
+      if (pickup.flight.ticksLeft <= 0) {
+        delete pickup.flight;
+      }
+      state.pickups[kept] = pickup;
+      kept += 1;
+      continue;
+    }
     pickup.ticksLeft -= 1;
     const collector = nearestCollector(state, content, pickup);
     if (collector !== undefined && attract(pickup, collector, set.pickups.speed)) {

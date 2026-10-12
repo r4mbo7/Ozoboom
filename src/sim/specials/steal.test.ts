@@ -57,6 +57,18 @@ describe('steal', () => {
     expect(simulation.state.pickups).toHaveLength(0);
   });
 
+  it('leaves a vibe in flight alone', () => {
+    const { simulation } = arena();
+    const thief = placeEnemy(simulation.state, 'grifter', 900, 100);
+    const flying = dropVibes(simulation, 900, 100, 7);
+    flying.flight = { ticksLeft: 10_000, ticks: 10_000, fromX: 0, fromY: 0 };
+
+    simulation.step([]);
+
+    expect(thief.carrying ?? 0).toBe(0);
+    expect(simulation.state.pickups).toContain(flying);
+  });
+
   it('flees to the nearest edge at fleeSpeedMul and disappears with its loot once there', () => {
     const { simulation } = arena();
     const { arena: bounds } = simulation.state;

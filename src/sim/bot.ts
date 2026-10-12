@@ -115,7 +115,10 @@ function moveOf(
   if (downed !== undefined) {
     return towards(player, downed, player.radius);
   }
-  const pickup = nearest(player, state.pickups);
+  const pickup = nearest(
+    player,
+    state.pickups.filter((candidate) => candidate.flight === undefined),
+  );
   if (pickup !== undefined && distanceSquared(pickup, player) <= PICKUP_REACH * PICKUP_REACH) {
     return towards(player, pickup, 4);
   }

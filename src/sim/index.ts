@@ -23,6 +23,7 @@ import { revive } from './systems/revive';
 import { setProgress } from './systems/set-progress';
 import { skills } from './systems/skills';
 import { speakers } from './systems/speakers';
+import { vibeRain } from './systems/vibe-rain';
 import { spawning } from './systems/spawning';
 import { specials } from './systems/specials';
 import { status } from './systems/status';
@@ -68,6 +69,7 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     projectiles,
     traps,
     speakers,
+    vibeRain,
     enemyAttacks,
     bombs,
     deaths,

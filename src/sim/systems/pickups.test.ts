@@ -46,6 +46,24 @@ function drop(
 }
 
 describe('pickups', () => {
+  it('leave a vibe in flight alone, then let it land and be picked up', () => {
+    const { simulation, player } = arena();
+    const pickup = drop(simulation.state, 'vibes', 400, 400, 100);
+    pickup.flight = { ticksLeft: 2, ticks: 24, fromX: 0, fromY: 0 };
+
+    simulation.step([]);
+    expect(simulation.state.pickups).toContain(pickup);
+    expect(pickup.ticksLeft).toBe(100);
+
+    simulation.step([]);
+    expect(pickup.flight).toBeUndefined();
+    expect(player.vibes).toBe(0);
+
+    simulation.step([]);
+    expect(simulation.state.pickups).toHaveLength(0);
+    expect(player.vibes).toBe(3);
+  });
+
   it('fly to a player who comes within the pickup radius of their class', () => {
     const { simulation } = arena();
     const pickup = drop(simulation.state, 'vibes', 400 + 60, 400);

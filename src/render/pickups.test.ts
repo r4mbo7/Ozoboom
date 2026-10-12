@@ -15,7 +15,7 @@ const SPEED = 12;
 function context(): RenderContext {
   const shape: Shape = { texture: Texture.EMPTY, radius: 12 };
   return {
-    textures: { vibes: shape, cometHead: shape, cometTail: shape },
+    textures: { vibes: shape, ring: shape, cometHead: shape, cometTail: shape },
     layers: createLayers(new Container()),
   } as unknown as RenderContext;
 }
@@ -34,6 +34,27 @@ function stateWith(tick: number, ...pickups: PickupState[]) {
 const shown = (layer: Container) => layer.children.filter((child) => child.visible);
 
 describe('pickups', () => {
+  it('tighten a gold circle on the landing spot of a lobbed vibe, not in calm mode', () => {
+    const ctx = context();
+    const frame = createFrame();
+    const family = createPickups(ctx);
+    const flight = { ticksLeft: 12, ticks: 24, fromX: 0, fromY: 50 };
+    const state = stateWith(10, { ...vibe(1, 300, 0), flight });
+
+    family.update(state, 0, frame);
+
+    const [, body, mark] = ctx.layers.pickups.children;
+    expect(mark).toMatchObject({ visible: true, x: 300, y: 50, tint: frame.palette.or });
+    expect(body?.x).toBe(150);
+    expect(shown(ctx.layers.fx)).toHaveLength(0);
+
+    frame.calm = true;
+    family.update(state, 0, frame);
+
+    expect(mark?.visible).toBe(false);
+    expect(body?.x).toBe(300);
+  });
+
   it('trail gold then turquoise behind the vibes in flight only', () => {
     const ctx = context();
     const frame = createFrame();

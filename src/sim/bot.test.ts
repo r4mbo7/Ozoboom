@@ -32,6 +32,32 @@ function playDuo(seed: number) {
 }
 
 describe('the automatic player', () => {
+  it('walks to a vibe on the ground, not to one in flight', () => {
+    const { state } = createSimulation(COMBAT_OPTIONS);
+    const [player] = state.players;
+    if (player === undefined) {
+      throw new Error('expected one player');
+    }
+    const idle = botCommand(state, COMBAT_OPTIONS.content, 0);
+    const y = player.y + 40;
+    const flight = { ticksLeft: 10, ticks: 24, fromX: 0, fromY: 0 };
+    state.pickups.push({
+      id: 9001,
+      kind: 'vibes',
+      amount: 1,
+      x: player.x,
+      y,
+      prevX: player.x,
+      prevY: y,
+      ticksLeft: 100,
+      flight,
+    });
+
+    expect(botCommand(state, COMBAT_OPTIONS.content, 0)).toEqual(idle);
+    state.pickups.forEach((pickup) => delete pickup.flight);
+    expect(botCommand(state, COMBAT_OPTIONS.content, 0)).not.toEqual(idle);
+  });
+
   it('plays the same short game for two twice from the same seed', () => {
     expect(hashState(playDuo(3))).toBe(hashState(playDuo(3)));
   });

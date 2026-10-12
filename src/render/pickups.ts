@@ -4,6 +4,7 @@ import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { lerp } from './motion';
 import { cometPop, cometStretch, isAttracted, trailSteps } from './pickup-comet';
+import { flightPose } from './pickup-flight';
 import { COMET_LENGTH } from './textures-pickups';
 import { add, hide, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
@@ -11,10 +12,15 @@ import { ViewPool } from './views';
 const PICKUP_RADIUS = 7;
 const TRAIL_ALPHA = 0.75;
 const RESTING = -1;
+// The circle that tightens on the landing spot of a vibe in flight.
+const MARK_RADIUS = 22;
+const MARK_ALPHA = 0.25;
+const MARK_ALPHA_GAIN = 0.45;
 
 interface PickupView {
   readonly outline: Sprite;
   readonly body: Sprite;
+  readonly mark: Sprite;
 }
 
 interface CometView {
@@ -41,9 +47,13 @@ function placeTrail(
 export function createPickups(ctx: RenderContext): Family {
   const { textures: t, layers } = ctx;
   const views = new ViewPool<PickupView>(
-    () => ({ outline: add(layers.pickups, t.vibes), body: add(layers.pickups, t.vibes) }),
+    () => ({
+      outline: add(layers.pickups, t.vibes),
+      body: add(layers.pickups, t.vibes),
+      mark: add(layers.pickups, t.ring),
+    }),
     (view) => {
-      hide(view.outline, view.body);
+      hide(view.mark, view.outline, view.body);
     },
   );
   // Only the vibes in flight hold a trail: a resting one costs no sprite.
@@ -67,16 +77,17 @@ export function createPickups(ctx: RenderContext): Family {
       views.begin();
       comets.begin();
       for (const pickup of state.pickups) {
-        const { body, outline } = views.acquire(pickup.id);
+        const { body, outline, mark } = views.acquire(pickup.id);
         const shape = t.vibes;
+        const pose = flightPose(pickup, alpha, calm);
         const twinkle = calm ? 1 : 1 + 0.2 * Math.sin(now * 0.45 + pickup.id);
-        const size = (PICKUP_RADIUS / shape.radius) * twinkle;
-        const x = lerp(pickup.prevX, pickup.x, alpha);
-        const y = lerp(pickup.prevY, pickup.y, alpha);
+        const size = (PICKUP_RADIUS / shape.radius) * twinkle * pose.scale;
+        const { x, y } = pose;
         body.texture = shape.texture;
         setTint(body, palette.or);
         body.visible = true;
         body.position.set(x, y);
+        body.alpha = pose.alpha;
         if (isAttracted(pickup)) {
           const comet = comets.acquire(pickup.id);
           if (comet.since === RESTING) {
@@ -98,6 +109,13 @@ export function createPickups(ctx: RenderContext): Family {
           body.rotation = calm ? 0 : now * 0.03 + pickup.id;
         }
         placeOutline(outline, body, shape.texture, shape.radius, frame);
+        mark.visible = pose.progress < 1 && !calm;
+        if (mark.visible) {
+          setTint(mark, palette.or);
+          mark.position.set(pickup.x, pickup.y);
+          mark.scale.set(lerp(MARK_RADIUS, PICKUP_RADIUS, pose.progress) / t.ring.radius);
+          mark.alpha = MARK_ALPHA + MARK_ALPHA_GAIN * pose.progress;
+        }
       }
       views.end();
       comets.end();

@@ -217,6 +217,16 @@ export interface SpeakerDefinition {
   unlocksWeaponId?: string;
 }
 
+// Plugging a speaker starts a shower of `bars` bars: every plugged speaker lobs `dropsPerBar` vibes
+// a bar, each worth `amount`, landing within `radius` of the core after `flightBeats` beats.
+export interface VibeRainRules {
+  bars: number;
+  dropsPerBar: number;
+  amount: number;
+  radius: number;
+  flightBeats: number;
+}
+
 // Phrases count from 0 within the tier's buildup, toPhrase included.
 export interface SpawnRule {
   enemyId: string;
@@ -312,6 +322,8 @@ export interface SetDefinition {
   pickups: { lifetimeTicks: number; speed: number };
   tiers: readonly TierDefinition[];
   speakers?: readonly SpeakerDefinition[];
+  // Absent means no shower.
+  vibeRain?: VibeRainRules;
   // Absent means 3.
   weaponSlots?: number;
   reviveBars?: number;

@@ -18,6 +18,7 @@ export const MAIN_STAGE: SetDefinition = {
   maxTraps: 6,
   levelCurve: { baseVibes: 10, vibesPerLevel: 16 },
   pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
+  vibeRain: { bars: 8, dropsPerBar: 4, amount: 0.25, radius: 300, flightBeats: 2 },
   weaponSlots: 3,
   reviveBars: 1,
   coreRepairPerBar: 85,
