@@ -1,4 +1,4 @@
-import type { SimEvent, SimState } from '../sim/state';
+import type { EnemyState, SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import {
   PARTY_OFFSET,
@@ -29,6 +29,35 @@ function killRandomEnemy(state: SimState, events: SimEvent[]): void {
     byPlayer: 0,
   });
   state.enemies[index] = spawnEnemy(state, breedOf(enemy.kind), false);
+}
+
+// The bad vibe nearest to the first player loses a share of its life, and gets it all back rather than die.
+function hitNearestEnemy(state: SimState, events: SimEvent[], share: number): void {
+  const player = state.players[0];
+  let nearest: EnemyState | undefined;
+  let reach = Number.POSITIVE_INFINITY;
+  for (const enemy of state.enemies) {
+    const distance = player === undefined ? 0 : Math.hypot(enemy.x - player.x, enemy.y - player.y);
+    if (!enemy.isBoss && distance < reach) {
+      nearest = enemy;
+      reach = distance;
+    }
+  }
+  if (player === undefined || nearest === undefined) {
+    return;
+  }
+  const damage = nearest.maxHp * share;
+  nearest.hp = nearest.hp > damage ? nearest.hp - damage : nearest.maxHp;
+  events.push({
+    type: 'enemyHit',
+    id: nearest.id,
+    damage,
+    x: nearest.x,
+    y: nearest.y,
+    by: player.id,
+    fromX: player.x,
+    fromY: player.y,
+  });
 }
 
 export function advanceFixture(state: SimState, queued: readonly FixtureEvent[]): void {
@@ -99,6 +128,9 @@ export function advanceFixture(state: SimState, queued: readonly FixtureEvent[])
   }
 
   advanceClassFx(state, queued, events);
+  if (queued.includes('enemyHit')) {
+    hitNearestEnemy(state, events, 0.25);
+  }
 
   for (let index = 0; index < state.enemies.length; index += 1) {
     const enemy = state.enemies[index];

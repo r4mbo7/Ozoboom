@@ -19,6 +19,7 @@ interface Particle {
   from: number;
   to: number;
   peak: number;
+  rotation: number;
   spin: number;
 }
 
@@ -33,6 +34,8 @@ export interface ParticleSpec {
   readonly toRadius: number;
   readonly tint: number;
   readonly peak: number;
+  // The angle it is born with, then how far it turns over its life.
+  readonly rotation?: number;
   readonly spin?: number;
 }
 
@@ -59,6 +62,7 @@ export class Particles {
         from: 0,
         to: 0,
         peak: 0,
+        rotation: 0,
         spin: 0,
       };
     });
@@ -79,6 +83,7 @@ export class Particles {
     particle.from = spec.fromRadius / this.shape.radius;
     particle.to = spec.toRadius / this.shape.radius;
     particle.peak = spec.peak;
+    particle.rotation = spec.rotation ?? 0;
     particle.spin = spec.spin ?? 0;
     particle.sprite.tint = spec.tint;
     particle.sprite.visible = true;
@@ -98,7 +103,7 @@ export class Particles {
       const eased = 1 - (1 - progress) * (1 - progress);
       sprite.position.set(particle.x + particle.dx * eased, particle.y + particle.dy * eased);
       sprite.scale.set(particle.from + (particle.to - particle.from) * eased);
-      sprite.rotation = particle.spin * progress;
+      sprite.rotation = particle.rotation + particle.spin * progress;
       sprite.alpha = particle.peak * (1 - progress);
     }
   }

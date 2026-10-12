@@ -12,6 +12,7 @@ import { blinkLit, lerp } from './motion';
 import type { PixiPalette } from './palette';
 import { add, byId, hide, setTint } from './util';
 import { ViewPool } from './views';
+import { mixColor } from './weapon-kit';
 
 const TAU = Math.PI * 2;
 // A mask leans toward its heading, never turns upside down: a face stays readable at 16 pixels.
@@ -40,12 +41,7 @@ interface EnemyView {
 
 export interface EnemiesFamily extends Family {
   blink(id: number, untilTick: number): void;
-}
-
-function mixColor(from: number, to: number, amount: number): number {
-  const channel = (shift: number) =>
-    Math.round(((from >> shift) & 0xff) * (1 - amount) + ((to >> shift) & 0xff) * amount);
-  return (channel(16) << 16) | (channel(8) << 8) | channel(0);
+  radiusOf(id: number): number | undefined;
 }
 
 const warnUnknown = (message: string): void => {
@@ -192,6 +188,9 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       if (view !== undefined) {
         view.blinkUntil = Math.max(view.blinkUntil, untilTick);
       }
+    },
+    radiusOf(id: number): number | undefined {
+      return views.peek(id)?.radius;
     },
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, calm } = frame;

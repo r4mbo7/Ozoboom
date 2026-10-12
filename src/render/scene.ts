@@ -19,6 +19,7 @@ import { createDecors } from './decors';
 import { createClassEffects } from './class-effects';
 import { createDropTrails } from './drop-trails';
 import { createEffects } from './effects';
+import { createHits } from './hits';
 import { createEnemies } from './enemies';
 import { type Frame, advanceFrame, createFrame } from './frame';
 import { createGiants } from './giants';
@@ -138,6 +139,7 @@ export class Scene implements Renderer {
       createMarkers(ctx),
       createStageMarker(ctx),
       createEffects(ctx, (id) => traps.reachOf(id)),
+      createHits(ctx, (id) => enemies.radiusOf(id)),
       createClassEffects(ctx, (id, untilTick) => {
         enemies.blink(id, untilTick);
       }),
