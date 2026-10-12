@@ -73,6 +73,33 @@ const VOWEL_O: Vowel = [
   [2400, 9, 0.08],
 ];
 const TOM_HZ = [190, 160, 130, 105];
+// Each harmonic twice, a few cents apart and on opposite sides: they beat against each other.
+const HALO_PARTIALS: readonly (readonly [
+  ratio: number,
+  cents: number,
+  gain: number,
+  pan: number,
+])[] = [
+  [1, -5, 0.05, -1],
+  [1, 5, 0.05, 1],
+  [2, 4, 0.034, -1],
+  [2, -4, 0.034, 1],
+  [3, -3, 0.02, 1],
+  [3, 4, 0.02, -1],
+  [4, 3, 0.014, -1],
+  [4, -4, 0.014, 1],
+  [6, -3, 0.008, 1],
+  [6, 3, 0.008, -1],
+  [8, 2, 0.0045, -1],
+  [8, -3, 0.0045, 1],
+];
+const BIRD_HZ = [2600, 3400, 2150, 3900, 2950];
+// One gust on each side, their filters crossing: [from hz, to hz, pan, seconds late].
+const WIND_GUSTS = [
+  [700, 1500, -0.8, 0],
+  [1900, 900, 0.8, 0.37],
+] as const;
+const HALO_ATTACK = 1.3;
 const GATE_TOP_HZ = 2200;
 
 function sweepOf(step: number, tempo: Tempo): number {
@@ -95,6 +122,20 @@ function held(ctx: MusicVoiceContext, steps: number, release: number, share = 0.
     0,
     Math.min(steps * sixteenthSeconds(ctx.tempo) * share, ctx.until - ctx.at - release),
   );
+}
+
+// A slow swell and its fall, shortened so that nothing sounds past the cut.
+function swell(
+  ctx: MusicVoiceContext,
+  at: number,
+  sustain: number,
+  attack: number,
+  release: number,
+) {
+  const whole = Math.max(0, Math.min(sustain + release, ctx.until - at));
+  const rise = Math.min(attack, whole / 2);
+  const fall = Math.min(release, whole - rise);
+  return { attack: rise, hold: Math.max(0, whole - rise - fall), release: fall };
 }
 
 interface Singing extends Omit<ToneSpec, 'wave' | 'hz' | 'detune' | 'filter'> {
@@ -717,7 +758,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
     playTone(echoed(ctx, 0.35), at, {
       wave: 'sawtooth',
       hz,
-      gain: 0.034 * gain,
+      gain: 0.085 * gain,
       attack: 0.002,
       hold: 0.01,
       release: 0.24,
@@ -772,5 +813,194 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       hold: held(ctx, steps, 0.27, 0.75),
       release: 0.25,
     });
+  },
+  bubble: (ctx) => {
+    const { out, at, hz, step, tempo, position, gain, light } = ctx;
+    const top = (light ? 420 : 700) + (light ? 900 : 2600) * sweepOf(step, tempo);
+    const pan = position % 2 === 0 ? -0.35 : 0.35;
+    playTone(echoed(ctx, 0.5), at, {
+      wave: 'square',
+      hz,
+      gain: 0.08 * gain,
+      attack: 0.003,
+      hold: 0.015,
+      release: 0.17,
+      pan,
+      filter: { type: 'lowpass', hz: top, toHz: 240, glide: 0.13, q: 9 },
+    });
+    playTone(out, at, {
+      wave: 'sine',
+      hz,
+      gain: 0.045 * gain,
+      attack: 0.003,
+      hold: 0.01,
+      release: 0.13,
+      pan,
+    });
+  },
+  halo: (ctx) => {
+    const { out, at, hz, steps, gain } = ctx;
+    const seconds = steps * sixteenthSeconds(ctx.tempo);
+    for (const [ratio, cents, level, pan] of HALO_PARTIALS) {
+      const attack = HALO_ATTACK * (1 + ratio / 10);
+      playTone(out, at, {
+        wave: 'sine',
+        hz: hz * ratio,
+        detune: cents,
+        gain: level * gain,
+        ...swell(ctx, at, seconds + attack - HALO_ATTACK, attack, 2),
+        pan,
+      });
+    }
+  },
+  mallet: (ctx) => {
+    const { out, at, hz, position, gain, steps } = ctx;
+    const ring = 0.7 + 0.25 * steps;
+    const pan = position % 8 < 4 ? -0.45 : 0.45;
+    const into = echoed(ctx, 0.75);
+    playTone(into, at, {
+      wave: 'sine',
+      hz,
+      gain: 0.1 * gain,
+      attack: 0.003,
+      hold: 0.02,
+      release: ring,
+      pan,
+    });
+    playTone(into, at, {
+      wave: 'triangle',
+      hz: hz * 2,
+      detune: 6,
+      gain: 0.03 * gain,
+      attack: 0.003,
+      hold: 0.01,
+      release: ring * 0.45,
+      pan: -pan,
+    });
+    playTone(out, at, {
+      wave: 'sine',
+      hz: hz * 4.02,
+      gain: 0.03 * gain,
+      attack: 0.002,
+      hold: 0.004,
+      release: 0.11,
+      pan,
+    });
+    playNoise(out, at, {
+      gain: 0.02 * gain,
+      attack: 0.001,
+      hold: 0.002,
+      release: 0.02,
+      pan,
+      filter: { type: 'bandpass', hz: 3000, q: 1 },
+    });
+  },
+  'glide-sub': (ctx) => {
+    const { out, at, hz, steps, gain, cutoff, accent } = ctx;
+    const from = hz * (accent ? 3.6 : 2.2);
+    const glide = accent ? 0.42 : 0.26;
+    const hold = held(ctx, steps, 0.012 + 0.25, 0.95);
+    playTone(out, at, {
+      wave: 'sine',
+      hz: from,
+      toHz: hz,
+      glide,
+      gain: 0.34 * gain,
+      attack: 0.012,
+      hold,
+      release: 0.25,
+    });
+    playTone(out, at, {
+      wave: 'sawtooth',
+      hz: from,
+      toHz: hz,
+      glide,
+      gain: 0.13 * gain,
+      attack: 0.012,
+      hold,
+      release: 0.25,
+      filter: { type: 'lowpass', hz: cutoff * 1.4, toHz: cutoff * 0.5, glide: glide * 2, q: 3 },
+    });
+  },
+  bansuri: (ctx) => {
+    const { at, hz, fromHz, steps, slide, gain } = ctx;
+    const grace = steps <= 1;
+    const attack = grace || slide ? 0.025 : 0.08;
+    const release = grace ? 0.08 : 0.28;
+    const hold = held(ctx, steps, attack * 1.5 + release, 1);
+    const pitch = slide
+      ? { hz: fromHz, toHz: hz, glide: 0.07 }
+      : { hz: hz * 0.985, toHz: hz, glide: 0.06 };
+    const vibrato = steps >= 5 ? { vibrato: { hz: 5.1, cents: 20, delay: 0.32 } } : {};
+    const into = echoed(ctx, 0.45);
+    playTone(into, at, {
+      wave: 'triangle',
+      ...pitch,
+      gain: 0.13 * gain,
+      attack,
+      hold,
+      release,
+      ...vibrato,
+      pan: -0.1,
+      filter: { type: 'lowpass', hz: Math.min(hz * 5, 4200), q: 0.8 },
+    });
+    playTone(into, at, {
+      wave: 'sine',
+      hz: hz * 2,
+      gain: 0.035 * gain,
+      attack,
+      hold,
+      release,
+      ...vibrato,
+      pan: 0.15,
+    });
+    playTone(into, at, {
+      wave: 'sine',
+      hz: hz * 3,
+      gain: 0.012 * gain,
+      attack: attack * 1.5,
+      hold,
+      release,
+      pan: -0.2,
+    });
+    playNoise(into, at, {
+      gain: 0.045 * gain,
+      attack: attack * 0.6,
+      hold,
+      release: release * 0.8,
+      filter: { type: 'bandpass', hz: hz * 2, q: 2.2 },
+    });
+  },
+  bird: (ctx) => {
+    const { at, position, gain } = ctx;
+    const base = BIRD_HZ[position % BIRD_HZ.length] ?? 2600;
+    const pan = position % 2 === 0 ? -0.7 : 0.7;
+    const into = echoed(ctx, 0.5);
+    [0, 0.11, 0.2, 0.42].forEach((offset, index) => {
+      playTone(into, at + offset, {
+        wave: 'sine',
+        hz: base * (1 + 0.08 * index),
+        toHz: base * (index % 2 === 0 ? 1.45 : 0.8),
+        glide: 0.08,
+        gain: 0.022 * gain,
+        attack: 0.006,
+        hold: 0.03,
+        release: 0.06,
+        pan,
+        fm: { wave: 'sine', hz: 30, toHz: 46, glide: 0.1, depth: base * 0.04 },
+      });
+    });
+  },
+  wind: (ctx) => {
+    const { out, at, steps, gain } = ctx;
+    const seconds = steps * sixteenthSeconds(ctx.tempo);
+    for (const [hz, toHz, pan, lag] of WIND_GUSTS) {
+      playNoise(out, at + lag, {
+        gain: 0.035 * gain,
+        ...swell(ctx, at + lag, seconds * 0.6, seconds * 0.4, seconds * 0.4),
+        pan,
+        filter: { type: 'bandpass', hz, toHz, glide: seconds * 0.8, q: 0.9 },
+      });
+    }
   },
 };

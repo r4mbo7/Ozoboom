@@ -154,12 +154,12 @@ describe('the Dome tracks', () => {
   });
 });
 
-describe('the Ambyss track', () => {
+describe('Premier rayon', () => {
   const ambyss = SETS.find((set) => set.id === 'ambyss');
   const track = TRACKS.find((candidate) => candidate.id === ambyss?.trackIds[0]);
 
-  it('plays only Premier rayon, in E major over vi-IV-I-V', () => {
-    expect(ambyss?.trackIds).toEqual(['premier-rayon']);
+  it('plays at Ambyss in E major over vi-IV-I-V', () => {
+    expect(ambyss?.trackIds).toContain('premier-rayon');
     expect(track?.name).toBe('Premier rayon');
     expect((track?.rootMidi ?? 0) % 12).toBe(4);
     expect(track?.scale).toEqual([0, 2, 4, 5, 7, 9, 11]);
@@ -185,5 +185,60 @@ describe('the Ambyss track', () => {
       ['drop', 3, 1],
       ['drop', 4, 0.45],
     ]);
+  });
+});
+
+describe('Sous la voile', () => {
+  const track = TRACKS.find((candidate) => candidate.id === 'sous-la-voile');
+  const steps = (voice: string, heard?: string) =>
+    (track?.drums ?? [])
+      .filter((drum) => drum.voice === voice && drum.in === heard && drum.loopSteps === 32)
+      .flatMap((drum) => drum.hits.map(([step]) => step))
+      .sort((a, b) => a - b);
+
+  it('plays at Ambyss in C dorian, each chord over two bars', () => {
+    expect(SETS.find((set) => set.id === 'ambyss')?.trackIds).toContain('sous-la-voile');
+    expect((track?.rootMidi ?? 1) % 12).toBe(0);
+    expect(track?.scale).toEqual([0, 2, 3, 5, 7, 9, 10]);
+    expect(track?.chords).toEqual([0, 0, 4, 4, 0, 0, 3, 3]);
+  });
+
+  it('bounces its echo and softens its build', () => {
+    expect(track?.echo?.wide).toBe(true);
+    expect(track?.build).toBe('soft');
+  });
+
+  it('plays half-time: two kicks and two snares over two bars', () => {
+    expect(steps('kick', 'rise')).toEqual([0, 16]);
+    expect(steps('kick', 'drop')).toEqual([0, 16, 22]);
+    expect(steps('snare', 'drop')).toEqual([8, 24]);
+  });
+
+  it('slides its bass down to the root, then jumps to the fifth', () => {
+    const bass = track?.parts.find((part) => part.voice === 'glide-sub');
+
+    expect(bass?.notes.map(([step, degree]) => [step, degree])).toEqual([
+      [0, 0],
+      [24, 4],
+      [30, 0],
+    ]);
+    expect(bass?.accents).toEqual([0]);
+  });
+
+  it('rolls three tuned drums down into every eighth bar', () => {
+    const roll = (track?.drums ?? []).filter((drum) => drum.loopSteps === 128);
+
+    expect(roll.map((drum) => drum.hz)).toEqual([294, 220, 147]);
+    expect(roll.flatMap((drum) => drum.hits.map(([step]) => step))).toEqual([
+      120, 122, 124, 125, 126, 127,
+    ]);
+  });
+
+  it('sings the bansuri on the fifth, sparse in the buildup and whole from the break', () => {
+    const flutes = (track?.parts ?? []).filter((part) => part.voice === 'bansuri');
+
+    expect(flutes.map((part) => part.layer)).toEqual(['lead', 'theme']);
+    expect(flutes.map((part) => part.notes[1]?.[1])).toEqual([4, 4]);
+    expect(flutes[0]?.notes.length).toBeLessThan(flutes[1]?.notes.length ?? 0);
   });
 });

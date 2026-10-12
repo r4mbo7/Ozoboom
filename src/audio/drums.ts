@@ -184,4 +184,47 @@ export const DRUM_VOICES: Record<DrumVoiceId, DrumVoice> = {
   tom(ctx) {
     tom(ctx, ctx.hz ?? FRAME_DRUM_HZ, ctx.gain, ctx.release ?? 0.45);
   },
+  udu({ out, at, gain, pan, hz, release }) {
+    const pitch = hz ?? 147;
+    playTone(out, at, {
+      wave: 'sine',
+      hz: pitch * 3.2,
+      toHz: pitch,
+      glide: 0.07,
+      gain: 0.5 * gain,
+      attack: 0.001,
+      hold: 0.03,
+      release: release ?? 0.24,
+      pan,
+    });
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: pitch * 2,
+      toHz: pitch * 1.5,
+      glide: 0.05,
+      gain: 0.12 * gain,
+      attack: 0.001,
+      hold: 0.01,
+      release: 0.09,
+      pan,
+    });
+    playNoise(out, at, {
+      gain: 0.1 * gain,
+      attack: 0.001,
+      hold: 0.003,
+      release: 0.035,
+      pan,
+      filter: { type: 'bandpass', hz: 2200, q: 1.2 },
+    });
+  },
+  cabasa({ out, at, gain, pan }) {
+    playNoise(out, at, {
+      gain: 0.3 * gain,
+      attack: 0.006,
+      hold: 0.006,
+      release: 0.05,
+      pan,
+      filter: { type: 'bandpass', hz: 7200, q: 0.7 },
+    });
+  },
 };

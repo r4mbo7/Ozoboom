@@ -373,7 +373,14 @@ export type MusicVoiceId =
   | 'sunrise-pluck'
   | 'strings'
   | 'ooh'
-  | 'aah';
+  | 'aah'
+  | 'bubble'
+  | 'halo'
+  | 'mallet'
+  | 'glide-sub'
+  | 'bansuri'
+  | 'bird'
+  | 'wind';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
 // `kick` plays out of the break, `clap` only in the drop.
@@ -413,7 +420,9 @@ export type DrumVoiceId =
   | 'tek'
   | 'frame-drum'
   | 'rattle'
-  | 'tom';
+  | 'tom'
+  | 'udu'
+  | 'cabasa';
 
 // One drum of a track's own kit: [sixteenth within the loop, gain] hits, gated by its layer.
 export interface DrumPart {

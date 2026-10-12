@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MAIN_TEMPO, tempoOf } from '../shared/tempo';
 import { sixteenthSeconds } from './clock';
+import { DRUM_VOICES } from './drums';
 import { MUSIC_VOICES, type MusicVoiceContext } from './voices';
 
 const noop = () => undefined;
@@ -362,5 +363,114 @@ describe('ambyss voices', () => {
 
     expect(rig.oscillators).toBe(6);
     expect(Math.max(...rig.ends)).toBeLessThan(1 + 2 * sixteenth + 0.3);
+  });
+});
+
+describe('psychill voices', () => {
+  it('beats twelve sines against each other under the halo, silent at the cut', () => {
+    const held = probe();
+    const cut = probe();
+
+    MUSIC_VOICES.halo(contextOf(held, { steps: 32 }));
+    MUSIC_VOICES.halo(contextOf(cut, { steps: 32, until: 2.8 }));
+
+    expect([held.oscillators, held.sources]).toEqual([12, 0]);
+    expect(Math.max(...held.ends)).toBeGreaterThan(1 + 32 * sixteenthSeconds());
+    expect(Math.max(...cut.ends)).toBeCloseTo(2.8, 6);
+  });
+
+  it('blows the wind as two gusts of noise, silent at the cut', () => {
+    const held = probe();
+    const cut = probe();
+
+    MUSIC_VOICES.wind(contextOf(held, { steps: 40 }));
+    MUSIC_VOICES.wind(contextOf(cut, { steps: 40, until: 2.2 }));
+
+    expect([held.oscillators, held.sources]).toEqual([0, 2]);
+    expect(Math.max(...cut.ends)).toBeCloseTo(2.2, 6);
+  });
+
+  it('strikes the mallet with a tick of noise, and lets a longer note ring longer', () => {
+    const short = probe();
+    const long = probe();
+    const gains = spyGains(short);
+
+    MUSIC_VOICES.mallet(contextOf(short, { steps: 1 }));
+    MUSIC_VOICES.mallet(contextOf(long, { steps: 4 }));
+
+    expect([short.oscillators, short.sources]).toEqual([3, 1]);
+    expect(gains.sends()).toEqual([0.75]);
+    expect(Math.max(...long.ends)).toBeGreaterThan(Math.max(...short.ends) + 0.5);
+  });
+
+  it('glides the sub and its saw down to the note, and stops them at the cut', () => {
+    const held = probe();
+    const cut = probe();
+
+    MUSIC_VOICES['glide-sub'](contextOf(held, { steps: 8, accent: true }));
+    MUSIC_VOICES['glide-sub'](contextOf(cut, { steps: 8, until: 1.4 }));
+
+    expect(held.oscillators).toBe(2);
+    expect(Math.max(...cut.ends)).toBeCloseTo(1.4, 6);
+  });
+
+  it('breathes noise under the bansuri, with a vibrato only on long notes', () => {
+    const grace = probe();
+    const long = probe();
+    const cut = probe();
+
+    MUSIC_VOICES.bansuri(contextOf(grace, { steps: 1 }));
+    MUSIC_VOICES.bansuri(contextOf(long, { steps: 8 }));
+    MUSIC_VOICES.bansuri(contextOf(cut, { steps: 8, until: 1.5 }));
+
+    expect([grace.oscillators, grace.sources]).toEqual([3, 1]);
+    expect(long.oscillators).toBe(5);
+    expect(Math.max(...cut.ends)).toBeCloseTo(1.5, 6);
+  });
+
+  it('chirps the bird four times, each with a warble', () => {
+    const rig = probe();
+
+    MUSIC_VOICES.bird(contextOf(rig));
+
+    expect(rig.oscillators).toBe(8);
+  });
+
+  it('pops the bubble as a square and a sine, half of it into the echo', () => {
+    const rig = probe();
+    const gains = spyGains(rig);
+
+    MUSIC_VOICES.bubble(contextOf(rig));
+
+    expect(rig.oscillators).toBe(2);
+    expect(gains.sends()).toEqual([0.5]);
+  });
+});
+
+describe('psychill drums', () => {
+  const hit = (rig: Probe, hz?: number) => ({
+    out: rig.out,
+    at: 1,
+    gain: 1,
+    pan: undefined,
+    hz,
+    release: undefined,
+    kick: { fromHz: 150, toHz: 33, release: 0.26 },
+  });
+
+  it('sweeps the udu down to its pitch with a slap of noise', () => {
+    const rig = probe();
+
+    DRUM_VOICES.udu(hit(rig, 196));
+
+    expect([rig.oscillators, rig.sources]).toEqual([2, 1]);
+  });
+
+  it('shakes the cabasa as one burst of noise', () => {
+    const rig = probe();
+
+    DRUM_VOICES.cabasa(hit(rig));
+
+    expect([rig.oscillators, rig.sources]).toEqual([0, 1]);
   });
 });
