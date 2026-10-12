@@ -1,5 +1,5 @@
 import { type Locator, expect, test } from './test';
-import { cardsDealt } from './game';
+import { cardsDealt, logsOf } from './game';
 
 async function expectWholeIn(texts: Locator, frame: string): Promise<void> {
   for (const text of await texts.all()) {
@@ -90,6 +90,22 @@ test.describe('a phone held sideways', () => {
     ]) {
       await expect(part).toBeHidden();
     }
+  });
+
+  test('flies a chosen weapon card to the level ring, its gear slot being off the screen', async ({
+    page,
+  }) => {
+    const logs = logsOf(page);
+    await page.goto('/dev/ui.html?screen=fusion');
+    const offer = page.getByRole('region', { name: 'Choix d’amélioration' });
+    await cardsDealt(page);
+
+    await offer.getByRole('button', { name: /Diabolo Lancé/ }).tap();
+
+    await expect(offer).toBeHidden();
+    await expect
+      .poll(() => logs.filter((line) => line.includes('onUpgradeCue card')).slice(-2))
+      .toEqual(['[ui] onUpgradeCue cardFlight 0', '[ui] onUpgradeCue cardLanded 0']);
   });
 
   test('picks a class without asking to turn the phone', async ({ page }) => {

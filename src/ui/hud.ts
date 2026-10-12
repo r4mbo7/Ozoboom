@@ -511,7 +511,9 @@ export function createHud(): Hud {
       if (playerId !== shownPlayer) {
         return null;
       }
-      return chips.find((chip) => chip.dataset.weapon === weaponId) ?? level;
+      // A short screen hides the gear: the card then lands on the level ring.
+      const chip = chips.find((candidate) => candidate.dataset.weapon === weaponId);
+      return chip !== undefined && chip.getClientRects().length > 0 ? chip : level;
     },
     reset() {
       selectedTrap = 0;
