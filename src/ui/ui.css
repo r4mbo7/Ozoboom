@@ -1794,13 +1794,20 @@
   border-radius: 999px;
 }
 
-.ui-hud__bar > section {
+/* A short screen draws the timeline, the status and the actions as panels of their own. */
+.ui-hud__timeline,
+.ui-hud__status,
+.ui-hud__actions {
+  display: contents;
+}
+
+.ui-hud__bar section {
   display: flex;
   align-items: center;
   align-self: stretch;
 }
 
-.ui-hud__bar > section + section {
+.ui-hud__bar section:not(.ui-hud__level) {
   padding-left: 16px;
   border-left: 1px solid var(--ui-line);
 }
@@ -3504,7 +3511,7 @@
     padding-right: 14px;
   }
 
-  .ui-hud__bar > section + section {
+  .ui-hud__bar section:not(.ui-hud__level) {
     padding-left: 8px;
   }
 
@@ -3660,7 +3667,7 @@
     border-radius: 28px;
   }
 
-  .ui-hud__bar > section + section {
+  .ui-hud__bar section:not(.ui-hud__level) {
     padding-left: 0;
     border-left: 0;
   }
@@ -3922,4 +3929,233 @@
   user-select: none;
   touch-action: none;
   pointer-events: auto;
+}
+
+/* Short screens, a phone held sideways: the HUD keeps to the corners, clear of the speakers at the top and the
+   bottom of the stage. Only the line-up, the pause, the level, the life, the traps and the skill stay. */
+
+@media (max-height: 520px) and (min-width: 600px) {
+  .ui-hud,
+  .ui-hud[data-team] {
+    --ui-gap: 8px;
+
+    grid-template:
+      'top' auto
+      'bracelets' auto
+      '.' 1fr
+      'bar' auto
+      / minmax(0, 1fr);
+  }
+
+  .ui-hud[data-team] .ui-hud__bracelets {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .ui-bracelet {
+    gap: 8px;
+    width: 200px;
+    padding: 5px 10px 6px;
+  }
+
+  .ui-bracelet__level,
+  .ui-bracelet__key {
+    display: none;
+  }
+
+  .ui-hud__top {
+    align-items: stretch;
+  }
+
+  .ui-hud__help {
+    align-self: flex-start;
+  }
+
+  .ui-hud__ribbon,
+  .ui-hud__bar {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    justify-self: stretch;
+    gap: var(--ui-gap);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .ui-hud__ribbon {
+    align-items: flex-start;
+  }
+
+  .ui-hud__bar {
+    align-items: flex-end;
+  }
+
+  .ui-hud__timeline,
+  .ui-hud__status,
+  .ui-hud__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 999px;
+  }
+
+  .ui-hud__timeline {
+    max-width: 40vw;
+    padding: 4px 16px 5px;
+  }
+
+  .ui-hud__status {
+    padding: 5px 16px 5px 5px;
+  }
+
+  .ui-hud__actions {
+    margin-left: auto;
+    padding: 6px;
+  }
+
+  .ui-hud[data-multi] .ui-hud__status,
+  .ui-drop,
+  .ui-plugs,
+  .ui-hud__bar .ui-hud__gear,
+  .ui-life__bar,
+  .ui-hud__life .ui-who__name,
+  .ui-traps__name,
+  .ui-hud__skills .ui-skill__text {
+    display: none;
+  }
+
+  [data-touch] .ui-hud__pause {
+    margin-left: auto;
+    border-color: var(--ui-line);
+    background: var(--ui-panel);
+    box-shadow: var(--ui-lift);
+    backdrop-filter: blur(10px);
+  }
+
+  .ui-hud__ribbon .ui-lineup {
+    flex-basis: auto;
+    order: 0;
+    gap: 7px;
+    height: 12px;
+    margin-top: 15px;
+  }
+
+  .ui-hud__ribbon .ui-lineup__sky {
+    inset: -16px 0 auto;
+    height: 14px;
+  }
+
+  .ui-hud__ribbon .ui-lineup__sky::before {
+    inset: 6px 0 auto;
+  }
+
+  .ui-hud__ribbon .ui-lineup__sun {
+    width: 14px;
+    height: 14px;
+  }
+
+  .ui-hud__ribbon .ui-lineup__tier {
+    gap: 3px;
+  }
+
+  .ui-hud__ribbon .ui-slot--phrase {
+    width: 16px;
+    height: 10px;
+  }
+
+  .ui-hud__ribbon .ui-slot--break {
+    width: 12px;
+    height: 12px;
+  }
+
+  .ui-hud__ribbon .ui-slot--break::before {
+    inset: 2px 2.5px;
+    border-inline-width: 2px;
+  }
+
+  .ui-hud__ribbon .ui-slot--drop {
+    width: 10px;
+    height: 10px;
+  }
+
+  .ui-hud__ribbon .ui-slot--sunrise {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ui-hud__bar section:not(.ui-hud__level) {
+    padding-left: 10px;
+    border-left: 1px solid var(--ui-line);
+  }
+
+  .ui-hud__actions section:first-child {
+    padding-left: 4px;
+    border-left: 0;
+  }
+
+  .ui-level {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ui-level::after {
+    transform-origin: 4px 21.5px;
+  }
+
+  .ui-level__number {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .ui-hud__life {
+    gap: 6px;
+  }
+
+  .ui-life__icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .ui-life__value {
+    min-width: 0;
+  }
+
+  .ui-trap {
+    width: 48px;
+    height: 48px;
+  }
+
+  .ui-hud__skills .ui-skill__ring {
+    width: 48px;
+    height: 48px;
+  }
+
+  .ui-hud__skills .ui-skill__glyph {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ui-hud__skills .ui-skill__key {
+    top: 26px;
+    left: 26px;
+  }
+}
+
+@media (max-height: 520px) and (min-width: 600px) and (max-width: 720px) {
+  .ui-hud__timeline {
+    padding-inline: 14px;
+  }
+
+  .ui-hud__ribbon .ui-lineup {
+    gap: 6px;
+  }
+
+  .ui-hud__ribbon .ui-slot--phrase {
+    width: 11px;
+  }
 }

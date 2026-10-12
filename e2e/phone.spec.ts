@@ -50,13 +50,46 @@ test.describe('a phone held upright', () => {
 test.describe('a phone held sideways', () => {
   test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
 
-  test('keeps the skill name and its state inside the action bar', async ({ page }) => {
+  test('keeps the HUD in the corners, clear of the speakers at the top and the bottom', async ({
+    page,
+  }) => {
     await page.goto('./?dev=bench');
     await page.getByRole('button', { name: 'Jouer', exact: true }).tap();
     await page.getByRole('radio', { name: 'Le Nounours' }).tap();
     await page.getByRole('button', { name: 'Lancer le set' }).tap();
-    await expect(page.locator('.ui-skill__status')).toHaveText('Prête');
-    await expectWholeIn(page.locator('.ui-skill__name, .ui-skill__status'), '.ui-hud__bar');
+    const hud = page.locator('.ui-hud');
+    await expect(hud.getByRole('button', { name: 'Pause' })).toBeVisible();
+
+    const edges = async (part: Locator) => {
+      const box = await part.boundingBox();
+      if (box === null) throw new Error('Nothing drawn');
+      return { left: box.x / 844, right: (box.x + box.width) / 844 };
+    };
+
+    for (const part of [
+      hud.locator('.ui-lineup'),
+      hud.getByRole('region', { name: 'Niveau' }),
+      hud.getByRole('region', { name: 'Vie' }),
+    ]) {
+      expect((await edges(part)).right).toBeLessThanOrEqual(0.4);
+    }
+    for (const part of [
+      hud.getByRole('button', { name: 'Pause' }),
+      hud.getByRole('region', { name: 'Pièges' }),
+      hud.getByRole('region', { name: 'Compétence' }),
+    ]) {
+      expect((await edges(part)).left).toBeGreaterThanOrEqual(0.6);
+    }
+    for (const part of [
+      hud.getByRole('timer', { name: 'Drop' }),
+      hud.getByRole('meter', { name: 'Enceintes branchées' }),
+      hud.getByRole('region', { name: 'Agrès' }),
+      hud.getByRole('meter', { name: 'Vie' }),
+      hud.locator('.ui-skill__text'),
+      hud.locator('.ui-traps__name'),
+    ]) {
+      await expect(part).toBeHidden();
+    }
   });
 
   test('picks a class without asking to turn the phone', async ({ page }) => {

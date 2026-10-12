@@ -88,7 +88,9 @@ export function createHud(): Hud {
   pause.setAttribute('aria-label', 'Pause');
   pause.dataset.touchControl = 'pause';
   pause.append(icon('ui-hud__pause-icon', PAUSE));
-  ribbon.append(drop, lineupTrack, plugRow, pause);
+  const timeline = el('div', 'ui-panel ui-hud__timeline');
+  timeline.append(lineupTrack);
+  ribbon.append(drop, timeline, plugRow, pause);
 
   const help = el('p', 'ui-hud__help');
   help.setAttribute('role', 'status');
@@ -129,7 +131,11 @@ export function createHud(): Hud {
   skill.root.dataset.touchControl = 'skill';
   skills.append(skill.root);
 
-  bar.append(level, life, gear, traps, skills);
+  const status = el('div', 'ui-panel ui-hud__status');
+  status.append(level, life, gear);
+  const actions = el('div', 'ui-panel ui-hud__actions');
+  actions.append(traps, skills);
+  bar.append(status, actions);
 
   const bracelets = el('div', 'ui-hud__bracelets');
   bracelets.setAttribute('aria-label', 'Les joueurs');

@@ -190,6 +190,7 @@ Pris en charge dès la V0 pour le clavier et la manette, **tranché le 2026-10-0
 - Le son des coups sur les bad vibes est un réglage de l'écran titre et de la pause, coupé par défaut.
 - Au clavier et à la manette, deux réglages de l'écran titre et de la pause, coupés par défaut, font ce que le tactile fait toujours : le tir automatique tire dès qu'une bad vibe est à portée, la visée automatique vise la plus proche à portée.
 - Au tactile, les menus se touchent, la compétence se touche sur sa tuile et la pause sur un bouton du bandeau ; aucune touche n'est affichée. Le tactile joue seul ou en ligne, pas en coop sur un même écran.
+- Sur un écran court (téléphone en paysage), le HUD ne garde que la frise du set et la pause en haut, le niveau, le chiffre de vie, les pièges et la compétence en bas, rangés dans les coins : le milieu reste libre pour les enceintes du haut et du bas.
 - Au clavier, les menus se parcourent aux flèches ou ZQSD et se valident avec Entrée. Espace ne sert qu'au tir : sans effet dans les menus, hors zone de texte.
 - Les commandes se remappent (V1).
 - La vibration de la manette suit le kick et les impacts, désactivable.
