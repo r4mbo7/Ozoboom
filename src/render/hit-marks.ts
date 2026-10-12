@@ -1,4 +1,5 @@
-import type { EntityId, SimEvent } from '../sim/state';
+import { TICKS_PER_BEAT } from '../shared/tempo';
+import type { EntityId, PlayerId, SimEvent } from '../sim/state';
 
 export type EnemyHit = Extract<SimEvent, { type: 'enemyHit' }>;
 
@@ -74,4 +75,72 @@ export function crackStage(hp: number, maxHp: number): number {
   }
   const lost = ((maxHp - Math.max(hp, 0)) * CRACK_STAGES) / maxHp;
   return Math.min(CRACK_STAGES, Math.ceil(lost - 1e-9));
+}
+
+export const NUMBER_GAP_TICKS = TICKS_PER_BEAT / 2;
+
+export interface Tallied {
+  id: EntityId;
+  x: number;
+  y: number;
+  by: PlayerId | undefined;
+  amount: number;
+}
+
+interface Tally extends Tallied {
+  lastHit: number;
+  shownAt: number;
+}
+
+// The hits on one bad vibe add up into the number shown above it, one per gap at most: a beam that
+// hits on every tick shows what it did in half a beat, not a number per tick.
+export class DamageTally {
+  private readonly tallies = new Map<EntityId, Tally>();
+
+  get size(): number {
+    return this.tallies.size;
+  }
+
+  add(hit: EnemyHit, tick: number): void {
+    let tally = this.tallies.get(hit.id);
+    if (tally === undefined) {
+      tally = {
+        id: hit.id,
+        x: 0,
+        y: 0,
+        by: undefined,
+        amount: 0,
+        lastHit: 0,
+        shownAt: Number.NEGATIVE_INFINITY,
+      };
+      this.tallies.set(hit.id, tally);
+    }
+    tally.x = hit.x;
+    tally.y = hit.y;
+    tally.by = hit.by;
+    tally.amount += hit.damage;
+    tally.lastHit = tick;
+  }
+
+  // `show` receives each number that is due; the object it is handed is reused afterwards.
+  flush(tick: number, show: (number: Tallied) => void): void {
+    for (const tally of this.tallies.values()) {
+      if (tick - tally.shownAt < NUMBER_GAP_TICKS) {
+        continue;
+      }
+      const amount = Math.round(tally.amount);
+      if (amount >= 1) {
+        tally.amount = amount;
+        show(tally);
+        tally.amount = 0;
+        tally.shownAt = tick;
+      } else if (tick - tally.lastHit >= NUMBER_GAP_TICKS) {
+        this.tallies.delete(tally.id);
+      }
+    }
+  }
+
+  clear(): void {
+    this.tallies.clear();
+  }
 }

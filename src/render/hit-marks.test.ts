@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   CRACK_STAGES,
+  DamageTally,
+  NUMBER_GAP_TICKS,
   SPARK_GAP_TICKS,
   SPARKS_PER_TICK,
   SparkBudget,
+  type Tallied,
   contactOf,
   crackStage,
 } from './hit-marks';
@@ -78,5 +81,55 @@ describe('crackStage', () => {
     const stage = crackStage(-5, 30);
 
     expect(stage).toBe(CRACK_STAGES);
+  });
+});
+
+describe('DamageTally', () => {
+  function shown(tally: DamageTally, tick: number): Tallied[] {
+    const numbers: Tallied[] = [];
+    tally.flush(tick, ({ id, x, y, by, amount }) => numbers.push({ id, x, y, by, amount }));
+    return numbers;
+  }
+
+  it('shows a lone hit at once, rounded, where it landed and for who landed it', () => {
+    const tally = new DamageTally();
+    tally.add({ ...HIT, damage: 11.6, by: 2 }, 10);
+
+    const numbers = shown(tally, 10);
+
+    expect(numbers).toEqual([{ id: 7, x: 100, y: 50, by: 2, amount: 12 }]);
+  });
+
+  it('adds up the hits of a beam into one number per gap', () => {
+    const tally = new DamageTally();
+    const numbers: Tallied[] = [];
+
+    for (let tick = 0; tick <= NUMBER_GAP_TICKS; tick += 1) {
+      tally.add({ ...HIT, damage: 2 }, tick);
+      numbers.push(...shown(tally, tick));
+    }
+
+    expect(numbers.map((number) => number.amount)).toEqual([2, 2 * NUMBER_GAP_TICKS]);
+  });
+
+  it('holds back what does not yet round to one', () => {
+    const tally = new DamageTally();
+    tally.add({ ...HIT, damage: 0.2 }, 0);
+    const early = shown(tally, 0);
+    tally.add({ ...HIT, damage: 0.4 }, 1);
+
+    const late = shown(tally, 1);
+
+    expect([early, late.map((number) => number.amount)]).toEqual([[], [1]]);
+  });
+
+  it('forgets a bad vibe once its number is shown and the gap has passed', () => {
+    const tally = new DamageTally();
+    tally.add(HIT, 0);
+    shown(tally, 0);
+
+    shown(tally, NUMBER_GAP_TICKS);
+
+    expect(tally.size).toBe(0);
   });
 });
