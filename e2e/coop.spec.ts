@@ -1,4 +1,4 @@
-import { type Page, expect as baseExpect, test } from '@playwright/test';
+import { type Page, expect as baseExpect, test } from './test';
 import { PAD, collectConsoleErrors, plugFakeGamepads, repeatUntil } from './game';
 
 // A local game of two on the short set of `?dev=fast`: the keyboard and a gamepad each take a seat

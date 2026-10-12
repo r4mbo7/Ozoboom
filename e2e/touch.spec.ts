@@ -1,4 +1,4 @@
-import { type Page, expect as baseExpect, test } from '@playwright/test';
+import { type Page, expect as baseExpect, test } from './test';
 import { collectConsoleErrors, playSolo } from './game';
 
 // A phone held sideways. The bench keeps the player alive whatever the bad vibes do.
@@ -36,10 +36,6 @@ function player(page: Page) {
 test('plays a game with a finger: stick, traps and pause', async ({ page }) => {
   const errors = collectConsoleErrors(page);
   const touch = await finger(page);
-  // Chromium reads the controllers plugged into the host: one touched mid-test takes the HUD.
-  await page.addInitScript(() => {
-    navigator.getGamepads = () => [];
-  });
   await page.goto('./?dev=bench');
   await playSolo(page, 'tap');
   const pause = page.getByRole('button', { name: 'Pause' });

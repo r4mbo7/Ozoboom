@@ -1,4 +1,4 @@
-import { type Page, expect, test } from '@playwright/test';
+import { type Page, expect, test } from './test';
 import { collectConsoleErrors } from './game';
 
 // Without a GPU, each page load builds the stage for seconds: a test that reloads needs more than

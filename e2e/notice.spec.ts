@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { collectConsoleErrors } from './game';
 
 test('shows an interruption over the game, and its button leaves for the title', async ({

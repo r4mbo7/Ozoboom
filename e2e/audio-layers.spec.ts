@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { CLIP_CEILING } from '../src/audio/master';
 import { collectConsoleErrors } from './game';
 

@@ -1,4 +1,4 @@
-import { type Locator, type Page, expect as baseExpect, test } from '@playwright/test';
+import { type Locator, type Page, expect as baseExpect, test } from './test';
 import {
   PAD,
   collectConsoleErrors,

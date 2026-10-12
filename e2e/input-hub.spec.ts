@@ -1,4 +1,4 @@
-import { type Page, expect, test } from '@playwright/test';
+import { type Page, expect, test } from './test';
 import { PAD, collectConsoleErrors, plugFakeGamepads } from './game';
 
 const column = (page: Page, device: string) => page.locator(`[data-device-id="${device}"]`);

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { collectConsoleErrors } from './game';
 
 test('loads the self-hosted fonts and never leaves the origin during a game', async ({

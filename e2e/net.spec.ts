@@ -1,4 +1,11 @@
-import { type Browser, type BrowserContext, type Page, expect, test } from '@playwright/test';
+import {
+  type Browser,
+  type BrowserContext,
+  type Page,
+  expect,
+  test,
+  unplugHostGamepads,
+} from './test';
 import { collectConsoleErrors } from './game';
 
 // A context made by hand outlives its test: close it, with its PeerJS connection.
@@ -10,6 +17,7 @@ test.afterEach(async () => {
 
 async function newPage(browser: Browser): Promise<Page> {
   const context = await browser.newContext();
+  await unplugHostGamepads(context);
   opened.push(context);
   return context.newPage();
 }

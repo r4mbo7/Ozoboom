@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { REPLAY_SCRIPTS } from '../src/sim/replay-scripts';
 
 test('every scripted game ends on the fingerprint Vitest pins in Node', async ({ page }) => {

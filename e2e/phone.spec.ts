@@ -1,4 +1,4 @@
-import { type Locator, expect, test } from '@playwright/test';
+import { type Locator, expect, test } from './test';
 
 async function expectWholeIn(texts: Locator, frame: string): Promise<void> {
   for (const text of await texts.all()) {

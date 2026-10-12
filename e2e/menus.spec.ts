@@ -1,4 +1,4 @@
-import { type Locator, type Page, expect as baseExpect, test } from '@playwright/test';
+import { type Locator, type Page, expect as baseExpect, test } from './test';
 import { collectConsoleErrors, playSolo } from './game';
 
 // A menu that opens under a resting cursor gets a synthetic hover from the browser: it must keep

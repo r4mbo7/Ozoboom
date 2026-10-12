@@ -1,4 +1,11 @@
-import { type Browser, type BrowserContext, type Page, expect, test } from '@playwright/test';
+import {
+  type Browser,
+  type BrowserContext,
+  type Page,
+  expect,
+  test,
+  unplugHostGamepads,
+} from './test';
 import { collectConsoleErrors, playSolo } from './game';
 
 // Two pages play one set through the local PeerJS broker (playwright.config.ts): no Internet.
@@ -21,6 +28,7 @@ test.afterEach(async () => {
 
 async function newPage(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ viewport: SMALL_SCREEN });
+  await unplugHostGamepads(context);
   opened.push(context);
   return context.newPage();
 }

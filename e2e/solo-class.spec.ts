@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { collectConsoleErrors } from './game';
 
 test('Jouer plays the class chosen after it, and the next visit proposes it again', async ({

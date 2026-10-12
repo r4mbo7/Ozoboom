@@ -1,4 +1,4 @@
-import { type Locator, type Page, expect as baseExpect, test } from '@playwright/test';
+import { type Locator, type Page, expect as baseExpect, test } from './test';
 import { collectConsoleErrors, playSolo, repeatUntil } from './game';
 
 // Every key press waits for two frames, and SwiftShader frames are slow on CI and when tests run

@@ -1,4 +1,4 @@
-import { type Page, expect as baseExpect, test } from '@playwright/test';
+import { type Page, expect as baseExpect, test } from './test';
 import { collectConsoleErrors, playSolo, repeatUntil } from './game';
 
 test.describe.configure({ timeout: 120_000 });

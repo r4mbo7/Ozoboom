@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from './test';
 import { collectConsoleErrors, repeatUntil } from './game';
 
 const PHONE = { width: 390, height: 844 };
