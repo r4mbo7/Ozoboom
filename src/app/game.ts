@@ -52,6 +52,7 @@ import {
   type Match,
 } from './match';
 import { endingMs, endingTicks } from './ending';
+import { openAudioOnGesture } from './gesture';
 import { createPauseScreen } from './pause';
 import { loadPrefs, savePref } from './prefs';
 import { createSeats, type LaunchedSeats } from './seats';
@@ -62,7 +63,6 @@ import { drawTrack, stageTracks, trackOf } from './track';
 import { countVisit } from './visits';
 import { playerLabel } from '../ui/hud-model';
 
-const GESTURES = ['pointerdown', 'pointerup', 'keydown'] as const;
 const DEFAULT_CLASS_ID = 'mage';
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const TOGETHER_FOCUS: CameraFocus = { kind: 'everyone' };
@@ -665,9 +665,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   // The pause is the team's: any device pauses, navigates and resumes, through the merged view.
   function beginFrame(): void {
     view = { devices: hub.poll(), merged: hub.merged() };
-    if (!gestured && padPressed()) {
-      openAudio();
-    }
+    audioGate.pad(padPressed);
     const { merged } = view;
     if (feedback !== null) {
       feedback.update(merged);
@@ -899,31 +897,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     }
     applySound();
   });
-  // Browsers keep the audio shut until a gesture: the first click, key or pad button opens it, and the
-  // title's ambience starts there instead of waiting for the set. A finger counts as a gesture only
-  // when it lifts.
-  let gestured = false;
-  function openAudio(): void {
-    if (!gestured) {
-      gestured = true;
-      void audio.start();
-      for (const type of GESTURES) {
-        window.removeEventListener(type, onGesture, true);
-      }
-    }
-  }
-  function onGesture(event: Event): void {
-    const touchDown =
-      event instanceof PointerEvent &&
-      event.type === 'pointerdown' &&
-      event.pointerType !== 'mouse';
-    if (!touchDown) {
-      openAudio();
-    }
-  }
-  for (const type of GESTURES) {
-    window.addEventListener(type, onGesture, true);
-  }
+  // The title's ambience starts at the first gesture instead of waiting for the set.
+  const audioGate = openAudioOnGesture(window, () => audio.start());
   loop.start();
 
   // A link to a room opens the lobby on the guest's side.
