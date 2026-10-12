@@ -251,7 +251,18 @@ export type SimEvent =
   | { type: 'phrase'; phrase: number }
   | { type: 'segment'; segment: SetSegment; tier: number }
   | { type: 'enemySpawned'; id: EntityId; kind: string; x: number; y: number }
-  | { type: 'enemyHit'; id: EntityId; damage: number; x: number; y: number; front?: true }
+  | {
+      type: 'enemyHit';
+      id: EntityId;
+      damage: number;
+      x: number;
+      y: number;
+      front?: true;
+      // The player credited with the hit and where it came from, when the sim knows them.
+      by?: PlayerId;
+      fromX?: number;
+      fromY?: number;
+    }
   | {
       type: 'enemyDied';
       id: EntityId;

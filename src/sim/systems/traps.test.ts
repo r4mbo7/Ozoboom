@@ -364,6 +364,9 @@ describe('trap effects', () => {
       damage: 8,
       x: 450,
       y: 450,
+      by: 0,
+      fromX: 400,
+      fromY: 450,
     });
     expect(state.stats.damageDealt).toBe(8);
   });

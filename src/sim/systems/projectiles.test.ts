@@ -96,7 +96,7 @@ describe('projectiles', () => {
     expect(first.lastHitBy).toBe(0);
   });
 
-  it('report each hit with an event', () => {
+  it('report each hit with an event that says who hit and from where', () => {
     const { simulation } = arena();
     const { state } = simulation;
     const enemy = placeEnemy(state, 'doorman', 500, 100);
@@ -110,6 +110,9 @@ describe('projectiles', () => {
       damage: 10,
       x: enemy.x,
       y: enemy.y,
+      by: 0,
+      fromX: 470,
+      fromY: 100,
     });
   });
 

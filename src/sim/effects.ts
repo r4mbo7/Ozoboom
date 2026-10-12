@@ -1,6 +1,6 @@
 import { isBarTick, type Tempo } from '../shared/tempo';
 import type { ResolvedContent } from './content';
-import type { EnemyState, PlayerId, PlayerState, SimState } from './state';
+import type { EnemyState, PlayerId, PlayerState, SimEvent, SimState } from './state';
 
 interface Point {
   x: number;
@@ -73,8 +73,24 @@ export function hurtEnemy(
     enemy.lastHitBy = by;
   }
   state.stats.damageDealt += dealt;
-  const hit = { type: 'enemyHit', id: enemy.id, damage: dealt, x: enemy.x, y: enemy.y } as const;
-  state.events.push(frontMul === 1 ? hit : { ...hit, front: true });
+  const hit: Extract<SimEvent, { type: 'enemyHit' }> = {
+    type: 'enemyHit',
+    id: enemy.id,
+    damage: dealt,
+    x: enemy.x,
+    y: enemy.y,
+  };
+  if (frontMul !== 1) {
+    hit.front = true;
+  }
+  if (by !== null) {
+    hit.by = by;
+  }
+  if (from !== null) {
+    hit.fromX = from.x;
+    hit.fromY = from.y;
+  }
+  state.events.push(hit);
 }
 
 function frontDamageMul(enemy: EnemyState, from: Point): number {

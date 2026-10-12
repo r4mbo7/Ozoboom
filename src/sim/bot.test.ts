@@ -9,9 +9,9 @@ import { hashState } from './replay';
 const TICKS = 1500;
 
 const STAGE_FINGERPRINTS: Readonly<Record<string, string>> = {
-  'soiree-v0': 'd497fb0d',
+  'soiree-v0': '2f225573',
   dome: 'f7cce676',
-  ambyss: '05e099eb',
+  ambyss: '9a15331a',
 };
 
 function playDuo(seed: number) {
