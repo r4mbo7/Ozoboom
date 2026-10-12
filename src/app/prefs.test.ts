@@ -5,6 +5,7 @@ const DEFAULTS = {
   calmMode: true,
   muted: false,
   volume: 10,
+  hitSound: false,
   autoFire: false,
   autoAim: false,
   classId: 'mage',
@@ -49,6 +50,7 @@ describe('prefs', () => {
     savePref(() => storage, 'calmMode', false);
     savePref(() => storage, 'muted', true);
     savePref(() => storage, 'volume', 4);
+    savePref(() => storage, 'hitSound', true);
     savePref(() => storage, 'autoFire', true);
     savePref(() => storage, 'autoAim', true);
     savePref(() => storage, 'classId', 'tank');
@@ -59,6 +61,7 @@ describe('prefs', () => {
       calmMode: false,
       muted: true,
       volume: 4,
+      hitSound: true,
       autoFire: true,
       autoAim: true,
       classId: 'tank',

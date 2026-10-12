@@ -26,6 +26,10 @@ export function createToggle(label: string, hint: string, onText: string, offTex
   };
 }
 
+export function createHitSoundToggle(): Toggle {
+  return createToggle('Son des coups', 'Une note par coup porté', 'Oui', 'Non');
+}
+
 // The touch screen always fires and aims by itself: these switches only show elsewhere.
 export function createAutoFireToggle(): Toggle {
   return assistToggle('Tir automatique', 'Sans tenir le tir');

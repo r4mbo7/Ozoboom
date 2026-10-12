@@ -33,6 +33,7 @@ import {
   createFeedbackButton,
   createAutoAimToggle,
   createAutoFireToggle,
+  createHitSoundToggle,
   createSoundControl,
   createUi,
   prefersCalmMode,
@@ -94,6 +95,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     calmMode: prefersCalmMode(),
     muted: false,
     volume: VOLUME_STEPS,
+    hitSound: false,
     autoFire: false,
     autoAim: false,
     classId: DEFAULT_CLASS_ID,
@@ -200,6 +202,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       onSetVolume(volume) {
         setSound({ volume, muted: prefs.muted });
       },
+      onToggleHitSound: setHitSound,
       onToggleAutoFire: setAutoFire,
       onToggleAutoAim: setAutoAim,
       onFeedback: openForm,
@@ -303,6 +306,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   });
   const soundControl = createSoundControl(stepVolume);
   soundControl.set(prefs);
+  const hitSoundToggle = createHitSoundToggle();
+  hitSoundToggle.set(prefs.hitSound);
   const autoFireToggle = createAutoFireToggle();
   autoFireToggle.set(prefs.autoFire);
   const autoAimToggle = createAutoAimToggle();
@@ -329,6 +334,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         setSound({ volume: prefs.volume, muted: !prefs.muted });
       },
       adjust: stepVolume,
+    },
+    {
+      label: 'Son des coups',
+      element: hitSoundToggle.button,
+      activate() {
+        setHitSound(!prefs.hitSound);
+      },
     },
     {
       label: 'Tir automatique',
@@ -361,6 +373,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       calmMode: prefs.calmMode,
       muted: prefs.muted,
       volume: prefs.volume,
+      hitSound: prefs.hitSound,
       autoFire: prefs.autoFire,
       autoAim: prefs.autoAim,
       device: view.merged.device,
@@ -377,6 +390,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     });
     audio.setMuted(sound.muted);
     audio.setVolume(prefs.volume / VOLUME_STEPS);
+    audio.setHitSound(prefs.hitSound);
     audio.setMood(sound.mood);
   }
 
@@ -458,6 +472,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
 
   function stepVolume(side: -1 | 1): void {
     setSound(stepSound(prefs, side));
+  }
+
+  function setHitSound(enabled: boolean): void {
+    prefs.hitSound = enabled;
+    applySound();
+    savePref(storage, 'hitSound', enabled);
+    hitSoundToggle.set(enabled);
   }
 
   function setAutoFire(enabled: boolean): void {

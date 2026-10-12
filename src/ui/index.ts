@@ -42,7 +42,7 @@ export type {
   UiFrame,
 } from './types';
 export { createFeedbackButton } from './feedback-button';
-export { createAutoAimToggle, createAutoFireToggle } from './toggle';
+export { createAutoAimToggle, createAutoFireToggle, createHitSoundToggle } from './toggle';
 export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './volume';
 export { heldSlot, selectTrap } from './navigation';
 export { SEAT_IDS, defaultName } from './lobby-model';
@@ -89,6 +89,7 @@ export function createUi(
   let calmMode = false;
   let muted = false;
   let volume = VOLUME_STEPS;
+  let hitSound = false;
   let autoFire = false;
   let autoAim = false;
   let device: InputDevice = 'none';
@@ -132,6 +133,11 @@ export function createUi(
     },
     stepVolume(side) {
       setSound(stepSound({ volume, muted }, side));
+    },
+    toggleHitSound() {
+      hitSound = !hitSound;
+      applyOptions();
+      callbacks.onToggleHitSound(hitSound);
     },
     toggleAutoFire() {
       autoFire = !autoFire;
@@ -257,7 +263,7 @@ export function createUi(
 
   function applyOptions(): void {
     root.classList.toggle('calm', calmMode);
-    title.setOptions({ calmMode, muted, volume, autoFire, autoAim });
+    title.setOptions({ calmMode, muted, volume, hitSound, autoFire, autoAim });
   }
 
   function setSound(next: SoundLevel): void {
@@ -312,6 +318,7 @@ export function createUi(
       calmMode = options.calmMode;
       muted = options.muted;
       volume = options.volume;
+      hitSound = options.hitSound;
       autoFire = options.autoFire;
       autoAim = options.autoAim;
       applyOptions();

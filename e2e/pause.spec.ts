@@ -111,6 +111,28 @@ test('turns on automatic fire and aim from the title and keeps them in the pause
   expect(errors).toEqual([]);
 });
 
+test('leaves the sound of hits off until asked for, from the title, and keeps it in the pause', async ({
+  page,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto('./?dev=fast');
+  const hitSound = page.getByRole('switch', { name: /^Son des coups/ });
+  await expect(hitSound).toHaveAttribute('aria-checked', 'false');
+
+  await hitSound.click();
+  await page.reload();
+  await playSolo(page);
+  await expect(page.getByRole('region', { name: 'Pièges' })).toBeVisible();
+  await press(page, 'Escape');
+
+  const pause = page.getByRole('dialog', { name: 'Pause' });
+  await expect(pause.getByRole('switch', { name: /^Son des coups/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  expect(errors).toEqual([]);
+});
+
 async function game(page: Page): Promise<{ seed: number; tick: number }> {
   const state = await page.evaluate(() => {
     const current = window.ozoboom?.state;
@@ -141,7 +163,7 @@ test('quits the set from the pause after a confirmation, then plays a new one', 
   const stay = confirmation.getByRole('button', { name: 'Rester' });
   const leave = confirmation.getByRole('button', { name: 'Quitter', exact: true });
 
-  for (let index = 0; index < 5; index++) {
+  for (let index = 0; index < 6; index++) {
     await press(page, 'ArrowDown');
   }
   await expect(quitEntry).toHaveAttribute('aria-current', 'true');
@@ -201,7 +223,7 @@ test('quits the set with a gamepad, B going back to the pause', async ({ page })
   const confirmation = page.getByRole('alertdialog', { name: 'Quitter le set\u202f?' });
   const leave = confirmation.getByRole('button', { name: 'Quitter', exact: true });
 
-  for (let index = 0; index < 5; index++) {
+  for (let index = 0; index < 6; index++) {
     await tapButton(page, PAD.DpadDown);
   }
   await expect(quitEntry).toHaveAttribute('aria-current', 'true');

@@ -11,6 +11,8 @@ export interface AudioEngine {
   setMuted(muted: boolean): void;
   // The player's level, from 0 to 1: the engine makes each step sound as large as the last.
   setVolume(volume: number): void;
+  // Whether a hit on a bad vibe sounds; it does until told otherwise.
+  setHitSound(enabled: boolean): void;
   setMood(mood: Mood): void;
   // The track of what is scheduled from now on: called when a game begins.
   setTrack(track: MusicTrack): void;

@@ -52,6 +52,7 @@ const titleOptions = {
   calmMode: params.has('calm') || prefersCalmMode(),
   muted: params.has('muted'),
   volume: 10,
+  hitSound: params.has('hitSound'),
   autoFire: params.has('autoFire'),
   autoAim: params.has('autoAim'),
 };
@@ -132,6 +133,10 @@ const ui = createUi(
     onSetVolume(volume) {
       console.info('[ui] onSetVolume', volume);
       titleOptions.volume = volume;
+    },
+    onToggleHitSound(enabled) {
+      console.info('[ui] onToggleHitSound', enabled);
+      titleOptions.hitSound = enabled;
     },
     onToggleAutoFire(enabled) {
       console.info('[ui] onToggleAutoFire', enabled);

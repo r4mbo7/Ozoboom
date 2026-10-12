@@ -641,4 +641,17 @@ describe('the hit on a bad vibe', () => {
 
     expect(tones).toEqual([keyHz(SOIREE_OUVERTURE, 4, 4)]);
   });
+
+  it('stays silent once the hit sound is turned off, and leaves the other sounds alone', () => {
+    const { out, peaks, tones } = recordingOutput();
+    const sfx = createSfx(out, trapEffectOf, lookups, SOIREE_OUVERTURE);
+    sfx.setHitSound(false);
+
+    sfx.play([hit], 1, players);
+    const afterHit = peaks.length;
+    sfx.play([{ type: 'coreHit', damage: 2 }], 1, players);
+
+    expect(afterHit).toBe(0);
+    expect(tones).toEqual([keyHz(SOIREE_OUVERTURE, 7, 2)]);
+  });
 });

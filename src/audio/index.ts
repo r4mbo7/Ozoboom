@@ -69,6 +69,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   let running: Running | null = null;
   let muted = false;
   let volume = 1;
+  let hitSound = true;
   let latest: SimState | null = null;
   let mood: Mood = 'set';
   let heard: Mood = 'set';
@@ -130,6 +131,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const open = (): Running => {
     const context = (options.createContext ?? (() => new AudioContext()))();
     const master = createMasterChain(context, muted, volume);
+    const sfx = createSfx(master.sfx, trapEffectOf, options.sfxLookups, track);
+    sfx.setHitSound(hitSound);
     return {
       context,
       master,
@@ -139,7 +142,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         setOf: options.setOf,
         onKickScheduled: options.onKickScheduled,
       }),
-      sfx: createSfx(master.sfx, trapEffectOf, options.sfxLookups, track),
+      sfx,
       ambience: createAmbience(master.music),
     };
   };
@@ -187,6 +190,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     setVolume(value) {
       volume = value;
       running?.master.setVolume(value);
+    },
+    setHitSound(value) {
+      hitSound = value;
+      running?.sfx.setHitSound(value);
     },
     setTrack(value) {
       track = value;

@@ -5,6 +5,8 @@ export interface Prefs {
   muted: boolean;
   // From 1 to `VOLUME_STEPS`.
   volume: number;
+  // The note of a hit on a bad vibe: off unless the player asks for it.
+  hitSound: boolean;
   autoFire: boolean;
   autoAim: boolean;
   // The class of a solo game: the last one chosen on the title.
@@ -19,6 +21,7 @@ const KEYS: Readonly<Record<keyof Prefs, string>> = {
   calmMode: 'ozoboom.calmMode',
   muted: 'ozoboom.muted',
   volume: 'ozoboom.volume',
+  hitSound: 'ozoboom.hitSound',
   autoFire: 'ozoboom.autoFire',
   autoAim: 'ozoboom.autoAim',
   classId: 'ozoboom.classId',
@@ -33,6 +36,7 @@ export function loadPrefs(storage: () => Storage, defaults: Prefs): Prefs {
     calmMode: readFlag(storage, KEYS.calmMode) ?? defaults.calmMode,
     muted: readFlag(storage, KEYS.muted) ?? defaults.muted,
     volume: readVolume(storage, KEYS.volume) ?? defaults.volume,
+    hitSound: readFlag(storage, KEYS.hitSound) ?? defaults.hitSound,
     autoFire: readFlag(storage, KEYS.autoFire) ?? defaults.autoFire,
     autoAim: readFlag(storage, KEYS.autoAim) ?? defaults.autoAim,
     classId: readText(storage, KEYS.classId) ?? defaults.classId,

@@ -4,7 +4,12 @@ import { formatNumber } from './format';
 import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
 import { promptsFor } from './prompts';
-import { createAutoAimToggle, createAutoFireToggle, createToggle } from './toggle';
+import {
+  createAutoAimToggle,
+  createAutoFireToggle,
+  createHitSoundToggle,
+  createToggle,
+} from './toggle';
 import { createSoundControl } from './volume';
 
 export interface TitleActions {
@@ -13,6 +18,7 @@ export interface TitleActions {
   toggleCalmMode(): void;
   toggleMute(): void;
   stepVolume(side: -1 | 1): void;
+  toggleHitSound(): void;
   toggleAutoFire(): void;
   toggleAutoAim(): void;
   feedback?(): void;
@@ -22,6 +28,7 @@ export interface TitleOptions {
   readonly calmMode: boolean;
   readonly muted: boolean;
   readonly volume: number;
+  readonly hitSound: boolean;
   readonly autoFire: boolean;
   readonly autoAim: boolean;
 }
@@ -64,10 +71,19 @@ export function createTitle(actions: TitleActions): TitleScreen {
   const sound = createSoundControl((side) => {
     actions.stepVolume(side);
   });
+  const hitSound = createHitSoundToggle();
   const autoFire = createAutoFireToggle();
   const autoAim = createAutoAimToggle();
 
-  const items = [play, together, calm.button, sound.element, autoFire.button, autoAim.button];
+  const items = [
+    play,
+    together,
+    calm.button,
+    sound.element,
+    hitSound.button,
+    autoFire.button,
+    autoAim.button,
+  ];
   if (actions.feedback !== undefined) {
     items.push(createFeedbackButton());
   }
@@ -105,6 +121,9 @@ export function createTitle(actions: TitleActions): TitleScreen {
       actions.toggleMute();
     },
     () => {
+      actions.toggleHitSound();
+    },
+    () => {
       actions.toggleAutoFire();
     },
     () => {
@@ -136,6 +155,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
     setOptions(options) {
       calm.set(options.calmMode);
       sound.set(options);
+      hitSound.set(options.hitSound);
       autoFire.set(options.autoFire);
       autoAim.set(options.autoAim);
     },

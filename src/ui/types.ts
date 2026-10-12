@@ -80,6 +80,7 @@ export interface UiCallbacks {
   onToggleMute(muted: boolean): void;
   // From 1 to `VOLUME_STEPS`.
   onSetVolume(volume: number): void;
+  onToggleHitSound(enabled: boolean): void;
   onToggleAutoFire(enabled: boolean): void;
   onToggleAutoAim(enabled: boolean): void;
   onPlayTogether(): void;
@@ -115,6 +116,7 @@ export interface Ui {
     calmMode: boolean;
     muted: boolean;
     volume: number;
+    hitSound: boolean;
     autoFire: boolean;
     autoAim: boolean;
     device: InputDevice;

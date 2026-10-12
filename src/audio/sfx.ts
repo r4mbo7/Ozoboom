@@ -1064,6 +1064,7 @@ export interface Sfx {
   ): void;
   cue(cue: Cue, now: number): void;
   beginFrame(): void;
+  setHitSound(enabled: boolean): void;
   setKey(key: SfxKey): void;
   setTempo(tempo: Tempo): void;
   // The clock the set is scheduled on, null when none plays: the vibes fall on its sixteenths.
@@ -1096,12 +1097,16 @@ export function createSfx(
   let tempo = MAIN_TEMPO;
   let clock: Anchor | null = null;
   let progress = 0;
+  let hitSound = true;
   const arp = createVibeArp();
   return {
     play(events, now, players = [], core = FULL_CORE, enemies = []) {
       let vibes = 0;
       for (const event of events) {
         const name = sfxOf(event, trapEffectOf, lookups, players);
+        if (name === 'enemyHit' && !hitSound) {
+          continue;
+        }
         if (event.type === 'pickupCollected') {
           vibes += 1;
           progress = levelProgress(players.find((player) => player.id === event.playerId));
@@ -1123,6 +1128,9 @@ export function createSfx(
     },
     beginFrame() {
       limiter.beginFrame();
+    },
+    setHitSound(enabled) {
+      hitSound = enabled;
     },
     setKey(next) {
       key = next;
