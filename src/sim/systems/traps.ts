@@ -1,0 +1,262 @@
+import type { TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
+import type { Tempo } from '../../shared/tempo';
+import { normalize } from '../../shared/vec';
+import type { PlayerAction } from '../commands';
+import { lookup, type ResolvedContent } from '../content';
+import {
+  drawTo,
+  healPlayersOnBar,
+  hurtEnemy,
+  markEnemy,
+  markedDamageMul,
+  shockwave,
+  slowEnemies,
+  touches,
+  wholeTicks,
+} from '../effects';
+import { touchesObstacle } from '../obstacles';
+import type { EnemyState, PlayerId, PlayerState, SimState, TrapState, Vec2 } from '../state';
+import { statValue, trapCapacity } from '../stats';
+import type { StepContext } from './types';
+
+// Marks the lure does not renew lapse after the next tick, whose earlier systems still see it.
+const LURE_MARK_TICKS = 2;
+
+type PlaceTrap = Extract<PlayerAction, { type: 'placeTrap' }>;
+type TakeTrap = Extract<PlayerAction, { type: 'takeTrap' }>;
+
+export interface Emitter extends Vec2 {
+  direction: Vec2;
+}
+
+export interface Firing {
+  state: SimState;
+  tempo: Tempo;
+  at: Emitter;
+  effect: TrapEffect;
+  // Half-width of the emitter body: the lure stops its prey there.
+  contact: number;
+  by: PlayerId | null;
+  power: number;
+  damageMul: number;
+  radiusMul: number;
+  markedMul: number;
+}
+
+export function traps(ctx: StepContext): void {
+  const { state, content, commands } = ctx;
+  for (const player of state.players) {
+    for (const action of commands.get(player.id)?.actions ?? []) {
+      if (action.type === 'placeTrap' || action.type === 'takeTrap') {
+        useTrapSpot(ctx, player, action);
+      }
+    }
+  }
+
+  const firing = cadencesFiring(state);
+  const markedMul = markedDamageMul(content);
+  const fireAll = (lures: boolean) => {
+    for (const trap of state.traps) {
+      const definition = trapDefinition(content, trap);
+      if (firing[definition.cadence] && (definition.effect.kind === 'lure') === lures) {
+        const owner = ownerOf(state, trap);
+        state.events.push({
+          type: 'trapFired',
+          id: trap.id,
+          kind: trap.kind,
+          x: trap.x,
+          y: trap.y,
+        });
+        fire({
+          state,
+          tempo: ctx.tempo,
+          at: trap,
+          effect: definition.effect,
+          contact: definition.radius,
+          by: trap.ownerId,
+          power: 1,
+          damageMul: statValue(owner, 'trapDamageMul', 1),
+          radiusMul: statValue(owner, 'trapRadiusMul', 1),
+          markedMul,
+        });
+      }
+    }
+  };
+
+  fireAll(true);
+  for (const enemy of state.enemies) {
+    enemy.slowFactor = 1;
+    enemy.stunTicks = Math.max(0, enemy.stunTicks - 1);
+  }
+  fireAll(false);
+}
+
+// A trap on the spot is taken back when a hand is free; free ground takes the trap placed.
+function useTrapSpot(ctx: StepContext, player: PlayerState, action: PlaceTrap | TakeTrap): void {
+  if (player.downed) {
+    return;
+  }
+  const { state, content, set } = ctx;
+  const under = trapAt(content.traps, state.traps, action);
+  if (under !== undefined) {
+    if ((player.hand?.length ?? 0) < set.handSize) {
+      state.traps.splice(state.traps.indexOf(under), 1);
+      (player.hand ??= []).push(under.kind);
+      const { id, kind, x, y } = under;
+      state.events.push({ type: 'trapTaken', id, kind, playerId: player.id, x, y });
+    }
+    return;
+  }
+  if (action.type === 'placeTrap') {
+    placeTrap(ctx, player, action);
+  }
+}
+
+function placeTrap({ state, content, set }: StepContext, player: PlayerState, action: PlaceTrap) {
+  const definition = content.traps.get(action.trapId);
+  const held = player.hand?.indexOf(action.trapId) ?? -1;
+  if (definition === undefined || held < 0) {
+    return;
+  }
+
+  const { x, y } = action;
+
+  const { radius } = definition;
+  const { arena, core } = state;
+  const footprint = { x, y, radius };
+  const fits =
+    x >= radius &&
+    x <= arena.width - radius &&
+    y >= radius &&
+    y <= arena.height - radius &&
+    !overlaps(footprint, core, core.radius) &&
+    !touchesObstacle(footprint, set.obstacles ?? []) &&
+    !state.traps.some((trap) => overlaps(footprint, trap, trapDefinition(content, trap).radius)) &&
+    state.traps.length < trapCapacity(set, state);
+  if (!fits) {
+    return;
+  }
+
+  const id = state.nextEntityId;
+  state.nextEntityId += 1;
+  state.traps.push({
+    id,
+    kind: definition.id,
+    ownerId: player.id,
+    x,
+    y,
+    prevX: x,
+    prevY: y,
+    direction: facing(action, player),
+  });
+  player.hand?.splice(held, 1);
+  state.events.push({ type: 'trapPlaced', id, kind: definition.id, x, y });
+}
+
+export function trapAt(
+  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
+  traps: readonly TrapState[],
+  { x, y }: Vec2,
+): TrapState | undefined {
+  return traps.find((trap) =>
+    touches({ x, y, radius: 0 }, trap, lookup(definitions, trap.kind, 'trap').radius),
+  );
+}
+
+function facing(action: PlaceTrap, player: PlayerState): Vec2 {
+  const direction = normalize({ x: action.dx, y: action.dy });
+  return direction.x === 0 && direction.y === 0 ? player.aim : direction;
+}
+
+function overlaps(
+  body: { x: number; y: number; radius: number },
+  center: { x: number; y: number },
+  radius: number,
+): boolean {
+  const dx = body.x - center.x;
+  const dy = body.y - center.y;
+  const reach = radius + body.radius;
+  return dx * dx + dy * dy < reach * reach;
+}
+
+function cadencesFiring(state: SimState): Readonly<Record<TrapCadence, boolean>> {
+  let beat = false;
+  let bar = false;
+  let drop = false;
+  for (const event of state.events) {
+    beat ||= event.type === 'beat';
+    bar ||= event.type === 'bar';
+    drop ||= event.type === 'segment' && event.segment === 'drop';
+  }
+  return { beat, bar, drop, continuous: true };
+}
+
+export function fire(firing: Firing): void {
+  const { state, tempo, at, effect, contact, by, power, damageMul, radiusMul, markedMul } = firing;
+  switch (effect.kind) {
+    case 'shockwave':
+      shockwave(
+        state,
+        at,
+        effect.radius * radiusMul,
+        effect.damage * damageMul,
+        effect.knockback,
+        markedMul,
+        by,
+      );
+      return;
+    case 'beam':
+      for (const enemy of state.enemies) {
+        if (enemy.hp > 0 && inBeam(enemy, at, effect.length * radiusMul, effect.width / 2)) {
+          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, by, at);
+        }
+      }
+      return;
+    case 'mist': {
+      const radius = effect.radius * radiusMul;
+      slowEnemies(state, at, radius, effect.slowFactor);
+      healPlayersOnBar(state, tempo, at, radius, effect.healPerBar * power);
+      return;
+    }
+    case 'lure':
+      for (const enemy of state.enemies) {
+        if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
+          markEnemy(state, enemy, LURE_MARK_TICKS);
+          drawTo(enemy, at, contact + enemy.radius);
+        }
+      }
+      return;
+    case 'strobe': {
+      const stun = wholeTicks(effect.stunTicks * power);
+      for (const enemy of state.enemies) {
+        if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
+          enemy.stunTicks = Math.max(enemy.stunTicks, stun);
+        }
+      }
+      return;
+    }
+  }
+}
+
+function inBeam(enemy: EnemyState, trap: Emitter, length: number, halfWidth: number): boolean {
+  const { direction } = trap;
+  const dx = enemy.x - trap.x;
+  const dy = enemy.y - trap.y;
+  const along = dx * direction.x + dy * direction.y;
+  const across = Math.abs(dx * direction.y - dy * direction.x);
+  return (
+    along >= -enemy.radius && along <= length + enemy.radius && across <= halfWidth + enemy.radius
+  );
+}
+
+function trapDefinition(content: ResolvedContent, trap: TrapState): TrapDefinition {
+  return lookup(content.traps, trap.kind, 'trap');
+}
+
+function ownerOf(state: SimState, trap: TrapState): PlayerState {
+  const owner = state.players.find((player) => player.id === trap.ownerId);
+  if (owner === undefined) {
+    throw new Error(`trap ${String(trap.id)} has no owner ${String(trap.ownerId)}`);
+  }
+  return owner;
+}

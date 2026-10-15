@@ -1,0 +1,71 @@
+html,
+body {
+  overflow: hidden;
+}
+
+.game-stage {
+  position: fixed;
+  inset: 0;
+}
+
+.game-stage canvas {
+  display: block;
+}
+
+.pause {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: min(100%, 520px);
+  text-align: center;
+}
+
+.pause__text {
+  color: var(--ui-muted);
+  font-size: 18px;
+}
+
+.pause__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 360px);
+  margin-top: 12px;
+}
+
+.toast__line {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border: 1.5px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-panel);
+  box-shadow: var(--ui-lift);
+  font-size: 18px;
+}
+
+/* The lost end screen's backdrop, without its blur, which would cost a frame of its own. */
+.defeat-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background:
+    radial-gradient(
+      ellipse 60% 50% at 50% 0%,
+      color-mix(in srgb, var(--bad-vibe) 35%, transparent),
+      transparent 70%
+    ),
+    color-mix(in srgb, var(--sol) 90%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition-property: none;
+}
+
+.defeat-fade--on {
+  opacity: 1;
+  transition-property: opacity;
+  transition-timing-function: ease-in;
+}

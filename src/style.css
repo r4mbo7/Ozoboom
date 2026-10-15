@@ -1,0 +1,60 @@
+@font-face {
+  font-family: 'Cinzel Decorative';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/cinzel-decorative-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Cinzel Decorative';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/cinzel-decorative-900.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-variable.woff2') format('woff2');
+}
+
+:root {
+  --sol: #060a1c;
+  --sol-clair: #101a3c;
+  --or: #d9a441;
+  --turquoise: #3fd0c9;
+  --noyau: #ffd27a;
+  --mage: #ff6fa8;
+  --tank: #ff9a3d;
+  --healer: #7cf2b0;
+  --bad-vibe: #4b4762;
+  --texte: #f6ecd2;
+  --rouge: #ff5a52;
+  --beat: 414ms;
+  --font-title: 'Cinzel Decorative', Georgia, serif;
+  --font-body: 'Space Grotesk', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  background: var(--sol);
+  color: var(--texte);
+  font-family: var(--font-body);
+}

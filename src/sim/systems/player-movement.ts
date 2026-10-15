@@ -1,0 +1,30 @@
+import { length, normalize } from '../../shared/vec';
+import { IDLE_INPUT } from '../commands';
+import { resolveObstacles } from '../obstacles';
+import type { StepContext } from './types';
+
+export function playerMovement({ state, set, commands }: StepContext): void {
+  const { arena } = state;
+  const obstacles = set.obstacles ?? [];
+  for (const player of state.players) {
+    if (player.downed) {
+      continue;
+    }
+    const input = commands.get(player.id)?.input ?? IDLE_INPUT;
+    const direction = length(input.move) > 1 ? normalize(input.move) : input.move;
+    const speed = player.speed * (player.slowFactor ?? 1);
+    const fromX = player.x;
+    const fromY = player.y;
+    player.x = clamp(player.x + direction.x * speed, player.radius, arena.width - player.radius);
+    player.y = clamp(player.y + direction.y * speed, player.radius, arena.height - player.radius);
+    resolveObstacles(player, fromX, fromY, obstacles);
+    const aim = normalize(input.aim);
+    if (aim.x !== 0 || aim.y !== 0) {
+      player.aim = aim;
+    }
+  }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}

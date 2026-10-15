@@ -1,0 +1,48 @@
+.game-stage {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.touch-stick,
+.touch-drop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.touch-stick[hidden],
+.touch-drop[hidden] {
+  display: none;
+}
+
+.touch-stick {
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border: 2px solid color-mix(in srgb, var(--texte) 35%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--sol) 35%, transparent);
+}
+
+.touch-stick__knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--turquoise) 70%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--turquoise) 50%, transparent);
+}
+
+.touch-drop {
+  width: 76px;
+  height: 76px;
+  margin: -38px 0 0 -38px;
+  border: 3px dashed var(--turquoise);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--turquoise) 15%, transparent);
+}

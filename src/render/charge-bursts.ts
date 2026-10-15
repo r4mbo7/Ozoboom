@@ -1,0 +1,124 @@
+import { TICKS_PER_BEAT } from '../shared/tempo';
+import type { PlayerState, SimEvent, SimState } from '../sim/state';
+import type { Burster } from './class-bursts';
+import type { RenderContext } from './context';
+import type { Frame } from './frame';
+import { BLINK_TICKS } from './motion';
+import { TRAIL_HALF_LENGTH } from './textures-class';
+import { byId } from './util';
+
+const TRAIL_BODY = 3;
+
+export function createChargeBursts(
+  ctx: RenderContext,
+  { spawn, tokenOf }: Burster,
+  blinkEnemy: (id: number, untilTick: number) => void,
+) {
+  const { textures: t } = ctx;
+  const { classFx } = t;
+
+  function dashTrail(state: SimState, player: PlayerState, distance: number, frame: Frame): void {
+    const moved = Math.hypot(player.x - player.prevX, player.y - player.prevY);
+    const walked = moved >= distance / 2;
+    const length = walked ? moved : distance;
+    const dirX = walked ? (player.x - player.prevX) / moved : player.aim.x;
+    const dirY = walked ? (player.y - player.prevY) / moved : player.aim.y;
+    const color = frame.palette[tokenOf(player)];
+    const angle = Math.atan2(dirY, dirX);
+    const scale = length / 2 / TRAIL_HALF_LENGTH;
+    const centerX = player.x - (dirX * length) / 2;
+    const centerY = player.y - (dirY * length) / 2;
+    for (const [body, peak, duration, outline] of [
+      [TRAIL_BODY, 0.9, TICKS_PER_BEAT, true],
+      [TRAIL_BODY * 2.2, 0.35, TICKS_PER_BEAT * 1.4, false],
+    ] as const) {
+      spawn(frame, {
+        shape: classFx.trail,
+        now: state.tick,
+        duration,
+        x: centerX,
+        y: centerY,
+        angle,
+        dx: dirX * length * 0.12,
+        dy: dirY * length * 0.12,
+        fromRadius: length / 2,
+        toRadius: length / 2,
+        squash: (player.radius * body) / (32 * scale),
+        tint: color,
+        peak,
+        outline,
+      });
+    }
+    spawn(frame, {
+      shape: t.halo,
+      now: state.tick,
+      duration: TICKS_PER_BEAT / 2,
+      x: player.x - dirX * length,
+      y: player.y - dirY * length,
+      fromRadius: player.radius * 1.5,
+      toRadius: player.radius * 3,
+      tint: color,
+      peak: 0.5,
+    });
+  }
+
+  function pull(state: SimState, event: SimEvent & { type: 'taunted' }, frame: Frame): void {
+    const color = frame.palette[tokenOf(byId(state.players, event.playerId))];
+    for (let index = 0; index < (frame.calm ? 1 : 2); index += 1) {
+      spawn(frame, {
+        shape: t.ring,
+        now: state.tick,
+        delay: index * 4,
+        duration: TICKS_PER_BEAT * 1.5,
+        x: event.x,
+        y: event.y,
+        fromRadius: event.radius,
+        toRadius: event.radius * 0.2,
+        tint: color,
+        peak: 0.85,
+        outline: true,
+      });
+    }
+    const until = state.tick + BLINK_TICKS;
+    for (const enemy of state.enemies) {
+      const reach = event.radius + enemy.radius;
+      const dx = enemy.x - event.x;
+      const dy = enemy.y - event.y;
+      if (dx * dx + dy * dy <= reach * reach) {
+        blinkEnemy(enemy.id, until);
+      }
+    }
+  }
+
+  function nova(state: SimState, player: PlayerState, radius: number, frame: Frame): void {
+    const color = frame.palette[tokenOf(player)];
+    const base = {
+      now: state.tick,
+      duration: TICKS_PER_BEAT,
+      x: 0,
+      y: 0,
+      anchor: 'player',
+      anchorId: player.id,
+      tint: color,
+    } as const;
+    spawn(frame, {
+      ...base,
+      shape: classFx.mandala,
+      duration: TICKS_PER_BEAT * 1.6,
+      fromRadius: player.radius,
+      toRadius: radius,
+      spin: 1.4,
+      peak: 0.95,
+      outline: true,
+    });
+    spawn(frame, {
+      ...base,
+      shape: t.halo,
+      fromRadius: player.radius * 1.5,
+      toRadius: radius * 0.9,
+      peak: 0.4,
+    });
+  }
+
+  return { dashTrail, nova, pull };
+}
