@@ -3,10 +3,21 @@ import { createGuestSource, createHostSource, type LockstepSource } from '../net
 import { createPeerTransport, type PeerTransport } from '../net/peerjs';
 import { createRoom, type RefusalReason, type Room, type StartMessage } from '../net/room';
 import type { PeerId, Role, Seat } from '../net/types';
+import { t } from '../shared/i18n';
 import type { PlayerId } from '../sim/state';
 import type { LobbyModel, Notice, StageCard, Ui } from '../ui';
+import { formatNumber } from '../ui/format';
+
+const ITCH_ORIGIN = 'https://html-classic.itch.zone';
+const DEMO_SITE = 'https://r4mbo7.github.io/Ozoboom/';
+
+// itch.io serves the demo at an address that changes with every upload: a shared link points to the demo's own site.
+export function shareBase(origin: string, pathname: string): string {
+  return origin === ITCH_ORIGIN ? DEMO_SITE : `${origin}${pathname}`;
+}
 
 // One online game: what the app needs to run it, whoever hosts.
+
 export interface OnlineMatch {
   readonly role: Role;
   readonly start: StartMessage;
@@ -100,29 +111,29 @@ type Phase = 'idle' | 'lobby' | 'playing' | 'ended';
 function refusalText(reason: RefusalReason): string {
   switch (reason) {
     case 'version':
-      return 'Recharge la page';
+      return t('Recharge la page');
     case 'full':
-      return 'Salon plein';
+      return t('Salon plein');
     case 'started':
-      return 'La partie a déjà commencé';
+      return t('La partie a déjà commencé');
   }
 }
 
 export function connectionText(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('networks cannot reach each other')) {
-    return 'Le salon existe, mais vos réseaux n’arrivent pas à se joindre';
+    return t('Le salon existe, mais vos réseaux n’arrivent pas à se joindre');
   }
   if (message.includes('no room with the code')) {
-    return 'Aucun salon ne porte ce code';
+    return t('Aucun salon ne porte ce code');
   }
   if (message.includes('already taken')) {
-    return 'Ce code est déjà pris, réessaie';
+    return t('Ce code est déjà pris, réessaie');
   }
   if (message.includes('did not answer') || message.includes('no answer from')) {
-    return 'Pas de réponse : réessaie, ou vérifie le code';
+    return t('Pas de réponse : réessaie, ou vérifie le code');
   }
-  return `Connexion impossible (${message})`;
+  return t('Connexion impossible ({message})', { message });
 }
 
 export function createOnline(env: OnlineEnv): Online {
@@ -148,7 +159,7 @@ export function createOnline(env: OnlineEnv): Online {
   function link(): string | null {
     return code === null
       ? null
-      : `${window.location.origin}${window.location.pathname}${joinHash(code)}`;
+      : `${shareBase(window.location.origin, window.location.pathname)}${joinHash(code)}`;
   }
 
   function model(): LobbyModel {
@@ -269,7 +280,7 @@ export function createOnline(env: OnlineEnv): Online {
         interrupt({ notice: 'hostLeft', details: '' });
       },
       onFellBehind() {
-        interrupt({ notice: 'connectionLost', details: 'Ton onglet a pris trop de retard.' });
+        interrupt({ notice: 'connectionLost', details: t('Ton onglet a pris trop de retard.') });
       },
     });
   }
@@ -306,7 +317,9 @@ export function createOnline(env: OnlineEnv): Online {
           source?.close();
           interrupt({
             notice: 'connectionLost',
-            details: `Plus aucun signe de l’hôte depuis ${String(HOST_SILENCE_MS / 1000)} secondes.`,
+            details: t('Plus aucun signe de l’hôte depuis {seconds} secondes.', {
+              seconds: formatNumber(HOST_SILENCE_MS / 1000),
+            }),
           });
         }
       }, WATCH_MS);
@@ -375,7 +388,7 @@ export function createOnline(env: OnlineEnv): Online {
         departed.add(peer);
         if (as === 'guest' && peer === hostPeerId(roomCode)) {
           if (phase === 'lobby') {
-            failLobby('L’hôte a fermé le salon');
+            failLobby(t('L’hôte a fermé le salon'));
           } else {
             interrupt({ notice: 'hostLeft', details: '' });
           }
@@ -428,7 +441,7 @@ export function createOnline(env: OnlineEnv): Online {
       }
       const roomCode = normalizeCode(typed);
       if (roomCode === null) {
-        failLobby('Ce code n’est pas valide');
+        failLobby(t('Ce code n’est pas valide'));
         return;
       }
       void connect('guest', roomCode);

@@ -12,12 +12,25 @@ import type { PlayerId, SimState } from '../sim/state';
 // - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
 //   weapons and a plugged speaker, to measure a frame. `&players=4` seats four players on one
 //   screen instead (one of each class, then the first again), three weapons each, camera on everyone.
-// Both play on the first stage only, so that « Jouer » starts at once; `&stages` keeps every stage.
-// Both draw the seed of every game at random, unless `&seed=` fixes it to replay the same game.
-// Both expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
+// - `?dev=boss&boss=<id>`: the real set at normal speed, started at the break of the first drop,
+//   with that boss and no other. `&tier=2` gives it the force of the second drop, `&stage=<id>` picks
+//   its only stage, the first by default. An unknown boss, tier or stage shows an error on the page.
+// `fast` and `bench` play on the first stage only, so that « Jouer » starts at once; `&stages` keeps
+// every stage.
+// All draw the seed of every game at random, unless `&seed=` fixes it to replay the same game.
+// All expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
 // A browser test's player set in `window.ozoboom.onStep` plays after every step of the game, and the
 // next step reads what it did on the devices, however few frames a loaded machine draws.
-export type DevMode = 'fast' | 'bench';
+export type DevMode = 'fast' | 'bench' | 'boss';
+
+// The boss of `?dev=boss`, and the index of the tier whose break the game starts at.
+export interface DevBoss {
+  readonly id: string;
+  readonly tier: number;
+}
+
+// A dev URL that names what the content does not have: the page shows it.
+export class DevUrlError extends Error {}
 
 export interface DevOptions {
   readonly mode: DevMode | null;
@@ -29,6 +42,7 @@ export interface DevOptions {
   readonly light: boolean;
   // The seed of every game, drawn at random when null.
   readonly seed: number | null;
+  readonly boss: DevBoss | null;
 }
 
 const FAST_SPEED = 8;
@@ -42,6 +56,9 @@ const MAX_BENCH_PLAYERS = BENCH_PLAYER_IDS.length;
 export function readDevOptions(search: string, content: GameContent): DevOptions {
   const params = new URLSearchParams(search);
   const mode = params.get('dev');
+  if (mode === 'boss') {
+    return bossOptions(params, content);
+  }
   if (mode !== null && !params.has('stages')) {
     return readDevOptions(`${search}&stages`, { ...content, sets: content.sets.slice(0, 1) });
   }
@@ -53,14 +70,60 @@ export function readDevOptions(search: string, content: GameContent): DevOptions
       content: fastContent(content),
       light: !params.has('crisp'),
       seed: readSeed(params),
+      boss: null,
     };
   }
   if (mode === 'bench') {
     const asked = Number(params.get('players') ?? 1);
     const players = Number.isInteger(asked) ? Math.min(Math.max(asked, 1), MAX_BENCH_PLAYERS) : 1;
-    return { mode, speed: 1, players, content, light: false, seed: readSeed(params) };
+    return { mode, speed: 1, players, content, light: false, seed: readSeed(params), boss: null };
   }
-  return { mode: null, speed: 1, players: 1, content, light: false, seed: null };
+  return { mode: null, speed: 1, players: 1, content, light: false, seed: null, boss: null };
+}
+
+function bossOptions(params: URLSearchParams, content: GameContent): DevOptions {
+  const bossIds = content.enemies.filter((e) => e.behaviour === 'boss').map((e) => e.id);
+  const id = params.get('boss') ?? '';
+  if (!bossIds.includes(id)) {
+    throw new DevUrlError(`Unknown boss "${id}" in ?dev=boss, pick one of: ${bossIds.join(', ')}`);
+  }
+  const stageId = params.get('stage') ?? content.sets[0]?.id;
+  const set = content.sets.find((candidate) => candidate.id === stageId);
+  if (set === undefined) {
+    const stageIds = content.sets.map((candidate) => candidate.id).join(', ');
+    throw new DevUrlError(
+      `Unknown stage "${stageId ?? ''}" in ?dev=boss, pick one of: ${stageIds}`,
+    );
+  }
+  const tier = params.get('tier') ?? '1';
+  if (!/^\d+$/.test(tier) || Number(tier) < 1 || Number(tier) > set.tiers.length) {
+    throw new DevUrlError(
+      `Unknown tier "${tier}" in ?dev=boss, ${set.id} has tiers 1 to ${String(set.tiers.length)}`,
+    );
+  }
+  return {
+    mode: 'boss',
+    speed: 1,
+    players: 1,
+    content: {
+      ...content,
+      enemies: content.enemies.filter((enemy) => enemy.behaviour !== 'boss' || enemy.id === id),
+      sets: [set],
+    },
+    light: false,
+    seed: readSeed(params),
+    boss: { id, tier: Number(tier) - 1 },
+  };
+}
+
+// The game starts at the break of the tier, its boss already drawn so that its arrival shows.
+export function bossScene(state: SimState, boss: DevBoss): void {
+  state.set.tier = boss.tier;
+  state.set.segment = 'break';
+  state.set.segmentStartTick = state.tick;
+  state.bosses = [boss.id];
+  state.events = state.events.filter((event) => event.type !== 'segment');
+  state.events.push({ type: 'segment', segment: 'break', tier: boss.tier });
 }
 
 function readSeed(params: URLSearchParams): number | null {
@@ -87,14 +150,16 @@ export function benchSlots(content: GameContent, players: number): PlayerSlot[] 
 export function fastContent(content: GameContent): GameContent {
   return {
     ...content,
-    enemies: content.enemies.map((enemy) => ({
-      ...enemy,
-      maxHp: enemy.maxHp * (enemy.behaviour === 'boss' ? FAST_HP.boss : FAST_HP.wave),
-    })),
+    enemies: content.enemies.map((enemy) => ({ ...enemy, maxHp: enemy.maxHp * FAST_HP.wave })),
     sets: content.sets.map((set) => ({
       ...set,
       core: { ...set.core, maxHp: set.core.maxHp * FAST_HP.core },
-      tiers: set.tiers.map((tier) => ({ ...tier, buildupPhrases: 1, breakBars: 1 })),
+      tiers: set.tiers.map((tier) => ({
+        ...tier,
+        buildupPhrases: 1,
+        breakBars: 1,
+        boss: { ...tier.boss, maxHp: tier.boss.maxHp * FAST_HP.boss },
+      })),
     })),
   };
 }

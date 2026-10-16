@@ -1,25 +1,35 @@
+import { locale, t } from '../shared/i18n';
 import { TICK_RATE_HZ } from '../shared/tempo';
 import { scoreOf } from '../sim/score';
 import type { SimState } from '../sim/state';
 
-const integer = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+const formats = new Map<string, Intl.NumberFormat>();
 
-export function formatNumber(value: number): string {
-  return integer.format(value);
+// Built at the first use in each language: a module loads before the language is set.
+function format(digits: number, value: number): string {
+  const key = `${locale()}:${String(digits)}`;
+  let numbers = formats.get(key);
+  if (numbers === undefined) {
+    numbers = new Intl.NumberFormat(locale(), { maximumFractionDigits: digits });
+    formats.set(key, numbers);
+  }
+  return numbers.format(value);
 }
 
-const tenth = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+export function formatNumber(value: number): string {
+  return format(0, value);
+}
 
 export function formatTenth(value: number): string {
-  return tenth.format(value);
+  return format(1, value);
 }
 
 export function formatTempo(bpm: number): string {
-  return `${tenth.format(bpm)}\u00a0BPM`;
+  return `${formatTenth(bpm)}\u00a0BPM`;
 }
 
 export function formatSeconds(ticks: number): string {
-  return `${tenth.format(ticks / TICK_RATE_HZ)}\u00a0s`;
+  return `${formatTenth(ticks / TICK_RATE_HZ)}\u00a0s`;
 }
 
 export function formatDuration(ticks: number): string {
@@ -37,7 +47,7 @@ export function ratio(value: number, max: number): number {
 }
 
 export function formatPercent(fraction: number): string {
-  return `${formatNumber(Math.round(fraction * 100))}\u202f%`;
+  return t('{percent}\u202f%', { percent: formatNumber(Math.round(fraction * 100)) });
 }
 
 export interface EndStat {
@@ -47,10 +57,10 @@ export interface EndStat {
 
 export function endStats(state: SimState): EndStat[] {
   return [
-    { label: 'Phrases tenues', value: formatNumber(state.stats.phrasesHeld) },
-    { label: 'Temps', value: formatDuration(state.tick) },
-    { label: 'Bad vibes dissipées', value: formatNumber(state.stats.kills) },
-    { label: 'Vie de la scène', value: formatPercent(ratio(state.core.hp, state.core.maxHp)) },
-    { label: 'Score', value: formatNumber(scoreOf(state)) },
+    { label: t('Phrases tenues'), value: formatNumber(state.stats.phrasesHeld) },
+    { label: t('Temps'), value: formatDuration(state.tick) },
+    { label: t('Bad vibes dissipées'), value: formatNumber(state.stats.kills) },
+    { label: t('Vie de la scène'), value: formatPercent(ratio(state.core.hp, state.core.maxHp)) },
+    { label: t('Score'), value: formatNumber(scoreOf(state)) },
   ];
 }

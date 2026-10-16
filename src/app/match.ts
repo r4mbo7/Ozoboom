@@ -1,4 +1,4 @@
-import type { GameContent } from '../data/types';
+import type { AttackDefinition, GameContent } from '../data/types';
 import type { DeviceId, InputSnapshot } from '../input/intents';
 import type { CommandSource } from '../net/types';
 import type { CameraFocus } from '../render/types';
@@ -7,7 +7,7 @@ import { IDLE_INPUT } from '../sim/commands';
 import { setOf } from '../sim/lineup';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId, PlayerState } from '../sim/state';
-import { statValue } from '../sim/stats';
+import { attackChargeTicks, attackReach } from '../sim/attacks';
 import type { LocalPlayer } from '../ui';
 import { type Assist, Controls, type ScreenToWorld } from './controls';
 import { createSession, type Session } from './session';
@@ -163,12 +163,14 @@ export function createMatch(options: MatchOptions): Match {
           if (player === undefined) {
             throw new Error(`The game has no player ${String(playerId)}`);
           }
+          const attack = attackOf(content, player);
           return own.command(
             player,
             toWorld,
             session.state.enemies,
-            reachOf(content, player),
+            attackReach(attack, player),
             options.assist?.(),
+            attackChargeTicks(attack),
           );
         }),
       );
@@ -196,10 +198,10 @@ function outwardAim({ state }: Session, playerId: PlayerId) {
   return outward !== null && length(outward) > 0 ? outward : IDLE_INPUT.aim;
 }
 
-// How far the attack of the player flies, with their upgrades, as the sim fires it.
-function reachOf(content: GameContent, player: PlayerState): number {
-  const attack = content.classes.find((definition) => definition.id === player.classId)?.attack;
-  return attack === undefined
-    ? 0
-    : statValue(player, 'projectileSpeedMul', attack.projectileSpeed) * attack.rangeTicks;
+function attackOf(content: GameContent, player: PlayerState): AttackDefinition {
+  const definition = content.classes.find((candidate) => candidate.id === player.classId);
+  if (definition === undefined) {
+    throw new Error(`The game has no class ${player.classId}`);
+  }
+  return definition.attack;
 }

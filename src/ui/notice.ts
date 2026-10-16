@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import type { InputDevice } from '../input/intents';
 import { el, fillHint, icon, setText } from './dom';
 import { createFeedbackButton } from './feedback-button';
@@ -31,7 +32,7 @@ export function createNotice(
   const title = el('h2', 'ui-end__title');
   const text = el('p', 'ui-end__text');
   const detail = el('p', 'ui-notice__detail');
-  const back = el('button', 'ui-button ui-button--primary', 'Retour au titre');
+  const back = el('button', 'ui-button ui-button--primary', t('Retour au titre'));
   back.type = 'button';
   const feedback = onFeedback === undefined ? null : createFeedbackButton();
   const items = feedback === null ? [back] : [back, feedback];
@@ -77,8 +78,8 @@ export function createNotice(
       fillHint(
         hint,
         [
-          ...(items.length > 1 ? [{ keys: prompts.navigate, label: 'naviguer' }] : []),
-          { keys: [prompts.confirm], label: 'valider' },
+          ...(items.length > 1 ? [{ keys: prompts.navigate, label: t('naviguer') }] : []),
+          { keys: [prompts.confirm], label: t('valider') },
         ],
         prompts.style,
       );

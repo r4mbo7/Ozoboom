@@ -1,7 +1,9 @@
 import type { InputDevice } from '../input/intents';
 import { el, fillHint, keycap, setText } from './dom';
 import { formatNumber } from './format';
-import { createFeedbackButton } from './feedback-button';
+import { createActionButton, createFeedbackButton } from './feedback-button';
+import { openDiscord } from './discord';
+import { DISCORD } from './icons';
 import { type Menu, createMenu } from './menu';
 import { promptsFor } from './prompts';
 import { TITLE_AT_REST, type TitleLight, heardFrom, titleLightAt } from './title-light';
@@ -12,6 +14,8 @@ import {
   createToggle,
 } from './toggle';
 import { createSoundControl } from './volume';
+import { createLanguageControl } from './language';
+import { locale, t } from '../shared/i18n';
 
 export interface TitleActions {
   start(): void;
@@ -22,6 +26,7 @@ export interface TitleActions {
   toggleHitSound(): void;
   toggleAutoFire(): void;
   toggleAutoAim(): void;
+  stepLocale(side: -1 | 1): void;
   feedback?(): void;
 }
 
@@ -101,7 +106,7 @@ const SUN =
 
 export function createTitle(actions: TitleActions): TitleScreen {
   const element = el('section', 'ui-screen ui-title');
-  element.setAttribute('aria-label', 'Écran titre');
+  element.setAttribute('aria-label', t('Écran titre'));
 
   const header = el('header', 'ui-title__header');
   const mark = el('div', 'ui-title__mark');
@@ -111,7 +116,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
   mark.append(logo);
   header.append(
     mark,
-    el('p', 'ui-title__tagline', 'Défends le sound system jusqu’au lever du soleil.'),
+    el('p', 'ui-title__tagline', t('Défends le sound system jusqu’au lever du soleil.')),
   );
 
   const shown = new Map<string, string>();
@@ -132,17 +137,26 @@ export function createTitle(actions: TitleActions): TitleScreen {
   show(TITLE_AT_REST);
   let origin: number | null = null;
 
-  const play = el('button', 'ui-button ui-button--primary', 'Jouer');
+  const play = el('button', 'ui-button ui-button--primary', t('Jouer'));
   play.type = 'button';
-  const together = el('button', 'ui-button', 'Jouer à plusieurs');
+  const together = el('button', 'ui-button', t('Jouer à plusieurs'));
   together.type = 'button';
-  const calm = createToggle('Mode calme', 'Sans strobos, secousses ni halos forts', 'Oui', 'Non');
+  const calm = createToggle(
+    t('Mode calme'),
+    t('Sans strobos, secousses ni halos forts'),
+    t('Oui'),
+    t('Non'),
+  );
   const sound = createSoundControl((side) => {
     actions.stepVolume(side);
   });
   const hitSound = createHitSoundToggle();
   const autoFire = createAutoFireToggle();
   const autoAim = createAutoAimToggle();
+  const language = createLanguageControl((side) => {
+    actions.stepLocale(side);
+  });
+  language.set(locale());
 
   const items = [
     play,
@@ -152,13 +166,20 @@ export function createTitle(actions: TitleActions): TitleScreen {
     hitSound.button,
     autoFire.button,
     autoAim.button,
+    language.element,
   ];
   if (actions.feedback !== undefined) {
     items.push(createFeedbackButton());
   }
+  const discord = createActionButton(
+    t('Backstage'),
+    t('Passe dans les coulisses sur Discord'),
+    DISCORD,
+  );
+  items.push(discord);
 
   const nav = el('nav', 'ui-menu');
-  nav.setAttribute('aria-label', 'Menu principal');
+  nav.setAttribute('aria-label', t('Menu principal'));
   nav.append(...items);
 
   const controls = el('section', 'ui-panel ui-controls');
@@ -199,19 +220,30 @@ export function createTitle(actions: TitleActions): TitleScreen {
       actions.toggleAutoAim();
     },
     () => {
+      actions.stepLocale(1);
+    },
+    () => {
       actions.feedback?.();
     },
   ];
   const menu = createMenu(
     (index) => {
+      if (items[index] === discord) {
+        openDiscord();
+        return;
+      }
       activations[index]?.();
     },
     (index, side) => {
-      if (items[index] !== sound.element) {
-        return false;
+      if (items[index] === sound.element) {
+        actions.stepVolume(side);
+        return true;
       }
-      actions.stepVolume(side);
-      return true;
+      if (items[index] === language.element) {
+        actions.stepLocale(side);
+        return true;
+      }
+      return false;
     },
   );
   menu.setItems(items);
@@ -238,7 +270,9 @@ export function createTitle(actions: TitleActions): TitleScreen {
       autoAim.set(options.autoAim);
     },
     setVisits(count) {
-      setText(meta, `v${__APP_RELEASE__} · ${formatNumber(count)} visite${count > 1 ? 's' : ''}`);
+      const params = { count: formatNumber(count) };
+      const visits = count > 1 ? t('{count} visites', params) : t('{count} visite', params);
+      setText(meta, `v${__APP_RELEASE__} · ${visits}`);
     },
     setDevice(next) {
       if (next === device) {
@@ -246,7 +280,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
       }
       device = next;
       const prompts = promptsFor(next);
-      setText(controlsTitle, `Commandes · ${prompts.name}`);
+      setText(controlsTitle, t('Commandes · {device}', { device: prompts.name }));
       controlsList.replaceChildren(
         ...prompts.controls.map((control) => {
           const row = el('div', 'ui-controls__row');
@@ -259,9 +293,9 @@ export function createTitle(actions: TitleActions): TitleScreen {
       fillHint(
         hint,
         [
-          { keys: prompts.navigate, label: 'naviguer' },
-          { keys: prompts.navigateRow, label: 'son' },
-          { keys: [prompts.confirm], label: 'valider' },
+          { keys: prompts.navigate, label: t('naviguer') },
+          { keys: prompts.navigateRow, label: t('son') },
+          { keys: [prompts.confirm], label: t('valider') },
         ],
         prompts.style,
       );

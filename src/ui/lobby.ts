@@ -1,13 +1,19 @@
 import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
+import { t } from '../shared/i18n';
 import type { PlayerId } from '../sim/state';
 import {
   type ClassInfo,
   type ClassStepper,
+  ROW_CARDS,
   createClassStepper,
   landscapeNotice,
 } from './class-picker';
+import { openDiscord } from './discord';
 import { el, fillHint, setFlag, setText } from './dom';
+import { createActionButton } from './feedback-button';
+import { DISCORD } from './icons';
 import { createEndlessToggle } from './endless';
+import { formatNumber } from './format';
 import {
   NAME_LENGTH,
   type Row,
@@ -30,6 +36,7 @@ import {
 } from './lobby-model';
 import { type MenuInput, createMenuInput } from './navigation';
 import { createStageCards, stepStage } from './stage';
+import { showsStageChoice } from './teaser';
 import { onMouseMove } from './pointer';
 import { promptsFor } from './prompts';
 import type { ClassPortrait, CreatePortrait, LobbyModel, LobbySeat, UiFrame } from './types';
@@ -71,7 +78,7 @@ interface SeatCard {
   readonly wait: HTMLElement;
 }
 
-const JOIN_TEXT = 'Appuie sur Entrée ou sur A pour rejoindre';
+const joinText = (): string => t('Appuie sur Entrée ou sur A pour rejoindre');
 
 function button(label: string, className = 'ui-button'): HTMLButtonElement {
   const node = el('button', className, label);
@@ -106,43 +113,51 @@ export function createLobby(
   let device: InputDevice | null = null;
 
   const element = el('section', 'ui-screen ui-lobby');
-  element.setAttribute('aria-label', 'Salon');
+  element.setAttribute('aria-label', t('Salon'));
+  element.toggleAttribute('data-many', classes.length > ROW_CARDS);
 
   const heading = el('h2', 'ui-lobby__title');
   const lead = el('p', 'ui-lobby__lead');
   const header = el('header', 'ui-lobby__header');
-  header.append(el('p', 'ui-kicker', 'À plusieurs'), heading, lead);
+  header.append(el('p', 'ui-kicker', t('À plusieurs')), heading, lead);
 
   const error = el('p', 'ui-lobby__error');
   error.setAttribute('role', 'alert');
 
-  const createButton = button('Créer un salon', 'ui-button ui-button--primary');
+  const createButton = button(t('Créer un salon'), 'ui-button ui-button--primary');
+  const discordButton = createActionButton(
+    t('Trouve ton crew'),
+    t('Recrute tes roadies sur Discord'),
+    DISCORD,
+  );
+  discordButton.tabIndex = -1;
   const codeInput = el('input', 'ui-lobby__input ui-lobby__input--code');
   codeInput.type = 'text';
   codeInput.autocomplete = 'off';
   codeInput.spellcheck = false;
   codeInput.setAttribute('autocapitalize', 'characters');
-  codeInput.setAttribute('aria-label', 'Code du salon');
-  codeInput.placeholder = 'Colle le code ici';
+  codeInput.setAttribute('aria-label', t('Code du salon'));
+  codeInput.placeholder = t('Colle le code ici');
   const codeField = el('div', 'ui-lobby__field');
-  codeField.append(el('span', 'ui-field__label', 'Code du salon'), codeInput);
-  const joinButton = button('Rejoindre');
+  codeField.append(el('span', 'ui-field__label', t('Code du salon')), codeInput);
+  const joinButton = button(t('Rejoindre'));
   const entry = el('div', 'ui-panel ui-lobby__entry');
   entry.append(
     createButton,
-    el('p', 'ui-lobby__or', 'ou rejoins le salon d’un ami'),
+    discordButton,
+    el('p', 'ui-lobby__or', t('ou rejoins le salon d’un ami')),
     codeField,
     joinButton,
   );
 
   const codeText = el('p', 'ui-lobby__code');
   const linkText = el('p', 'ui-lobby__link');
-  const copyButton = button('Copier le lien');
+  const copyButton = button(t('Copier le lien'));
   const copyStatus = el('p', 'ui-lobby__copy');
   copyStatus.setAttribute('role', 'status');
   const share = el('div', 'ui-panel ui-lobby__share');
   const shareText = el('div', 'ui-lobby__sharetext');
-  shareText.append(el('p', 'ui-panel__label', 'Code du salon'), codeText, linkText, copyStatus);
+  shareText.append(el('p', 'ui-panel__label', t('Code du salon')), codeText, linkText, copyStatus);
   share.append(shareText, copyButton);
 
   const seatList = el('ol', 'ui-lobby__seats');
@@ -158,7 +173,7 @@ export function createLobby(
     const number = el('span', 'ui-seat__number', String(playerId + 1));
     number.setAttribute('aria-hidden', 'true');
     const tag = el('p', 'ui-seat__tag');
-    const host = el('p', 'ui-seat__host', 'Lance le set');
+    const host = el('p', 'ui-seat__host', t('Lance le set'));
     const who = el('div', 'ui-seat__who');
     who.append(tag, host);
     const head = el('div', 'ui-seat__head');
@@ -170,9 +185,12 @@ export function createLobby(
     input.autocomplete = 'off';
     input.spellcheck = false;
     input.placeholder = defaultName(playerId);
-    input.setAttribute('aria-label', `Nom du joueur ${String(playerId + 1)}`);
+    input.setAttribute(
+      'aria-label',
+      t('Nom du joueur {number}', { number: formatNumber(playerId + 1) }),
+    );
     const field = el('div', 'ui-lobby__field');
-    field.append(el('span', 'ui-field__label', 'Nom'), input);
+    field.append(el('span', 'ui-field__label', t('Nom')), input);
     const name = el('p', 'ui-seat__name');
 
     const stepper = createClassStepper(classes, (side) => {
@@ -183,8 +201,8 @@ export function createLobby(
       }
     });
     const role = el('p', 'ui-seat__role');
-    const join = button(JOIN_TEXT, 'ui-seat__join');
-    const wait = el('p', 'ui-seat__wait', 'En attente d’un joueur');
+    const join = button(joinText(), 'ui-seat__join');
+    const wait = el('p', 'ui-seat__wait', t('En attente d’un joueur'));
     const drawn = portrait();
     const frame = el('div', 'ui-seat__portrait');
     frame.append(drawn.element);
@@ -210,18 +228,18 @@ export function createLobby(
   }
 
   const stageLabel = el('p', 'ui-panel__label');
-  const stageCards = createStageCards('Scène', (setId) => {
+  const stageCards = createStageCards(t('Scène'), (setId) => {
     actions.chooseStage(setId);
   });
   const stagePanel = el('div', 'ui-lobby__stage');
   stagePanel.append(stageLabel, stageCards.element);
 
   const endless = createEndlessToggle();
-  const onlineButton = button('Jouer en ligne');
-  const launchButton = button('Lancer le set', 'ui-button ui-button--primary');
-  const waiting = el('p', 'ui-lobby__waiting', 'En attente de l’hôte');
+  const onlineButton = button(t('Jouer en ligne'));
+  const launchButton = button(t('Lancer le set'), 'ui-button ui-button--primary');
+  const waiting = el('p', 'ui-lobby__waiting', t('En attente de l’hôte'));
   waiting.setAttribute('role', 'status');
-  const leaveButton = button('Retour au titre');
+  const leaveButton = button(t('Retour au titre'));
   const footer = el('div', 'ui-lobby__actions');
   footer.append(launchButton, waiting, onlineButton, leaveButton);
   const hint = el('p', 'ui-hint');
@@ -284,14 +302,14 @@ export function createLobby(
     const link = model.link ?? '';
     try {
       await navigator.clipboard.writeText(link);
-      setText(copyStatus, 'Lien copié, envoie-le à tes amis.');
+      setText(copyStatus, t('Lien copié, envoie-le à tes amis.'));
     } catch {
       const range = document.createRange();
       range.selectNodeContents(linkText);
       const selection = window.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(range);
-      setText(copyStatus, 'Lien sélectionné : copie-le avec Ctrl+C.');
+      setText(copyStatus, t('Lien sélectionné : copie-le avec Ctrl+C.'));
     }
   }
 
@@ -302,6 +320,7 @@ export function createLobby(
   onPointerClick(createButton, () => {
     actions.createRoom();
   });
+  onPointerClick(discordButton, openDiscord);
   onPointerClick(joinButton, joinNow);
   onPointerClick(copyButton, copyNow);
   onPointerClick(endless.button, toggleEndlessNow);
@@ -356,6 +375,8 @@ export function createLobby(
     switch (row) {
       case 'create':
         return createButton;
+      case 'discord':
+        return discordButton;
       case 'code':
         return codeField;
       case 'join':
@@ -397,6 +418,7 @@ export function createLobby(
     const lit = new Set(marked);
     const all: HTMLElement[] = [
       createButton,
+      discordButton,
       codeField,
       joinButton,
       copyButton,
@@ -442,6 +464,7 @@ export function createLobby(
   }
   const hovered: [HTMLElement, Row][] = [
     [createButton, 'create'],
+    [discordButton, 'discord'],
     [codeField, 'code'],
     [joinButton, 'join'],
     [copyButton, 'copy'],
@@ -457,6 +480,9 @@ export function createLobby(
     switch (row) {
       case 'create':
         actions.createRoom();
+        break;
+      case 'discord':
+        openDiscord();
         break;
       case 'code':
         codeInput.focus();
@@ -630,10 +656,13 @@ export function createLobby(
       fillHint(
         hint,
         [
-          { keys: ['Entrée', 'A'], label: 'rejoindre' },
-          { keys: prompts.navigateRow, label: hasStageChoice(model) ? 'classe, scène' : 'classe' },
-          { keys: [prompts.confirm], label: 'valider' },
-          { keys: ['Échap', 'B'], label: 'quitter sa place' },
+          { keys: [t('Entrée'), 'A'], label: t('rejoindre') },
+          {
+            keys: prompts.navigateRow,
+            label: hasStageChoice(model) ? t('classe, scène') : t('classe'),
+          },
+          { keys: [prompts.confirm], label: t('valider') },
+          { keys: [t('Échap'), 'B'], label: t('quitter sa place') },
         ],
         'key',
       );
@@ -642,17 +671,17 @@ export function createLobby(
     fillHint(
       hint,
       [
-        { keys: prompts.navigate, label: 'naviguer' },
+        { keys: prompts.navigate, label: t('naviguer') },
         ...(lobbyView(model) === 'entry'
           ? []
           : [
               {
                 keys: prompts.navigateRow,
-                label: hasStageChoice(model) ? 'classe, scène' : 'classe',
+                label: hasStageChoice(model) ? t('classe, scène') : t('classe'),
               },
             ]),
-        { keys: [prompts.confirm], label: 'valider' },
-        { keys: [prompts.back], label: 'quitter' },
+        { keys: [prompts.confirm], label: t('valider') },
+        { keys: [prompts.back], label: t('quitter') },
       ],
       prompts.style,
     );
@@ -663,9 +692,9 @@ export function createLobby(
       return deviceLabel(seat.device);
     }
     if (seat.remote) {
-      return seat.host ? 'Hôte' : 'Invité';
+      return seat.host ? t('Hôte') : t('Invité');
     }
-    return seat.host ? 'Toi · hôte' : 'Toi';
+    return seat.host ? t('Toi · hôte') : t('Toi');
   }
 
   function paintSeat(card: SeatCard, playerId: PlayerId): void {
@@ -693,23 +722,24 @@ export function createLobby(
       card.input.value = seat.name;
     }
     card.stepper.set(seat.classId);
-    setText(card.role, classes.find((info) => info.id === seat.classId)?.role ?? '');
+    const role = classes.find((info) => info.id === seat.classId)?.role;
+    setText(card.role, role === undefined ? '' : t(role));
   }
 
   function paint(): void {
     const view = lobbyView(model);
-    setText(heading, model.mode === 'online' ? 'Salon en ligne' : 'Salon local');
+    setText(heading, model.mode === 'online' ? t('Salon en ligne') : t('Salon local'));
     const own = ownSeat(model);
     const hosting = view === 'room' && own?.host === true;
     setText(
       lead,
       view === 'local'
-        ? 'Chacun prend une place avec son clavier ou sa manette.'
+        ? t('Chacun prend une place avec son clavier ou sa manette.')
         : view === 'entry'
-          ? 'Crée un salon pour inviter tes amis, ou rejoins le leur avec son code.'
+          ? t('Crée un salon pour inviter tes amis, ou rejoins le leur avec son code.')
           : hosting
-            ? 'Envoie le code ou le lien à tes amis, puis lance le set.'
-            : `Tu as rejoint le salon ${model.code ?? ''}.`,
+            ? t('Envoie le code ou le lien à tes amis, puis lance le set.')
+            : t('Tu as rejoint le salon {code}.', { code: model.code ?? '' }),
     );
     setText(error, model.error ?? '');
     error.hidden = model.error === null;
@@ -729,8 +759,8 @@ export function createLobby(
     const guest = view === 'room' && !hosting;
     stageCards.set(stages, model.stageId ?? '');
     stageCards.setReadonly(guest);
-    stagePanel.hidden = view === 'entry' || stages.length < 2;
-    setText(stageLabel, guest ? 'L’hôte choisit la scène' : 'Scène');
+    stagePanel.hidden = view === 'entry' || !showsStageChoice(stages.length);
+    setText(stageLabel, guest ? t('L’hôte choisit la scène') : t('Scène'));
     endless.set(model.endless === true);
     endless.button.hidden = view === 'entry';
     endless.button.setAttribute('aria-disabled', String(guest));
@@ -738,7 +768,7 @@ export function createLobby(
     onlineButton.hidden = view !== 'local' || actions.goOnline === undefined;
     launchButton.setAttribute('aria-disabled', String(!model.canLaunch));
     waiting.hidden = !guest;
-    setText(leaveButton, view === 'room' ? 'Quitter le salon' : 'Retour au titre');
+    setText(leaveButton, view === 'room' ? t('Quitter le salon') : t('Retour au titre'));
 
     if (view !== cursorView) {
       cursorView = view;

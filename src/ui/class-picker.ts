@@ -1,6 +1,9 @@
 import type { ClassDefinition } from '../data/types';
+import { t } from '../shared/i18n';
+import { isClassToken } from '../shared/palette';
 import { el, icon, setText } from './dom';
 import { PHONE } from './icons';
+import { cssName } from './sun';
 import type { ClassPortrait } from './types';
 
 export type ClassInfo = Pick<
@@ -8,11 +11,13 @@ export type ClassInfo = Pick<
   'id' | 'name' | 'role' | 'color' | 'maxHp' | 'speed' | 'attack' | 'skill'
 >;
 
-const THEMED = new Set(['mage', 'tank', 'healer']);
+// Up to this many classes sit on one row of wide cards; more make a grid of small ones, and long
+// names among them.
+export const ROW_CARDS = 3;
 
-// The three classes follow the palette of the hour: their data colour only stands in for the others.
+// A class with a tint follows the palette of the hour: its data colour only stands in for the others.
 export function classColor(info: ClassInfo): string {
-  return THEMED.has(info.id) ? `var(--${info.id})` : info.color;
+  return isClassToken(info.id) ? `var(${cssName(info.id)})` : info.color;
 }
 
 // Without the game to draw it, a class shows as a lit disc of its colour.
@@ -62,8 +67,8 @@ export function createClassStepper(
   onStep: (side: -1 | 1) => void,
 ): ClassStepper {
   const element = el('div', 'ui-stepper');
-  const previous = stepperArrow('Classe précédente', false);
-  const next = stepperArrow('Classe suivante', true);
+  const previous = stepperArrow(t('Classe précédente'), false);
+  const next = stepperArrow(t('Classe suivante'), true);
   const current = el('div', 'ui-stepper__current');
   const dot = el('span', 'ui-swatch');
   dot.setAttribute('aria-hidden', 'true');
@@ -86,7 +91,7 @@ export function createClassStepper(
       const info = classes.find((entry) => entry.id === classId);
       if (info !== undefined) {
         dot.style.setProperty('--class-color', classColor(info));
-        setText(name, info.name);
+        setText(name, t(info.name));
       }
     },
   };
@@ -97,8 +102,8 @@ export function landscapeNotice(): HTMLElement {
   const notice = el('p', 'ui-landscape');
   const text = el('span', 'ui-landscape__text');
   text.append(
-    el('strong', 'ui-landscape__title', 'Tourne ton téléphone'),
-    el('span', 'ui-landscape__detail', 'Le set se joue en paysage.'),
+    el('strong', 'ui-landscape__title', t('Tourne ton téléphone')),
+    el('span', 'ui-landscape__detail', t('Le set se joue en paysage.')),
   );
   notice.append(icon('ui-landscape__icon', PHONE), text);
   return notice;

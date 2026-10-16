@@ -73,7 +73,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       buildupPhrases: 4,
       breakBars: 4,
-      bossId: 'couvre-feu',
+      boss: { maxHp: 1200, damage: 25, vibesDrop: 40 },
       spawns: [
         { enemyId: 'random', everyBars: 4, count: 4, fromPhrase: 0 },
         { enemyId: 'desagreable', everyBars: 2, count: 2, fromPhrase: 0 },
@@ -95,7 +95,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       buildupPhrases: 4,
       breakBars: 4,
-      bossId: 'batterie-a-plat',
+      boss: { maxHp: 2400, damage: 35, vibesDrop: 60 },
       spawns: [
         { enemyId: 'desagreable', everyBars: 1, count: 2, fromPhrase: 0 },
         { enemyId: 'random', everyBars: 2, count: 4, fromPhrase: 0 },

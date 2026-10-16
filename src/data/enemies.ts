@@ -1,4 +1,5 @@
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { FULL_ENEMIES } from './full';
 import type { EnemyDefinition } from './types';
 
 const GROWING = { hp: 1.1, speed: 1.02 };
@@ -176,7 +177,7 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   {
     id: 'couvre-feu',
     name: 'Le Couvre-feu',
-    description: "Il tombe sur le premier drop et veut couper le son avant l'heure.",
+    description: "Il veut couper le son avant l'heure.",
     behaviour: 'boss',
     maxHp: 1200,
     speed: 1,
@@ -190,7 +191,7 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   {
     id: 'batterie-a-plat',
     name: 'La Batterie à plat',
-    description: "Elle arrive sur le dernier drop et vide l'énergie de tout ce qui brille.",
+    description: "Elle vide l'énergie de tout ce qui brille.",
     behaviour: 'boss',
     maxHp: 2400,
     speed: 0.9,
@@ -201,4 +202,5 @@ export const ENEMIES: readonly EnemyDefinition[] = [
     vibesDrop: 60,
     scalingPerPhrase: FIXED,
   },
+  ...FULL_ENEMIES,
 ];

@@ -8,8 +8,9 @@ import type { NetMessage } from './types';
 //   command  0x01 | tick (varint) | command
 //   frame    0x02 | tick (varint) | count (u8) | command...
 //   command  playerId (u8) | flags (u8) | move.x, move.y, aim.x, aim.y (i16 each, units of 1/32767)
+//            | fire ticks (varint, 1 to 65535), only when the flag is set
 //            | actions, only when the flag is set: count (u8) | action...
-//   flags    bit 0 fire, bit 1 skill, bit 2 has actions
+//   flags    bit 0 fire, bit 1 skill, bit 2 has actions, bit 3 has fire ticks
 //   action   0x00 placeTrap: id | x, y, dx, dy (f32)   0x01 chooseUpgrade: id
 //            0x02 takeTrap: x, y (f32)
 //   id       length (u8) | UTF-8
@@ -19,6 +20,8 @@ const FRAME = 2;
 const FIRE = 1;
 const SKILL = 2;
 const ACTIONS = 4;
+const FIRE_TICKS = 8;
+const MAX_FIRE_TICKS = 0xffff;
 const PLACE_TRAP = 0;
 const CHOOSE_UPGRADE = 1;
 const TAKE_TRAP = 2;
@@ -197,14 +200,21 @@ function writeCommand(writer: Writer, command: PlayerCommand): void {
   if (actions.length > MAX_COUNT) {
     throw new RangeError(`too many actions in one command: ${String(actions.length)}`);
   }
+  const fireTicks = input.fire ? input.fireTicks : undefined;
   writer.u8(command.playerId);
   writer.u8(
-    (input.fire ? FIRE : 0) | (input.skill ? SKILL : 0) | (actions.length > 0 ? ACTIONS : 0),
+    (input.fire ? FIRE : 0) |
+      (input.skill ? SKILL : 0) |
+      (actions.length > 0 ? ACTIONS : 0) |
+      (fireTicks === undefined ? 0 : FIRE_TICKS),
   );
   writer.i16(axis(input.move.x));
   writer.i16(axis(input.move.y));
   writer.i16(axis(input.aim.x));
   writer.i16(axis(input.aim.y));
+  if (fireTicks !== undefined) {
+    writer.varint(Math.min(MAX_FIRE_TICKS, Math.max(1, Math.round(fireTicks))));
+  }
   if (actions.length > 0) {
     writer.u8(actions.length);
     actions.forEach((action) => {
@@ -221,6 +231,7 @@ function readCommand(reader: Reader): PlayerCommand {
   const flags = reader.u8();
   const move = { x: unaxis(reader.i16()), y: unaxis(reader.i16()) };
   const aim = { x: unaxis(reader.i16()), y: unaxis(reader.i16()) };
+  const fireTicks = (flags & FIRE_TICKS) === 0 ? undefined : reader.varint();
   const actions: PlayerAction[] = [];
   if ((flags & ACTIONS) !== 0) {
     for (let count = reader.u8(); count > 0; count--) {
@@ -233,6 +244,7 @@ function readCommand(reader: Reader): PlayerCommand {
       move,
       aim,
       fire: (flags & FIRE) !== 0,
+      ...(fireTicks === undefined ? {} : { fireTicks }),
       skill: (flags & SKILL) !== 0,
     },
     actions,

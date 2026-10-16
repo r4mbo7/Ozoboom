@@ -1,4 +1,5 @@
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { FULL_CLASSES } from './full';
 import type { ClassDefinition } from './types';
 
 export const CLASSES: readonly ClassDefinition[] = [
@@ -12,6 +13,7 @@ export const CLASSES: readonly ClassDefinition[] = [
     radius: 14,
     pickupRadius: 80,
     attack: {
+      kind: 'straight',
       damage: 10,
       cooldownTicks: TICKS_PER_BEAT / 2,
       projectileSpeed: 16,
@@ -39,6 +41,7 @@ export const CLASSES: readonly ClassDefinition[] = [
     radius: 18,
     pickupRadius: 120,
     attack: {
+      kind: 'straight',
       damage: 17,
       cooldownTicks: 7,
       projectileSpeed: 10,
@@ -69,6 +72,7 @@ export const CLASSES: readonly ClassDefinition[] = [
     pickupRadius: 140,
     reviveMul: 2,
     attack: {
+      kind: 'straight',
       damage: 17,
       cooldownTicks: 10,
       projectileSpeed: 12,
@@ -86,4 +90,5 @@ export const CLASSES: readonly ClassDefinition[] = [
       effect: { kind: 'healPulse', amount: 30, radius: 160, coreRepair: 10 },
     },
   },
+  ...FULL_CLASSES,
 ];

@@ -1,8 +1,14 @@
 import type { MenuIntents } from '../input/intents';
+import { t } from '../shared/i18n';
 import { type Toggle, createToggle } from './toggle';
 
 export function createEndlessToggle(): Toggle {
-  const toggle = createToggle('Sans fin', 'Après le dernier boss, la nuit continue', 'Oui', 'Non');
+  const toggle = createToggle(
+    t('Sans fin'),
+    t('Après le dernier boss, la nuit continue'),
+    t('Oui'),
+    t('Non'),
+  );
   toggle.button.classList.add('ui-toggle--endless');
   toggle.button.tabIndex = -1;
   return toggle;

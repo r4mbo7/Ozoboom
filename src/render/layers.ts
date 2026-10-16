@@ -16,6 +16,7 @@ export interface Layers {
   readonly pickups: Container;
   readonly zones: Container;
   readonly bystanders: Container;
+  readonly recruits: Container;
   readonly fx: Container;
   readonly shots: Container;
   readonly weapons: Container;
@@ -46,6 +47,7 @@ export function createLayers(stage: Container): Layers {
     pickups: layer(world),
     zones: layer(world),
     bystanders: layer(world),
+    recruits: layer(world),
     fx: layer(world),
     shots: layer(world),
     weapons: layer(world),

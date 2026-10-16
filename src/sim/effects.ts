@@ -1,5 +1,6 @@
 import { isBarTick, type Tempo } from '../shared/tempo';
 import type { ResolvedContent } from './content';
+import { hasStatus, isRooted, walkingSpeed } from './enemy-status';
 import type { EnemyState, PlayerId, PlayerState, SimEvent, SimState } from './state';
 
 interface Point {
@@ -177,12 +178,13 @@ export function shockwave(
   }
 }
 
-// The lure replaces the step the steering just gave the enemy: same speed, slow and stun, new goal.
+// The lure replaces the step the steering just gave the enemy: same speed, slows and statuses, new goal.
+// A bubbled bad vibe floats out of its reach.
 export function drawTo(enemy: EnemyState, at: Point, contact: number): void {
-  if (enemy.isBoss) {
+  if (enemy.isBoss || hasStatus(enemy, 'bubbled')) {
     return;
   }
-  const step = enemy.stunTicks > 0 ? 0 : enemy.speed * enemy.slowFactor;
+  const step = isRooted(enemy) ? 0 : walkingSpeed(enemy);
   const dx = at.x - enemy.prevX;
   const dy = at.y - enemy.prevY;
   const distance = Math.sqrt(dx * dx + dy * dy);

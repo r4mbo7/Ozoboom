@@ -21,11 +21,12 @@ import { createEffects } from './effects';
 import { createHits } from './hits';
 import { createEnemies } from './enemies';
 import { type Frame, advanceFrame, createFrame } from './frame';
-import { FULL_LOOKS } from './full';
+import { FULL_FAMILIES, FULL_LOOKS } from './full';
 import { createGround } from './ground';
 import { createGroundWaves } from './ground-waves';
 import { type Layers, applyLight, createLayers } from './layers';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
+import { checkDrawings } from './drawings';
 import { classTokens } from './palette';
 import { createBombs } from './bombs';
 import { createLoots } from './loots';
@@ -35,6 +36,7 @@ import { createMarkers } from './markers';
 import { createStageMarker } from './stage-marker';
 import { createPlayers } from './players';
 import { createProjectiles } from './projectiles';
+import { createRecruits } from './recruits';
 import { createSpecials } from './specials';
 import { createSpeakerCards } from './speaker-card';
 import { createSpeakers } from './speakers';
@@ -87,6 +89,7 @@ export class Scene implements Renderer {
     this.pixi = pixi;
     this.options = { ...options };
     this.textures = createTextures();
+    checkDrawings(content.classes, this.textures.players.drawings);
     this.sets = new Map(content.sets.map((set) => [set.id, set]));
     this.camera = frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, width, height);
     this.layers = createLayers(this.stage);
@@ -130,9 +133,13 @@ export class Scene implements Renderer {
       createBombs(ctx),
       createBystanders(ctx),
       enemies,
+      createRecruits(ctx, (x, y, id, frame) => {
+        enemies.burst(x, y, id, frame);
+      }),
       createWounds(ctx, (id) => enemies.poseOf(id)),
       createSpecials(ctx),
       createProjectiles(ctx),
+      ...FULL_FAMILIES.map((create) => create(ctx)),
       createWeapons(ctx),
       createPlayers(ctx),
       createSpeakerCards(ctx),

@@ -1,74 +1,19 @@
-import { angleOf, rotate } from '../../shared/angle';
+import { ATTACKS, attackModule } from '../attacks';
 import { IDLE_INPUT } from '../commands';
 import { lookup } from '../content';
-import type { PlayerState, SimState, Vec2 } from '../state';
-import { statValue } from '../stats';
 import type { StepContext } from './types';
 
-export function playerAttack({ state, content, commands }: StepContext): void {
-  for (const player of state.players) {
+export function playerAttack(ctx: StepContext): void {
+  for (const player of ctx.state.players) {
     if (player.downed) {
+      delete player.chargeTicks;
       continue;
     }
-    if (player.attackCooldown > 0) {
-      player.attackCooldown -= 1;
-    }
-    const input = commands.get(player.id)?.input ?? IDLE_INPUT;
-    if (!input.fire || player.attackCooldown > 0) {
-      player.attackCooldown = Math.max(0, player.attackCooldown);
-      continue;
-    }
-    const attack = lookup(content.classes, player.classId, 'class').attack;
-    const count = Math.max(1, Math.floor(statValue(player, 'projectileCountAdd', attack.count)));
-    const shot: Shot = {
-      speed: statValue(player, 'projectileSpeedMul', attack.projectileSpeed),
-      radius: attack.projectileRadius,
-      damage: statValue(player, 'damageMul', attack.damage),
-      ticks: attack.rangeTicks,
-      pierce: statValue(player, 'pierceAdd', attack.pierce),
-      ...(attack.knockback === undefined ? {} : { knockback: attack.knockback }),
-    };
-    for (let i = 0; i < count; i++) {
-      const offset =
-        count === 1 ? 0 : -attack.spreadRadians / 2 + (i * attack.spreadRadians) / (count - 1);
-      fire(state, player, offset === 0 ? player.aim : rotate(player.aim, offset), shot);
-    }
-    // The fractional part of a shortened cooldown carries over, so the fire rate stays exact.
-    player.attackCooldown += statValue(player, 'attackCooldownMul', attack.cooldownTicks);
-    state.events.push({
-      type: 'playerFired',
-      playerId: player.id,
-      x: player.x,
-      y: player.y,
-      angle: angleOf(player.aim),
-    });
+    const { attack } = lookup(ctx.content.classes, player.classId, 'class');
+    const input = ctx.commands.get(player.id)?.input ?? IDLE_INPUT;
+    attackModule(attack).step(ctx, player, attack, input);
   }
-}
-
-interface Shot {
-  speed: number;
-  radius: number;
-  damage: number;
-  ticks: number;
-  pierce: number;
-  knockback?: number;
-}
-
-function fire(state: SimState, player: PlayerState, direction: Vec2, shot: Shot): void {
-  state.projectiles.push({
-    id: state.nextEntityId,
-    owner: { kind: 'player', playerId: player.id },
-    x: player.x,
-    y: player.y,
-    prevX: player.x,
-    prevY: player.y,
-    vx: direction.x * shot.speed,
-    vy: direction.y * shot.speed,
-    radius: shot.radius,
-    damage: shot.damage,
-    ticksLeft: shot.ticks,
-    pierceLeft: shot.pierce,
-    ...(shot.knockback === undefined ? {} : { knockback: shot.knockback }),
-  });
-  state.nextEntityId += 1;
+  for (const module of Object.values(ATTACKS)) {
+    module.update?.(ctx);
+  }
 }

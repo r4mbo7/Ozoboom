@@ -3,7 +3,7 @@ import { navigateMenu } from '../ui/navigation';
 import { FEEDBACK_TYPES } from './github';
 import type { FeedbackType } from './types';
 
-export type FormItem = 'type' | 'message' | 'context' | 'send' | 'copy' | 'close';
+export type FormItem = 'type' | 'message' | 'discord' | 'context' | 'send' | 'copy' | 'close';
 
 export interface FormStep {
   index: number;

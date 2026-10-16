@@ -1,4 +1,4 @@
-import type { PlayerState } from '../sim/state';
+import type { PlayerState, SimState } from '../sim/state';
 import type { BurstSpec } from './bursts';
 import type { Frame } from './frame';
 import { TAU } from './paint';
@@ -6,6 +6,8 @@ import { TAU } from './paint';
 // What a look needs to draw one standing player for one image. A single object is filled in place
 // for every player: nothing is allocated per image.
 export interface LookInput {
+  // The state the player is drawn from, for what it holds apart from itself (the clubs in hand).
+  state: SimState;
   player: PlayerState;
   x: number;
   y: number;
@@ -31,6 +33,7 @@ export interface LookInput {
 // Every field is written before a look reads it.
 export function createLookInput(): LookInput {
   return {
+    state: undefined as unknown as SimState,
     player: undefined as unknown as PlayerState,
     x: 0,
     y: 0,

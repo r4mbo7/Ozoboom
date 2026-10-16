@@ -792,7 +792,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
             release: track.kick.release,
           },
         });
-        if (drum.voice === 'kick') {
+        if (drum.voice === 'kick' || drum.voice === 'tuned-kick') {
           options.onKickScheduled?.(step, at);
         }
       }

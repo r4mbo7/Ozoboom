@@ -1,16 +1,19 @@
 import type {
   GameContent,
+  GaugeDefinition,
   SetDefinition,
   SkillDefinition,
   TrapDefinition,
   WeaponDefinition,
 } from '../data/types';
-import { NIGHT_END, NIGHT_START, type PaletteToken } from '../shared/palette';
+import { t } from '../shared/i18n';
+import { NIGHT_END, NIGHT_START, type PaletteToken, isClassToken } from '../shared/palette';
 import { setTempo, ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
+import { gaugeValue } from '../sim/gauges';
 import { skillCooldownTicks } from '../sim/stats';
 import { trapAt } from '../sim/systems/traps';
-import { formatDuration, ratio } from './format';
+import { formatDuration, formatNumber, formatPercent, ratio } from './format';
 import type { UiFrame } from './types';
 
 export function skillCharge(
@@ -20,18 +23,43 @@ export function skillCharge(
   return 1 - ratio(player.skillCooldown, skillCooldownTicks(player, skill));
 }
 
-const CLASS_TOKENS: Readonly<Record<string, PaletteToken>> = {
-  mage: 'mage',
-  tank: 'tank',
-  healer: 'healer',
-};
+export interface GaugeReading {
+  fill: number;
+  notches: number;
+  full: boolean;
+  text: string;
+}
+
+// The notches the ring of a gauge marks: none for a gauge that fills smoothly.
+export function gaugeNotches(gauge: Pick<GaugeDefinition, 'max'>): number {
+  return gauge.max > 1 && Number.isInteger(gauge.max) ? gauge.max : 0;
+}
+
+export function gaugeReading(
+  player: Pick<PlayerState, 'gauge'>,
+  gauge: Pick<GaugeDefinition, 'max'>,
+): GaugeReading {
+  const value = gaugeValue(player);
+  const fill = ratio(value, gauge.max);
+  const notches = gaugeNotches(gauge);
+  const full = fill >= 1;
+  const text = full
+    ? t('À fond')
+    : notches > 0
+      ? t('{value} sur {max}', {
+          value: formatNumber(Math.floor(value)),
+          max: formatNumber(notches),
+        })
+      : formatPercent(Math.floor(fill * 100 + 1e-6) / 100);
+  return { fill, notches, full, text };
+}
 
 export function classToken(classId: string): PaletteToken {
-  return CLASS_TOKENS[classId] ?? 'or';
+  return isClassToken(classId) ? classId : 'or';
 }
 
 export function playerLabel(player: Pick<PlayerState, 'id' | 'name'>): string {
-  return player.name ?? `Joueur ${String(player.id + 1)}`;
+  return player.name ?? t('Joueur {number}', { number: formatNumber(player.id + 1) });
 }
 
 export interface Roster {
@@ -153,11 +181,16 @@ export function handTiles(
   });
 }
 
-const COUNT_WORDS = ['zéro', 'une', 'deux', 'trois', 'quatre'];
+const plugHelps = (): readonly string[] => [
+  t('Reste zéro mesure pour brancher'),
+  t('Reste une mesure pour brancher'),
+  t('Reste deux mesures pour brancher'),
+  t('Reste trois mesures pour brancher'),
+  t('Reste quatre mesures pour brancher'),
+];
 
 export function plugHelp(bars: number): string {
-  const word = COUNT_WORDS[bars] ?? String(bars);
-  return `Reste ${word} mesure${bars > 1 ? 's' : ''} pour brancher`;
+  return plugHelps()[bars] ?? t('Reste {bars} mesures pour brancher', { bars: formatNumber(bars) });
 }
 
 // The unplugged speaker a living player stands in, if any.
@@ -232,11 +265,16 @@ export function dropReading(
 ): DropReading {
   const tier = set.tiers[state.set.tier];
   if (state.status === 'won' || tier === undefined) {
-    return { label: 'Sunrise', value: '', dropping: false };
+    return { label: t('Sunrise'), value: '', dropping: false };
   }
   if (state.set.segment === 'drop') {
-    const boss = content.enemies.find((enemy) => enemy.id === tier.bossId)?.name ?? 'Le boss';
-    return { label: 'Drop', value: boss, dropping: true };
+    const bossId = state.bosses?.at(-1);
+    const boss = content.enemies.find((enemy) => enemy.id === bossId);
+    return {
+      label: t('Drop'),
+      value: boss === undefined ? t('Le boss') : t(boss.name),
+      dropping: true,
+    };
   }
-  return { label: 'Drop', value: formatDuration(ticksToDrop(set, state) ?? 0), dropping: false };
+  return { label: t('Drop'), value: formatDuration(ticksToDrop(set, state) ?? 0), dropping: false };
 }

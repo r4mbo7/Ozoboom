@@ -1,3 +1,5 @@
+import type { FullAttack, FullSkillEffect, FullSpecialEffect } from './full';
+
 export type StatKey =
   | 'maxHpAdd'
   | 'speedMul'
@@ -21,7 +23,8 @@ export interface StatModifier {
   mul?: number;
 }
 
-export interface AttackDefinition {
+export interface StraightAttack {
+  kind: 'straight';
   damage: number;
   cooldownTicks: number;
   projectileSpeed: number;
@@ -33,10 +36,40 @@ export interface AttackDefinition {
   knockback?: number;
 }
 
+// One member per kind of attack, each with its module in `ATTACKS` (src/sim/attacks).
+export type AttackDefinition = StraightAttack | FullAttack;
+
+// One member per kind of skill, each with its module in `SKILLS` (src/sim/skills).
 export type SkillEffect =
   | { kind: 'nova'; damage: number; radius: number; knockback: number }
   | { kind: 'dash'; distance: number; invulnerableTicks: number; tauntRadius?: number }
-  | { kind: 'healPulse'; amount: number; radius: number; coreRepair: number };
+  | { kind: 'healPulse'; amount: number; radius: number; coreRepair: number }
+  | FullSkillEffect;
+
+export type ZoneCadence = 'beat' | 'offbeat' | 'continuous';
+
+// A zone a skill or an attack lays on the floor (src/sim/zones.ts). On its cadence it hurts, pushes
+// back and heals what stands on it; it slows and pulls on every tick.
+export interface ZoneDefinition {
+  // A player's zones of one id count towards `maxPerPlayer`: the oldest goes out to make room.
+  id: string;
+  radius: number;
+  // A line this long along the direction it is laid in, `radius` on each side. Absent, a disc.
+  length?: number;
+  durationBars: number;
+  maxPerPlayer: number;
+  cadence: ZoneCadence;
+  damage?: number;
+  knockback?: number;
+  // Speed of the bad vibes on it, bosses included.
+  slowFactor?: number;
+  // The bad vibes on it walk to its centre instead of their target; never a boss.
+  pull?: boolean;
+  // To each standing player on it.
+  heal?: number;
+  // Dealt to the bad vibes on it when its time runs out.
+  closeDamage?: number;
+}
 
 export interface SkillDefinition {
   id: string;
@@ -44,6 +77,29 @@ export interface SkillDefinition {
   description: string;
   cooldownTicks: number;
   effect: SkillEffect;
+}
+
+// A class gauge (Élan, Kiff, Racines...): the module of its kind in `GAUGES` (src/sim/systems/gauges.ts)
+// fills and drains it, the HUD shows it as a ring under its name.
+export interface GaugeDefinition {
+  kind: string;
+  name: string;
+  // Its full value: 1 for a gauge that fills smoothly, its count of notches for one read by steps.
+  max: number;
+  // Where it starts; absent, empty.
+  start?: number;
+}
+
+// A bad vibe of the horde a player of this class chases joins their side for `bars` bars
+// (src/sim/recruits.ts): it rushes the closest bad vibe and shoves it on each beat.
+export interface RecruitDefinition {
+  bars: number;
+  // Recruits a player keeps at once: the oldest leaves for a new one.
+  max: number;
+  // Dealt on each beat to the bad vibe it touches.
+  damage: number;
+  speed: number;
+  knockback: number;
 }
 
 export interface ClassDefinition {
@@ -58,6 +114,10 @@ export interface ClassDefinition {
   reviveMul?: number;
   attack: AttackDefinition;
   skill: SkillDefinition;
+  gauge?: GaugeDefinition;
+  recruits?: RecruitDefinition;
+  // Weapons drawn as often for this class as for the one of their `classAffinity`.
+  affinityWeaponIds?: readonly string[];
 }
 
 export type EnemyBehaviour = 'rusher' | 'horde' | 'heavy' | 'shooter' | 'boss';
@@ -72,7 +132,9 @@ export type SpecialEffect =
   | { kind: 'revive'; times: number; hpRatio: number; downBars: number }
   | { kind: 'dazzle'; radius: number }
   | { kind: 'babble'; everyBars: number }
-  | { kind: 'frontGuard'; frontDamageMul: number };
+  | { kind: 'frontGuard'; frontDamageMul: number }
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents -- never until the first effect of the full game, and in the demo.
+  | FullSpecialEffect;
 
 export interface EnemyDefinition {
   id: string;
@@ -257,10 +319,18 @@ export interface BystanderSpawnRule {
   toPhrase?: number;
 }
 
+// The force of the boss of a tier's drop, whichever the drop draws: the boss brings its shape, size,
+// speed and effect, and its own maxHp, damage and vibesDrop serve nowhere else.
+export interface BossStrength {
+  maxHp: number;
+  damage: number;
+  vibesDrop: number;
+}
+
 export interface TierDefinition {
   buildupPhrases: number;
   breakBars: number;
-  bossId: string;
+  boss: BossStrength;
   spawns: readonly SpawnRule[];
   // Read during the drop, bars counted from its start. Absent means the boss comes alone.
   dropSpawns?: readonly SpawnRule[];
@@ -339,6 +409,15 @@ export interface SetDefinition {
   sidedWaves?: { everyBars: number; chance: number; randomShare: number };
 }
 
+// A character or a stage of the full game, shown locked in the demo (ADR 0014): its name and colour, never its data.
+export interface TeaserDefinition {
+  kind: 'class' | 'stage';
+  name: string;
+  // The music style of a stage.
+  style?: string;
+  color: string;
+}
+
 export interface GameContent {
   classes: readonly ClassDefinition[];
   enemies: readonly EnemyDefinition[];
@@ -396,7 +475,12 @@ export type MusicVoiceId =
   | 'wind'
   | 'drone'
   | 'felt'
-  | 'cello';
+  | 'cello'
+  | 'saw-pad'
+  | 'sweep-pluck'
+  | 'gallop-bass'
+  | 'pulse'
+  | 'chant';
 
 // The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
 // `kick` plays out of the break, `clap` only in the drop.
@@ -438,7 +522,14 @@ export type DrumVoiceId =
   | 'rattle'
   | 'tom'
   | 'udu'
-  | 'cabasa';
+  | 'cabasa'
+  | 'tuned-kick'
+  | 'bright-hat'
+  | 'bright-hat-open'
+  | 'big-clap'
+  | 'ride'
+  | 'sand-shaker'
+  | 'wood-rim';
 
 // One drum of a track's own kit: [sixteenth within the loop, gain] hits, gated by its layer.
 export interface DrumPart {
@@ -450,7 +541,7 @@ export interface DrumPart {
   pan?: number;
   // Same meaning as on a music part: the segments in which the drum is heard.
   in?: MusicPart['in'];
-  // Pitch of a `tom`, in Hz.
+  // Pitch of a `tom` or a `tuned-kick`, in Hz.
   hz?: number;
   // Ring of a tom, doum or frame drum, in seconds. Absent keeps the voice's own.
   release?: number;

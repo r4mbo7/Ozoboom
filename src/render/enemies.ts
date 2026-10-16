@@ -54,6 +54,8 @@ export interface EnemiesFamily extends Family {
   // A mask stays where it was drawn until that tick: the stop of a heavy hit.
   hold(id: number, untilTick: number): void;
   poseOf(id: number): EnemyPose | undefined;
+  // The colors a chased bad vibe bursts into, for what leaves the party the same way.
+  burst(x: number, y: number, id: number, frame: Frame): void;
 }
 
 const warnUnknown = (message: string): void => {
@@ -177,6 +179,9 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       }
     },
     poseOf: (id) => views.peek(id),
+    burst(x, y, id, frame): void {
+      colors.burst(x, y, id, false, frame.now, frame);
+    },
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, calm } = frame;
       const downTint = mixColor(palette.badVibeRim, DOWN_GRAY, DOWN_MIX);
@@ -249,6 +254,12 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         if (view !== undefined) {
           view.glintStart = glintStart(state.tick, view.glintStart, frame.calm);
         }
+        return;
+      }
+      if (event.type === 'recruited') {
+        farewells.cancel(event.id, (sprite) => {
+          sprite.visible = false;
+        });
         return;
       }
       if (event.type !== 'enemyDied') {

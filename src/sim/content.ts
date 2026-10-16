@@ -4,12 +4,17 @@ import type {
   EnemyDefinition,
   FusionDefinition,
   GameContent,
+  GaugeDefinition,
   RarityWeights,
+  RecruitDefinition,
   SetDefinition,
   TrapDefinition,
   UpgradeDefinition,
   WeaponDefinition,
 } from '../data/types';
+import { ATTACKS } from './attacks';
+import { GAUGES } from './systems/gauges';
+import { SKILLS } from './skills';
 import { SPECIALS } from './specials';
 import { WEAPONS } from './systems/weapons';
 
@@ -68,8 +73,35 @@ export function resolveContent(content: GameContent): ResolvedContent {
     lookup(resolved.weapons, fusion.resultId, `result of fusion to "${fusion.resultId}"`);
   }
   for (const definition of content.classes) {
+    if (!Object.hasOwn(ATTACKS, definition.attack.kind)) {
+      throw new Error(
+        `class "${definition.id}" has no module for attack "${definition.attack.kind}"`,
+      );
+    }
+    if (!Object.hasOwn(SKILLS, definition.skill.effect.kind)) {
+      throw new Error(
+        `class "${definition.id}" has no module for skill "${definition.skill.effect.kind}"`,
+      );
+    }
+    for (const weaponId of definition.affinityWeaponIds ?? []) {
+      lookup(resolved.weapons, weaponId, `affinity weapon of class "${definition.id}"`);
+    }
     requirePositive(definition.reviveMul, `reviveMul of class "${definition.id}"`);
-    requireNonNegative(definition.attack.knockback, `attack knockback of class "${definition.id}"`);
+    if ('knockback' in definition.attack) {
+      requireNonNegative(
+        definition.attack.knockback,
+        `attack knockback of class "${definition.id}"`,
+      );
+    }
+    if (definition.gauge !== undefined) {
+      requireGauge(definition.id, definition.gauge);
+    }
+    if (definition.recruits !== undefined) {
+      requireRecruits(definition.id, definition.recruits);
+    }
+  }
+  if (!content.enemies.some((enemy) => enemy.behaviour === 'boss')) {
+    throw new Error('no boss for the drops to draw from');
   }
   for (const set of content.sets) {
     requirePositive(set.reviveBars, `reviveBars of set "${set.id}"`);
@@ -82,7 +114,6 @@ export function resolveContent(content: GameContent): ResolvedContent {
     }
     set.tiers.forEach((tier, index) => {
       const where = `tier ${String(index)} of set "${set.id}"`;
-      lookup(resolved.enemies, tier.bossId, `boss of ${where}`);
       for (const spawn of tier.spawns) {
         lookup(resolved.enemies, spawn.enemyId, `spawned enemy of ${where}`);
       }
@@ -149,6 +180,30 @@ function requirePositive(value: number | undefined, what: string): void {
   if (value !== undefined && !(Number.isFinite(value) && value > 0)) {
     throw new Error(`${what} must be positive, got ${String(value)}`);
   }
+}
+
+function requireGauge(classId: string, gauge: GaugeDefinition): void {
+  if (!Object.hasOwn(GAUGES, gauge.kind)) {
+    throw new Error(`class "${classId}" has no module for gauge "${gauge.kind}"`);
+  }
+  const what = `of the gauge of class "${classId}"`;
+  requirePositive(gauge.max, `max ${what}`);
+  if (gauge.start !== undefined && !(gauge.start >= 0 && gauge.start <= gauge.max)) {
+    throw new Error(
+      `start ${what} must be within 0 and ${String(gauge.max)}, got ${String(gauge.start)}`,
+    );
+  }
+}
+
+function requireRecruits(classId: string, recruits: RecruitDefinition): void {
+  const what = `of the recruits of class "${classId}"`;
+  for (const key of ['bars', 'max', 'damage', 'speed'] as const) {
+    requirePositive(recruits[key], `${key} ${what}`);
+  }
+  if (!Number.isInteger(recruits.max)) {
+    throw new Error(`max ${what} must be a whole number, got ${String(recruits.max)}`);
+  }
+  requireNonNegative(recruits.knockback, `knockback ${what}`);
 }
 
 function requireNonNegative(value: number | undefined, what: string): void {

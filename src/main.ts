@@ -1,7 +1,8 @@
 import './style.css';
 import './app/app.css';
-import { readDevOptions } from './app/dev';
+import { DevUrlError, type DevOptions, readDevOptions } from './app/dev';
 import { startGame } from './app/game';
+import { startLocale } from './app/locale';
 import { CONTENT } from './data/content';
 import { DEFAULT_BPM, beatPeriodMs } from './shared/tempo';
 
@@ -22,4 +23,16 @@ for (const face of [
 }
 
 root.style.setProperty('--beat', `${beatPeriodMs(DEFAULT_BPM).toFixed(1)}ms`);
-await startGame(root, readDevOptions(window.location.search, CONTENT));
+function devOptions(page: HTMLElement): DevOptions {
+  try {
+    return readDevOptions(window.location.search, CONTENT);
+  } catch (error) {
+    if (error instanceof DevUrlError) {
+      page.textContent = error.message;
+    }
+    throw error;
+  }
+}
+
+startLocale();
+await startGame(root, devOptions(root));

@@ -1,6 +1,7 @@
 import type { EnemyDefinition } from '../../data/types';
 import { lookup } from '../content';
 import { damageCore, damagePlayer, playerById } from '../damage';
+import { canStrike, strikeCooldownMul } from '../enemy-status';
 import type { EnemyState, SimState } from '../state';
 import type { StepContext } from './types';
 
@@ -14,7 +15,7 @@ export function enemyAttacks({ state, content }: StepContext): void {
     }
     if (
       enemy.hp <= 0 ||
-      enemy.stunTicks > 0 ||
+      !canStrike(enemy) ||
       enemy.attackCooldown > 0 ||
       enemy.clingingTo !== undefined
     ) {
@@ -26,7 +27,7 @@ export function enemyAttacks({ state, content }: StepContext): void {
         ? strike(state, enemy)
         : shoot(state, enemy, definition.ranged);
     if (attacked) {
-      enemy.attackCooldown = definition.attackCooldownTicks;
+      enemy.attackCooldown = definition.attackCooldownTicks * strikeCooldownMul(enemy);
     }
   }
 }

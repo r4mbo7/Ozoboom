@@ -188,18 +188,26 @@
   transform: translateX(20px);
 }
 
-.ui-volume__control {
+.ui-volume__control,
+.ui-language__control {
   gap: 4px;
 }
 
-.ui-volume .ui-stepper__arrow {
+:is(.ui-volume, .ui-language) .ui-stepper__arrow {
   width: 30px;
   height: 30px;
 }
 
-.ui-volume .ui-stepper__glyph {
+:is(.ui-volume, .ui-language) .ui-stepper__glyph {
   width: 18px;
   height: 18px;
+}
+
+.ui-language .ui-toggle__state {
+  min-width: 5em;
+  color: var(--texte);
+  font-weight: 700;
+  text-align: center;
 }
 
 .ui-volume__meter {
@@ -704,7 +712,10 @@ svg.ui-title__sun {
   box-shadow: 0 0 calc(40px * var(--ui-halo)) var(--class-color);
 }
 
+/* Out of the flow: the size of its frame never follows the size of its drawing buffer. */
 .ui canvas.portrait {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -719,6 +730,7 @@ svg.ui-title__sun {
 }
 
 .ui-hero__stage {
+  position: relative;
   display: grid;
   aspect-ratio: 4 / 3;
   overflow: hidden;
@@ -865,10 +877,16 @@ svg.ui-title__sun {
 }
 
 .ui-classcard__portrait {
+  position: relative;
   display: grid;
   flex: none;
   width: 56px;
   height: 56px;
+}
+
+/* The glow of a small portrait fades out before its edges: no square shows on the card. */
+.ui-classcard__portrait canvas.portrait {
+  mask-image: radial-gradient(closest-side, #000 80%, transparent);
 }
 
 .ui-classcard__name {
@@ -876,7 +894,55 @@ svg.ui-title__sun {
   line-height: 1.15;
 }
 
+/* More classes than one row holds: a grid of small cards under a shorter stage. */
+
+.ui-classpicker[data-many] .ui-lobby__body {
+  gap: 14px;
+}
+
+.ui-classpicker[data-many] .ui-hero {
+  width: min(100%, 1080px);
+}
+
+.ui-classpicker[data-many] .ui-hero__stage {
+  aspect-ratio: 2 / 1;
+}
+
+.ui-classpicker[data-many] .ui-hero__info {
+  gap: 10px;
+}
+
+.ui-classpicker[data-many] :is(.ui-hero__role, .ui-hero__skilltext) {
+  text-wrap: pretty;
+}
+
+.ui-classpicker[data-many] .ui-classcards {
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+  width: min(100%, 1080px);
+}
+
+.ui-classpicker[data-many] .ui-classcard {
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 2px 8px;
+  border-radius: 18px;
+  font-size: 13px;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.ui-classpicker[data-many] .ui-classcard__portrait {
+  width: 48px;
+  height: 48px;
+}
+
+.ui-classpicker[data-many] .ui-classcards[aria-current] .ui-classcard[aria-checked='true']::before {
+  content: none;
+}
+
 .ui-seat__portrait {
+  position: relative;
   display: grid;
   aspect-ratio: 2 / 1;
   overflow: hidden;
@@ -1092,7 +1158,7 @@ svg.ui-title__sun {
   box-shadow: none;
 }
 
-.ui-lobby__entry .ui-button {
+.ui-lobby__entry .ui-button:not(.ui-action) {
   justify-content: center;
 }
 
@@ -1332,6 +1398,17 @@ svg.ui-title__sun {
 
 .ui-stepper[data-readonly] .ui-stepper__current {
   justify-content: flex-start;
+}
+
+/* Long names among many classes: every name keeps room for two lines, so stepping never jumps. */
+
+.ui-lobby[data-many] .ui-stepper__current {
+  min-height: calc(2 * 1.15em);
+}
+
+.ui-lobby[data-many] .ui-stepper__name {
+  line-height: 1.15;
+  text-wrap: balance;
 }
 
 .ui-lobby__actions {
@@ -2305,6 +2382,103 @@ svg.ui-title__sun {
   text-align: left;
 }
 
+@property --gauge-fill {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+.ui-gauge {
+  --gauge-fill: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ui-gauge__ring {
+  --notches: 1;
+
+  display: grid;
+  position: relative;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  transition: --gauge-fill 120ms linear;
+}
+
+.ui-gauge__ring::before {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--who) calc(var(--gauge-fill) * 360deg),
+    color-mix(in srgb, var(--texte) 14%, transparent) calc(var(--gauge-fill) * 360deg)
+  );
+  content: '';
+}
+
+/* A gauge read by steps: a gap between each notch. */
+.ui-gauge__ring[data-notched]::before {
+  mask: repeating-conic-gradient(
+    from -3deg,
+    transparent 0deg 6deg,
+    #000 6deg calc(360deg / var(--notches))
+  );
+}
+
+.ui-gauge__core {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--sol-clair);
+}
+
+/* The heart of the ring lights up as the gauge nears full. */
+.ui-gauge__core::before {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--who) 70%, transparent) 0,
+    transparent 70%
+  );
+  opacity: calc(var(--gauge-fill) * var(--gauge-fill));
+  content: '';
+}
+
+.ui-hud__gauge[data-full] .ui-gauge__ring {
+  box-shadow: 0 0 calc(16px * var(--ui-halo)) color-mix(in srgb, var(--who) 70%, transparent);
+}
+
+.ui-gauge__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.ui-gauge__name {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ui-gauge__status {
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ui-hud__gauge[data-full] .ui-gauge__status {
+  color: color-mix(in srgb, var(--who) 60%, var(--texte));
+  font-weight: 700;
+}
+
 /* Overlays */
 
 /* A menu over a light sky caps its lightness and warms to sand: it must not dazzle after the night. */
@@ -2831,7 +3005,8 @@ svg.ui-title__sun {
   min-width: 0;
 }
 
-.ui-hud[data-multi] :is(.ui-hud__level, .ui-hud__life, .ui-hud__gear, .ui-hud__skills) {
+.ui-hud[data-multi]
+  :is(.ui-hud__level, .ui-hud__life, .ui-hud__gear, .ui-hud__skills, .ui-hud__gauge) {
   display: none;
 }
 
@@ -3727,6 +3902,7 @@ svg.ui-title__sun {
   }
 
   .ui-hud__skills .ui-skill__text,
+  .ui-gauge__text,
   .ui-traps__name {
     display: none;
   }
@@ -4074,7 +4250,8 @@ svg.ui-title__sun {
   .ui-life__bar,
   .ui-hud__life .ui-who__name,
   .ui-traps__name,
-  .ui-hud__skills .ui-skill__text {
+  .ui-hud__skills .ui-skill__text,
+  .ui-gauge__text {
     display: none;
   }
 
@@ -4180,9 +4357,15 @@ svg.ui-title__sun {
     height: 48px;
   }
 
-  .ui-hud__skills .ui-skill__ring {
+  .ui-hud__skills .ui-skill__ring,
+  .ui-gauge__ring {
     width: 48px;
     height: 48px;
+  }
+
+  .ui-gauge__core {
+    width: 40px;
+    height: 40px;
   }
 
   .ui-hud__skills .ui-skill__glyph {
@@ -4208,4 +4391,52 @@ svg.ui-title__sun {
   .ui-hud__ribbon .ui-slot--phrase {
     width: 11px;
   }
+}
+
+/* The cards of the full game in the demo: locked, in the colour of what they hold. */
+
+.ui-teaser {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--class-color) 8%, var(--ui-panel));
+}
+
+.ui-teaser:hover {
+  border-color: var(--class-color);
+}
+
+.ui-teaser__lock {
+  display: grid;
+  place-items: center;
+  color: var(--class-color);
+}
+
+.ui-teaser__lock svg {
+  width: 28px;
+  height: 28px;
+}
+
+.ui-classcard .ui-teaser__lock {
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--class-color) 16%, transparent);
+}
+
+.ui .ui-teaser__preview {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--class-color) 24%, #060a1c),
+    #060a1c
+  );
+}
+
+.ui-teaser__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-teaser__note {
+  color: var(--ui-muted);
+  font-size: 12px;
+  font-weight: 700;
 }

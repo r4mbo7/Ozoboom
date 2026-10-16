@@ -27,7 +27,7 @@ export function createClassEffects(
       charge.dashTrail(state, player, effect.distance, frame);
     } else if (effect.kind === 'nova') {
       charge.nova(state, player, effect.radius, frame);
-    } else {
+    } else if (effect.kind === 'healPulse') {
       care.heal(state, player, effect.radius, frame);
     }
   }

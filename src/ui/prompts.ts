@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import type { InputDevice } from '../input/intents';
 
 export type KeyStyle = 'key' | 'button';
@@ -19,71 +20,71 @@ export interface DevicePrompts {
   controls: readonly Control[];
 }
 
-const KEYBOARD: DevicePrompts = {
-  name: 'Clavier et souris',
+const keyboard = (): DevicePrompts => ({
+  name: t('Clavier et souris'),
   style: 'key',
   navigate: ['↑', '↓'],
   navigateRow: ['←', '→'],
-  confirm: 'Entrée',
-  back: 'Échap',
+  confirm: t('Entrée'),
+  back: t('Échap'),
   skill: 'E',
   controls: [
-    { action: 'Se déplacer', keys: ['ZQSD', 'WASD'] },
-    { action: 'Viser', keys: ['Souris'] },
-    { action: 'Tirer', keys: ['Clic gauche', 'Espace'] },
-    { action: 'Choisir un piège', keys: ['Molette', '1 à 5'] },
-    { action: 'Poser le piège', keys: ['Clic droit', 'F'] },
-    { action: 'Compétence', keys: ['E'] },
-    { action: 'Pause', keys: ['Échap'] },
+    { action: t('Se déplacer'), keys: ['ZQSD', 'WASD'] },
+    { action: t('Viser'), keys: [t('Souris')] },
+    { action: t('Tirer'), keys: [t('Clic gauche'), t('Espace')] },
+    { action: t('Choisir un piège'), keys: [t('Molette'), t('1 à 5')] },
+    { action: t('Poser le piège'), keys: [t('Clic droit'), 'F'] },
+    { action: t('Compétence'), keys: ['E'] },
+    { action: t('Pause'), keys: [t('Échap')] },
   ],
-};
+});
 
-const GAMEPAD: DevicePrompts = {
-  name: 'Manette',
+const gamepad = (): DevicePrompts => ({
+  name: t('Manette'),
   style: 'button',
-  navigate: ['Stick gauche', 'Croix'],
-  navigateRow: ['Stick gauche', 'Croix'],
+  navigate: [t('Stick gauche'), t('Croix')],
+  navigateRow: [t('Stick gauche'), t('Croix')],
   confirm: 'A',
   back: 'B',
   skill: 'LT',
   controls: [
-    { action: 'Se déplacer', keys: ['Stick gauche'] },
-    { action: 'Viser', keys: ['Stick droit'] },
-    { action: 'Tirer', keys: ['RT'] },
-    { action: 'Choisir un piège', keys: ['LB', 'RB'] },
-    { action: 'Poser le piège', keys: ['A'] },
-    { action: 'Compétence', keys: ['LT'] },
-    { action: 'Pause', keys: ['Start'] },
+    { action: t('Se déplacer'), keys: [t('Stick gauche')] },
+    { action: t('Viser'), keys: [t('Stick droit')] },
+    { action: t('Tirer'), keys: ['RT'] },
+    { action: t('Choisir un piège'), keys: ['LB', 'RB'] },
+    { action: t('Poser le piège'), keys: ['A'] },
+    { action: t('Compétence'), keys: ['LT'] },
+    { action: t('Pause'), keys: ['Start'] },
   ],
-};
+});
 
 // Menus are touched, not walked: a touch screen shows no key hints and no skill key.
-const TOUCH: DevicePrompts = {
-  name: 'Tactile',
+const touch = (): DevicePrompts => ({
+  name: t('Tactile'),
   style: 'key',
   navigate: [],
   navigateRow: [],
-  confirm: 'Toucher',
-  back: 'Retour',
+  confirm: t('Toucher'),
+  back: t('Retour'),
   skill: '',
   controls: [
-    { action: 'Se déplacer', keys: ['Glisser sur l’arène'] },
-    { action: 'Viser et tirer', keys: ['Automatique'] },
-    { action: 'Poser un piège à ses pieds', keys: ['Toucher sa tuile'] },
-    { action: 'Le poser ailleurs', keys: ['Glisser sa tuile'] },
-    { action: 'Compétence', keys: ['Toucher sa tuile'] },
-    { action: 'Pause', keys: ['❚❚'] },
+    { action: t('Se déplacer'), keys: [t('Glisser sur l’arène')] },
+    { action: t('Viser et tirer'), keys: [t('Automatique')] },
+    { action: t('Poser un piège à ses pieds'), keys: [t('Toucher sa tuile')] },
+    { action: t('Le poser ailleurs'), keys: [t('Glisser sa tuile')] },
+    { action: t('Compétence'), keys: [t('Toucher sa tuile')] },
+    { action: t('Pause'), keys: ['❚❚'] },
   ],
-};
+});
 
 export function promptsFor(device: InputDevice): DevicePrompts {
   switch (device) {
     case 'gamepad':
-      return GAMEPAD;
+      return gamepad();
     case 'touch':
-      return TOUCH;
+      return touch();
     default:
-      return KEYBOARD;
+      return keyboard();
   }
 }
 
@@ -91,5 +92,5 @@ export function promptsFor(device: InputDevice): DevicePrompts {
 // the keys that choose a card, or on a touch screen.
 export function endlessHint(prompts: DevicePrompts): { keys: readonly string[]; label: string }[] {
   const same = prompts.navigate.join() === prompts.navigateRow.join();
-  return same ? [] : [{ keys: prompts.navigate, label: 'sans fin' }];
+  return same ? [] : [{ keys: prompts.navigate, label: t('sans fin') }];
 }

@@ -10,6 +10,8 @@ export function beginStep({ state }: StepContext): void {
   rememberPositions(state.pickups);
   rememberPositions(state.bystanders ?? []);
   rememberPositions(state.placed ?? []);
+  rememberPositions(state.recruits ?? []);
+  rememberPositions(state.props ?? []);
   if (state.status === 'running') {
     state.tick += 1;
   }

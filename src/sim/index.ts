@@ -1,9 +1,12 @@
 import type { GameContent } from '../data/types';
 import type { PlayerCommand } from './commands';
 import { lookup, resolveContent } from './content';
+import { enemyStatuses } from './enemy-status';
 import { createFlowFields } from './flow-field';
 import { createInitialState, type PlayerSlot } from './initial-state';
 import { setTempo } from './lineup';
+import { playerBoosts } from './player-boosts';
+import { recruits } from './recruits';
 import { SpatialHash } from './spatial-hash';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
@@ -12,6 +15,7 @@ import { bystanders } from './systems/bystanders';
 import { deaths } from './systems/deaths';
 import { enemyAttacks } from './systems/enemy-attacks';
 import { enemySteering } from './systems/enemy-steering';
+import { gauges } from './systems/gauges';
 import { lootCarriers, loots } from './systems/loot';
 import { pickups } from './systems/pickups';
 import { placedTotems, placedZones } from './systems/placed';
@@ -32,6 +36,8 @@ import { traps } from './systems/traps';
 import { upgradeChoice } from './systems/upgrade-choice';
 import { weapons } from './systems/weapons';
 import type { StepContext, System } from './systems/types';
+import { walls } from './walls';
+import { zones } from './zones';
 
 export interface SimulationOptions {
   seed: number;
@@ -70,13 +76,19 @@ const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
     bystanders,
     projectiles,
     traps,
+    zones,
     speakers,
     vibeRain,
+    recruits,
+    walls,
     enemyAttacks,
+    enemyStatuses,
     bombs,
     deaths,
+    gauges,
     pickups,
     loots,
+    playerBoosts,
     progression,
     status,
   ],

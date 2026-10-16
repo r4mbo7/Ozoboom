@@ -1,5 +1,6 @@
 import { lookup } from '../content';
 import { drawRelics } from '../draw';
+import { recruitFallen } from '../recruits';
 import { SPECIALS } from '../specials';
 import type { PickupKind, SimState } from '../state';
 import { dropBomb } from './bomb';
@@ -38,7 +39,8 @@ export function deaths(ctx: StepContext): void {
         continue;
       }
     }
-    const vibesDrop = definition.vibesDrop + (enemy.carrying ?? 0);
+    const base = enemy.isBoss ? set.tiers[state.set.tier]?.boss.vibesDrop : undefined;
+    const vibesDrop = (base ?? definition.vibesDrop) + (enemy.carrying ?? 0);
     state.events.push({
       type: 'enemyDied',
       id: enemy.id,
@@ -48,6 +50,7 @@ export function deaths(ctx: StepContext): void {
       byPlayer: enemy.lastHitBy ?? null,
     });
     state.stats.kills += 1;
+    recruitFallen(ctx, enemy, definition);
     if (enemy.isBoss && !isLastTier(state.set, set)) {
       offerRelics(ctx);
     }

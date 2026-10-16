@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import { el, setText } from './dom';
 
 export interface Toggle {
@@ -27,20 +28,20 @@ export function createToggle(label: string, hint: string, onText: string, offTex
 }
 
 export function createHitSoundToggle(): Toggle {
-  return createToggle('Son des coups', 'Une note par coup porté', 'Oui', 'Non');
+  return createToggle(t('Son des coups'), t('Une note par coup porté'), t('Oui'), t('Non'));
 }
 
 // The touch screen always fires and aims by itself: these switches only show elsewhere.
 export function createAutoFireToggle(): Toggle {
-  return assistToggle('Tir automatique', 'Sans tenir le tir');
+  return assistToggle(t('Tir automatique'), t('Sans tenir le tir'));
 }
 
 export function createAutoAimToggle(): Toggle {
-  return assistToggle('Visée automatique', 'Vers la bad vibe à portée');
+  return assistToggle(t('Visée automatique'), t('Vers la bad vibe à portée'));
 }
 
 function assistToggle(label: string, hint: string): Toggle {
-  const toggle = createToggle(label, hint, 'Oui', 'Non');
+  const toggle = createToggle(label, hint, t('Oui'), t('Non'));
   toggle.button.classList.add('ui-toggle--assist');
   return toggle;
 }

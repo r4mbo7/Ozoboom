@@ -2,6 +2,13 @@ import type { EnemyDefinition } from '../../data/types';
 import { distanceSquared } from '../../shared/vec';
 import { lookup, type ResolvedContent } from '../content';
 import { playerById } from '../damage';
+import {
+  bubbleDrift,
+  disorientedHeading,
+  hasStatus,
+  isRooted,
+  walkingSpeed,
+} from '../enemy-status';
 import { flowWaypoint } from '../flow-field';
 import { lineBlocked, resolveObstacles } from '../obstacles';
 import type { Circle } from '../spatial-hash';
@@ -27,31 +34,45 @@ export function enemySteering(ctx: StepContext): void {
     }
     const definition = lookup(content.enemies, enemy.kind, 'enemy');
     chooseTarget(state, enemy, definition);
-    if (enemy.stunTicks > 0) {
+    if (hasStatus(enemy, 'bubbled')) {
+      bubbleDrift(enemy);
       continue;
     }
-    const override = steeringOverride(ctx, enemy, definition);
-    const target = override?.target ?? targetOf(state, enemy);
-    const speed = enemy.speed * enemy.slowFactor * (override?.speedMul ?? 1);
-    // When the straight line to its target is blocked, a bad vibe walks the core's flow field
-    // instead, whoever its target is: a chased player behind a pole is reached once the line clears.
-    const detour =
-      ctx.flowFields !== undefined &&
-      override === undefined &&
-      lineBlocked(enemy.x, enemy.y, target.x, target.y, enemy.radius, obstacles) &&
-      flowWaypoint(ctx.flowFields, enemy.radius, enemy.x, enemy.y, waypoint);
-    const aim = detour ? waypoint : target;
-    const dx = aim.x - enemy.x;
-    const dy = aim.y - enemy.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const gap = detour ? distance : distance - enemy.radius - target.radius;
-    const advance =
-      !detour && override === undefined && definition.ranged !== undefined
-        ? Math.min(speed, Math.max(-speed, gap - definition.ranged.keepDistance))
-        : Math.min(speed, Math.max(0, gap));
-    let moveX = distance === 0 ? 0 : (dx / distance) * advance;
-    let moveY = distance === 0 ? 0 : (dy / distance) * advance;
-    if (definition.behaviour === 'horde') {
+    if (isRooted(enemy)) {
+      continue;
+    }
+    const disoriented = hasStatus(enemy, 'disoriented');
+    let speed = walkingSpeed(enemy);
+    let moveX: number;
+    let moveY: number;
+    if (disoriented) {
+      const heading = disorientedHeading(state.tick, enemy);
+      moveX = heading.x * speed;
+      moveY = heading.y * speed;
+    } else {
+      const override = steeringOverride(ctx, enemy, definition);
+      const target = override?.target ?? targetOf(state, enemy);
+      speed *= override?.speedMul ?? 1;
+      // When the straight line to its target is blocked, a bad vibe walks the core's flow field
+      // instead, whoever its target is: a chased player behind a pole is reached once the line clears.
+      const detour =
+        ctx.flowFields !== undefined &&
+        override === undefined &&
+        lineBlocked(enemy.x, enemy.y, target.x, target.y, enemy.radius, obstacles) &&
+        flowWaypoint(ctx.flowFields, enemy.radius, enemy.x, enemy.y, waypoint);
+      const aim = detour ? waypoint : target;
+      const dx = aim.x - enemy.x;
+      const dy = aim.y - enemy.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const gap = detour ? distance : distance - enemy.radius - target.radius;
+      const advance =
+        !detour && override === undefined && definition.ranged !== undefined
+          ? Math.min(speed, Math.max(-speed, gap - definition.ranged.keepDistance))
+          : Math.min(speed, Math.max(0, gap));
+      moveX = distance === 0 ? 0 : (dx / distance) * advance;
+      moveY = distance === 0 ? 0 : (dy / distance) * advance;
+    }
+    if (definition.behaviour === 'horde' || disoriented) {
       separate(state, enemyGrid, enemy);
       moveX += separation.x * speed * SEPARATION_WEIGHT;
       moveY += separation.y * speed * SEPARATION_WEIGHT;

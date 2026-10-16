@@ -1,18 +1,20 @@
 import type { SetDefinition, TierDefinition } from '../../data/types';
 import { BARS_PER_PHRASE, TICK_RATE_HZ, isBarTick, type Tempo } from '../../shared/tempo';
+import type { ResolvedContent } from '../content';
+import { drawBoss } from '../draw';
 import type { SetProgress, SetSegment, SimState } from '../state';
 import type { StepContext } from './types';
 
 const MIN_DROP_BARS = 1;
 const TICKS_PER_MINUTE = 60 * TICK_RATE_HZ;
 
-export function setProgress({ state, set, tempo }: StepContext): void {
+export function setProgress({ state, content, set, tempo }: StepContext): void {
   if (!isBarTick(state.tick, tempo)) {
     return;
   }
   let tier = currentTier(state.set, set);
   while (tier !== undefined && isSegmentOver(state, tier, tempo)) {
-    advance(state, set);
+    advance(state, content, set);
     tier = currentTier(state.set, set);
   }
 }
@@ -55,10 +57,12 @@ function isSegmentOver(state: SimState, tier: TierDefinition, tempo: Tempo): boo
   }
 }
 
-function advance(state: SimState, set: SetDefinition): void {
+function advance(state: SimState, content: ResolvedContent, set: SetDefinition): void {
   const progress = state.set;
   switch (progress.segment) {
     case 'buildup':
+      state.bosses ??= [];
+      state.bosses.push(drawBoss(state.seed, content, state.bosses));
       enterSegment(state, 'break');
       return;
     case 'break':

@@ -1,6 +1,7 @@
 import type { ClassDefinition } from '../data/types';
 import type { InputDevice } from '../input/intents';
 import type { PlayerState } from '../sim/state';
+import { t } from '../shared/i18n';
 import { el, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
 import { playerLabel, skillCharge } from './hud-model';
@@ -47,7 +48,7 @@ export function createBracelet(): Bracelet {
   head.append(who, level, status);
   const life = el('div', 'ui-bar ui-bracelet__life');
   life.setAttribute('role', 'meter');
-  life.setAttribute('aria-label', 'Vie');
+  life.setAttribute('aria-label', t('Vie'));
   life.setAttribute('aria-valuemin', '0');
   life.append(el('span', 'ui-bar__fill'));
   const body = el('div', 'ui-bracelet__body');
@@ -69,12 +70,12 @@ export function createBracelet(): Bracelet {
       life.setAttribute('aria-valuenow', String(Math.round(player.hp)));
       life.setAttribute(
         'aria-valuetext',
-        `${formatNumber(player.hp)} sur ${formatNumber(player.maxHp)}`,
+        t('{hp} sur {maxHp}', { hp: formatNumber(player.hp), maxHp: formatNumber(player.maxHp) }),
       );
       setFlag(element, 'critical', !player.downed && fraction <= CRITICAL_RATIO);
       setFlag(element, 'downed', player.downed);
-      setText(level, `Niv. ${String(player.level)}`);
-      setText(status, player.downed ? 'À terre' : '');
+      setText(level, t('Niv. {level}', { level: player.level }));
+      setText(status, player.downed ? t('À terre') : '');
       element.setAttribute('aria-label', playerLabel(player));
       if (device !== builtDevice) {
         builtDevice = device;
@@ -89,8 +90,12 @@ export function createBracelet(): Bracelet {
         definition === null ? '0' : String(skillCharge(player, definition.skill)),
       );
       setFlag(skill, 'ready', ready);
-      skill.title =
-        definition === null ? '' : `${definition.skill.name} : ${ready ? 'prête' : 'en recharge'}`;
+      if (definition === null) {
+        skill.title = '';
+      } else {
+        const params = { skill: t(definition.skill.name) };
+        skill.title = ready ? t('{skill} : prête', params) : t('{skill} : en recharge', params);
+      }
     },
   };
 }

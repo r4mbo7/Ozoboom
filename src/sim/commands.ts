@@ -4,6 +4,9 @@ export interface PlayerInput {
   move: Vec2;
   aim: Vec2;
   fire: boolean;
+  // With `fire`: the ticks it has been held, this one included, as the player's device counted
+  // them. A charged attack reads it; absent, the attack counts the ticks itself.
+  fireTicks?: number;
   skill: boolean;
 }
 

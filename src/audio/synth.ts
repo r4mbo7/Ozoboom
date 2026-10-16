@@ -10,6 +10,8 @@ export interface Vibrato {
   hz: number;
   cents: number;
   delay: number;
+  // Seconds the depth takes to reach `cents`. Absent means 0.12.
+  rise?: number;
 }
 
 // Modulates the frequency by up to `depth` Hz, with an LFO sweeping from `hz` to `toHz` over `glide`.
@@ -106,7 +108,7 @@ function wobble(oscillator: OscillatorNode, at: number, end: number, vibrato: Vi
   const from = Math.min(at + vibrato.delay, end);
   depth.gain.setValueAtTime(0, at);
   depth.gain.setValueAtTime(0, from);
-  depth.gain.linearRampToValueAtTime(vibrato.cents, Math.min(from + 0.12, end));
+  depth.gain.linearRampToValueAtTime(vibrato.cents, Math.min(from + (vibrato.rise ?? 0.12), end));
   lfo.connect(depth);
   depth.connect(oscillator.detune);
   lfo.start(at);

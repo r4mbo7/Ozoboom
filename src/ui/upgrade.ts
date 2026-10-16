@@ -1,5 +1,6 @@
 import type { GameContent } from '../data/types';
 import type { InputDevice, InputSnapshot } from '../input/intents';
+import { t } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
 import { setOf, setTempo } from '../sim/lineup';
 import type { PlayerId, PlayerState, SimState, UpgradeOffer } from '../sim/state';
@@ -19,6 +20,7 @@ import {
   pickOf,
   waitingFor,
 } from './cards';
+import { formatNumber } from './format';
 import { playerLabel } from './hud-model';
 import { classMark, familyIcon, medallion, weaponIcon } from './icons';
 import { type Menu, createMenu } from './menu';
@@ -70,17 +72,24 @@ function runDue(later: readonly Later[], now: number): Later[] {
   return later.filter((entry) => entry.at > now);
 }
 
+function stripLabel({ steps, everyBars }: WeaponCard): string {
+  if (steps === 'continuous') {
+    return t('Joue en continu');
+  }
+  const fired = steps.flatMap((on, step) => (on ? [formatNumber(step + 1)] : [])).join(', ');
+  return everyBars > 1
+    ? t('Tire sur les doubles croches {steps}, une mesure sur {bars}', {
+        steps: fired,
+        bars: formatNumber(everyBars),
+      })
+    : t('Tire sur les doubles croches {steps}', { steps: fired });
+}
+
 function strip(card: WeaponCard): HTMLElement {
   const { steps } = card;
-  const label =
-    steps === 'continuous'
-      ? 'Joue en continu'
-      : `Tire sur les doubles croches ${steps
-          .flatMap((on, step) => (on ? [String(step + 1)] : []))
-          .join(', ')}${card.everyBars > 1 ? `, une mesure sur ${String(card.everyBars)}` : ''}`;
   const row = el('span', 'ui-card__steps');
   row.setAttribute('role', 'img');
-  row.setAttribute('aria-label', label);
+  row.setAttribute('aria-label', stripLabel(card));
   row.dataset.mode = steps === 'continuous' ? 'continuous' : 'steps';
   const cells = steps === 'continuous' ? Array<boolean>(SIXTEENTHS_PER_BAR).fill(true) : steps;
   row.append(
@@ -131,18 +140,18 @@ function card(model: Card): HTMLButtonElement {
     el(
       'span',
       'ui-card__rank-text',
-      model.kind === 'fusion' ? `Remplace ${model.replaces}` : model.rank,
+      model.kind === 'fusion' ? t('Remplace {weapon}', { weapon: model.replaces }) : model.rank,
     ),
   );
   const foot = el('span', 'ui-card__foot');
-  foot.append(rank, el('span', 'ui-card__cta', 'Choisir'));
+  foot.append(rank, el('span', 'ui-card__cta', t('Choisir')));
   button.append(
     icon('ui-card__medal', medallion(glyph), '0 0 84 84'),
     familyRow,
     el('span', 'ui-card__name', model.name),
   );
   if (model.kind === 'fusion') {
-    button.append(el('span', 'ui-card__recipe', `B2B : ${model.recipe}`));
+    button.append(el('span', 'ui-card__recipe', t('B2B : {recipe}', { recipe: model.recipe })));
   }
   button.append(el('span', 'ui-card__desc', model.description));
   if (model.kind === 'weapon') {
@@ -260,7 +269,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   element.hidden = true;
   const who = createWho();
   const kicker = el('p', 'ui-kicker');
-  const heading = el('h2', 'ui-heading', 'Choisis ton amélioration');
+  const heading = el('h2', 'ui-heading', t('Choisis ton amélioration'));
   const cards = el('div', 'ui-cards');
   const hint = el('p', 'ui-hint');
   element.append(who, kicker, heading, cards, hint);
@@ -338,7 +347,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       setFlag(button, 'chosen', picked);
       const cta = button.querySelector('.ui-card__cta');
       if (cta instanceof HTMLElement) {
-        setText(cta, picked ? 'Choisi' : 'Choisir');
+        setText(cta, picked ? t('Choisi') : t('Choisir'));
       }
     }
   }
@@ -352,9 +361,9 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     fillHint(
       hint,
       [
-        { keys: prompts.navigateRow, label: 'choisir', screen: 'wide' },
-        { keys: prompts.navigate, label: 'choisir', screen: 'narrow' },
-        { keys: [prompts.confirm], label: 'valider' },
+        { keys: prompts.navigateRow, label: t('choisir'), screen: 'wide' },
+        { keys: prompts.navigate, label: t('choisir'), screen: 'narrow' },
+        { keys: [prompts.confirm], label: t('valider') },
       ],
       prompts.style,
     );
@@ -480,7 +489,7 @@ function chip(model: WaitChip): HTMLElement {
 
 export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
   const element = el('section', 'ui-screen ui-overlay ui-upgrade');
-  element.setAttribute('aria-label', 'Choix d’amélioration');
+  element.setAttribute('aria-label', t('Choix d’amélioration'));
   element.hidden = true;
   const effects = el('div', 'ui-screen ui-sparks');
   effects.setAttribute('aria-hidden', 'true');

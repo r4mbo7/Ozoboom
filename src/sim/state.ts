@@ -1,4 +1,4 @@
-import type { Rarity, StatKey } from '../data/types';
+import type { Rarity, StatKey, ZoneDefinition } from '../data/types';
 
 export type EntityId = number;
 export type PlayerId = 0 | 1 | 2 | 3;
@@ -75,6 +75,9 @@ export interface PlayerState extends Positioned {
   vibes: number;
   vibesToNextLevel: number;
   attackCooldown: number;
+  // Ticks of charge of a charged attack, held or let go and waiting for the cooldown; absent
+  // otherwise. Bounded by the full charge.
+  chargeTicks?: number;
   skillCooldown: number;
   upgrades: string[];
   // The rarity of each stack in `upgrades`, same order; absent means all common.
@@ -95,6 +98,8 @@ export interface PlayerState extends Positioned {
   suppressedTicks?: number;
   // Set by dazzle, decremented by `specials`.
   dazzledTicks?: number;
+  // Timed stat bonuses posed through `applyPlayerBoost`; absent while it carries none.
+  boosts?: PlayerBoost[];
   weapons?: WeaponSlot[];
   // Trap ids carried, oldest first, at most `SetDefinition.handSize`.
   hand?: string[];
@@ -102,7 +107,29 @@ export interface PlayerState extends Positioned {
   fused?: string[];
   name?: string;
   reviveTicks?: number;
+  // Only on a player whose class has a gauge; read through `gaugeValue`, written through `setGauge`.
+  gauge?: number;
 }
+
+// The maximum hp is left out: a bonus that ends never takes hp points away.
+export type BoostStat = Exclude<StatKey, 'maxHpAdd'>;
+
+export interface BoostModifier {
+  stat: BoostStat;
+  add?: number;
+  mul?: number;
+}
+
+// A timed stat bonus a character poses on a player, itself or an ally (src/sim/player-boosts.ts).
+export interface PlayerBoost {
+  id: string;
+  modifiers: readonly BoostModifier[];
+  ticksLeft: number;
+}
+
+// Timed statuses a character poses on a bad vibe through `applyEnemyStatus` (src/sim/enemy-status.ts).
+export type EnemyStatusKind =
+  'slowed' | 'halfTime' | 'disoriented' | 'bubbled' | 'eating' | 'held' | 'frozen';
 
 export interface EnemyState extends Positioned {
   id: EntityId;
@@ -116,6 +143,8 @@ export interface EnemyState extends Positioned {
   attackCooldown: number;
   slowFactor: number;
   stunTicks: number;
+  // Ticks left of each timed status it carries; absent while it carries none.
+  statuses?: Partial<Record<EnemyStatusKind, number>>;
   marked: boolean;
   // Tick from which the mark lapses, whatever put it there (lure, ribbon): the longest wins.
   markedUntilTick?: number;
@@ -199,6 +228,66 @@ export interface PlacedState extends Positioned {
   radius: number;
   ticksLeft: number;
   cooldown: number;
+}
+
+// A wall a player raised (src/sim/walls.ts): a segment across `normal`, no bad vibe crosses it, a boss
+// only slows down there.
+export interface WallState {
+  id: EntityId;
+  playerId: PlayerId;
+  x: number;
+  y: number;
+  normal: Vec2;
+  halfLength: number;
+  ticksLeft: number;
+}
+
+// A zone a skill or an attack laid (src/sim/zones.ts).
+export interface ZoneState {
+  id: EntityId;
+  playerId: PlayerId;
+  definition: ZoneDefinition;
+  x: number;
+  y: number;
+  // Unit vector along a line zone: the way it was laid.
+  direction: Vec2;
+  // Multiplies its damage and its heal.
+  power: number;
+  ticksLeft: number;
+}
+
+// A bad vibe of the horde a player recruited (src/sim/recruits.ts), under the id it had as a bad vibe.
+export interface RecruitState extends Positioned {
+  id: EntityId;
+  playerId: PlayerId;
+  kind: string;
+  radius: number;
+  ticksLeft: number;
+}
+
+// Where a prop is: in its owner's hands, flying where it was thrown, bouncing from bad vibe to bad
+// vibe, lying on the ground, or flying back to its owner.
+export type PropPhase = 'held' | 'flying' | 'bouncing' | 'grounded' | 'returning';
+
+// What a character throws and gets back, the Jongleur's clubs: the modules of its attack and skill
+// move it, the render draws it by `kind`.
+export interface PropState extends Positioned {
+  id: EntityId;
+  kind: string;
+  playerId: PlayerId;
+  phase: PropPhase;
+  vx: number;
+  vy: number;
+  damage: number;
+  // Ticks left in its phase: before it falls, before it flies back on its own.
+  ticksLeft: number;
+  // Bad vibes it may still hit in its phase, each once.
+  hitsLeft: number;
+  hitIds?: EntityId[];
+  // The bad vibe it bounces to.
+  targetId?: EntityId;
+  // Caught on the beat: its next throw hits harder.
+  boosted?: true;
 }
 
 export type PickupKind = 'vibes';
@@ -302,6 +391,12 @@ export type SimEvent =
   | { type: 'bombDropped'; id: EntityId; x: number; y: number }
   | { type: 'bombExploded'; id: EntityId; playerId: PlayerId; x: number; y: number }
   | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
+  | { type: 'enemyStatusStarted'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
+  | { type: 'enemyStatusEnded'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
+  | { type: 'playerBoostStarted'; playerId: PlayerId; boost: string }
+  | { type: 'playerBoostEnded'; playerId: PlayerId; boost: string }
+  | { type: 'recruited'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
+  | { type: 'recruitLeft'; id: EntityId; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyRevived'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'vibesStolen'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'enemyFled'; id: EntityId; kind: string; x: number; y: number }
@@ -329,6 +424,8 @@ export type SimEvent =
   | { type: 'weaponEvolved'; playerId: PlayerId; weaponId: string; resultId: string }
   | { type: 'placedSpawned'; id: EntityId; weaponId: string; x: number; y: number }
   | { type: 'placedRemoved'; id: EntityId; weaponId: string; x: number; y: number }
+  | { type: 'zoneLaid'; id: EntityId; zoneId: string; playerId: PlayerId; x: number; y: number }
+  | { type: 'zoneEnded'; id: EntityId; zoneId: string; x: number; y: number }
   | { type: 'speakerPlugging'; speakerId: string; progress: number }
   | { type: 'speakerPlugged'; speakerId: string }
   | { type: 'volumeChanged'; volume: number }
@@ -370,9 +467,20 @@ export interface SimState {
   // Ticks left of the shower of `SetDefinition.vibeRain`.
   vibeRainTicks?: number;
   placed?: PlacedState[];
+  // Optional like `bystanders`: created with the first wall raised, removed when the last one falls.
+  walls?: WallState[];
+  // Optional like `walls`: created with the first zone laid, removed when the last one goes out.
+  zones?: ZoneState[];
+  // Optional like `walls`: created with the first recruit, removed when the last one leaves.
+  recruits?: RecruitState[];
+  // Optional like `bystanders`: created with the first prop of a character who throws them.
+  props?: PropState[];
   // The sides of the current window of `SetDefinition.sidedWaves`, drawn at its first rule spawn;
   // no sides means a window from anywhere.
   spawnWindow?: { index: number; sides: EdgeSide[] };
+  // The bosses drawn so far, one as each break starts: the last one is the boss of the coming or
+  // current drop. Created with the first draw.
+  bosses?: string[];
   pendingUpgrades: UpgradeOffer[];
   nextEntityId: EntityId;
   stats: SimStats;

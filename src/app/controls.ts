@@ -1,7 +1,12 @@
 import type { GameplayIntents, InputSnapshot } from '../input/intents';
 import { heldSlot, selectTrap } from '../ui';
 import { distanceSquared, length, normalize } from '../shared/vec';
-import { IDLE_INPUT, type PlayerAction, type PlayerCommand } from '../sim/commands';
+import {
+  IDLE_INPUT,
+  type PlayerAction,
+  type PlayerCommand,
+  type PlayerInput,
+} from '../sim/commands';
 import type { EnemyState, PlayerState, Vec2 } from '../sim/state';
 
 export type ScreenToWorld = (point: Vec2) => Vec2;
@@ -126,6 +131,7 @@ export class Controls {
   private trapScreen: Vec2 | null = null;
   private upgradeId: string | null = null;
   private trapIndex = 0;
+  private fireTicks = 0;
   private readonly handSize: number;
 
   // The first aim, before any input, should point away from the scene, where the bad vibes come
@@ -151,13 +157,15 @@ export class Controls {
     this.upgradeId = upgradeId;
   }
 
-  // `reach`: how far the player's attack flies now, for the assist.
+  // `reach`: how far the player's attack flies now, for the assist. `chargeTicks`: how long it
+  // takes to charge, 0 for an attack that does not.
   command(
     player: Body,
     toWorld: ScreenToWorld,
     enemies: readonly Target[],
     reach: number,
     chosen: Assist = NO_ASSIST,
+    chargeTicks = 0,
   ): PlayerCommand {
     if (this.snapshot === null) {
       return { playerId: player.id, input: IDLE_INPUT, actions: [] };
@@ -178,6 +186,22 @@ export class Controls {
     this.placeTrap = false;
     this.trapScreen = null;
     this.upgradeId = null;
-    return command;
+    if (chargeTicks === 0) {
+      return command;
+    }
+    return {
+      ...command,
+      input: this.charge(command.input, this.snapshot.gameplay.fire, chargeTicks),
+    };
+  }
+
+  // A charged attack learns how many steps the fire has been held. A fire no hand holds, that of
+  // the assist, lets go at half charge.
+  private charge(input: PlayerInput, pressed: boolean, chargeTicks: number): PlayerInput {
+    const letGo = !pressed && this.fireTicks >= Math.ceil(chargeTicks / 2);
+    this.fireTicks = input.fire && !letGo ? this.fireTicks + 1 : 0;
+    return this.fireTicks === 0
+      ? { ...input, fire: false }
+      : { ...input, fireTicks: this.fireTicks };
   }
 }

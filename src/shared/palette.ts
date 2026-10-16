@@ -1,4 +1,6 @@
-export const PALETTE_TOKENS = [
+import { FULL_TINTS } from './full';
+
+const BASE_TOKENS = [
   'sol',
   'solClair',
   'or',
@@ -13,18 +15,35 @@ export const PALETTE_TOKENS = [
   'rouge',
 ] as const;
 
-export type PaletteToken = (typeof PALETTE_TOKENS)[number];
-
-export type SunPalette = Record<PaletteToken, string>;
+type BaseToken = (typeof BASE_TOKENS)[number];
 
 export type SunMoment = 'crepuscule' | 'nuit' | 'aube' | 'jour';
+
+export type ClassTint = Readonly<Record<SunMoment, string>>;
+
+type FullTintId = keyof typeof FULL_TINTS;
+
+export type SunPalette = (typeof SUN_PALETTES)[SunMoment];
+
+export type PaletteToken = keyof SunPalette;
+
+const FULL_TINT_IDS = Object.keys(FULL_TINTS) as FullTintId[];
+
+export const PALETTE_TOKENS: readonly PaletteToken[] = [...BASE_TOKENS, ...FULL_TINT_IDS];
+
+// The tint of a class is the token of its id: the three classes, then the characters of the full game.
+export const CLASS_TOKENS: readonly PaletteToken[] = ['mage', 'tank', 'healer', ...FULL_TINT_IDS];
+
+export function isClassToken(id: string): id is PaletteToken {
+  return (CLASS_TOKENS as readonly string[]).includes(id);
+}
 
 export interface Light {
   additive: boolean;
   haloAlpha: number;
 }
 
-export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
+const BASE_PALETTES: Record<SunMoment, Record<BaseToken, string>> = {
   crepuscule: {
     sol: '#2a1830',
     solClair: '#5a2c48',
@@ -82,6 +101,27 @@ export const SUN_PALETTES: Record<SunMoment, SunPalette> = {
     rouge: '#be281d',
   },
 };
+
+export const SUN_PALETTES = withClassTints<BaseToken, FullTintId>(BASE_PALETTES, FULL_TINTS);
+
+// Each tint joins the palette of every moment under the id of its class.
+export function withClassTints<B extends string, C extends string>(
+  palettes: Readonly<Record<SunMoment, Readonly<Record<B, string>>>>,
+  tints: Readonly<Record<C, ClassTint>>,
+): Record<SunMoment, Record<B | C, string>> {
+  const tinted = {} as Record<SunMoment, Record<B | C, string>>;
+  for (const moment of Object.keys(palettes) as SunMoment[]) {
+    const palette: Record<string, string> = { ...palettes[moment] };
+    for (const [id, tint] of Object.entries<ClassTint>(tints)) {
+      if (id in palette) {
+        throw new Error(`The tint of class "${id}" would replace a token of the palette`);
+      }
+      palette[id] = tint[moment];
+    }
+    tinted[moment] = palette;
+  }
+  return tinted;
+}
 
 export const NIGHT_START = 0.25;
 export const NIGHT_END = 0.6;

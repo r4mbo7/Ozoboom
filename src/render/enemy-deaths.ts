@@ -62,6 +62,16 @@ export class Farewells<V> {
     Object.assign(slot, spec, { live: true });
   }
 
+  // A bad vibe recruited as it fell lives on as a recruit: no smile, no burst.
+  cancel(id: number, hide: (view: V) => void): void {
+    for (const item of this.items) {
+      if (item.live && item.id === id) {
+        item.live = false;
+        hide(item.view);
+      }
+    }
+  }
+
   update(now: number, calm: boolean, hooks: FarewellHooks<V>): void {
     for (const item of this.items) {
       if (!item.live) {

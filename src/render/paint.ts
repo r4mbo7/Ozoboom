@@ -31,6 +31,24 @@ export function paintedFiner<T>(times: number, make: () => T): T {
   }
 }
 
+export interface Later<T> {
+  get(): T;
+  // What was painted, if anything was asked for yet.
+  readonly painted: T | undefined;
+}
+
+// What `make` paints, at the density of the moment it is declared, the first time it is asked for.
+export function paintedLater<T>(make: () => T): Later<T> {
+  const times = density;
+  let made: T | undefined;
+  return {
+    get: () => (made ??= paintedFiner(times, make)),
+    get painted() {
+      return made;
+    },
+  };
+}
+
 function canvas2d(width: number, height: number): { canvas: HTMLCanvasElement; ctx: Ctx } {
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(width * density);

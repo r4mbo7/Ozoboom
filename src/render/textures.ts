@@ -12,7 +12,8 @@ import {
   star,
   type Shape,
 } from './paint';
-import { MASK_BODY } from './face-kit';
+import { FACE_RADIUS, MASK_BODY } from './face-kit';
+import { recruit } from './faces';
 import { type MaskSet, createMasks } from './textures-enemies';
 import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
 import { type PlayerTextures, playerTextures } from './textures-players';
@@ -54,6 +55,7 @@ export interface Textures {
   readonly zone: Shape;
   readonly sweep: Shape;
   readonly masks: MaskSet;
+  readonly recruit: Shape;
   readonly traps: Readonly<Record<TrapLook, Shape>>;
   readonly specials: SpecialTextures;
   readonly weapons: WeaponTextures;
@@ -160,6 +162,7 @@ export function createTextures(): Textures {
     crate: crate(),
     bomb: bomb(),
     players: playerTextures(),
+    recruit: paint(144, 144, FACE_RADIUS, recruit),
     core: paint(256, 256, 96, (ctx) => {
       ctx.fillStyle = SHADE_DEEP;
       circle(ctx, 92);
@@ -277,6 +280,9 @@ export function destroyTextures(textures: Textures): void {
     shape.texture.destroy(true);
   }
   textures.players.source.destroy();
+  for (const drawing of textures.players.drawings.values()) {
+    drawing.painted?.source.destroy();
+  }
   textures.masks.destroy();
   textures.names.destroy();
   destroyWeaponTextures(textures.weapons);

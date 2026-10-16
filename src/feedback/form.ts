@@ -1,8 +1,10 @@
 import '../ui/ui.css';
 import './feedback.css';
 import type { InputDevice, InputSnapshot } from '../input/intents';
+import { t } from '../shared/i18n';
 import { el, fillHint, icon, setText } from '../ui/dom';
 import { formatNumber } from '../ui/format';
+import { openDiscord } from '../ui/discord';
 import { EYE, SENT } from '../ui/icons';
 import { createMenuInput } from '../ui/navigation';
 import { onMouseMove } from '../ui/pointer';
@@ -67,7 +69,7 @@ export function openFeedback(
   layer.append(element);
 
   const typeField = el('div', 'ui-field ui-field--type');
-  const typeLabel = el('span', 'ui-field__label', 'C’est plutôt');
+  const typeLabel = el('span', 'ui-field__label', t('C’est plutôt'));
   typeLabel.id = `${titleId}-type`;
   const chips = el('div', 'ui-chips');
   chips.setAttribute('role', 'radiogroup');
@@ -88,7 +90,7 @@ export function openFeedback(
 
   const messageField = el('div', 'ui-field ui-field--message');
   const messageHead = el('div', 'ui-field__head');
-  const messageLabel = el('label', 'ui-field__label', 'Ton avis');
+  const messageLabel = el('label', 'ui-field__label', t('Ton avis'));
   messageLabel.htmlFor = messageId;
   const counter = el('span', 'ui-field__count');
   messageHead.append(messageLabel, counter);
@@ -96,49 +98,56 @@ export function openFeedback(
   textarea.id = messageId;
   textarea.maxLength = MAX_MESSAGE_LENGTH;
   textarea.rows = 6;
-  textarea.placeholder = 'Ce que tu as vécu, ce que tu attendais, ce que tu changerais.';
+  textarea.placeholder = t('Ce que tu as vécu, ce que tu attendais, ce que tu changerais.');
   messageField.append(messageHead, textarea);
 
   const notice = el('p', 'ui-feedback__public');
   notice.append(
     icon('ui-feedback__public-icon', EYE),
-    el('span', '', 'Ton avis sera public sur GitHub. N’y mets rien de personnel.'),
+    el('span', '', t('Ton avis sera public sur GitHub. N’y mets rien de personnel.')),
+  );
+
+  const discord = button('ui-feedback__discord', '');
+  discord.append(
+    el('span', '', t('Pas sur GitHub ?')),
+    el('span', 'ui-feedback__discord-link', t('Pose ton mot sur Discord')),
   );
 
   const attach = createToggle(
-    'Joindre le contexte',
-    'Pour rejouer ta partie à l’identique',
-    'Oui',
-    'Non',
+    t('Joindre le contexte'),
+    t('Pour rejouer ta partie à l’identique'),
+    t('Oui'),
+    t('Non'),
   );
   attach.button.tabIndex = -1;
   const context = el('pre', 'ui-feedback__context', report);
-  context.setAttribute('aria-label', 'Contexte de la partie');
+  context.setAttribute('aria-label', t('Contexte de la partie'));
 
   const main = el('div', 'ui-feedback__column');
-  main.append(typeField, messageField, notice);
+  main.append(typeField, messageField, notice, discord);
   const side = el('div', 'ui-feedback__column');
   side.append(attach.button, context);
   const grid = el('div', 'ui-feedback__grid');
   grid.append(main, side);
 
-  const send = button('ui-button ui-button--primary', 'Envoyer sur GitHub');
-  const copy = button('ui-button ui-feedback__secondary', 'Copier');
-  const cancel = button('ui-button ui-feedback__secondary', 'Fermer');
+  const send = button('ui-button ui-button--primary', t('Envoyer sur GitHub'));
+  const copy = button('ui-button ui-feedback__secondary', t('Copier'));
+  const cancel = button('ui-button ui-feedback__secondary', t('Fermer'));
   const formActions = el('div', 'ui-feedback__actions');
   formActions.append(send, copy, cancel);
 
-  const title = el('h2', 'ui-heading', 'Raconte-nous ta soirée');
+  const title = el('h2', 'ui-heading', t('Raconte-nous ta soirée'));
   title.id = titleId;
   const formHeader = el('header', 'ui-feedback__header');
-  formHeader.append(el('p', 'ui-kicker', 'Ton avis'), title);
+  formHeader.append(el('p', 'ui-kicker', t('Ton avis')), title);
 
   const form: View = {
     element: el('div', 'ui-feedback__view'),
-    items: ['type', 'message', 'context', 'send', 'copy', 'close'],
+    items: ['type', 'message', 'discord', 'context', 'send', 'copy', 'close'],
     nodes: new Map<FormItem, HTMLElement>([
       ['type', typeField],
       ['message', messageField],
+      ['discord', discord],
       ['context', attach.button],
       ['send', send],
       ['copy', copy],
@@ -149,14 +158,16 @@ export function openFeedback(
   };
   form.element.append(formHeader, grid, form.status, formActions, form.hint);
 
-  const sentClose = button('ui-button ui-button--primary', 'Fermer');
-  const sentCopy = button('ui-button ui-feedback__secondary', 'Copier');
+  const sentClose = button('ui-button ui-button--primary', t('Fermer'));
+  const sentCopy = button('ui-button ui-feedback__secondary', t('Copier'));
   const sentActions = el('div', 'ui-feedback__actions');
   sentActions.append(sentClose, sentCopy);
   const truncatedNote = el(
     'p',
     'ui-feedback__text ui-feedback__text--warn',
-    'Ton message était trop long pour le lien, sa fin a été coupée. Copie-le en entier pour le coller sur GitHub.',
+    t(
+      'Ton message était trop long pour le lien, sa fin a été coupée. Copie-le en entier pour le coller sur GitHub.',
+    ),
   );
   const sent: View = {
     element: el('div', 'ui-feedback__view ui-feedback__sent'),
@@ -170,14 +181,18 @@ export function openFeedback(
   };
   sent.element.append(
     icon('ui-feedback__emblem', SENT),
-    el('h2', 'ui-heading', 'Le formulaire GitHub est ouvert'),
+    el('h2', 'ui-heading', t('Le formulaire GitHub est ouvert')),
     el(
       'p',
       'ui-feedback__text',
-      'Relis ton avis dans le nouvel onglet, puis publie-le. Il te faut un compte GitHub.',
+      t('Relis ton avis dans le nouvel onglet, puis publie-le. Il te faut un compte GitHub.'),
     ),
     truncatedNote,
-    el('p', 'ui-feedback__text', 'Pas de compte GitHub ? Copie ton avis pour l’envoyer autrement.'),
+    el(
+      'p',
+      'ui-feedback__text',
+      t('Pas de compte GitHub ? Copie ton avis pour l’envoyer autrement.'),
+    ),
     sent.status,
     sentActions,
     sent.hint,
@@ -246,9 +261,9 @@ export function openFeedback(
     fillHint(
       target.hint,
       [
-        { keys: prompts.navigate, label: 'naviguer' },
-        { keys: [prompts.confirm], label: 'valider' },
-        { keys: [prompts.back], label: 'fermer' },
+        { keys: prompts.navigate, label: t('naviguer') },
+        { keys: [prompts.confirm], label: t('valider') },
+        { keys: [prompts.back], label: t('fermer') },
       ],
       prompts.style,
     );
@@ -261,12 +276,12 @@ export function openFeedback(
   async function submit(): Promise<void> {
     const current = draft();
     if (current.type === null) {
-      say(form, 'Choisis d’abord le type de ton avis.', 'warn');
+      say(form, t('Choisis d’abord le type de ton avis.'), 'warn');
       select(form, form.items.indexOf('type'), true);
       return;
     }
     if (current.message.trim() === '') {
-      say(form, 'Écris ton avis avant de l’envoyer.', 'warn');
+      say(form, t('Écris ton avis avant de l’envoyer.'), 'warn');
       select(form, form.items.indexOf('message'), true);
       return;
     }
@@ -281,10 +296,12 @@ export function openFeedback(
         truncatedNote.hidden = !outcome.truncated;
         show(sent);
       } else {
-        setText(send, 'Réessayer');
+        setText(send, t('Réessayer'));
         say(
           form,
-          'Ton navigateur a bloqué le nouvel onglet. Réessaie, ou copie ton avis pour ne pas le perdre.',
+          t(
+            'Ton navigateur a bloqué le nouvel onglet. Réessaie, ou copie ton avis pour ne pas le perdre.',
+          ),
           'warn',
         );
       }
@@ -297,16 +314,20 @@ export function openFeedback(
   async function copyDraft(target: View): Promise<void> {
     try {
       await navigator.clipboard.writeText(clipboardText(draft()));
-      say(target, 'Copié dans le presse-papiers.', 'ok');
+      say(target, t('Copié dans le presse-papiers.'), 'ok');
     } catch (error) {
       if (!(error instanceof DOMException || error instanceof TypeError)) {
         throw error;
       }
       if (target === form) {
         textarea.select();
-        say(form, 'Copie impossible ici. Ton texte est sélectionné : copie-le à la main.', 'warn');
+        say(
+          form,
+          t('Copie impossible ici. Ton texte est sélectionné : copie-le à la main.'),
+          'warn',
+        );
       } else {
-        say(sent, 'Copie impossible ici. Ton avis reste dans l’onglet GitHub.', 'warn');
+        say(sent, t('Copie impossible ici. Ton avis reste dans l’onglet GitHub.'), 'warn');
       }
     }
   }
@@ -318,6 +339,9 @@ export function openFeedback(
         break;
       case 'message':
         textarea.focus();
+        break;
+      case 'discord':
+        openDiscord();
         break;
       case 'context':
         setAttached(!attached);

@@ -1,4 +1,5 @@
 import type { DecorId, GameContent } from '../data/types';
+import type { Locale } from '../shared/i18n';
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
 import type { PlayerId, SimState } from '../sim/state';
 
@@ -104,6 +105,8 @@ export interface UiCallbacks {
   onToggleHitSound(enabled: boolean): void;
   onToggleAutoFire(enabled: boolean): void;
   onToggleAutoAim(enabled: boolean): void;
+  // The game reloads in it (ADR 0017).
+  onChooseLocale(locale: Locale): void;
   onPlayTogether(): void;
   // Picks a class, in the class picker.
   onChooseClass(classId: string): void;

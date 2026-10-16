@@ -13,6 +13,7 @@ import { createNotice } from './notice';
 import { createStagePicker } from './stage';
 import { createSunFollower } from './sun';
 import { createTitle } from './title';
+import { locale, stepLocale, t } from '../shared/i18n';
 import type { GameContent } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
 import type {
@@ -49,23 +50,25 @@ export { SEAT_IDS, defaultName } from './lobby-model';
 
 type Screen = 'title' | 'class' | 'stage' | 'lobby' | 'game' | 'end' | 'notice';
 
-const NOTICES: Readonly<Record<Notice, { title: string; text: string; glyph: string }>> = {
+const notices = (): Readonly<Record<Notice, { title: string; text: string; glyph: string }>> => ({
   desync: {
-    title: 'Les deux versions de la partie ont divergé',
-    text: 'Le set s’arrête pour tout le monde plutôt que de continuer de travers. Le rapport est prêt pour « Ton avis ».',
+    title: t('Les deux versions de la partie ont divergé'),
+    text: t(
+      'Le set s’arrête pour tout le monde plutôt que de continuer de travers. Le rapport est prêt pour « Ton avis ».',
+    ),
     glyph: TWO_VERSIONS,
   },
   hostLeft: {
-    title: 'L’hôte a quitté le set',
-    text: 'Sans lui, le sound system s’éteint.',
+    title: t('L’hôte a quitté le set'),
+    text: t('Sans lui, le sound system s’éteint.'),
     glyph: DOOR,
   },
   connectionLost: {
-    title: 'Connexion perdue',
-    text: 'Le lien avec les autres joueurs est coupé.',
+    title: t('Connexion perdue'),
+    text: t('Le lien avec les autres joueurs est coupé.'),
     glyph: BROKEN_LINK,
   },
-};
+});
 
 const MENU_GRACE_MS = 500;
 
@@ -148,6 +151,9 @@ export function createUi(
       autoAim = !autoAim;
       applyOptions();
       callbacks.onToggleAutoAim(autoAim);
+    },
+    stepLocale(side) {
+      callbacks.onChooseLocale(stepLocale(locale(), side));
     },
   });
   const classPicker = createClassPicker(classes, portrait, {
@@ -259,7 +265,7 @@ export function createUi(
     },
   });
   const notice = createNotice(
-    'Interruption',
+    t('Interruption'),
     () => {
       once(() => {
         callbacks.onLeaveNotice();
@@ -374,8 +380,8 @@ export function createUi(
     },
     updateLobby,
     showNotice(kind, details) {
-      const content = NOTICES[kind];
-      notice.show('Partie interrompue', content.title, content.text, {
+      const content = notices()[kind];
+      notice.show(t('Partie interrompue'), content.title, content.text, {
         glyph: content.glyph,
         detail: details,
       });

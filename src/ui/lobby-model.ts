@@ -1,7 +1,9 @@
 import type { SetDefinition } from '../data/types';
 import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
+import { t } from '../shared/i18n';
 import { setTempo } from '../sim/lineup';
 import type { PlayerId } from '../sim/state';
+import { formatNumber } from './format';
 import type { LobbyModel, LobbySeat, StageCard } from './types';
 
 export const SEAT_IDS: readonly PlayerId[] = [0, 1, 2, 3];
@@ -20,7 +22,7 @@ export function roomCodeFromHash(hash: string): string {
 }
 
 export function defaultName(playerId: PlayerId): string {
-  return `Joueur ${String(playerId + 1)}`;
+  return t('Joueur {number}', { number: formatNumber(playerId + 1) });
 }
 
 export function seatName(raw: string, playerId: PlayerId): string {
@@ -73,16 +75,19 @@ export function deviceOf(device: InputDevice): DeviceId | null {
 
 export function deviceLabel(device: DeviceId | null): string {
   if (device === null) {
-    return 'À distance';
+    return t('À distance');
   }
   if (device === 'keyboardMouse') {
-    return 'Clavier et souris';
+    return t('Clavier et souris');
   }
-  return `Manette ${String(Number(device.slice('gamepad:'.length)) + 1)}`;
+  return t('Manette {number}', {
+    number: formatNumber(Number(device.slice('gamepad:'.length)) + 1),
+  });
 }
 
 export type Row =
   | 'create'
+  | 'discord'
   | 'code'
   | 'join'
   | 'copy'
@@ -112,7 +117,7 @@ export function hasStageChoice(model: LobbyModel): boolean {
 export function rowsOf(model: LobbyModel): readonly Row[] {
   const view = lobbyView(model);
   if (view === 'entry') {
-    return ['create', 'code', 'join', 'leave'];
+    return ['create', 'discord', 'code', 'join', 'leave'];
   }
   const own = ownSeat(model);
   const rows: Row[] = [];

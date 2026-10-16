@@ -8,17 +8,18 @@ import {
   meprisant,
   random,
 } from './faces-1';
+import { FULL_FACES } from './full';
 import { bavard, fatigue, filmeur, neutral, zombie } from './faces-2';
 import { batterieAPlat, couvreFeu } from './faces-bosses';
 
 export { FACE_RADIUS, NEUTRAL, cracks, type Face, type Pose } from './face-kit';
-export { drowsyZ, smile } from './faces-2';
+export { drowsyZ, recruit, smile } from './faces-2';
 
 const MAIN = { boss: false, loopBeats: 1 };
 
 export const NEUTRAL_FACE: Face = { ...MAIN, draw: neutral, frames: 1 };
 
-// One face per id of src/data/enemies.ts: a test holds the two lists together.
+// One face per id of src/data/enemies.ts, the full game's in `FULL_FACES`: a test holds the two lists together.
 export const FACES: Readonly<Record<string, Face>> = {
   random: { ...MAIN, draw: random, frames: 4, loopBeats: 4 },
   desagreable: { ...MAIN, draw: desagreable, frames: 1 },
@@ -39,6 +40,7 @@ export const FACES: Readonly<Record<string, Face>> = {
   },
   'couvre-feu': { ...MAIN, draw: couvreFeu, frames: 4, loopBeats: 4, boss: true },
   'batterie-a-plat': { ...MAIN, draw: batterieAPlat, frames: 4, loopBeats: 2, boss: true },
+  ...FULL_FACES,
 };
 
 // Looks a mask up by sort. A sort the renderer does not know gets the fallback and a warning,

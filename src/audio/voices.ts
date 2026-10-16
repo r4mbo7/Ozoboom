@@ -111,6 +111,24 @@ const WIND_GUSTS = [
   [700, 1500, -0.8, 0],
   [1900, 900, 0.8, 0.37],
 ] as const;
+const SAW_PAD_SPREAD: readonly (readonly [cents: number, pan: number])[] = [
+  [-19, -0.85],
+  [-11, 0.55],
+  [-4, -0.3],
+  [0, 0],
+  [4, 0.3],
+  [11, -0.55],
+  [19, 0.85],
+];
+const PLUCK_OPENING_BARS = 4;
+const CHANT_VOWEL: Vowel = [
+  [700, 3.5, 0.8],
+  [1150, 3.5, 0.88],
+  [1700, 3, 0.8],
+  [2500, 5, 0.6],
+  [3100, 5, 0.64],
+  [4300, 4, 0.36],
+];
 const HALO_ATTACK = 1.3;
 const GATE_TOP_HZ = 2200;
 
@@ -1032,5 +1050,104 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       });
     }
     playTone(into, at, { wave: 'triangle', hz, gain: 0.055 * gain, attack, hold, release });
+  },
+  'saw-pad': (ctx) => {
+    const { out, at, hz, steps, gain } = ctx;
+    const envelope = swell(ctx, at, steps * sixteenthSeconds(ctx.tempo), 0.5, 1.4);
+    for (const [detune, pan] of SAW_PAD_SPREAD) {
+      playTone(out, at, {
+        wave: 'sawtooth',
+        hz,
+        detune,
+        gain: 0.036 * gain,
+        ...envelope,
+        pan,
+        filter: { type: 'lowpass', hz: 3600, q: 0.4 },
+      });
+    }
+  },
+  'sweep-pluck': (ctx) => {
+    const { at, hz, position, cutoff, light, until, accent, gain } = ctx;
+    const bar = 16 * sixteenthSeconds(ctx.tempo);
+    const opening = Math.max(0, 1 - (until - at) / (PLUCK_OPENING_BARS * bar));
+    const open = light ? 700 + 5200 * opening ** 2 : Math.min(6500, Math.max(1600, cutoff * 1.6));
+    const top = open * (accent ? 1.3 : 1);
+    const into = echoed(ctx, 0.3);
+    for (const detune of [-5, 6]) {
+      playTone(into, at, {
+        wave: 'sawtooth',
+        hz,
+        detune,
+        gain: (light ? 0.06 + 0.05 * opening : 0.09) * gain,
+        attack: 0.002,
+        hold: 0.03,
+        release: 0.26,
+        pan: position % 2 === 0 ? -0.15 : 0.15,
+        filter: { type: 'lowpass', hz: top, toHz: Math.max(300, top * 0.18), glide: 0.22, q: 6 },
+      });
+    }
+  },
+  'gallop-bass': ({ out, at, hz, gain }) => {
+    const envelope = { attack: 0.003, hold: 0.05, release: 0.11 };
+    playTone(out, at, {
+      ...envelope,
+      wave: 'sawtooth',
+      hz,
+      gain: 0.32 * gain,
+      filter: { type: 'lowpass', hz: 900, toHz: 200, glide: 0.13, q: 2.5 },
+    });
+    playTone(out, at, { ...envelope, wave: 'sine', hz, gain: 0.29 * gain });
+  },
+  pulse: ({ out, at, hz, cutoff, gain }) => {
+    for (const [wave, detune] of [
+      ['sawtooth', -8],
+      ['square', 8],
+    ] as const) {
+      playTone(out, at, {
+        wave,
+        hz,
+        detune,
+        gain: 0.06 * gain,
+        attack: 0.003,
+        hold: 0.025,
+        release: 0.075,
+        filter: { type: 'lowpass', hz: Math.min(3200, Math.max(450, cutoff * 1.1)), q: 3 },
+      });
+    }
+  },
+  chant: (ctx) => {
+    const { at, hz, fromHz, steps, slide, legato, until, gain } = ctx;
+    const seconds = Math.min(steps * sixteenthSeconds(ctx.tempo), until - at);
+    const attack = slide ? 0.02 : 0.06;
+    const release = legato ? 0.09 : 0.32;
+    const envelope = { attack, hold: Math.max(0, held(ctx, steps, release, 1) - attack), release };
+    const delay = Math.min(0.28, seconds / 2);
+    const into = echoed(ctx, 0.22);
+    const soft = into.context.createBiquadFilter();
+    soft.frequency.value = 9000;
+    soft.Q.value = 0.5;
+    soft.connect(into);
+    sing(soft, at, slide ? fromHz : hz, CHANT_VOWEL, {
+      ...envelope,
+      detunes: [-5, 5],
+      gain: 0.2 * gain,
+      ...(slide ? { toHz: hz, glide: 0.045 } : {}),
+      vibrato: {
+        hz: 5.4,
+        cents: seconds > 0.3 ? 28 : 6,
+        delay,
+        rise: Math.max(0, Math.min(0.7, seconds) - delay),
+      },
+    });
+    playNoise(soft, at, {
+      ...envelope,
+      gain: 0.008 * gain,
+      filter: { type: 'bandpass', hz: 3100, q: 1 },
+    });
+    playNoise(into, at, {
+      ...envelope,
+      gain: 0.007 * gain,
+      filter: { type: 'highpass', hz: 8000 },
+    });
   },
 };

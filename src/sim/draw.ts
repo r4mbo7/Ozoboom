@@ -6,7 +6,7 @@ import type {
   UpgradeDefinition,
   WeaponDefinition,
 } from '../data/types';
-import { nextInt } from '../shared/prng';
+import { nextInt, nextU32, pick, seedRng } from '../shared/prng';
 import type { ResolvedContent } from './content';
 import type { PlayerState, RngState, SimState, UpgradeOffer } from './state';
 
@@ -108,6 +108,18 @@ function drawRarity(rng: RngState, weights: RarityWeights | undefined): Rarity {
   return roll < weights.common + weights.rare ? 'rare' : 'legendary';
 }
 
+// A weapon is drawn more often for the class of its `classAffinity` and for those that list it.
+export function hasAffinity(
+  content: Pick<ResolvedContent, 'classes'>,
+  weapon: WeaponDefinition,
+  classId: string,
+): boolean {
+  return (
+    weapon.classAffinity === classId ||
+    content.classes.get(classId)?.affinityWeaponIds?.includes(weapon.id) === true
+  );
+}
+
 function candidates(
   state: SimState,
   content: ResolvedContent,
@@ -124,7 +136,7 @@ function candidates(
     if (openFusion(weapon, player, state, content) !== undefined) {
       pool.push({ id: weapon.id, weight: FUSION_WEIGHT });
     } else if (isWeaponOffered(weapon, player, state, set)) {
-      const weight = weapon.classAffinity === player.classId ? AFFINITY_WEIGHT : 1;
+      const weight = hasAffinity(content, weapon, player.classId) ? AFFINITY_WEIGHT : 1;
       pool.push({ id: weapon.id, weight });
     }
   }
@@ -188,4 +200,22 @@ export function drawRelics(
     }
   }
   return offer;
+}
+
+const BOSS_STREAM = 0xb055;
+
+// The boss of the next drop, among the bosses of the content not drawn yet in this round. Once each
+// came, a new round starts without the last one, so that no boss comes twice in a row. The n-th
+// boss takes the n-th value of a stream drawn from the seed alone: what the game drew before the
+// break leaves the bosses as they are, and drawing them leaves the game's generator as it is.
+export function drawBoss(seed: number, content: ResolvedContent, drawn: readonly string[]): string {
+  const rng = seedRng((seed ^ BOSS_STREAM) >>> 0);
+  drawn.forEach(() => nextU32(rng));
+  const pool = [...content.enemies.values()]
+    .filter((enemy) => enemy.behaviour === 'boss')
+    .map((enemy) => enemy.id);
+  const round = drawn.slice(drawn.length - (drawn.length % pool.length));
+  const excluded = round.length > 0 ? round : drawn.slice(-1);
+  const fresh = pool.filter((id) => !excluded.includes(id));
+  return pick(rng, fresh.length > 0 ? fresh : pool);
 }

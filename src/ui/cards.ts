@@ -1,21 +1,23 @@
 import type { GameContent, Rarity, UpgradeFamily, WeaponDefinition } from '../data/types';
 import type { PlayerId, PlayerState, SimEvent, UpgradeOffer } from '../sim/state';
+import { t } from '../shared/i18n';
 import { upgradeForm } from '../sim/stats';
+import { formatNumber } from './format';
 
 export const SIXTEENTHS_PER_BAR = 16;
 
-const FAMILY_LABEL: Record<UpgradeFamily, string> = {
-  class: 'Classe',
-  generic: 'Générique',
-  defense: 'Défense',
-  relic: 'Relique',
-};
+const familyLabels = (): Record<UpgradeFamily, string> => ({
+  class: t('Classe'),
+  generic: t('Générique'),
+  defense: t('Défense'),
+  relic: t('Relique'),
+});
 
-const RARITY_LABEL: Record<Rarity, string | null> = {
+const rarityLabels = (): Record<Rarity, string | null> => ({
   common: null,
-  rare: 'Rare',
-  legendary: 'Légendaire',
-};
+  rare: t('Rare'),
+  legendary: t('Légendaire'),
+});
 
 export type CardTint = 'common' | 'rare' | 'legendary' | 'relic' | 'fusion';
 
@@ -66,14 +68,16 @@ export interface FusionCard extends CardBase {
 export type Card = UpgradeCard | WeaponCard | FusionCard;
 
 export function offerHeading(offer: UpgradeOffer): string {
-  return offer.kind === 'relic' ? 'Le boss lâche une relique' : 'Choisis ton amélioration';
+  return offer.kind === 'relic' ? t('Le boss lâche une relique') : t('Choisis ton amélioration');
 }
 
 export function offerKicker(offer: UpgradeOffer, player: PlayerState | undefined): string {
   if (offer.kind === 'relic') {
-    return 'Boss vaincu';
+    return t('Boss vaincu');
   }
-  return player === undefined ? 'Niveau supérieur' : `Niveau ${String(player.level)}`;
+  return player === undefined
+    ? t('Niveau supérieur')
+    : t('Niveau {level}', { level: formatNumber(player.level) });
 }
 
 export function stepsOf(weapon: WeaponDefinition): readonly boolean[] | 'continuous' {
@@ -84,15 +88,11 @@ export function stepsOf(weapon: WeaponDefinition): readonly boolean[] | 'continu
   return Array.from({ length: SIXTEENTHS_PER_BAR }, (_, step) => steps.includes(step));
 }
 
-function pearlsOf(unit: string, rank: number, max: number): Pearls {
-  return { rank, max, label: `${unit} ${String(rank)} sur ${String(max)}` };
-}
-
 function rankOf(family: UpgradeFamily, stacks: number): string {
   if (family === 'relic') {
     return '';
   }
-  return stacks === 0 ? 'Nouveau' : `Rang ${String(stacks + 1)}`;
+  return stacks === 0 ? t('Nouveau') : t('Rang {rank}', { rank: formatNumber(stacks + 1) });
 }
 
 export function cardFor(
@@ -108,19 +108,32 @@ export function cardFor(
       upgrade.family === 'class'
         ? content.classes.find((entry) => entry.id === upgrade.classId)?.name
         : undefined;
-    const label = FAMILY_LABEL[upgrade.family];
     const stacks = player?.upgrades.filter((held) => held === id).length ?? 0;
+    const rank = stacks + 1;
     return {
       kind: 'upgrade',
       id,
-      name: upgrade.name,
-      description: upgradeForm(upgrade, rarity).description,
+      name: t(upgrade.name),
+      description: t(upgradeForm(upgrade, rarity).description),
       family: upgrade.family,
-      label: className === undefined ? label : `${label} · ${className}`,
+      label:
+        className === undefined
+          ? familyLabels()[upgrade.family]
+          : t('Classe · {className}', { className: t(className) }),
       rank: rankOf(upgrade.family, stacks),
-      pearls: upgrade.family === 'relic' ? null : pearlsOf('Rang', stacks + 1, upgrade.maxStacks),
+      pearls:
+        upgrade.family === 'relic'
+          ? null
+          : {
+              rank,
+              max: upgrade.maxStacks,
+              label: t('Rang {rank} sur {max}', {
+                rank: formatNumber(rank),
+                max: formatNumber(upgrade.maxStacks),
+              }),
+            },
       tint: upgrade.family === 'relic' || offer.kind === 'relic' ? 'relic' : rarity,
-      rarityLabel: upgrade.family === 'relic' ? null : RARITY_LABEL[rarity],
+      rarityLabel: upgrade.family === 'relic' ? null : rarityLabels()[rarity],
     };
   }
   const weapon = content.weapons?.find((entry) => entry.id === id);
@@ -137,27 +150,33 @@ export function cardFor(
     return {
       kind: 'fusion',
       id,
-      name: weapon.name,
-      description: weapon.description,
+      name: t(weapon.name),
+      description: t(weapon.description),
       weapon,
-      label: 'Fusion',
-      replaces: from.name,
-      recipe: `${from.name} + ${upgradeName}`,
+      label: t('Fusion'),
+      replaces: t(from.name),
+      recipe: t('{weapon} + {upgrade}', { weapon: t(from.name), upgrade: t(upgradeName) }),
       tint: 'fusion',
       rarityLabel: null,
     };
   }
   const level = player?.weapons?.find((slot) => slot.id === id)?.level ?? 0;
+  const next = formatNumber(level + 1);
   const className = content.classes.find((entry) => entry.id === weapon.classAffinity)?.name;
   return {
     kind: 'weapon',
     id,
-    name: weapon.name,
-    description: weapon.description,
+    name: t(weapon.name),
+    description: t(weapon.description),
     weapon,
-    label: className === undefined ? 'Agrès' : `Agrès · ${className}`,
-    rank: level === 0 ? 'Nouveau' : `Niveau ${String(level + 1)}`,
-    pearls: pearlsOf('Niveau', level + 1, weapon.maxLevel),
+    label:
+      className === undefined ? t('Agrès') : t('Agrès · {className}', { className: t(className) }),
+    rank: level === 0 ? t('Nouveau') : t('Niveau {level}', { level: next }),
+    pearls: {
+      rank: level + 1,
+      max: weapon.maxLevel,
+      label: t('Niveau {level} sur {max}', { level: next, max: formatNumber(weapon.maxLevel) }),
+    },
     steps: stepsOf(weapon),
     everyBars: weapon.rhythm === 'continuous' ? 1 : weapon.rhythm.everyBars,
     tint: 'common',
@@ -166,11 +185,10 @@ export function cardFor(
 }
 
 export function cardName(id: string, content: GameContent): string {
-  return (
+  const name =
     content.upgrades.find((entry) => entry.id === id)?.name ??
-    content.weapons?.find((entry) => entry.id === id)?.name ??
-    id
-  );
+    content.weapons?.find((entry) => entry.id === id)?.name;
+  return name === undefined ? id : t(name);
 }
 
 export type Celebrated = 'rare' | 'legendary';
@@ -217,7 +235,7 @@ function listOf(names: readonly string[]): string {
   const last = names.at(-1);
   return names.length < 2 || last === undefined
     ? names.join('')
-    : `${names.slice(0, -1).join(', ')} et ${last}`;
+    : t('{names} et {last}', { names: names.slice(0, -1).join(', '), last });
 }
 
 // A player of another screen: still choosing, or the name of the card taken.
@@ -245,9 +263,15 @@ export function waitingFor(remote: readonly RemoteChoice[], localsDone: boolean)
   return {
     chips: remote.map((player) =>
       player.picked === null
-        ? { text: `${player.name} choisit…`, classId: null }
-        : { text: `${player.name} : ${player.picked}`, classId: player.classId },
+        ? { text: t('{name} choisit…', { name: player.name }), classId: null }
+        : {
+            text: t('{name} : {card}', { name: player.name, card: player.picked }),
+            classId: player.classId,
+          },
     ),
-    waiting: choosing.length > 0 && localsDone ? `En attente de ${listOf(choosing)}` : null,
+    waiting:
+      choosing.length > 0 && localsDone
+        ? t('En attente de {players}', { players: listOf(choosing) })
+        : null,
   };
 }

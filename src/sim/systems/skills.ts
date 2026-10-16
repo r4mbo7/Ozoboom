@@ -1,17 +1,14 @@
-import type { SkillEffect } from '../../data/types';
-import { normalize } from '../../shared/vec';
-import { IDLE_INPUT, type PlayerInput } from '../commands';
+import { IDLE_INPUT } from '../commands';
 import { lookup } from '../content';
-import { healPlayer, hurtEnemy, markedDamageMul, knockBack, touches } from '../effects';
-import type { PlayerState, SimState } from '../state';
+import { SKILLS, skillModule } from '../skills';
 import { skillCooldownTicks, statValue } from '../stats';
 import type { StepContext } from './types';
 
-export function skills({ state, content, set, commands }: StepContext): void {
+export function skills(ctx: StepContext): void {
+  const { state, content, commands } = ctx;
   if (state.events.some((event) => event.type === 'bar')) {
     delete state.core.repairedThisBar;
   }
-  const markedMul = markedDamageMul(content);
   for (const player of state.players) {
     player.skillCooldown = Math.max(0, player.skillCooldown - 1);
     player.invulnerableTicks = Math.max(0, (player.invulnerableTicks ?? 0) - 1);
@@ -23,83 +20,12 @@ export function skills({ state, content, set, commands }: StepContext): void {
 
     if (input.skill && player.skillCooldown === 0) {
       const power = statValue(player, 'skillPowerMul', 1);
-      cast(state, player, input, skill.effect, power, markedMul, set.coreRepairPerBar);
+      skillModule(skill.effect).cast(ctx, player, skill.effect, input, power);
       player.skillCooldown = skillCooldownTicks(player, skill);
       state.events.push({ type: 'skillUsed', playerId: player.id });
     }
   }
-}
-
-function cast(
-  state: SimState,
-  player: PlayerState,
-  input: PlayerInput,
-  effect: SkillEffect,
-  power: number,
-  markedMul: number,
-  repairCap: number | undefined,
-): void {
-  switch (effect.kind) {
-    case 'nova':
-      for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, player, effect.radius)) {
-          hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id, player);
-          knockBack(enemy, player, effect.knockback);
-        }
-      }
-      return;
-    case 'dash': {
-      const move = normalize(input.move);
-      const direction = move.x === 0 && move.y === 0 ? player.aim : move;
-      const distance = effect.distance * power;
-      const { width, height } = state.arena;
-      player.x = clamp(player.x + direction.x * distance, player.radius, width - player.radius);
-      player.y = clamp(player.y + direction.y * distance, player.radius, height - player.radius);
-      player.invulnerableTicks = Math.max(player.invulnerableTicks ?? 0, effect.invulnerableTicks);
-      if (effect.tauntRadius !== undefined) {
-        taunt(state, player, effect.tauntRadius);
-      }
-      return;
-    }
-    case 'healPulse': {
-      for (const ally of state.players) {
-        if (!ally.downed && touches(ally, player, effect.radius)) {
-          healPlayer(state, ally, effect.amount * power);
-        }
-      }
-      const { core } = state;
-      const room = repairCap === undefined ? Infinity : repairCap - (core.repairedThisBar ?? 0);
-      const repaired = Math.min(core.maxHp - core.hp, effect.coreRepair * power, room);
-      if (touches(core, player, effect.radius) && repaired > 0) {
-        core.hp += repaired;
-        if (repairCap !== undefined) {
-          core.repairedThisBar = (core.repairedThisBar ?? 0) + repaired;
-        }
-        state.events.push({ type: 'coreRepaired', amount: repaired });
-      }
-      return;
-    }
+  for (const module of Object.values(SKILLS)) {
+    module.update?.(ctx);
   }
-}
-
-function taunt(state: SimState, player: PlayerState, radius: number): void {
-  let count = 0;
-  for (const enemy of state.enemies) {
-    if (enemy.hp > 0 && touches(enemy, player, radius)) {
-      enemy.target = player.id;
-      count += 1;
-    }
-  }
-  state.events.push({
-    type: 'taunted',
-    playerId: player.id,
-    x: player.x,
-    y: player.y,
-    radius,
-    count,
-  });
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }

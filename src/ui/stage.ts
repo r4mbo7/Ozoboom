@@ -1,10 +1,12 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
+import { t } from '../shared/i18n';
 import { el, fillHint } from './dom';
 import { createEndlessRow } from './endless';
 import { formatTempo } from './format';
 import { stepClass } from './lobby-model';
 import { endlessHint, promptsFor } from './prompts';
 import { stagePreview } from './stage-preview';
+import { STAGE_TEASERS, stageTeaser } from './teaser';
 import type { StageCard, StagePickerModel } from './types';
 
 export interface StageCards {
@@ -34,10 +36,10 @@ function card(stage: StageCard, onChoose: (setId: string) => void, readonly: () 
   node.setAttribute('role', 'radio');
   const meta = el('span', 'ui-stage__meta');
   meta.append(
-    el('span', 'ui-stage__chip', stage.style),
+    el('span', 'ui-stage__chip', t(stage.style)),
     el('span', 'ui-stage__chip', formatTempo(stage.bpm)),
   );
-  node.append(stagePreview(stage.decor), el('span', 'ui-stage__name', stage.name), meta);
+  node.append(stagePreview(stage.decor), el('span', 'ui-stage__name', t(stage.name)), meta);
   node.addEventListener('click', (event) => {
     event.stopPropagation();
     if (!readonly()) {
@@ -55,6 +57,7 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
   let stages: readonly StageCard[] = [];
   let nodes: HTMLButtonElement[] = [];
   let locked = false;
+  const teasers = STAGE_TEASERS.map(stageTeaser);
 
   function same(next: readonly StageCard[]): boolean {
     return (
@@ -69,7 +72,7 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
       if (!same(next)) {
         stages = next;
         nodes = next.map((stage) => card(stage, onChoose, () => locked));
-        element.replaceChildren(...nodes);
+        element.replaceChildren(...nodes, ...teasers);
       }
       stages.forEach((stage, index) => {
         nodes[index]?.setAttribute('aria-checked', String(stage.setId === stageId));
@@ -104,23 +107,23 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
   let model: StagePickerModel = { stages: [], stageId: '', endless: false };
 
   const element = el('section', 'ui-screen ui-stagepicker');
-  element.setAttribute('aria-label', 'Choix de la scène');
+  element.setAttribute('aria-label', t('Choix de la scène'));
   const header = el('header', 'ui-lobby__header');
   header.append(
-    el('p', 'ui-kicker', 'Avant de lancer'),
-    el('h2', 'ui-lobby__title', 'Choisis la scène'),
-    el('p', 'ui-lobby__lead', 'Où se passe la nuit ?'),
+    el('p', 'ui-kicker', t('Avant de lancer')),
+    el('h2', 'ui-lobby__title', t('Choisis la scène')),
+    el('p', 'ui-lobby__lead', t('Où se passe la nuit ?')),
   );
-  const cards = createStageCards('Scènes', (setId) => {
+  const cards = createStageCards(t('Scènes'), (setId) => {
     actions.choose(setId);
   });
   const endless = createEndlessRow(cards.element, (enabled) => {
     actions.toggleEndless(enabled);
   });
-  const launch = el('button', 'ui-button ui-button--primary', 'Lancer le set');
+  const launch = el('button', 'ui-button ui-button--primary', t('Lancer le set'));
   launch.type = 'button';
   launch.tabIndex = -1;
-  const back = el('button', 'ui-button', 'Retour au perso');
+  const back = el('button', 'ui-button', t('Retour au perso'));
   back.type = 'button';
   back.tabIndex = -1;
   launch.addEventListener('click', () => {
@@ -146,10 +149,13 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
     fillHint(
       hint,
       [
-        { keys: prompts.navigateRow, label: 'choisir' },
+        { keys: prompts.navigateRow, label: t('choisir') },
         ...endlessHint(prompts),
-        { keys: [prompts.confirm], label: endless.row === 'endless' ? 'changer' : 'lancer' },
-        { keys: [prompts.back], label: 'retour' },
+        {
+          keys: [prompts.confirm],
+          label: endless.row === 'endless' ? t('changer') : t('lancer'),
+        },
+        { keys: [prompts.back], label: t('retour') },
       ],
       prompts.style,
     );

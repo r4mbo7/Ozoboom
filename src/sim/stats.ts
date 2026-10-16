@@ -30,14 +30,23 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
 };
 
 export function statValue(
-  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks'>,
+  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts'>,
   key: StatKey,
   base: number,
 ): number {
   if ((player.suppressedTicks ?? 0) > 0) {
     return base;
   }
-  const modifier = player.modifiers[key];
+  let modifier = player.modifiers[key];
+  if (player.boosts !== undefined) {
+    for (const boost of player.boosts) {
+      for (const { stat, add = 0, mul = 1 } of boost.modifiers) {
+        if (stat === key) {
+          modifier = ((modifier ?? (ADDITIVE[key] ? 0 : 1)) + add) * mul;
+        }
+      }
+    }
+  }
   if (modifier === undefined) {
     return base;
   }
@@ -86,7 +95,7 @@ export function applyModifiers(
 // Recomputes maxHp and speed, leaving hp untouched: for a temporary effect (suppress) that must
 // not cost or grant hp points while it holds the derived stats down to their base value.
 export function applyDerivedStats(
-  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'maxHp' | 'speed'>,
+  player: Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts' | 'maxHp' | 'speed'>,
   definition: Pick<ClassDefinition, 'maxHp' | 'speed'>,
 ): void {
   player.maxHp = statValue(player, 'maxHpAdd', definition.maxHp);

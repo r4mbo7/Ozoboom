@@ -67,6 +67,49 @@
   color: var(--tank);
 }
 
+.ui-feedback__discord {
+  position: relative;
+  align-self: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  margin-top: -6px;
+  padding: 8px 16px;
+  border: 1.5px solid transparent;
+  border-radius: 99px;
+  background: none;
+  color: var(--ui-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-feedback__discord-link {
+  color: var(--ui-turquoise);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ui-feedback__discord[aria-current] {
+  outline: none;
+  border-color: var(--turquoise);
+  box-shadow:
+    var(--ui-focus),
+    0 0 calc(30px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 40%, transparent);
+}
+
+.ui-feedback__discord[aria-current]::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * var(--ui-chevron));
+  border-block: 9px solid transparent;
+  border-left: 12px solid var(--turquoise);
+  transform: translateY(-50%);
+}
+
 .ui-feedback__context {
   flex: 1;
   margin: 0;

@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import type { FeedbackDraft, FeedbackTransport, FeedbackType } from './types';
 
 export const FEEDBACK_TEMPLATE = 'feedback-in-game.yml';
@@ -15,10 +16,34 @@ export interface FeedbackTypeOption {
 }
 
 export const FEEDBACK_TYPES: readonly FeedbackTypeOption[] = [
-  { id: 'idea', label: 'Idée', formOption: 'Une idée' },
-  { id: 'bug', label: 'Bug', formOption: 'Un bug' },
-  { id: 'balance', label: 'Équilibrage', formOption: 'Trop dur, trop facile ou trop long' },
-  { id: 'other', label: 'Autre', formOption: 'Autre chose' },
+  {
+    id: 'idea',
+    get label() {
+      return t('Idée');
+    },
+    formOption: 'Une idée',
+  },
+  {
+    id: 'bug',
+    get label() {
+      return t('Bug');
+    },
+    formOption: 'Un bug',
+  },
+  {
+    id: 'balance',
+    get label() {
+      return t('Équilibrage');
+    },
+    formOption: 'Trop dur, trop facile ou trop long',
+  },
+  {
+    id: 'other',
+    get label() {
+      return t('Autre');
+    },
+    formOption: 'Autre chose',
+  },
 ];
 
 const segmenter = new Intl.Segmenter('fr', { granularity: 'grapheme' });

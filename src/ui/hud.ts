@@ -1,9 +1,16 @@
-import type { ClassDefinition, GameContent, SetDefinition, TrapDefinition } from '../data/types';
+import type {
+  ClassDefinition,
+  GameContent,
+  GaugeDefinition,
+  SetDefinition,
+  TrapDefinition,
+} from '../data/types';
 import { setFraction } from '../sim/lineup';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
 import type { PlayerId, PlayerState, SimState } from '../sim/state';
 import { trapCapacity } from '../sim/stats';
+import { t } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
@@ -13,6 +20,8 @@ import {
   classToken,
   dropReading,
   enteredSpeaker,
+  gaugeNotches,
+  gaugeReading,
   gearSlots,
   handTiles,
   isNight,
@@ -57,25 +66,28 @@ function endlessMark(from: number | null | undefined): string | undefined {
 function slotLabel(slot: LineupSlot): string {
   switch (slot.kind) {
     case 'phrase':
-      return `Palier ${String(slot.tier + 1)}, phrase ${String(slot.phrase + 1)}`;
+      return t('Palier {tier}, phrase {phrase}', {
+        tier: formatNumber(slot.tier + 1),
+        phrase: formatNumber(slot.phrase + 1),
+      });
     case 'break':
-      return `Palier ${String(slot.tier + 1)}, break`;
+      return t('Palier {tier}, break', { tier: formatNumber(slot.tier + 1) });
     case 'drop':
-      return `Palier ${String(slot.tier + 1)}, drop`;
+      return t('Palier {tier}, drop', { tier: formatNumber(slot.tier + 1) });
     case 'sunrise':
-      return 'Sunrise';
+      return t('Sunrise');
   }
 }
 
 export function createHud(): Hud {
   const element = el('div', 'ui-screen ui-hud');
 
-  const ribbon = section('ui-panel ui-hud__ribbon', 'Line-up');
+  const ribbon = section('ui-panel ui-hud__ribbon', t('Line-up'));
   const drop = el('div', 'ui-drop');
-  const dropLabel = el('span', 'ui-drop__label', 'Drop');
+  const dropLabel = el('span', 'ui-drop__label', t('Drop'));
   const dropValue = el('span', 'ui-drop__value');
   dropValue.setAttribute('role', 'timer');
-  dropValue.setAttribute('aria-label', 'Drop');
+  dropValue.setAttribute('aria-label', t('Drop'));
   drop.append(dropLabel, dropValue);
   const lineupTrack = el('div', 'ui-lineup');
   const sky = el('div', 'ui-lineup__sky');
@@ -84,12 +96,12 @@ export function createHud(): Hud {
   sky.append(sun);
   const plugRow = el('div', 'ui-plugs');
   plugRow.setAttribute('role', 'meter');
-  plugRow.setAttribute('aria-label', 'Enceintes branchées');
+  plugRow.setAttribute('aria-label', t('Enceintes branchées'));
   plugRow.setAttribute('aria-valuemin', '0');
   const pause = el('button', 'ui-hud__pause');
   pause.type = 'button';
   pause.tabIndex = -1;
-  pause.setAttribute('aria-label', 'Pause');
+  pause.setAttribute('aria-label', t('Pause'));
   pause.dataset.touchControl = 'pause';
   pause.append(icon('ui-hud__pause-icon', PAUSE));
   const timeline = el('div', 'ui-panel ui-hud__timeline');
@@ -102,16 +114,16 @@ export function createHud(): Hud {
 
   const bar = el('div', 'ui-panel ui-hud__bar');
 
-  const level = section('ui-hud__level', 'Niveau');
+  const level = section('ui-hud__level', t('Niveau'));
   const levelRing = el('div', 'ui-level');
   const levelNumber = el('span', 'ui-level__number');
   levelRing.append(levelNumber);
   level.append(levelRing);
 
-  const life = section('ui-hud__life', 'Vie');
+  const life = section('ui-hud__life', t('Vie'));
   const lifeBar = el('div', 'ui-bar ui-life__bar');
   lifeBar.setAttribute('role', 'meter');
-  lifeBar.setAttribute('aria-label', 'Vie');
+  lifeBar.setAttribute('aria-label', t('Vie'));
   lifeBar.setAttribute('aria-valuemin', '0');
   lifeBar.append(el('span', 'ui-bar__fill'));
   const lifeValue = el('span', 'ui-life__value');
@@ -119,9 +131,9 @@ export function createHud(): Hud {
   const lifeIcon = icon('ui-life__icon', HEART);
   life.append(lifeWho, lifeIcon, lifeBar, lifeValue);
 
-  const gear = section('ui-hud__gear', 'Agrès');
+  const gear = section('ui-hud__gear', t('Agrès'));
 
-  const traps = section('ui-hud__traps', 'Pièges');
+  const traps = section('ui-hud__traps', t('Pièges'));
   const trapTiles = el('div', 'ui-traps');
   const cyclePrevious = el('span', 'ui-traps__cycle');
   const cycleNext = el('span', 'ui-traps__cycle');
@@ -130,19 +142,33 @@ export function createHud(): Hud {
   const trapName = el('div', 'ui-traps__name');
   traps.append(cyclePrevious, trapTiles, cycleNext, trapName);
 
-  const skills = section('ui-hud__skills', 'Compétence');
+  const skills = section('ui-hud__skills', t('Compétence'));
   const skill = createSkillView();
   skill.root.dataset.touchControl = 'skill';
   skills.append(skill.root);
 
+  const gauge = section('ui-hud__gauge', t('Jauge'));
+  gauge.hidden = true;
+  const gaugeRing = el('div', 'ui-gauge__ring');
+  gaugeRing.setAttribute('role', 'meter');
+  gaugeRing.setAttribute('aria-valuemin', '0');
+  gaugeRing.append(el('span', 'ui-gauge__core'));
+  const gaugeName = el('span', 'ui-gauge__name');
+  const gaugeStatus = el('span', 'ui-gauge__status');
+  const gaugeText = el('div', 'ui-gauge__text');
+  gaugeText.append(gaugeName, gaugeStatus);
+  const gaugeView = el('div', 'ui-gauge');
+  gaugeView.append(gaugeRing, gaugeText);
+  gauge.append(gaugeView);
+
   const status = el('div', 'ui-panel ui-hud__status');
   status.append(level, life, gear);
   const actions = el('div', 'ui-panel ui-hud__actions');
-  actions.append(traps, skills);
+  actions.append(traps, skills, gauge);
   bar.append(status, actions);
 
   const bracelets = el('div', 'ui-hud__bracelets');
-  bracelets.setAttribute('aria-label', 'Les joueurs');
+  bracelets.setAttribute('aria-label', t('Les joueurs'));
   const braceletViews: Bracelet[] = [];
 
   const top = el('div', 'ui-hud__top');
@@ -204,7 +230,7 @@ export function createHud(): Hud {
 
     plugs = (set.speakers ?? []).map((speaker) => {
       const plug = el('span', 'ui-plug');
-      plug.title = speaker.name;
+      plug.title = t(speaker.name);
       plug.append(icon('ui-plug__icon', PLUG));
       return plug;
     });
@@ -266,9 +292,12 @@ export function createHud(): Hud {
     });
     const plugged = state.volume ?? 0;
     plugRow.setAttribute('aria-valuenow', String(plugged));
+    const counts = { plugged: formatNumber(plugged), total: formatNumber(levels.length) };
     plugRow.setAttribute(
       'aria-valuetext',
-      `${String(plugged)} enceinte${plugged > 1 ? 's' : ''} branchée${plugged > 1 ? 's' : ''} sur ${String(levels.length)}`,
+      plugged > 1
+        ? t('{plugged} enceintes branchées sur {total}', counts)
+        : t('{plugged} enceinte branchée sur {total}', counts),
     );
     if (state.events.some((event) => event.type === 'volumeChanged')) {
       beat = !beat;
@@ -292,8 +321,12 @@ export function createHud(): Hud {
       }
       const chip = el('div', 'ui-gear');
       chip.setAttribute('role', 'img');
-      chip.setAttribute('aria-label', `${view.weapon.name}, niveau ${String(view.level)}`);
-      chip.title = `${view.weapon.name} : ${view.weapon.description}`;
+      const name = t(view.weapon.name);
+      chip.setAttribute(
+        'aria-label',
+        t('{weapon}, niveau {level}', { weapon: name, level: formatNumber(view.level) }),
+      );
+      chip.title = t('{name} : {description}', { name, description: t(view.weapon.description) });
       chip.dataset.weapon = view.weapon.id;
       if (view.weapon.rhythm === 'continuous') {
         chip.dataset.continuous = '';
@@ -335,11 +368,41 @@ export function createHud(): Hud {
     builtDevice = device;
     const prompts = promptsFor(device);
     skill.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(definition.skill.effect)));
-    setText(skill.name, definition.skill.name);
-    skill.root.title = `${definition.skill.name} : ${definition.skill.description}`;
+    const name = t(definition.skill.name);
+    setText(skill.name, name);
+    skill.root.title = t('{name} : {description}', {
+      name,
+      description: t(definition.skill.description),
+    });
     skill.key.replaceChildren(keycap(prompts.skill, prompts.style));
     setFlag(traps, 'gamepad', device === 'gamepad');
     setVar(element, '--who', `var(${cssName(classToken(definition.id))})`);
+    buildGauge(definition.gauge);
+  }
+
+  function buildGauge(definition: GaugeDefinition | undefined): void {
+    gauge.hidden = definition === undefined;
+    if (definition === undefined) {
+      return;
+    }
+    const name = t(definition.name);
+    gauge.setAttribute('aria-label', name);
+    gauge.title = name;
+    gaugeRing.setAttribute('aria-label', name);
+    gaugeRing.setAttribute('aria-valuemax', String(definition.max));
+    setText(gaugeName, name);
+    const notches = gaugeNotches(definition);
+    setFlag(gaugeRing, 'notched', notches > 0);
+    setVar(gaugeRing, '--notches', String(Math.max(1, notches)));
+  }
+
+  function updateGauge(player: PlayerState, definition: GaugeDefinition): void {
+    const reading = gaugeReading(player, definition);
+    setVar(gaugeRing, '--gauge-fill', String(reading.fill));
+    gaugeRing.setAttribute('aria-valuenow', String(player.gauge ?? 0));
+    gaugeRing.setAttribute('aria-valuetext', reading.text);
+    setText(gaugeStatus, reading.text);
+    setFlag(gauge, 'full', reading.full);
   }
 
   function updateLineup(state: SimState, content: GameContent): void {
@@ -367,7 +430,7 @@ export function createHud(): Hud {
       } else {
         last.dataset.endless = endlessMark(from);
       }
-      last.title = from === undefined ? 'Sunrise' : 'Sans fin';
+      last.title = from === undefined ? t('Sunrise') : t('Sans fin');
     }
 
     const reading = dropReading(set, state, content);
@@ -466,7 +529,11 @@ export function createHud(): Hud {
     }
 
     updateLevel(player);
-    level.title = `Niveau ${String(player.level)} : ${formatNumber(player.vibes)} vibes sur ${formatNumber(player.vibesToNextLevel)}`;
+    level.title = t('Niveau {level} : {vibes} vibes sur {next}', {
+      level: formatNumber(player.level),
+      vibes: formatNumber(player.vibes),
+      next: formatNumber(player.vibesToNextLevel),
+    });
     updateLife(player);
 
     selectedTrap = selectTrap(selectedTrap, tiles.length, snapshot.gameplay, previousGameplay);
@@ -478,7 +545,10 @@ export function createHud(): Hud {
       const skillReady = player.skillCooldown <= 0;
       setVar(skill.root, '--charge', String(skillCharge(player, definition.skill)));
       setFlag(skill.root, 'ready', skillReady);
-      setText(skill.status, skillReady ? 'Prête' : 'Recharge');
+      setText(skill.status, skillReady ? t('Prête') : t('Recharge'));
+      if (definition.gauge !== undefined) {
+        updateGauge(player, definition.gauge);
+      }
     }
   }
 
@@ -498,7 +568,10 @@ export function createHud(): Hud {
         if (trap !== undefined) {
           tile.append(icon('ui-trap__icon', trapIcon(trap.effect)));
         }
-        tile.title = trap === undefined ? 'Main libre' : `${trap.name} : ${trap.description}`;
+        tile.title =
+          trap === undefined
+            ? t('Main libre')
+            : t('{name} : {description}', { name: t(trap.name), description: t(trap.description) });
       }
       setFlag(tile, 'empty', view.trapId === null);
       setFlag(tile, 'selected', index === selected);
@@ -506,9 +579,11 @@ export function createHud(): Hud {
     });
     const taken = trapToTake(trapDefinitions, state, player, tiles.length);
     const held = player.hand?.[selected];
-    const name = (id: string | null | undefined) =>
-      id === null || id === undefined ? '' : (trapDefinitions.get(id)?.name ?? '');
-    setText(trapName, taken === null ? name(held) : `Reprendre : ${name(taken)}`);
+    const name = (id: string | null | undefined) => {
+      const trap = id === null || id === undefined ? undefined : trapDefinitions.get(id);
+      return trap === undefined ? '' : t(trap.name);
+    };
+    setText(trapName, taken === null ? name(held) : t('Reprendre : {trap}', { trap: name(taken) }));
     trapName.hidden = taken === null && held === undefined;
   }
 

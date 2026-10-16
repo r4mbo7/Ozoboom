@@ -1,20 +1,21 @@
 import { Container, type Renderer as PixiRenderer, autoDetectRenderer } from 'pixi.js';
 import type { ClassDefinition, SkillDefinition } from '../data/types';
-import { NIGHT_END, NIGHT_START, type PaletteToken, lightAt, paletteAt } from '../shared/palette';
+import { NIGHT_END, NIGHT_START, lightAt, paletteAt } from '../shared/palette';
 import { TICK_MS } from '../shared/tempo';
 import type { SimState } from '../sim/state';
 import { createClassEffects } from './class-effects';
+import { checkDrawings } from './drawings';
 import type { Family, RenderContext } from './context';
 import { type Frame, createFrame } from './frame';
 import { type Layers, applyLight, createLayers } from './layers';
 import { emptyState, portraitEvents, standing } from './portrait-state';
 import { beatEnvelope } from './motion';
-import { isPaletteToken, writePixiPalette } from './palette';
+import { classTokens, writePixiPalette } from './palette';
 import { createPlayers } from './players';
 import { paintedFiner } from './paint';
 import { type Textures, createTextures } from './textures';
 import { createClassFxTextures } from './textures-class';
-import { playerTextures } from './textures-players';
+import { REFERENCE, playerTextures } from './textures-players';
 
 export type PortraitClass = Pick<ClassDefinition, 'id' | 'radius'> & {
   readonly skill: Pick<SkillDefinition, 'effect'>;
@@ -56,14 +57,7 @@ export function createPortraits(
   calm: () => boolean,
 ): () => Portrait {
   const definitions = new Map(classes.map((definition) => [definition.id, definition]));
-  const classTokens = new Map(
-    classes.map(({ id }): [string, PaletteToken] => {
-      if (!isPaletteToken(id)) {
-        throw new Error(`Class "${id}" has no palette token of the same name`);
-      }
-      return [id, id];
-    }),
-  );
+  const tokens = classTokens(classes);
   const skillEffects = new Map(
     classes.map((definition) => [definition.id, definition.skill.effect]),
   );
@@ -162,8 +156,17 @@ export function createPortraits(
     frame.calm = calm();
     frame.pulse = beatEnvelope(now - view.beatTick, frame.tempo) * (frame.calm ? CALM_PULSE : 1);
     frame.camera = { centerX: 0, centerY: 0, scale, screenWidth: width, screenHeight: height };
+    const player = state.players[0];
+    const middle =
+      player === undefined
+        ? 0
+        : ((textures?.players.drawings.get(player.classId)?.get().middle ?? 0) * player.radius) /
+          REFERENCE;
     layers.world.scale.set(scale);
-    layers.world.position.set(width / 2, height / 2);
+    layers.world.position.set(
+      width / 2 - (player?.aim.x ?? 0) * middle * scale,
+      height / 2 - (player?.aim.y ?? 0) * middle * scale,
+    );
     for (const family of view.families) {
       family.update(state, alpha, frame);
     }
@@ -191,18 +194,21 @@ export function createPortraits(
 
   return () => {
     load();
-    textures ??= {
-      ...createTextures(),
-      players: paintedFiner(FINER, playerTextures),
-      classFx: paintedFiner(FINER, createClassFxTextures),
-    };
+    if (textures === null) {
+      textures = {
+        ...createTextures(),
+        players: paintedFiner(FINER, playerTextures),
+        classFx: paintedFiner(FINER, createClassFxTextures),
+      };
+      checkDrawings(classes, textures.players.drawings);
+    }
     const stage = new Container();
     const layers = createLayers(stage);
     const ctx: RenderContext = {
       textures,
       layers,
       options: { calmMode: false },
-      classTokens,
+      classTokens: tokens,
       behaviours: new Map(),
       trapLooks: new Map(),
       specials: new Map(),

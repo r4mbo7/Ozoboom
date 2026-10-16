@@ -40,6 +40,17 @@ function tom(ctx: DrumContext, hz: number, gain: number, release: number) {
   });
 }
 
+// A peaking filter on the way out: the shine of a hat.
+function shine(out: AudioNode, hz: number, q: number, gain: number): AudioNode {
+  const filter = out.context.createBiquadFilter();
+  filter.type = 'peaking';
+  filter.frequency.value = hz;
+  filter.Q.value = q;
+  filter.gain.value = gain;
+  filter.connect(out);
+  return filter;
+}
+
 export const DRUM_VOICES: Record<DrumVoiceId, DrumVoice> = {
   kick({ out, at, gain, pan, kick }) {
     playTone(out, at, {
@@ -226,5 +237,86 @@ export const DRUM_VOICES: Record<DrumVoiceId, DrumVoice> = {
       pan,
       filter: { type: 'bandpass', hz: 7200, q: 0.7 },
     });
+  },
+  'tuned-kick'({ out, at, gain, pan, hz, kick }) {
+    playTone(out, at, {
+      wave: 'sine',
+      hz: kick.fromHz,
+      toHz: hz ?? kick.toHz,
+      glide: 0.055,
+      gain: 0.85 * gain,
+      attack: 0.0008,
+      hold: 0.07,
+      release: 0.28,
+      pan,
+    });
+    playNoise(out, at, {
+      gain: 0.12 * gain,
+      attack: 0.0005,
+      hold: 0.002,
+      release: 0.008,
+      pan,
+      filter: { type: 'highpass', hz: 4000 },
+    });
+  },
+  'bright-hat'({ out, at, gain, pan }) {
+    playNoise(shine(out, 8000, 1.2, 6), at, {
+      gain: 0.6 * gain,
+      attack: 0.0008,
+      hold: 0.002,
+      release: 0.04,
+      pan,
+      filter: { type: 'highpass', hz: 6500 },
+    });
+  },
+  'bright-hat-open'({ out, at, gain, pan }) {
+    playNoise(shine(out, 7500, 1, 5), at, {
+      gain: 0.5 * gain,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.18,
+      pan,
+      filter: { type: 'highpass', hz: 5200 },
+    });
+  },
+  'big-clap'({ out, at, gain, pan }) {
+    [0, 0.008, 0.017, 0.026].forEach((offset, index) => {
+      const envelope = { attack: 0.001, hold: 0.002, release: index === 3 ? 0.26 : 0.01, pan };
+      playNoise(out, at + offset, {
+        ...envelope,
+        gain: 0.34 * gain,
+        filter: { type: 'bandpass', hz: 1900, q: 0.9 },
+      });
+      playNoise(out, at + offset, {
+        ...envelope,
+        gain: 0.31 * gain,
+        filter: { type: 'highpass', hz: 3200 },
+      });
+    });
+  },
+  ride({ out, at, gain, pan }) {
+    playNoise(out, at, {
+      gain: 0.17 * gain,
+      attack: 0.001,
+      hold: 0.01,
+      release: 0.55,
+      pan,
+      filter: { type: 'bandpass', hz: 9500, q: 0.9 },
+    });
+  },
+  'sand-shaker'({ out, at, gain, pan }) {
+    playNoise(out, at, {
+      gain: 0.25 * gain,
+      attack: 0.012,
+      hold: 0.004,
+      release: 0.05,
+      pan,
+      filter: { type: 'bandpass', hz: 6500, q: 1 },
+    });
+  },
+  'wood-rim'({ out, at, gain, pan }) {
+    const envelope = { gain: 0.14 * gain, attack: 0.0005, hold: 0.002, release: 0.04, pan };
+    playTone(out, at, { ...envelope, wave: 'triangle', hz: 1750 });
+    playNoise(out, at, { ...envelope, filter: { type: 'bandpass', hz: 3200, q: 2 } });
   },
 };

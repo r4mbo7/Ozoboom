@@ -1,4 +1,5 @@
 import type { SkillEffect, TrapEffect, UpgradeFamily, WeaponEffect } from '../data/types';
+import { FULL_MARKS, FULL_SKILL_ICONS } from './full';
 
 export const BOLT = '<path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z" fill="currentColor"/>';
 
@@ -34,6 +35,13 @@ export const MOON =
 export const SPEECH =
   '<path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
   '<path d="M7.5 8.5h9M7.5 12.5h5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+
+export const LOCK =
+  '<rect x="5" y="10.5" width="14" height="10.5" rx="2.5" fill="currentColor"/>' +
+  '<path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>';
+
+export const DISCORD =
+  '<path fill="currentColor" d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.61 1.25a18.3 18.3 0 0 0-5.49 0 12.6 12.6 0 0 0-.62-1.25.08.08 0 0 0-.08-.04 19.7 19.7 0 0 0-4.88 1.52.07.07 0 0 0-.03.03C.53 9.05-.32 13.58.1 18.06a.08.08 0 0 0 .03.06 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.88-1.3 1.23-2a.08.08 0 0 0-.04-.1 13.1 13.1 0 0 1-1.87-.9.08.08 0 0 1 0-.12l.37-.3a.07.07 0 0 1 .08-.01c3.93 1.8 8.18 1.8 12.06 0a.07.07 0 0 1 .08.01l.37.3a.08.08 0 0 1 0 .12c-.6.35-1.22.65-1.87.9a.08.08 0 0 0-.04.1c.36.7.77 1.37 1.22 2a.08.08 0 0 0 .09.03 19.8 19.8 0 0 0 6-3.03.08.08 0 0 0 .03-.06c.5-5.17-.84-9.67-3.55-13.66a.06.06 0 0 0-.03-.03zM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42 0-1.33.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.34-.96 2.42-2.16 2.42zm7.97 0c-1.18 0-2.15-1.08-2.15-2.42 0-1.33.95-2.42 2.15-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.34-.95 2.42-2.16 2.42z"/>';
 
 export const EYE =
   '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
@@ -72,8 +80,12 @@ export function trapIcon(effect: TrapEffect): string {
   }
 }
 
+// Read by a plain string: in the demo, no skill is left for them.
+const FULL_ICONS: Readonly<Record<string, string>> = FULL_SKILL_ICONS;
+
 export function skillIcon(effect: SkillEffect): string {
-  switch (effect.kind) {
+  const kind: string = effect.kind;
+  switch (kind) {
     case 'nova':
       return (
         '<circle cx="12" cy="12" r="3.5" fill="currentColor"/>' +
@@ -83,6 +95,13 @@ export function skillIcon(effect: SkillEffect): string {
       return '<path d="M4 7h9M2 12h12M4 17h9M14 5l7 7-7 7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>';
     case 'healPulse':
       return '<path d="M9.5 3h5v6.5H21v5h-6.5V21h-5v-6.5H3v-5h6.5z" fill="currentColor"/>';
+    default: {
+      const icon = FULL_ICONS[kind];
+      if (icon === undefined) {
+        throw new Error(`No icon for the skill "${kind}"`);
+      }
+      return icon;
+    }
   }
 }
 
@@ -190,7 +209,7 @@ export function classMark(classId: string): string {
         '<path d="M12 3.5v17M4.6 7.8l14.8 8.4M19.4 7.8 4.6 16.2" stroke="currentColor" stroke-width="1.6"/>'
       );
     default:
-      return '<circle cx="12" cy="12" r="7" fill="currentColor"/>';
+      return FULL_MARKS[classId] ?? '<circle cx="12" cy="12" r="7" fill="currentColor"/>';
   }
 }
 

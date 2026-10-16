@@ -53,6 +53,11 @@ export function isBeatTick(tick: number, tempo: Tempo = MAIN_TEMPO): boolean {
   return tick % tempo.ticksPerBeat === 0;
 }
 
+// Halfway through the beat, rounded down when a beat has an odd number of ticks.
+export function isOffbeatTick(tick: number, tempo: Tempo = MAIN_TEMPO): boolean {
+  return tick % tempo.ticksPerBeat === Math.floor(tempo.ticksPerBeat / 2);
+}
+
 export function isBarTick(tick: number, tempo: Tempo = MAIN_TEMPO): boolean {
   return tick % tempo.ticksPerBar === 0;
 }

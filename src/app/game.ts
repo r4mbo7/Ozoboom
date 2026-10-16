@@ -1,4 +1,6 @@
+import { t } from '../shared/i18n';
 import { createAudioEngine } from '../audio';
+import { EIGHTH_SECONDS } from '../audio/ambience';
 import {
   APP_VERSION,
   type FeedbackDialog,
@@ -39,7 +41,14 @@ import {
   prefersCalmMode,
   stepSound,
 } from '../ui';
-import { BENCH_ENEMIES, type DevOptions, benchScene, benchSlots, createDevProbe } from './dev';
+import {
+  BENCH_ENEMIES,
+  type DevOptions,
+  benchScene,
+  benchSlots,
+  bossScene,
+  createDevProbe,
+} from './dev';
 import { createFpsMeter } from './fps';
 import { createFixedStepLoop, dueTicks } from './loop';
 import { type Interruption, type OnlineMatch, createOnline } from './online';
@@ -63,6 +72,8 @@ import { drawTrack, stageTracks, trackOf } from './track';
 import { countVisit } from './visits';
 import { playerLabel } from '../ui/hud-model';
 import { stageCards } from '../ui/lobby-model';
+import { showsStageChoice } from '../ui/teaser';
+import { chooseLocale } from './locale';
 
 const DEFAULT_CLASS_ID = 'mage';
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
@@ -204,6 +215,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       onToggleHitSound: setHitSound,
       onToggleAutoFire: setAutoFire,
       onToggleAutoAim: setAutoAim,
+      onChooseLocale: chooseLocale,
       onFeedback: openForm,
       onPlayTogether: openLobby,
       onChooseClass(classId) {
@@ -317,7 +329,11 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     onInterruption: interrupt,
     onGuestLeft(playerId) {
       const player = match.session.state.players.find((candidate) => candidate.id === playerId);
-      toast.show(`${player === undefined ? 'Un joueur' : playerLabel(player)} a quitté le set`);
+      toast.show(
+        t('{name} a quitté le set', {
+          name: player === undefined ? t('Un joueur') : playerLabel(player),
+        }),
+      );
     },
   });
   const soundControl = createSoundControl(stepVolume);
@@ -338,13 +354,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   root.append(fade);
   const pause = createPauseScreen(root, [
     {
-      label: 'Reprendre',
+      label: t('Reprendre'),
       activate() {
         setPaused(false);
       },
     },
     {
-      label: 'Son',
+      label: t('Son'),
       element: soundControl.element,
       activate() {
         setSound({ volume: prefs.volume, muted: !prefs.muted });
@@ -352,31 +368,31 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       adjust: stepVolume,
     },
     {
-      label: 'Son des coups',
+      label: t('Son des coups'),
       element: hitSoundToggle.button,
       activate() {
         setHitSound(!prefs.hitSound);
       },
     },
     {
-      label: 'Tir automatique',
+      label: t('Tir automatique'),
       element: autoFireToggle.button,
       activate() {
         setAutoFire(!prefs.autoFire);
       },
     },
     {
-      label: 'Visée automatique',
+      label: t('Visée automatique'),
       element: autoAimToggle.button,
       activate() {
         setAutoAim(!prefs.autoAim);
       },
     },
-    { label: 'Ton avis', element: createFeedbackButton(), activate: openForm },
+    { label: t('Ton avis'), element: createFeedbackButton(), activate: openForm },
     {
-      label: 'Quitter la partie',
+      label: t('Quitter la partie'),
       get confirm() {
-        return onlineMatch === null ? QUIT : QUIT_ONLINE;
+        return onlineMatch === null ? quitConfirm() : quitOnlineConfirm();
       },
       activate: quit,
     },
@@ -524,7 +540,11 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function classPicker(): ClassPickerModel {
-    return { classId: prefs.classId, launches: stages.length < 2, endless: prefs.endless };
+    return {
+      classId: prefs.classId,
+      launches: !showsStageChoice(stages.length),
+      endless: prefs.endless,
+    };
   }
 
   function stagePicker(): StagePickerModel {
@@ -538,7 +558,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function openStagePicker(): void {
-    if (stages.length < 2) {
+    if (!showsStageChoice(stages.length)) {
       play();
       return;
     }
@@ -556,6 +576,9 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     played = true;
     if (dev.mode === 'bench') {
       benchScene(match.session.state, content, match.session.state.seed, BENCH_ENEMIES);
+    }
+    if (dev.boss !== null) {
+      bossScene(match.session.state, dev.boss);
     }
     screen = 'game';
     // An online guest may still be fading out when the host plays again.
@@ -678,7 +701,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     paused = next;
     applySound();
     if (next) {
-      pause.show(device, onlineMatch === null ? undefined : ONLINE_PAUSE);
+      pause.show(device, onlineMatch === null ? undefined : onlinePauseText());
     } else {
       pause.hide();
     }
@@ -733,12 +756,17 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     }
   }
 
+  // Until a gesture opens the audio, or while the sound is off, the title keeps the ambience's time.
+  function silentMenuPosition(): number {
+    return performance.now() / 1000 / EIGHTH_SECONDS;
+  }
+
   function uiFrame(snapshot: InputSnapshot): UiFrame {
     return {
       snapshot,
       players: uiPlayers,
       devices: [...view.devices].map(([device, own]) => ({ device, snapshot: own })),
-      menuPosition: screen === 'title' ? audio.menuPosition() : null,
+      menuPosition: screen === 'title' ? (audio.menuPosition() ?? silentMenuPosition()) : null,
     };
   }
 
@@ -944,21 +972,28 @@ function stillView(view: InputView): InputView {
   };
 }
 
-const QUIT = {
-  question: 'Quitter le set\u202f?',
-  text: 'Tu rentres avant le sunrise\u202f: la partie s’arrête ici, sans score.',
-  stay: 'Rester',
-  leave: 'Quitter',
-} as const;
+const quitConfirm = () =>
+  ({
+    question: t('Quitter le set\u202f?'),
+    text: t('Tu rentres avant le sunrise\u202f: la partie s’arrête ici, sans score.'),
+    stay: t('Rester'),
+    leave: t('Quitter'),
+  }) as const;
 
-const QUIT_ONLINE = {
-  question: 'Quitter le set\u202f?',
-  text: 'Tu laisses les autres joueurs\u202f: ton personnage reste immobile et le set continue sans toi.',
-  stay: 'Rester',
-  leave: 'Quitter',
-} as const;
+const quitOnlineConfirm = () =>
+  ({
+    question: t('Quitter le set\u202f?'),
+    text: t(
+      'Tu laisses les autres joueurs\u202f: ton personnage reste immobile et le set continue sans toi.',
+    ),
+    stay: t('Rester'),
+    leave: t('Quitter'),
+  }) as const;
 
-const ONLINE_PAUSE = {
-  heading: 'Le set continue',
-  text: 'En ligne, la pause n’arrête pas le set : ton personnage reste immobile pendant que les autres jouent.',
-} as const;
+const onlinePauseText = () =>
+  ({
+    heading: t('Le set continue'),
+    text: t(
+      'En ligne, la pause n’arrête pas le set : ton personnage reste immobile pendant que les autres jouent.',
+    ),
+  }) as const;

@@ -1,3 +1,4 @@
+import { t } from '../shared/i18n';
 import type { InputDevice, MenuIntents } from '../input/intents';
 import type { Vec2 } from '../sim/state';
 import { el, fillHint, setText } from '../ui/dom';
@@ -17,10 +18,10 @@ export interface PauseText {
   readonly text: string;
 }
 
-const PAUSE_TEXT: PauseText = {
-  heading: 'La piste t’attend',
-  text: 'Le set reprend là où tu l’as laissé.',
-};
+const pauseText = (): PauseText => ({
+  heading: t('La piste t’attend'),
+  text: t('Le set reprend là où tu l’as laissé.'),
+});
 
 export interface PauseItem {
   readonly label: string;
@@ -64,7 +65,7 @@ function view(role: 'dialog' | 'alertdialog', heading: string, text: string): Vi
     nav: el('nav', 'pause__menu'),
     hint: el('p', 'ui-hint'),
   };
-  body.append(el('p', 'ui-kicker', 'Pause'), parts.heading, parts.text, parts.nav, parts.hint);
+  body.append(el('p', 'ui-kicker', t('Pause')), parts.heading, parts.text, parts.nav, parts.hint);
   section.append(body);
   return parts;
 }
@@ -80,9 +81,10 @@ function button(className: string, label: string): HTMLButtonElement {
 // one selected when it opens: adding an entry is adding an item.
 export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]): PauseScreen {
   const layer = el('div', 'ui');
-  const main = view('dialog', PAUSE_TEXT.heading, PAUSE_TEXT.text);
-  main.section.setAttribute('aria-label', 'Pause');
-  main.nav.setAttribute('aria-label', 'Menu de pause');
+  const resting = pauseText();
+  const main = view('dialog', resting.heading, resting.text);
+  main.section.setAttribute('aria-label', t('Pause'));
+  main.nav.setAttribute('aria-label', t('Menu de pause'));
   const confirmation = view('alertdialog', '', '');
   layer.append(main.section, confirmation.section);
 
@@ -138,8 +140,8 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
     fillHint(
       confirmation.hint,
       [
-        { keys: prompts.navigate, label: 'naviguer' },
-        { keys: [prompts.confirm], label: 'valider' },
+        { keys: prompts.navigate, label: t('naviguer') },
+        { keys: [prompts.confirm], label: t('valider') },
         { keys: [prompts.back], label: asked.stay.toLowerCase() },
       ],
       prompts.style,
@@ -164,18 +166,18 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
     get confirming() {
       return pending !== null;
     },
-    show(next, text = PAUSE_TEXT) {
+    show(next, text = pauseText()) {
       device = next;
       setText(main.heading, text.heading);
       setText(main.text, text.text);
       const prompts = promptsFor(device);
-      const navigate = items.length > 1 ? [{ keys: prompts.navigate, label: 'naviguer' }] : [];
+      const navigate = items.length > 1 ? [{ keys: prompts.navigate, label: t('naviguer') }] : [];
       fillHint(
         main.hint,
         [
           ...navigate,
-          { keys: [prompts.confirm], label: 'valider' },
-          { keys: [device === 'gamepad' ? 'Start' : 'Échap'], label: 'reprendre' },
+          { keys: [prompts.confirm], label: t('valider') },
+          { keys: [device === 'gamepad' ? 'Start' : t('Échap')], label: t('reprendre') },
         ],
         prompts.style,
       );

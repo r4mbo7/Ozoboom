@@ -13,8 +13,13 @@ export function spawning({ state, content, set, tempo }: StepContext): void {
   for (const event of state.events) {
     if (event.type === 'segment' && event.segment === 'drop') {
       const tier = set.tiers[event.tier];
+      const bossId = state.bosses?.at(-1);
       if (tier !== undefined) {
-        spawnAtEdge(state, set, tempo, lookup(content.enemies, tier.bossId, 'enemy'), true);
+        if (bossId === undefined) {
+          throw new Error('a drop starts with no boss drawn');
+        }
+        const boss = { ...lookup(content.enemies, bossId, 'enemy'), ...tier.boss };
+        spawnAtEdge(state, set, tempo, boss, true);
       }
     }
   }

@@ -1,4 +1,6 @@
 import type { TextureSource } from 'pixi.js';
+import type { Drawings } from './drawings';
+import { FULL_DRAWINGS } from './full';
 import {
   SHADE,
   SHADE_DEEP,
@@ -8,6 +10,7 @@ import {
   circle,
   glow,
   paintSheet,
+  paintedLater,
   rim,
   type Ctx,
   type Piece,
@@ -52,6 +55,9 @@ export interface LookTextures {
   readonly extent: number;
   // How high the object is held above the ground: it stretches the shadow.
   readonly height: number;
+  // How far ahead of the player the middle of the drawing is, in reference pixels: a portrait
+  // frames it there. Absent, on the player.
+  readonly middle?: number;
   readonly shadow: Shape;
 }
 
@@ -64,6 +70,7 @@ export interface PlayerTextures {
   readonly poi: PoiParts;
   readonly bag: BagParts;
   readonly parasol: ParasolParts;
+  readonly drawings: Drawings;
   // The one source under every texture above, destroyed once.
   readonly source: TextureSource;
 }
@@ -221,6 +228,9 @@ export function playerTextures(): PlayerTextures {
       mug: t.mug,
     },
     parasol: { sneaker: t.sneaker, pompom: t.pompom },
+    drawings: new Map(
+      FULL_DRAWINGS.map((drawing) => [drawing.classId, paintedLater(() => drawing.paint())]),
+    ),
     source,
   };
 }
