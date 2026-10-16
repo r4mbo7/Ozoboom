@@ -948,7 +948,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     }
     applySound();
   });
-  // The title's ambience starts at the first gesture instead of waiting for the set.
+  // The title's ambience starts as soon as the browser allows it, instead of waiting for the set.
   const audioGate = openAudioOnGesture(window, () => audio.start());
   loop.start();
 
