@@ -15,7 +15,8 @@ export type PlayerAction =
   | { type: 'placeTrap'; trapId: string; x: number; y: number; dx: number; dy: number }
   // Takes back the trap placed at (x, y), as a placement there does when it finds one.
   | { type: 'takeTrap'; x: number; y: number }
-  | { type: 'chooseUpgrade'; upgradeId: string };
+  | { type: 'chooseUpgrade'; upgradeId: string }
+  | { type: 'dash' };
 
 export interface PlayerCommand {
   playerId: PlayerId;

@@ -1,5 +1,6 @@
 import type {
   BystanderDefinition,
+  DashDefinition,
   ClassDefinition,
   EnemyBehaviour,
   EnemyDefinition,
@@ -32,6 +33,7 @@ export interface RenderContent {
   readonly sets: readonly SetDefinition[];
   readonly bystanders?: readonly Pick<BystanderDefinition, 'id' | 'helpTicks'>[];
   readonly weapons?: readonly (WeaponLook & Pick<WeaponDefinition, 'id'>)[];
+  readonly dash?: DashDefinition;
 }
 
 export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect'>;
@@ -53,6 +55,7 @@ export interface RenderContext {
   readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
   readonly weaponLooks: ReadonlyMap<string, WeaponLook>;
   readonly skillEffects: ReadonlyMap<string, SkillEffect>;
+  readonly dash: DashDefinition | null;
 }
 
 export interface Family {

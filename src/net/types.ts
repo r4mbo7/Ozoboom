@@ -8,6 +8,7 @@ export type Role = 'host' | 'guest';
 export interface Seat {
   playerId: PlayerId;
   peer: PeerId | null;
+  // Empty when the player typed none: each screen names it in its own language.
   name: string;
   classId: string;
 }

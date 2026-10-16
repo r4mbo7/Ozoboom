@@ -15,7 +15,7 @@ export const cling: SpecialModule = (ctx, enemy, effect) => {
     const hit = (enemy.hpWatermark ?? enemy.hp) - enemy.hp;
     const player = playerById(state, enemy.clingingTo);
     if (hit >= effect.detachDamage || player === undefined || player.downed) {
-      detach(enemy, ctx.tempo.ticksPerBar);
+      detachCling(enemy, ctx.tempo.ticksPerBar);
     } else {
       slow(player, effect.slowFactor);
     }
@@ -56,7 +56,7 @@ function slow(player: PlayerState, slowFactor: number): void {
   player.slowFactor = Math.min(player.slowFactor ?? 1, slowFactor);
 }
 
-function detach(enemy: EnemyState, cooldown: number): void {
+export function detachCling(enemy: EnemyState, cooldown: number): void {
   delete enemy.clingingTo;
   enemy.clingCooldown = cooldown;
 }

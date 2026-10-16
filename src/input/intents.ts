@@ -5,6 +5,7 @@ export type InputDevice = 'keyboardMouse' | 'gamepad' | 'touch' | 'none';
 
 export interface GameplayIntents extends PlayerInput {
   placeTrap: boolean;
+  dash: boolean;
   nextTrap: boolean;
   previousTrap: boolean;
   selectTrap: number | null;

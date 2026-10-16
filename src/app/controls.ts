@@ -30,6 +30,7 @@ export interface CommandRequest {
   readonly heldAim: Vec2;
   readonly trapId: string | undefined;
   readonly placeTrap: boolean;
+  readonly dash: boolean;
   readonly upgradeId: string | null;
   readonly assist: Assist;
   // The bad vibe the assist aims or fires at.
@@ -85,6 +86,9 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
         : { type: 'placeTrap', trapId, x, y, dx: aim.x, dy: aim.y },
     );
   }
+  if (request.dash) {
+    actions.push({ type: 'dash' });
+  }
   if (request.upgradeId !== null) {
     actions.push({ type: 'chooseUpgrade', upgradeId: request.upgradeId });
   }
@@ -128,6 +132,7 @@ export class Controls {
   private previousGameplay: GameplayIntents | null = null;
   private heldAim: Vec2;
   private placeTrap = false;
+  private dash = false;
   private trapScreen: Vec2 | null = null;
   private upgradeId: string | null = null;
   private trapIndex = 0;
@@ -150,6 +155,7 @@ export class Controls {
       this.placeTrap = true;
       this.trapScreen = snapshot.device === 'touch' ? snapshot.pointerScreen : null;
     }
+    this.dash ||= gameplay.dash;
     this.snapshot = snapshot;
   }
 
@@ -178,12 +184,14 @@ export class Controls {
       heldAim: this.heldAim,
       trapId: player.hand?.[heldSlot(this.trapIndex, player.hand.length)],
       placeTrap: this.placeTrap,
+      dash: this.dash,
       upgradeId: this.upgradeId,
       assist,
       target: assist.autoFire || assist.autoAim ? autoTarget(player, enemies, reach) : null,
       trapScreen: this.trapScreen,
     });
     this.placeTrap = false;
+    this.dash = false;
     this.trapScreen = null;
     this.upgradeId = null;
     if (chargeTicks === 0) {

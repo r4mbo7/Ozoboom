@@ -17,6 +17,10 @@ export const PHONE =
 export const HEART =
   '<path d="M12 20.5s-8.2-4.7-8.2-10.6A4.7 4.7 0 0 1 12 7a4.7 4.7 0 0 1 8.2 2.9c0 5.9-8.2 10.6-8.2 10.6z" fill="currentColor"/>';
 
+// A pearl thrown forward: the dash, beside the Charge's lines and arrow.
+export const DASH =
+  '<circle cx="15.5" cy="12" r="5" fill="currentColor"/><path d="M2 8.5h6M1 12h8M2 15.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+
 export const FOG =
   '<path d="M7 18.5a4.5 4.5 0 0 1-.6-8.96 6 6 0 0 1 11.47 1.2A3.9 3.9 0 0 1 17.1 18.5z" fill="currentColor"/>' +
   '<path d="M4 21.5h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';
@@ -105,20 +109,45 @@ export function skillIcon(effect: SkillEffect): string {
   }
 }
 
+const STROKE = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"';
+const ROUND = `${STROKE} stroke-linejoin="round"`;
+
 export function familyIcon(family: UpgradeFamily): string {
   switch (family) {
     case 'class':
-      return '<path d="m12 2 2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z" fill="currentColor"/>';
+      return '<path d="M12 1.5 13 9.6l3.6-2.2-2.2 3.6 8.1 1-8.1 1 2.2 3.6-3.6-2.2-1 8.1-1-8.1-3.6 2.2 2.2-3.6-8.1-1 8.1-1-2.2-3.6 3.6 2.2z" fill="currentColor"/>';
     case 'generic':
-      return '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="3"/>';
+      return `<path d="m5 12.5 7-7 7 7M5 19.5l7-7 7 7" ${ROUND}/>`;
     case 'defense':
-      return '<path d="M12 2.5 20 6v6c0 4.6-3.4 8.2-8 9.5-4.6-1.3-8-4.9-8-9.5V6z" fill="currentColor"/>';
+      return (
+        `<path d="M12 2.5 20 6v6c0 4.6-3.4 8.2-8 9.5-4.6-1.3-8-4.9-8-9.5V6z" ${ROUND}/>` +
+        '<path d="M12 6.5 16.5 8.5v3.6c0 2.6-1.9 4.6-4.5 5.4-2.6-.8-4.5-2.8-4.5-5.4V8.5z" fill="currentColor"/>'
+      );
     case 'relic':
-      return '<path d="M12 2 4 9l8 13 8-13z" fill="currentColor"/>';
+      return (
+        `<circle cx="12" cy="12" r="9.5" ${STROKE}/>` +
+        `<circle cx="12" cy="12" r="6.8" ${STROKE} opacity="0.6"/>` +
+        '<circle cx="12" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="2.4"/>' +
+        `<path d="M6.5 5.8a8 8 0 0 1 4-1.7" ${STROKE}/>`
+      );
   }
 }
 
-const STROKE = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"';
+// The few cards with a picto of their own; the others wear that of their family.
+const UPGRADE_GLYPHS: Readonly<Record<string, string>> = {
+  'baskets-legeres':
+    `<path d="M2.5 18.5V12l4-1.3L9 6h4l2 5 3.6 1c1.7.5 2.9 1.9 2.9 3.6v2.9z" ${ROUND}/>` +
+    `<path d="M2.5 15.5h19M10.2 9.4l2.3.8M11 7.4l2 .7" ${STROKE}/>`,
+  'pas-chasse':
+    '<ellipse cx="7" cy="12.5" rx="3.3" ry="4.8" transform="rotate(-15 7 12.5)" fill="currentColor"/>' +
+    '<circle cx="8.8" cy="20.2" r="2.2" fill="currentColor"/>' +
+    '<ellipse cx="16.5" cy="5.2" rx="3.3" ry="4.8" transform="rotate(-15 16.5 5.2)" fill="currentColor"/>' +
+    '<circle cx="18.3" cy="12.9" r="2.2" fill="currentColor"/>',
+};
+
+export function upgradeIcon(id: string, family: UpgradeFamily): string {
+  return UPGRADE_GLYPHS[id] ?? familyIcon(family);
+}
 
 // A card's pictogram in a medallion of sacred geometry, six circles in a flower: drawn in a box of 84.
 export function medallion(glyph: string): string {
@@ -138,15 +167,15 @@ export function weaponIcon(effect: WeaponEffect): string {
   switch (effect.kind) {
     case 'sweep':
       return (
-        `<path d="M4 20 15 9" ${STROKE} stroke-width="2.6"/>` +
+        `<path d="M4 20 15 9" ${STROKE}/>` +
         `<path d="M13 3.5a9 9 0 0 1 7.5 7.5" ${STROKE}/>` +
         '<circle cx="16.5" cy="7.5" r="2" fill="currentColor"/>'
       );
     case 'spark':
       return (
-        `<path d="M3 20 14 9" ${STROKE} stroke-width="2.6"/>` +
-        '<circle cx="17" cy="6" r="3" fill="currentColor"/>' +
-        `<path d="M20.5 11.5 22 13M12 2.5 11 1" ${STROKE} stroke-width="1.6"/>`
+        `<path d="M3.5 20.5 11.5 12.5" ${STROKE}/>` +
+        '<path d="M16 2.5q1 4.5 5.5 5.5-4.5 1-5.5 5.5-1-4.5-5.5-5.5 4.5-1 5.5-5.5z" fill="currentColor"/>' +
+        '<path d="M21 14q.36 1.64 2 2-1.64.36-2 2-.36-1.64-2-2 1.64-.36 2-2zM8 1.5q.36 1.64 2 2-1.64.36-2 2-.36-1.64-2-2 1.64-.36 2-2z" fill="currentColor"/>'
       );
     case 'hoop':
       return (
@@ -154,21 +183,26 @@ export function weaponIcon(effect: WeaponEffect): string {
       );
     case 'lob':
       return (
-        `<path d="M3 19c3-12 15-12 18 0" ${STROKE} stroke-dasharray="1 3.4"/>` +
-        '<circle cx="12" cy="8.5" r="3.4" fill="currentColor"/>'
+        '<path d="M4 7 10.6 10.8h2.8L20 7v10l-6.6-3.8h-2.8L4 17z" fill="currentColor" stroke="currentColor" stroke-linejoin="round" transform="rotate(-25 12 12)"/>' +
+        `<path d="M1.5 22c.8-3 2.2-5 4-6.5" ${STROKE} stroke-dasharray="1 3"/>`
       );
     case 'boomerang':
-      return `<path d="M5 5c6 0 12 4.5 14 14-4-5-8-6.5-14-5.5z" ${STROKE} stroke-linejoin="round"/>`;
+      return (
+        `<ellipse cx="13" cy="10" rx="8.5" ry="3.4" ${STROKE}/>` +
+        `<path d="M4.5 10v1.4c0 1.9 3.8 3.4 8.5 3.4s8.5-1.5 8.5-3.4V10" ${STROKE}/>` +
+        `<ellipse cx="13" cy="10" rx="4" ry="1.4" ${STROKE} opacity="0.7"/>` +
+        `<path d="M1.5 17.5h5M3.5 20.5h6" ${STROKE}/>`
+      );
     case 'plate':
       return (
-        `<ellipse cx="12" cy="7.5" rx="8.5" ry="3" ${STROKE}/>` +
-        `<path d="M12 10.5V21M8 21h8" ${STROKE}/>`
+        `<ellipse cx="12" cy="5" rx="7" ry="2.4" ${STROKE}/>` +
+        `<path d="M12 7.4V17M3.5 3a8 3 0 0 1 3-1.2M20.5 7a8 3 0 0 1-3 1.2" ${STROKE}/>` +
+        `<ellipse cx="12" cy="19" rx="9.5" ry="3" ${STROKE} stroke-dasharray="1 3"/>`
       );
     case 'totem':
       return (
-        `<rect x="7" y="3" width="10" height="5" rx="1.4" ${STROKE}/>` +
-        `<rect x="7" y="9.5" width="10" height="5" rx="1.4" ${STROKE}/>` +
-        `<rect x="7" y="16" width="10" height="5" rx="1.4" ${STROKE}/>`
+        `<path d="M8 2.5v19M3 20.5c3 2 7 2 10 0M15.5 15.5c2.5 1 4 2.5 4.5 4.5" ${ROUND}/>` +
+        '<path d="M8 3 19 6.5 8 10z" fill="currentColor" stroke="currentColor" stroke-linejoin="round"/>'
       );
     case 'orbit':
       return (
@@ -179,12 +213,13 @@ export function weaponIcon(effect: WeaponEffect): string {
       );
     case 'trail':
       return (
-        '<circle cx="18.5" cy="12" r="3.2" fill="currentColor"/>' +
-        `<path d="M3 12h9" ${STROKE} stroke-dasharray="1 3.2"/>` +
-        `<circle cx="15" cy="12" r="6.5" ${STROKE} stroke-width="1.4" opacity="0.6"/>`
+        `<circle cx="16" cy="16" r="5" ${STROKE}/>` +
+        '<circle cx="16" cy="16" r="1.3" fill="currentColor"/>' +
+        `<path d="M16 16V5M12.5 4h7M1.5 21c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0" ${ROUND}/>` +
+        '<path d="M6 14.3s-2.6-1.5-2.6-3.4a1.5 1.5 0 0 1 2.6-.35 1.5 1.5 0 0 1 2.6.35c0 1.9-2.6 3.4-2.6 3.4z" fill="currentColor"/>'
       );
     case 'ribbon':
-      return `<path d="M2.5 15c3-8 6-8 9.5 0s6.5 8 9.5 0" ${STROKE} stroke-width="2.6"/>`;
+      return `<path d="M2.5 15c3-8 6-8 9.5 0s6.5 8 9.5 0" ${STROKE}/>`;
   }
 }
 
@@ -194,7 +229,7 @@ export function classMark(classId: string): string {
     case 'mage':
       return (
         '<circle cx="12" cy="12" r="2.6" fill="currentColor"/>' +
-        `<circle cx="12" cy="12" r="7.5" ${STROKE} stroke-width="1.5" stroke-dasharray="2 3"/>` +
+        `<circle cx="12" cy="12" r="7.5" ${STROKE} stroke-dasharray="2 3"/>` +
         '<circle cx="19.5" cy="12" r="2.4" fill="currentColor"/><circle cx="4.5" cy="12" r="2.4" fill="currentColor"/>'
       );
     case 'tank':

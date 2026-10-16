@@ -209,7 +209,7 @@ export function createLobby(
     item.append(head, frame, join, wait, field, name, stepper.element, role);
 
     input.addEventListener('input', () => {
-      actions.seatName(playerId, seatName(input.value, playerId));
+      actions.seatName(playerId, seatName(input.value));
     });
     onPointerClick(join, joinWithKeyboard);
     return {
@@ -717,9 +717,10 @@ export function createLobby(
       return;
     }
     setText(card.tag, seatTag(seat));
-    setText(card.name, seat.name);
-    if (document.activeElement !== card.input && card.input.value !== seat.name) {
-      card.input.value = seat.name;
+    const name = seat.name === '' ? defaultName(playerId) : seat.name;
+    setText(card.name, name);
+    if (document.activeElement !== card.input && card.input.value !== name) {
+      card.input.value = name;
     }
     card.stepper.set(seat.classId);
     const role = classes.find((info) => info.id === seat.classId)?.role;

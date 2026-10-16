@@ -1,5 +1,6 @@
 import { Container, type Sprite } from 'pixi.js';
 import type { PlayerId, PlayerState, SimEvent } from '../sim/state';
+import { defaultName } from '../shared/i18n';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { RenderContext } from './context';
 import type { Frame } from './frame';
@@ -115,11 +116,12 @@ export class PlayerTag {
     share: number,
     burst: number,
     frame: Frame,
+    team: boolean,
   ): void {
     this.placeBurst(player, x, y, color, burst, frame);
     this.placeRing(player, x, y, color, share, frame);
     const room = share > 0 ? Math.max(reach, player.radius * RING_SHARE * 1.15) : reach;
-    this.placeName(player, x, y, room, color, frame);
+    this.placeName(player, x, y, room, color, frame, team);
   }
 
   private placeBurst(
@@ -181,9 +183,15 @@ export class PlayerTag {
     reach: number,
     color: number,
     frame: Frame,
+    team: boolean,
   ): void {
     const { name, nameEdge } = this;
-    const label = player.name === undefined || player.name === '' ? null : player.name;
+    const label =
+      player.name !== undefined && player.name !== ''
+        ? player.name
+        : team
+          ? defaultName(player.id)
+          : null;
     name.visible = nameEdge.visible = label !== null;
     if (label === null) {
       return;

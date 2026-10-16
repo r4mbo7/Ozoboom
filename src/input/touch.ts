@@ -10,8 +10,8 @@ import type { TouchFrame } from './merge';
 import './touch.css';
 
 // What a finger lands on, from the `data-touch-control` of the element under it: the arena takes
-// the virtual stick, the HUD its trap tiles, its skill and its pause button.
-export type TouchControl = 'stick' | 'skill' | 'pause' | `trap:${number}`;
+// the virtual stick, the HUD its trap tiles, its skill, its dash and its pause button.
+export type TouchControl = 'stick' | 'skill' | 'dash' | 'pause' | `trap:${number}`;
 
 interface Stick {
   readonly id: number;
@@ -68,7 +68,7 @@ export const INITIAL_TOUCH_STATE: TouchState = {
 };
 
 export function parseTouchControl(value: string | undefined): TouchControl | null {
-  if (value === 'stick' || value === 'skill' || value === 'pause') return value;
+  if (value === 'stick' || value === 'skill' || value === 'dash' || value === 'pause') return value;
   const slot = trapSlot(value);
   return slot === null ? null : (`trap:${String(slot)}` as TouchControl);
 }
@@ -109,7 +109,9 @@ function press(state: TouchState, id: number, control: TouchControl | null, at: 
   if (control === 'skill') {
     return { ...touched, skill: new Set(state.skill).add(id), skillTapped: true };
   }
-  if (control === 'pause') return { ...touched, presses: [...state.presses, 'pause'] };
+  if (control === 'pause' || control === 'dash') {
+    return { ...touched, presses: [...state.presses, control] };
+  }
   const slot = trapSlot(control);
   const select = slot === null ? undefined : TRAP_SLOT_CONTROLS[slot];
   if (slot === null || select === undefined) return touched;

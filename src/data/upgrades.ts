@@ -141,6 +141,42 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
     maxStacks: 2,
   },
   {
+    id: 'baskets-legeres',
+    name: 'Baskets légères',
+    description: 'Ton dash revient plus vite.',
+    family: 'generic',
+    modifiers: [{ stat: 'dashRechargeMul', mul: 0.75 }],
+    rarities: {
+      rare: {
+        description: 'Ton dash revient nettement plus vite.',
+        modifiers: [{ stat: 'dashRechargeMul', mul: 0.5 }],
+      },
+      legendary: {
+        description: 'Ton dash revient bien plus vite.',
+        modifiers: [{ stat: 'dashRechargeMul', mul: 0.375 }],
+      },
+    },
+    maxStacks: 2,
+  },
+  {
+    id: 'pas-chasse',
+    name: 'Pas chassé',
+    description: 'Tu peux enchaîner un dash de plus.',
+    family: 'generic',
+    modifiers: [{ stat: 'dashChargesAdd', add: 1 }],
+    rarities: {
+      rare: {
+        description: 'Tu peux enchaîner deux dashs de plus.',
+        modifiers: [{ stat: 'dashChargesAdd', add: 2 }],
+      },
+      legendary: {
+        description: 'Tu peux enchaîner trois dashs de plus.',
+        modifiers: [{ stat: 'dashChargesAdd', add: 3 }],
+      },
+    },
+    maxStacks: 2,
+  },
+  {
     id: 'volume-a-fond',
     name: 'Volume à fond',
     description: 'Tes tirs font plus de dégâts.',

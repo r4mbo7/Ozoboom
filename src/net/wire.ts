@@ -25,6 +25,7 @@ const MAX_FIRE_TICKS = 0xffff;
 const PLACE_TRAP = 0;
 const CHOOSE_UPGRADE = 1;
 const TAKE_TRAP = 2;
+const DASH = 3;
 const AXIS_SCALE = 32767;
 const MAX_COUNT = 255;
 const MAX_PLAYER_ID = 3;
@@ -167,6 +168,8 @@ function writeAction(writer: Writer, action: PlayerAction): void {
     writer.u8(TAKE_TRAP);
     writer.f32(action.x);
     writer.f32(action.y);
+  } else if (action.type === 'dash') {
+    writer.u8(DASH);
   } else {
     writer.u8(CHOOSE_UPGRADE);
     writer.id(action.upgradeId);
@@ -191,6 +194,9 @@ function readAction(reader: Reader): PlayerAction {
   }
   if (type === TAKE_TRAP) {
     return { type: 'takeTrap', x: reader.f32(), y: reader.f32() };
+  }
+  if (type === DASH) {
+    return { type: 'dash' };
   }
   throw new RangeError(`unknown action ${String(type)}`);
 }

@@ -21,13 +21,10 @@ export function roomCodeFromHash(hash: string): string {
   return normalizeRoomCode(ROOM_LINK.exec(hash)?.[0] ?? '');
 }
 
-export function defaultName(playerId: PlayerId): string {
-  return t('Joueur {number}', { number: formatNumber(playerId + 1) });
-}
+export { defaultName } from '../shared/i18n';
 
-export function seatName(raw: string, playerId: PlayerId): string {
-  const name = raw.replace(/\s+/g, ' ').trim().slice(0, NAME_LENGTH).trim();
-  return name === '' ? defaultName(playerId) : name;
+export function seatName(raw: string): string {
+  return raw.replace(/\s+/g, ' ').trim().slice(0, NAME_LENGTH).trim();
 }
 
 export function stepClass(

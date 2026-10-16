@@ -188,6 +188,23 @@ export const WEAPONS: readonly WeaponDefinition[] = [
     levelMul: 1,
   },
   {
+    id: 'monocycle-filant',
+    name: 'Monocycle filant',
+    description: 'Fusion : chaque dash laisse ta traînée au sol deux mesures.',
+    evolvedFrom: 'monocycle',
+    rhythm: 'continuous',
+    effect: {
+      kind: 'trail',
+      speedMul: 1.35,
+      slowFactor: 0.5,
+      healPerBar: 8,
+      lengthTicks: 4 * TICKS_PER_BEAT,
+      dashTrailTicks: 2 * TICKS_PER_BAR,
+    },
+    maxLevel: 1,
+    levelMul: 1,
+  },
+  {
     id: 'monocycle-reparateur',
     name: 'Monocycle réparateur',
     description: 'Fusion : ta traînée répare aussi la scène (voir #71).',

@@ -35,6 +35,7 @@ const keyboard = (): DevicePrompts => ({
     { action: t('Choisir un piège'), keys: [t('Molette'), t('1 à 5')] },
     { action: t('Poser le piège'), keys: [t('Clic droit'), 'F'] },
     { action: t('Compétence'), keys: ['E'] },
+    { action: t('Dash'), keys: [t('Maj')] },
     { action: t('Pause'), keys: [t('Échap')] },
   ],
 });
@@ -54,6 +55,7 @@ const gamepad = (): DevicePrompts => ({
     { action: t('Choisir un piège'), keys: ['LB', 'RB'] },
     { action: t('Poser le piège'), keys: ['A'] },
     { action: t('Compétence'), keys: ['LT'] },
+    { action: t('Dash'), keys: ['B'] },
     { action: t('Pause'), keys: ['Start'] },
   ],
 });
@@ -73,6 +75,7 @@ const touch = (): DevicePrompts => ({
     { action: t('Poser un piège à ses pieds'), keys: [t('Toucher sa tuile')] },
     { action: t('Le poser ailleurs'), keys: [t('Glisser sa tuile')] },
     { action: t('Compétence'), keys: [t('Toucher sa tuile')] },
+    { action: t('Dash'), keys: [t('Toucher sa tuile')] },
     { action: t('Pause'), keys: ['❚❚'] },
   ],
 });

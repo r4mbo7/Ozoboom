@@ -1,29 +1,29 @@
-name: Donner un avis
-description: Une idée, un bug, un souci d'équilibrage. Ton avis sera public.
+name: Donner un avis / Give feedback
+description: Une idée, un bug, un souci d'équilibrage. Ton avis sera public. / An idea, a bug, a balance issue. Your feedback will be public.
 title: '[Avis] '
 labels: [feedback, needs-triage]
 body:
   - type: dropdown
     id: type
     attributes:
-      label: C'est plutôt
+      label: C'est plutôt / Kind of feedback
       options:
-        - Une idée
-        - Un bug
-        - Trop dur, trop facile ou trop long
-        - Autre chose
+        - Une idée / An idea
+        - Un bug / A bug
+        - Trop dur, trop facile ou trop long / Too hard, too easy or too long
+        - Autre chose / Something else
     validations:
       required: true
   - type: textarea
     id: message
     attributes:
-      label: Ton avis
-      description: Ce que tu as vécu, ce que tu attendais, ce que tu changerais.
+      label: Ton avis / Your feedback
+      description: Ce que tu as vécu, ce que tu attendais, ce que tu changerais. / What you experienced, what you expected, what you would change.
     validations:
       required: true
   - type: textarea
     id: context
     attributes:
-      label: Contexte de la partie
-      description: Rempli par le jeu. Laisse vide si tu écris depuis GitHub.
+      label: Contexte de la partie / Game context
+      description: Rempli par le jeu. Laisse vide si tu écris depuis GitHub. / Filled in by the game. Leave empty if you write from GitHub.
       render: text

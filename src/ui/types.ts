@@ -51,6 +51,7 @@ export type CreatePortrait = () => ClassPortrait;
 
 export interface LobbySeat {
   playerId: PlayerId;
+  // Empty when the player typed none: the lobby shows `defaultName` in the screen's language.
   name: string;
   classId: string;
   device: DeviceId | null;

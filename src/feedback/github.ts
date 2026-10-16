@@ -21,28 +21,28 @@ export const FEEDBACK_TYPES: readonly FeedbackTypeOption[] = [
     get label() {
       return t('Idée');
     },
-    formOption: 'Une idée',
+    formOption: 'Une idée / An idea',
   },
   {
     id: 'bug',
     get label() {
       return t('Bug');
     },
-    formOption: 'Un bug',
+    formOption: 'Un bug / A bug',
   },
   {
     id: 'balance',
     get label() {
       return t('Équilibrage');
     },
-    formOption: 'Trop dur, trop facile ou trop long',
+    formOption: 'Trop dur, trop facile ou trop long / Too hard, too easy or too long',
   },
   {
     id: 'other',
     get label() {
       return t('Autre');
     },
-    formOption: 'Autre chose',
+    formOption: 'Autre chose / Something else',
   },
 ];
 

@@ -1,4 +1,5 @@
 import { BYSTANDERS } from './bystanders';
+import { DASH } from './dash';
 import { CLASSES } from './classes';
 import { ENEMIES } from './enemies';
 import { FUSIONS } from './fusions';
@@ -18,4 +19,5 @@ export const CONTENT: GameContent = {
   weapons: WEAPONS,
   fusions: FUSIONS,
   rarityWeights: RARITY_WEIGHTS,
+  dash: DASH,
 };

@@ -2,7 +2,7 @@
 
 A co-op survival game set at a psytrance festival. One to four friends defend the main stage's sound system against ever stronger waves of bad vibes, each with their own class, from sunset to sunrise.
 
-**Play the demo: [r4mbo7.github.io/Ozoboom](https://r4mbo7.github.io/Ozoboom/)**. Free, in the browser, no account, nothing to install.
+**Play the demo: [r4mbo7.github.io/Ozoboom](https://r4mbo7.github.io/Ozoboom/)**. Free, in the browser, no account, nothing to install. Also on [itch.io](https://brothercos.itch.io/ozoboom).
 
 ## The demo
 
@@ -27,7 +27,7 @@ To play without the browser bars, add the game to your home screen (Safari: Shar
 
 ## Your feedback
 
-An idea, a bug, a balance issue: the game's "Your feedback" button, or [this form](https://github.com/r4mbo7/Ozoboom/issues/new?template=feedback.yml).
+An idea, a bug, a balance issue: the game's "Your feedback" button, or [this form](https://github.com/r4mbo7/Ozoboom/issues/new?template=feedback.yml). To find a team or talk with other players, join the [Discord](https://discord.gg/YcEGRxaqcu).
 
 ## License
 

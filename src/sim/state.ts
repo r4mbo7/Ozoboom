@@ -61,6 +61,8 @@ export interface WeaponSlot {
   phase: number;
   // Ring of x, y pairs written by the trail module, indexed by tick; `phase` counts the filled pairs.
   trail?: number[];
+  // x, y and the tick it fades at, for each point a dash went through; oldest first.
+  dashTrail?: number[];
 }
 
 export interface PlayerState extends Positioned {
@@ -109,6 +111,11 @@ export interface PlayerState extends Positioned {
   reviveTicks?: number;
   // Only on a player whose class has a gauge; read through `gaugeValue`, written through `setGauge`.
   gauge?: number;
+  // Dashes spent and not back yet, and the beats counted toward the next; absent while all are in.
+  dashesSpent?: number;
+  dashBeats?: number;
+  // The move of each tick of a dash under way, and its ticks left; absent outside a dash.
+  dash?: { dx: number; dy: number; ticksLeft: number };
 }
 
 // The maximum hp is left out: a bonus that ends never takes hp points away.
@@ -373,6 +380,9 @@ export type SimEvent =
   | { type: 'playerHealed'; playerId: PlayerId; amount: number }
   | { type: 'taunted'; playerId: PlayerId; x: number; y: number; radius: number; count: number }
   | { type: 'skillUsed'; playerId: PlayerId }
+  | { type: 'dashed'; playerId: PlayerId; dx: number; dy: number; onBeat?: true }
+  | { type: 'dashEmpty'; playerId: PlayerId }
+  | { type: 'dashBack'; playerId: PlayerId }
   | { type: 'coreHit'; damage: number }
   | { type: 'coreRepaired'; amount: number }
   | { type: 'trapPlaced'; id: EntityId; kind: string; x: number; y: number }

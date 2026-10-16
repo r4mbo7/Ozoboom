@@ -45,8 +45,12 @@ export interface Room {
   dispose(): void;
 }
 
-function cleanName(name: string, playerId: PlayerId): string {
-  return trimPlayerName(name) || `Joueur ${String(playerId + 1)}`;
+export function playerSlot(seat: Seat): PlayerSlot {
+  return {
+    id: seat.playerId,
+    classId: seat.classId,
+    ...(seat.name === '' ? {} : { name: seat.name }),
+  };
 }
 
 export function createRoom(transport: Transport, role: Role, profile: RoomProfile): Room {
@@ -62,7 +66,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
           {
             playerId: 0,
             peer: transport.id,
-            name: cleanName(profile.name, 0),
+            name: trimPlayerName(profile.name),
             classId: knownClass(profile.classId),
           },
         ]
@@ -111,7 +115,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
       seat.peer === peer
         ? {
             ...seat,
-            name: change.name === undefined ? seat.name : cleanName(change.name, seat.playerId),
+            name: change.name === undefined ? seat.name : trimPlayerName(change.name),
             classId: change.classId === undefined ? seat.classId : knownClass(change.classId),
           }
         : seat,
@@ -146,7 +150,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
             {
               playerId,
               peer: from,
-              name: cleanName(message.name, playerId),
+              name: trimPlayerName(message.name),
               classId: knownClass(message.classId),
             },
           ].sort((a, b) => a.playerId - b.playerId);
@@ -262,11 +266,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         throw new Error('the game has already started');
       }
       started = true;
-      const players: PlayerSlot[] = seats.map((seat) => ({
-        id: seat.playerId,
-        classId: seat.classId,
-        name: seat.name,
-      }));
+      const players = seats.map(playerSlot);
       const message: StartMessage = {
         type: 'start',
         seed,

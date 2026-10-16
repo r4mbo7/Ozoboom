@@ -1,27 +1,27 @@
-name: Avis envoyé depuis le jeu
-description: Formulaire pré-rempli par le jeu. Pour écrire directement, utilise « Donner un avis ».
+name: Avis envoyé depuis le jeu / Feedback sent from the game
+description: Formulaire pré-rempli par le jeu. Pour écrire directement, utilise « Donner un avis ». / Form prefilled by the game. To write directly, use "Give feedback".
 title: '[Avis] '
 labels: [feedback, needs-triage, source:in-game]
 body:
   - type: dropdown
     id: type
     attributes:
-      label: C'est plutôt
+      label: C'est plutôt / Kind of feedback
       options:
-        - Une idée
-        - Un bug
-        - Trop dur, trop facile ou trop long
-        - Autre chose
+        - Une idée / An idea
+        - Un bug / A bug
+        - Trop dur, trop facile ou trop long / Too hard, too easy or too long
+        - Autre chose / Something else
     validations:
       required: true
   - type: textarea
     id: message
     attributes:
-      label: Ton avis
+      label: Ton avis / Your feedback
     validations:
       required: true
   - type: textarea
     id: context
     attributes:
-      label: Contexte de la partie
+      label: Contexte de la partie / Game context
       render: text

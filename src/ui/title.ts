@@ -1,4 +1,4 @@
-import type { InputDevice } from '../input/intents';
+import type { InputDevice, MenuIntents } from '../input/intents';
 import { el, fillHint, keycap, setText } from './dom';
 import { formatNumber } from './format';
 import { createActionButton, createFeedbackButton } from './feedback-button';
@@ -14,8 +14,8 @@ import {
   createToggle,
 } from './toggle';
 import { createSoundControl } from './volume';
-import { createLanguageControl } from './language';
-import { locale, t } from '../shared/i18n';
+import { createLanguageControl, createLanguageList } from './language';
+import { type Locale, locale, t } from '../shared/i18n';
 
 export interface TitleActions {
   start(): void;
@@ -26,7 +26,7 @@ export interface TitleActions {
   toggleHitSound(): void;
   toggleAutoFire(): void;
   toggleAutoAim(): void;
-  stepLocale(side: -1 | 1): void;
+  chooseLocale(locale: Locale): void;
   feedback?(): void;
 }
 
@@ -42,6 +42,7 @@ export interface TitleOptions {
 export interface TitleScreen {
   readonly element: HTMLElement;
   readonly menu: Menu;
+  handle(edges: MenuIntents): void;
   setOptions(options: TitleOptions): void;
   setDevice(device: InputDevice): void;
   setVisits(count: number): void;
@@ -153,10 +154,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
   const hitSound = createHitSoundToggle();
   const autoFire = createAutoFireToggle();
   const autoAim = createAutoAimToggle();
-  const language = createLanguageControl((side) => {
-    actions.stepLocale(side);
-  });
-  language.set(locale());
+  const language = createLanguageControl(locale());
 
   const items = [
     play,
@@ -166,7 +164,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
     hitSound.button,
     autoFire.button,
     autoAim.button,
-    language.element,
+    language,
   ];
   if (actions.feedback !== undefined) {
     items.push(createFeedbackButton());
@@ -195,7 +193,16 @@ export function createTitle(actions: TitleActions): TitleScreen {
 
   const body = el('div', 'ui-title__body');
   body.append(header, nav, controls, hint, meta);
-  element.append(body);
+  const languages = createLanguageList(
+    locale(),
+    (next) => {
+      actions.chooseLocale(next);
+    },
+    () => {
+      menu.select(items.indexOf(language));
+    },
+  );
+  element.append(body, languages.element);
 
   const activations = [
     () => {
@@ -220,7 +227,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
       actions.toggleAutoAim();
     },
     () => {
-      actions.stepLocale(1);
+      languages.open();
     },
     () => {
       actions.feedback?.();
@@ -239,10 +246,6 @@ export function createTitle(actions: TitleActions): TitleScreen {
         actions.stepVolume(side);
         return true;
       }
-      if (items[index] === language.element) {
-        actions.stepLocale(side);
-        return true;
-      }
       return false;
     },
   );
@@ -253,6 +256,9 @@ export function createTitle(actions: TitleActions): TitleScreen {
   return {
     element,
     menu,
+    handle(edges) {
+      (languages.isOpen ? languages : menu).handle(edges);
+    },
     follow(position) {
       if (position === null) {
         origin = null;
@@ -279,6 +285,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
         return;
       }
       device = next;
+      languages.setDevice(next);
       const prompts = promptsFor(next);
       setText(controlsTitle, t('Commandes · {device}', { device: prompts.name }));
       controlsList.replaceChildren(

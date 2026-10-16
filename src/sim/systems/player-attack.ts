@@ -9,6 +9,9 @@ export function playerAttack(ctx: StepContext): void {
       delete player.chargeTicks;
       continue;
     }
+    if (player.dash !== undefined) {
+      continue;
+    }
     const { attack } = lookup(ctx.content.classes, player.classId, 'class');
     const input = ctx.commands.get(player.id)?.input ?? IDLE_INPUT;
     attackModule(attack).step(ctx, player, attack, input);

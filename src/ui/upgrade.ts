@@ -22,7 +22,7 @@ import {
 } from './cards';
 import { formatNumber } from './format';
 import { playerLabel } from './hud-model';
-import { classMark, familyIcon, medallion, weaponIcon } from './icons';
+import { classMark, medallion, upgradeIcon, weaponIcon } from './icons';
 import { type Menu, createMenu } from './menu';
 import { type MenuInput, createMenuInput } from './navigation';
 import { promptsFor } from './prompts';
@@ -124,7 +124,9 @@ function card(model: Card): HTMLButtonElement {
     button.dataset.family = model.family;
   }
   const glyph =
-    model.kind === 'upgrade' ? familyIcon(model.family) : weaponIcon(model.weapon.effect);
+    model.kind === 'upgrade'
+      ? upgradeIcon(model.id, model.family)
+      : weaponIcon(model.weapon.effect);
   const familyRow = el('span', 'ui-card__family');
   familyRow.append(el('span', 'ui-card__label', model.label));
   if (model.rarityLabel !== null) {

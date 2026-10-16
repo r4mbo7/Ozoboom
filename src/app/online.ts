@@ -1,7 +1,13 @@
 import { generateCode, hostPeerId, joinHash, normalizeCode } from '../net/code';
 import { createGuestSource, createHostSource, type LockstepSource } from '../net/lockstep';
 import { createPeerTransport, type PeerTransport } from '../net/peerjs';
-import { createRoom, type RefusalReason, type Room, type StartMessage } from '../net/room';
+import {
+  createRoom,
+  playerSlot,
+  type RefusalReason,
+  type Room,
+  type StartMessage,
+} from '../net/room';
 import type { PeerId, Role, Seat } from '../net/types';
 import { t } from '../shared/i18n';
 import type { PlayerId } from '../sim/state';
@@ -491,11 +497,7 @@ export function createOnline(env: OnlineEnv): Online {
         seed: crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
         setId: room.setId ?? env.stageId(),
         trackId: env.trackId(),
-        players: present.map((seat) => ({
-          id: seat.playerId,
-          classId: seat.classId,
-          name: seat.name,
-        })),
+        players: present.map(playerSlot),
         ...(room.endless ? { endless: true } : {}),
       };
       for (const seat of present) {

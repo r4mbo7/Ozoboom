@@ -100,6 +100,7 @@ export function mergeFrames(
         fire: held('fire'),
         skill: held('skill'),
         placeTrap: pressed('placeTrap'),
+        dash: pressed('dash'),
         nextTrap: pressed('nextTrap'),
         previousTrap: pressed('previousTrap'),
         selectTrap: selectedTrap(keyboardMouse.presses, gamepad.presses, touch.presses),

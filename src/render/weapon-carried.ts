@@ -9,6 +9,8 @@ import { ViewPool } from './views';
 
 const TRAIL_DOTS = 14;
 const TRAIL_SAMPLE_TICKS = 3;
+// Points a fused monocycle keeps of the ways of its dashes: a few dashes' worth.
+const DASH_DOTS = 24;
 
 // The wheel and the trail of the monocycle, which have no shot to hang on. The action bar shows
 // what else a festivalier carries.
@@ -22,12 +24,19 @@ export function createCarried(ctx: RenderContext, kit: WeaponKit): Pick<Family, 
       hide(...dots);
     },
   );
+  const dashTrails = new ViewPool<readonly Sprite[]>(
+    () => Array.from({ length: DASH_DOTS }, () => add(layers.fx, t.halo)),
+    (dots) => {
+      hide(...dots);
+    },
+  );
 
   return {
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette } = frame;
       wheels.begin();
       trails.begin();
+      dashTrails.begin();
       for (const player of state.players) {
         const slot = player.weapons?.find((candidate) => kit.style(candidate.id).kind === 'trail');
         if (player.downed || slot === undefined) {
@@ -62,9 +71,30 @@ export function createCarried(ctx: RenderContext, kit: WeaponKit): Pick<Family, 
           dot.scale.set((player.radius * 1.5 * (1 - 0.6 * along)) / t.halo.radius);
           dot.alpha = frame.light.haloAlpha * (1 - along) * 1.4;
         });
+        const lasting =
+          look.look.effect.kind === 'trail' ? look.look.effect.dashTrailTicks : undefined;
+        const kept = slot.dashTrail;
+        if (lasting === undefined || kept === undefined) {
+          continue;
+        }
+        // The newest points first: past the pool, the oldest are the ones not drawn.
+        const shown = Math.min(DASH_DOTS, kept.length / 3);
+        dashTrails.acquire(player.id).forEach((dot, index) => {
+          const at = (kept.length / 3 - 1 - index) * 3;
+          dot.visible = index < shown;
+          if (!dot.visible) {
+            return;
+          }
+          const left = ((kept[at + 2] ?? 0) - frame.now) / lasting;
+          setTint(dot, mixColor(end, color, left));
+          dot.position.set(kept[at] ?? x, kept[at + 1] ?? y);
+          dot.scale.set((player.radius * 1.3) / t.halo.radius);
+          dot.alpha = frame.light.haloAlpha * Math.max(0, Math.min(1, left)) * 1.2;
+        });
       }
       wheels.end();
       trails.end();
+      dashTrails.end();
     },
   };
 }

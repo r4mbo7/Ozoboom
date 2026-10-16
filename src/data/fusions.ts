@@ -8,4 +8,5 @@ export const FUSIONS: readonly FusionDefinition[] = [
   { weaponId: 'frisbee', upgradeId: 'bonnes-ondes', resultId: 'frisbees-en-passes' },
   { weaponId: 'ruban-arc-en-ciel', upgradeId: 'double-tempo', resultId: 'arc-en-ciel-du-drop' },
   { weaponId: 'monocycle', upgradeId: 'deuxieme-souffle', resultId: 'monocycle-reparateur' },
+  { weaponId: 'monocycle', upgradeId: 'pas-chasse', resultId: 'monocycle-filant' },
 ];

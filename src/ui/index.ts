@@ -13,7 +13,7 @@ import { createNotice } from './notice';
 import { createStagePicker } from './stage';
 import { createSunFollower } from './sun';
 import { createTitle } from './title';
-import { locale, stepLocale, t } from '../shared/i18n';
+import { t } from '../shared/i18n';
 import type { GameContent } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
 import type {
@@ -152,8 +152,8 @@ export function createUi(
       applyOptions();
       callbacks.onToggleAutoAim(autoAim);
     },
-    stepLocale(side) {
-      callbacks.onChooseLocale(stepLocale(locale(), side));
+    chooseLocale(next) {
+      callbacks.onChooseLocale(next);
     },
   });
   const classPicker = createClassPicker(classes, portrait, {
@@ -410,7 +410,7 @@ export function createUi(
       const edges = menuInput.edges(snapshot.menu, snapshot.gameplay.move);
 
       if (screen === 'title') {
-        title.menu.handle(edges);
+        title.handle(edges);
         title.follow(isCalm() ? null : (frame.menuPosition ?? null));
         return;
       }

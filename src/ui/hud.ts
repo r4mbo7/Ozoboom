@@ -13,6 +13,7 @@ import { trapCapacity } from '../sim/stats';
 import { t } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
+import { createDashTile } from './dash-tile';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
 import {
@@ -147,6 +148,8 @@ export function createHud(): Hud {
   skill.root.dataset.touchControl = 'skill';
   skills.append(skill.root);
 
+  const dashTile = createDashTile();
+
   const gauge = section('ui-hud__gauge', t('Jauge'));
   gauge.hidden = true;
   const gaugeRing = el('div', 'ui-gauge__ring');
@@ -164,7 +167,7 @@ export function createHud(): Hud {
   const status = el('div', 'ui-panel ui-hud__status');
   status.append(level, life, gear);
   const actions = el('div', 'ui-panel ui-hud__actions');
-  actions.append(traps, skills, gauge);
+  actions.append(traps, skills, dashTile.section, gauge);
   bar.append(status, actions);
 
   const bracelets = el('div', 'ui-hud__bracelets');
@@ -462,13 +465,13 @@ export function createHud(): Hud {
     }
   }
 
-  function updateLife(player: PlayerState): void {
+  function updateLife(player: PlayerState, team: boolean): void {
     const fraction = ratio(player.hp, player.maxHp);
     setVar(lifeBar, '--fill', String(fraction));
     lifeBar.setAttribute('aria-valuemax', String(player.maxHp));
     lifeBar.setAttribute('aria-valuenow', String(Math.round(player.hp)));
     setText(lifeValue, formatNumber(player.hp));
-    lifeWho.hidden = player.name === undefined;
+    lifeWho.hidden = !team;
     lifeIcon.hidden = !lifeWho.hidden;
     if (!lifeWho.hidden) {
       fillWho(lifeWho, player);
@@ -534,7 +537,7 @@ export function createHud(): Hud {
       vibes: formatNumber(player.vibes),
       next: formatNumber(player.vibesToNextLevel),
     });
-    updateLife(player);
+    updateLife(player, people.team);
 
     selectedTrap = selectTrap(selectedTrap, tiles.length, snapshot.gameplay, previousGameplay);
     previousGameplay = snapshot.gameplay;
@@ -546,6 +549,9 @@ export function createHud(): Hud {
       setVar(skill.root, '--charge', String(skillCharge(player, definition.skill)));
       setFlag(skill.root, 'ready', skillReady);
       setText(skill.status, skillReady ? t('Prête') : t('Recharge'));
+      if (set !== null) {
+        dashTile.update(player, content.dash, snapshot.device, state.tick, setTempo(set));
+      }
       if (definition.gauge !== undefined) {
         updateGauge(player, definition.gauge);
       }

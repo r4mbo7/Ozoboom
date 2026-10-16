@@ -188,26 +188,55 @@
   transform: translateX(20px);
 }
 
-.ui-volume__control,
-.ui-language__control {
+.ui-volume__control {
   gap: 4px;
 }
 
-:is(.ui-volume, .ui-language) .ui-stepper__arrow {
+.ui-volume .ui-stepper__arrow {
   width: 30px;
   height: 30px;
 }
 
-:is(.ui-volume, .ui-language) .ui-stepper__glyph {
+.ui-volume .ui-stepper__glyph {
   width: 18px;
   height: 18px;
 }
 
 .ui-language .ui-toggle__state {
-  min-width: 5em;
   color: var(--texte);
   font-weight: 700;
-  text-align: center;
+}
+
+/* Over a scrolled title, the list stays on the screen. */
+.ui-languages {
+  position: fixed;
+}
+
+.ui-languages__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: min(100%, 360px);
+}
+
+.ui-languages__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.ui-languages__body > .ui-hint {
+  margin-top: 12px;
+}
+
+.ui-languages__check {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--turquoise);
 }
 
 .ui-volume__meter {
@@ -2376,6 +2405,30 @@ svg.ui-title__sun {
   margin: 0;
 }
 
+.ui-dash__pearls {
+  position: absolute;
+  top: 44px;
+  left: 26px;
+  display: flex;
+  gap: 3px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: var(--sol-clair);
+  transform: translateX(-50%);
+}
+
+.ui-dash__pearl {
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid color-mix(in srgb, var(--skill) 55%, transparent);
+  border-radius: 50%;
+}
+
+.ui-dash__pearl[data-on] {
+  border-color: var(--skill);
+  background: var(--skill);
+}
+
 .ui-hud__skills .ui-skill__text {
   align-items: flex-start;
   margin: 0;
@@ -4376,6 +4429,11 @@ svg.ui-title__sun {
   .ui-hud__skills .ui-skill__key {
     top: 26px;
     left: 26px;
+  }
+
+  .ui-dash__pearls {
+    top: 40px;
+    left: 24px;
   }
 }
 

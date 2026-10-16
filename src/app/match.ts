@@ -61,6 +61,7 @@ export interface Match {
 const IDLE_GAMEPLAY = {
   ...IDLE_INPUT,
   placeTrap: false,
+  dash: false,
   nextTrap: false,
   previousTrap: false,
   selectTrap: null,
@@ -94,6 +95,7 @@ export function withoutPresses(snapshot: InputSnapshot): InputSnapshot {
       fire: false,
       skill: false,
       placeTrap: false,
+      dash: false,
       nextTrap: false,
       previousTrap: false,
       selectTrap: null,

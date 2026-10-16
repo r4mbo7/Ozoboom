@@ -1,5 +1,7 @@
 import type {
   ClassDefinition,
+  DashDefinition,
+  GameContent,
   Rarity,
   RarityForm,
   SetDefinition,
@@ -27,6 +29,8 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   trapSlotsAdd: true,
   lootIntervalMul: false,
   lootRadiusMul: false,
+  dashRechargeMul: false,
+  dashChargesAdd: true,
 };
 
 export function statValue(
@@ -58,6 +62,24 @@ export function skillCooldownTicks(
   skill: Pick<SkillDefinition, 'cooldownTicks'>,
 ): number {
   return wholeTicks(statValue(player, 'skillCooldownMul', skill.cooldownTicks));
+}
+
+// How many dashes a player chains, and in how many beats a spent one comes back.
+type Carded = Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts'>;
+
+export function dashCharges(
+  player: Carded,
+  dash: Pick<DashDefinition, 'charges' | 'maxCharges'>,
+): number {
+  return Math.min(dash.maxCharges, statValue(player, 'dashChargesAdd', dash.charges));
+}
+
+export function dashRechargeBeats(
+  player: Carded,
+  dash: Pick<DashDefinition, 'rechargeBeats' | 'minRechargeBeats'>,
+): number {
+  const beats = Math.floor(statValue(player, 'dashRechargeMul', dash.rechargeBeats) + 0.5);
+  return Math.max(dash.minRechargeBeats, beats);
 }
 
 export function trapCapacity(
@@ -109,4 +131,10 @@ export function refreshDerivedStats(
   const previousMaxHp = player.maxHp;
   applyDerivedStats(player, definition);
   player.hp += player.maxHp - previousMaxHp;
+}
+
+// Whether card `id` grows nothing but the dash, for a player who never dashes.
+export function onlyGrowsDash(content: Pick<GameContent, 'upgrades'>, id: string): boolean {
+  const upgrade = content.upgrades.find((candidate) => candidate.id === id);
+  return upgrade?.modifiers.every((modifier) => modifier.stat.startsWith('dash')) === true;
 }

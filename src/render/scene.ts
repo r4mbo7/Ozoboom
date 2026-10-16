@@ -117,6 +117,7 @@ export class Scene implements Renderer {
       ),
       weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
       skillEffects: new Map(content.classes.map((def) => [def.id, def.skill.effect])),
+      dash: content.dash ?? null,
     };
     const traps = createTraps(ctx);
     const enemies = createEnemies(ctx);

@@ -13,6 +13,7 @@ export type Control =
   | 'selectTrap4'
   | 'selectTrap5'
   | 'skill'
+  | 'dash'
   | 'pause'
   | 'menuUp'
   | 'menuDown'
@@ -56,6 +57,8 @@ export const KEY_BINDINGS: Bindings<string> = {
   Digit4: ['selectTrap4'],
   Digit5: ['selectTrap5'],
   KeyE: ['skill'],
+  ShiftLeft: ['dash'],
+  ShiftRight: ['dash'],
   Escape: ['pause', 'back'],
   Enter: ['confirm'],
   NumpadEnter: ['confirm'],
@@ -101,7 +104,7 @@ export const StandardButton = {
 export const GAMEPAD_BUTTON_BINDINGS: Bindings<number> = {
   [StandardButton.RT]: ['fire'],
   [StandardButton.A]: ['placeTrap', 'confirm'],
-  [StandardButton.B]: ['back'],
+  [StandardButton.B]: ['back', 'dash'],
   [StandardButton.LT]: ['skill'],
   [StandardButton.LB]: ['previousTrap'],
   [StandardButton.RB]: ['nextTrap'],

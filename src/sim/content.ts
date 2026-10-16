@@ -1,4 +1,5 @@
 import type {
+  DashDefinition,
   BystanderDefinition,
   ClassDefinition,
   EnemyDefinition,
@@ -28,6 +29,7 @@ export interface ResolvedContent {
   readonly weapons: ReadonlyMap<string, WeaponDefinition>;
   readonly fusions: readonly FusionDefinition[];
   readonly rarityWeights: readonly RarityWeights[];
+  readonly dash: DashDefinition | null;
 }
 
 export function resolveContent(content: GameContent): ResolvedContent {
@@ -41,6 +43,7 @@ export function resolveContent(content: GameContent): ResolvedContent {
     weapons: indexById(content.weapons ?? [], 'weapon'),
     fusions: content.fusions ?? [],
     rarityWeights: content.rarityWeights ?? [],
+    dash: content.dash ?? null,
   };
 
   for (const enemy of content.enemies) {

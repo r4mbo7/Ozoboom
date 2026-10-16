@@ -15,7 +15,9 @@ export type StatKey =
   | 'trapRadiusMul'
   | 'trapSlotsAdd'
   | 'lootIntervalMul'
-  | 'lootRadiusMul';
+  | 'lootRadiusMul'
+  | 'dashRechargeMul'
+  | 'dashChargesAdd';
 
 export interface StatModifier {
   stat: StatKey;
@@ -239,7 +241,15 @@ export type WeaponEffect =
       orbitRadius: number;
       turnsPerBar: number;
     }
-  | { kind: 'trail'; speedMul: number; slowFactor: number; healPerBar: number; lengthTicks: number }
+  | {
+      kind: 'trail';
+      speedMul: number;
+      slowFactor: number;
+      healPerBar: number;
+      lengthTicks: number;
+      // How long the way of each dash stays on the ground, slowing and healing as the trail does.
+      dashTrailTicks?: number;
+    }
   | {
       kind: 'ribbon';
       length: number;
@@ -418,6 +428,20 @@ export interface TeaserDefinition {
   color: string;
 }
 
+// The dash every character has, the same for all (docs/game-design.md, « Le dash »).
+export interface DashDefinition {
+  distance: number;
+  ticks: number;
+  // A spent dash comes back on the beat that completes this many beats, never fewer than the floor.
+  rechargeBeats: number;
+  minRechargeBeats: number;
+  charges: number;
+  maxCharges: number;
+  // A dash this many ticks or fewer from a beat goes `onBeatDistanceMul` further.
+  onBeatTicks: number;
+  onBeatDistanceMul: number;
+}
+
 export interface GameContent {
   classes: readonly ClassDefinition[];
   enemies: readonly EnemyDefinition[];
@@ -428,6 +452,8 @@ export interface GameContent {
   weapons?: readonly WeaponDefinition[];
   fusions?: readonly FusionDefinition[];
   rarityWeights?: readonly RarityWeights[];
+  // Absent, nobody dashes.
+  dash?: DashDefinition;
 }
 
 export type MusicVoiceId =

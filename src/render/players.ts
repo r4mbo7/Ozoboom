@@ -3,6 +3,8 @@ import type { PlayerId, PlayerState, SimEvent, SimState } from '../sim/state';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
+import { DashArc } from './dash-arc';
+import { createDashBursts } from './dash-bursts';
 import { createDrawn } from './drawings';
 import type { Frame } from './frame';
 import { shadowAt } from './ground-sun';
@@ -44,6 +46,7 @@ interface PlayerView {
   readonly lying: Sprite;
   readonly aim: Sprite;
   readonly contour: Sprite;
+  readonly dashArc: DashArc;
 }
 
 interface Moments {
@@ -83,6 +86,7 @@ export function createPlayers(ctx: RenderContext): Family {
       lying: add(bodies, t.looks.poi.downed),
       aim: add(marks, t.aim),
       contour: add(marks, t.contour),
+      dashArc: new DashArc(ground),
     }),
     // A released view forgets its player, so that the next one starts from rest.
     (view) => {
@@ -90,6 +94,7 @@ export function createPlayers(ctx: RenderContext): Family {
       view.moving = 0;
       view.tag.hide();
       view.glow.reset();
+      view.dashArc.reset();
       hide(view.halo, view.shadow, view.lying, view.aim, view.contour);
       for (const look of view.looks.values()) {
         look.hide();
@@ -108,6 +113,12 @@ export function createPlayers(ctx: RenderContext): Family {
     }
     return found;
   }
+
+  const dashBursts = createDashBursts(
+    ctx,
+    spawn,
+    (player) => drawnOf(player.classId).textures.extent * (player.radius / REFERENCE),
+  );
 
   return {
     onEvent(event: SimEvent, state: SimState, frame: Frame): void {
@@ -131,6 +142,13 @@ export function createPlayers(ctx: RenderContext): Family {
           break;
         case 'pickupCollected':
           views.peek(event.playerId)?.glow.collect(state.tick, frame.tempo);
+          break;
+        case 'dashed':
+        case 'dashBack':
+          dashBursts.onEvent(event, state, frame);
+          break;
+        case 'dashEmpty':
+          views.peek(event.playerId)?.dashArc.empty(state.tick);
           break;
         default:
           break;
@@ -187,8 +205,8 @@ export function createPlayers(ctx: RenderContext): Family {
           share,
           revives.burst(player.id, now),
           frame,
+          state.players.length > 1,
         );
-
         const downed = player.downed;
         const bounce = view.glow.place(player, x, y, lookTextures.extent * scale, frame);
         const dt =
@@ -235,6 +253,8 @@ export function createPlayers(ctx: RenderContext): Family {
           input.sinceSkill = now - moment.skill;
           lift = look.place(input);
         }
+
+        view.dashArc.place(player, x, y, color, ctx.dash, frame);
 
         const reach = sun.length * (downed ? 1 : lookTextures.height * 3) + lift * 6 * scale;
         shadow.visible = true;

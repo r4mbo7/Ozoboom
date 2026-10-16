@@ -208,6 +208,7 @@ export function createPortraits(
       textures,
       layers,
       options: { calmMode: false },
+      dash: null,
       classTokens: tokens,
       behaviours: new Map(),
       trapLooks: new Map(),

@@ -2,8 +2,8 @@ import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { MusicTrack } from '../data/types';
 import type { SimEvent } from '../sim/state';
 import type { Cue } from './types';
-import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
-import { beatSeconds, type Anchor } from './clock';
+import { MAIN_TEMPO, type Tempo, barOfTick } from '../shared/tempo';
+import { beatSeconds, timeToTick, type Anchor } from './clock';
 import { chordRootOfBar, keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 import { createVibeArp } from './vibe-arp';
@@ -60,7 +60,10 @@ export type SfxName =
   | 'playerReviving'
   | 'seatTaken'
   | 'seatFreed'
-  | 'launch';
+  | 'launch'
+  | 'dashed'
+  | 'dashEmpty'
+  | 'dashBack';
 
 export interface SfxLimit {
   perFrame: number;
@@ -195,6 +198,9 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     seatTaken: { perFrame: 1, concurrent: 2, seconds: 0.4 },
     seatFreed: { perFrame: 1, concurrent: 2, seconds: 0.4 },
     launch: { perFrame: 1, concurrent: 1, seconds: 1.4 },
+    dashed: { perFrame: 1, concurrent: 2, seconds: 0.2 },
+    dashEmpty: { perFrame: 1, concurrent: 1, seconds: 0.15 },
+    dashBack: { perFrame: 1, concurrent: 2, seconds: 0.25 },
   };
 }
 
@@ -231,6 +237,10 @@ export function sfxOf(
       return event.type;
     case 'pickupCollected':
       return 'vibesCollected';
+    case 'dashed':
+    case 'dashEmpty':
+    case 'dashBack':
+      return event.type;
     case 'skillUsed': {
       const classId = players.find((player) => player.id === event.playerId)?.classId;
       const kind = classId === undefined ? undefined : lookups.skillKindOf?.(classId);
@@ -944,6 +954,38 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
+  // A dash: a short breath of air that rises.
+  dashed: (out, at) => {
+    playNoise(out, at, {
+      gain: 0.12,
+      attack: 0.01,
+      hold: 0.03,
+      release: 0.08,
+      filter: { type: 'bandpass', hz: 1800, q: 1.2 },
+    });
+  },
+  // No dash in hand: a dull knock, low and short.
+  dashEmpty: (out, at, _variant, key) => {
+    playTone(out, at, {
+      wave: 'sine',
+      hz: keyHz(key, 0, 2),
+      gain: 0.16,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.06,
+    });
+  },
+  // A dash back in hand, on the beat: the fifth of the chord of the bar, a light bell.
+  dashBack: (out, at, degree, key) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, degree, 5),
+      gain: 0.07,
+      attack: 0.003,
+      hold: 0.03,
+      release: 0.18,
+    });
+  },
   playerShoved: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
@@ -1220,7 +1262,14 @@ export function createSfx(
           vibes += 1;
           progress = levelProgress(players.find((player) => player.id === event.playerId));
         } else if (name !== null && limiter.tryAcquire(name, now)) {
-          VOICES[name](out, now, variantOf(event, core, enemies), key);
+          const variant =
+            event.type === 'dashBack'
+              ? chordRootOfBar(
+                  key.chords,
+                  clock === null ? 0 : barOfTick(timeToTick(clock, now), tempo),
+                ) + 4
+              : variantOf(event, core, enemies);
+          VOICES[name](out, now, variant, key);
         }
       }
       const note = arp.collect(vibes, now, tempo, clock);

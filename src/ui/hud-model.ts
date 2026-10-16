@@ -14,6 +14,7 @@ import { gaugeValue } from '../sim/gauges';
 import { skillCooldownTicks } from '../sim/stats';
 import { trapAt } from '../sim/systems/traps';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
+import { defaultName } from './lobby-model';
 import type { UiFrame } from './types';
 
 export function skillCharge(
@@ -59,7 +60,7 @@ export function classToken(classId: string): PaletteToken {
 }
 
 export function playerLabel(player: Pick<PlayerState, 'id' | 'name'>): string {
-  return player.name ?? t('Joueur {number}', { number: formatNumber(player.id + 1) });
+  return player.name ?? defaultName(player.id);
 }
 
 export interface Roster {
