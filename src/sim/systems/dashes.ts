@@ -58,7 +58,7 @@ export function dashes(ctx: StepContext): void {
   }
 }
 
-// A dash shakes off the Collant and the sigh of the Méprisant, and no other slow.
+// A dash shakes off the Collant and the bottle of the Méprisant, and no other slow.
 function shakeOff({ state, tempo }: StepContext, player: PlayerState): void {
   for (const enemy of state.enemies) {
     if (enemy.clingingTo === player.id) {

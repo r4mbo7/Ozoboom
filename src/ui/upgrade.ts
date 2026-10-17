@@ -1,6 +1,6 @@
 import type { GameContent } from '../data/types';
 import type { InputDevice, InputSnapshot } from '../input/intents';
-import { t } from '../shared/i18n';
+import { direction, t, tn } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
 import { setOf, setTempo } from '../sim/lineup';
 import type { PlayerId, PlayerState, SimState, UpgradeOffer } from '../sim/state';
@@ -78,10 +78,12 @@ function stripLabel({ steps, everyBars }: WeaponCard): string {
   }
   const fired = steps.flatMap((on, step) => (on ? [formatNumber(step + 1)] : [])).join(', ');
   return everyBars > 1
-    ? t('Tire sur les doubles croches {steps}, une mesure sur {bars}', {
-        steps: fired,
-        bars: formatNumber(everyBars),
-      })
+    ? tn(
+        everyBars,
+        'Tire sur les doubles croches {steps}, une mesure sur {bars}',
+        'Tire sur les doubles croches {steps}, une mesure sur {bars}',
+        { steps: fired, bars: formatNumber(everyBars) },
+      )
     : t('Tire sur les doubles croches {steps}', { steps: fired });
 }
 
@@ -309,9 +311,10 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       return;
     }
     const at = buttons.indexOf(picked);
+    const rtl = direction() === 'rtl';
     buttons.forEach((button, index) => {
       if (button !== picked) {
-        button.dataset.dropped = index < at ? 'left' : 'right';
+        button.dataset.dropped = index < at !== rtl ? 'left' : 'right';
       }
     });
     picked.dataset.slammed = '';
@@ -384,12 +387,17 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
 
   function deal(): void {
     opensAt = clock + MENU_GRACE_MS;
+    const side = direction() === 'rtl' ? -1 : 1;
     later = dealOf(models.map((model) => model.tint)).map((dealt, turn) => {
       const button = buttons[dealt.index];
       if (button !== undefined) {
         button.dataset.dealt = '';
         setVar(button, '--deal', `${String(dealt.delayMs)}ms`);
-        setVar(button, '--tilt', `${String((dealt.index - (buttons.length - 1) / 2) * 5)}deg`);
+        setVar(
+          button,
+          '--tilt',
+          `${String(side * (dealt.index - (buttons.length - 1) / 2) * 5)}deg`,
+        );
       }
       return {
         at: clock + dealt.delayMs + DEAL_NOTE_MS,
@@ -489,6 +497,10 @@ function chip(model: WaitChip): HTMLElement {
   return node;
 }
 
+// The relics a boss drops wait for its farewell, drawn by the renderer over the frozen game: it
+// smiles, bursts into colors and lets its relics float before the cards come.
+export const RELIC_HOLD_BEATS = 5;
+
 export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
   const element = el('section', 'ui-screen ui-overlay ui-upgrade');
   element.setAttribute('aria-label', t('Choix d’amélioration'));
@@ -521,6 +533,7 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
   let later: Later[] = [];
   let lit: HTMLElement[] = [];
   let closesAt: number | null = null;
+  let heldUntil = Number.NEGATIVE_INFINITY;
 
   function panelOf(playerId: PlayerId): Panel {
     let panel = panels.get(playerId);
@@ -546,6 +559,7 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
   function hide(): void {
     shut();
     later = [];
+    heldUntil = Number.NEGATIVE_INFINITY;
     for (const spot of lit) {
       delete spot.dataset.landed;
     }
@@ -553,8 +567,9 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
     effects.replaceChildren();
   }
 
+  // Each card lands with its own sound, even when a slow frame lands two at once.
   function land(spot: HTMLElement, now: number, beatMs: number): void {
-    heard.cue('cardLanded', 0);
+    host.cue('cardLanded', 0);
     spot.dataset.landed = '';
     lit.push(spot);
     later.push({
@@ -639,7 +654,11 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
       setVar(effects, '--beat', beat);
       later = runDue(later, now);
 
-      const offers = state.status === 'choosingUpgrade' ? state.pendingUpgrades : [];
+      if (state.events.some((event) => event.type === 'relicOffered')) {
+        heldUntil = now + RELIC_HOLD_BEATS * beatMs;
+      }
+      const offers =
+        state.status === 'choosingUpgrade' && now >= heldUntil ? state.pendingUpgrades : [];
       if (closesAt !== null && (offers.length > 0 || now >= closesAt)) {
         shut();
       }

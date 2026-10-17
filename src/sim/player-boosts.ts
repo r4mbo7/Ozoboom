@@ -1,4 +1,4 @@
-import { lookup } from './content';
+import { lookup } from './lookup';
 import type { BoostModifier, PlayerState } from './state';
 import { applyDerivedStats } from './stats';
 import type { StepContext } from './systems/types';

@@ -10,7 +10,10 @@ function format(digits: number, value: number): string {
   const key = `${locale()}:${String(digits)}`;
   let numbers = formats.get(key);
   if (numbers === undefined) {
-    numbers = new Intl.NumberFormat(locale(), { maximumFractionDigits: digits });
+    numbers = new Intl.NumberFormat(locale(), {
+      maximumFractionDigits: digits,
+      numberingSystem: 'latn',
+    });
     formats.set(key, numbers);
   }
   return numbers.format(value);

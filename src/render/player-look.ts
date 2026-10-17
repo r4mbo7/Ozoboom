@@ -59,8 +59,8 @@ export interface Look {
   // Returns how high the player is lifted, 0 on the ground, for the shadow.
   place(input: LookInput): number;
   hide(): void;
-  // A new player takes this view: forget the springs of the previous one.
-  reset(): void;
+  // A new player takes this view: forget the springs of the previous one, if any.
+  reset?(): void;
 }
 
 export type Spawn = (frame: Frame, spec: BurstSpec) => void;

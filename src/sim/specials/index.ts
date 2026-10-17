@@ -6,7 +6,7 @@ import { dazzle } from './dazzle';
 import { frontGuard } from './front-guard';
 import { revive } from './revive';
 import { shove } from './shove';
-import { sigh } from './sigh';
+import { bottle } from './bottle';
 import { steal, stealSteering } from './steal';
 import { suppress } from './suppress';
 import type { SpecialModule, SteeringTarget } from './types';
@@ -14,7 +14,7 @@ import { yawn } from './yawn';
 
 export const SPECIALS: Record<SpecialEffect['kind'], SpecialModule> = {
   shove,
-  sigh,
+  bottle,
   cling,
   suppress,
   steal,

@@ -132,7 +132,11 @@ function candidates(
       pool.push({ id: upgrade.id, weight: 1 });
     }
   }
+  const excluded = content.classes.get(player.classId)?.excludedWeaponIds;
   for (const weapon of content.weapons.values()) {
+    if (excluded?.includes(weapon.id) === true) {
+      continue;
+    }
     if (openFusion(weapon, player, state, content) !== undefined) {
       pool.push({ id: weapon.id, weight: FUSION_WEIGHT });
     } else if (isWeaponOffered(weapon, player, state, set)) {

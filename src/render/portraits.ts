@@ -8,7 +8,7 @@ import { checkDrawings } from './drawings';
 import type { Family, RenderContext } from './context';
 import { type Frame, createFrame } from './frame';
 import { type Layers, applyLight, createLayers } from './layers';
-import { emptyState, portraitEvents, standing } from './portrait-state';
+import { emptyState, portraitEvents, portraitPixels, standing } from './portrait-state';
 import { beatEnvelope } from './motion';
 import { classTokens, writePixiPalette } from './palette';
 import { createPlayers } from './players';
@@ -136,9 +136,12 @@ export function createPortraits(
 
   function draw(view: View, renderer: PixiRenderer, now: number): void {
     const { canvas, frame, layers, state } = view;
-    const ratio = Math.min(window.devicePixelRatio, 2);
-    const width = Math.min(MAX_PIXELS, Math.round(canvas.clientWidth * ratio));
-    const height = Math.min(MAX_PIXELS, Math.round(canvas.clientHeight * ratio));
+    const { width, height } = portraitPixels(
+      canvas.clientWidth,
+      canvas.clientHeight,
+      window.devicePixelRatio,
+      MAX_PIXELS,
+    );
     const target = canvas.getContext('2d');
     if (width === 0 || height === 0 || target === null) {
       return;
@@ -217,6 +220,7 @@ export function createPortraits(
       speakerLooks: new Map(),
       weaponLooks: new Map(),
       skillEffects,
+      attacks: new Map(),
     };
     const first = classes[0];
     if (first === undefined) {
@@ -224,6 +228,7 @@ export function createPortraits(
     }
     const state = emptyState(standing(first), VIEW_UNITS);
     const frame = createFrame();
+    frame.portrait = true;
     frame.fraction = NIGHT;
     frame.light = light;
     writePixiPalette(frame.palette, palette);

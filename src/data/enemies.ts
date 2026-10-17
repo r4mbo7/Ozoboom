@@ -38,9 +38,9 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   {
     id: 'meprisant',
     name: 'Le Méprisant',
-    description: 'Il reste loin et souffle des soupirs qui ralentissent qui les reçoit.',
+    description: 'Il reste loin et balance des bouteilles qui ralentissent qui les reçoit.',
     behaviour: 'shooter',
-    maxHp: 24,
+    maxHp: 15,
     speed: 1.8,
     radius: 11,
     damage: 5,
@@ -48,8 +48,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
     aggroRadius: 220,
     vibesDrop: 2,
     scalingPerPhrase: GROWING,
-    ranged: { projectileSpeed: 7, projectileRadius: 5, rangeTicks: 50, keepDistance: 260 },
-    special: { kind: 'sigh', slowFactor: 0.5, durationTicks: 2 * TICKS_PER_BAR },
+    ranged: { projectileSpeed: 7, projectileRadius: 5, rangeTicks: 30, keepDistance: 120 },
+    special: { kind: 'bottle', slowFactor: 0.5, durationTicks: 2 * TICKS_PER_BAR },
   },
   {
     id: 'male-alpha',

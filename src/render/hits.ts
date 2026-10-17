@@ -80,7 +80,7 @@ export function createHits(
       tint,
       peak: calm ? 0.5 : 0.9,
     });
-    if (calm) {
+    if (calm || enemies.poseOf(hit.id)?.boss === true) {
       return;
     }
     for (let index = 0; index < SHARDS; index += 1) {

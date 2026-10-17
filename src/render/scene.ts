@@ -1,5 +1,5 @@
 import { Container, type Renderer as PixiRenderer } from 'pixi.js';
-import type { SetDefinition, SpecialEffect } from '../data/types';
+import type { SetDefinition } from '../data/types';
 import type { Arena, SimEvent, SimState, Vec2 } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
@@ -12,9 +12,12 @@ import {
   isSettled,
   screenToWorld,
 } from './camera';
+import { ShowClock, isBossLanding } from './boss-moments';
+import { createBatterieAPlat } from './batterie';
 import { createBystanders } from './bystanders';
-import type { Family, RenderContent, RenderContext } from './context';
+import { type Family, type RenderContent, createRenderContext } from './context';
 import { createCore } from './core';
+import { createCouvreFeu } from './couvre-feu';
 import { createClassEffects } from './class-effects';
 import { createDropTrails } from './drop-trails';
 import { createEffects } from './effects';
@@ -27,7 +30,6 @@ import { createGroundWaves } from './ground-waves';
 import { type Layers, applyLight, createLayers } from './layers';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { checkDrawings } from './drawings';
-import { classTokens } from './palette';
 import { createBombs } from './bombs';
 import { createLoots } from './loots';
 import { createPickupBursts } from './pickup-bursts';
@@ -70,6 +72,7 @@ export class Scene implements Renderer {
   private lastState: SimState | null = null;
   private lastTick = -1;
   private readonly flashLimiter = new FlashLimiter();
+  private readonly showClock = new ShowClock();
   private beatTick = Number.NEGATIVE_INFINITY;
   private shakeTick = Number.NEGATIVE_INFINITY;
   private readonly focus = { x: 0, y: 0 };
@@ -96,29 +99,7 @@ export class Scene implements Renderer {
     this.frame.resolution = pixi.resolution;
     this.dropTrails = createDropTrails(pixi, this.layers);
 
-    const ctx: RenderContext = {
-      textures: this.textures,
-      layers: this.layers,
-      options: this.options,
-      classTokens: classTokens(content.classes),
-      behaviours: new Map(content.enemies.map((def) => [def.id, def.behaviour])),
-      trapLooks: new Map(content.traps.map((def) => [def.id, def])),
-      specials: new Map(
-        content.enemies.flatMap((def): [string, SpecialEffect][] =>
-          def.special === undefined ? [] : [[def.id, def.special]],
-        ),
-      ),
-      helpTicks: new Map((content.bystanders ?? []).map((def) => [def.id, def.helpTicks])),
-      speakerLooks: new Map(
-        content.sets.map((set) => [
-          set.id,
-          new Map((set.speakers ?? []).map((def) => [def.id, def])),
-        ]),
-      ),
-      weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
-      skillEffects: new Map(content.classes.map((def) => [def.id, def.skill.effect])),
-      dash: content.dash ?? null,
-    };
+    const ctx = createRenderContext(this.textures, this.layers, this.options, content);
     const traps = createTraps(ctx);
     const enemies = createEnemies(ctx);
     this.families = [
@@ -138,6 +119,8 @@ export class Scene implements Renderer {
         enemies.burst(x, y, id, frame);
       }),
       createWounds(ctx, (id) => enemies.poseOf(id)),
+      createCouvreFeu(ctx, (id) => enemies.poseOf(id)),
+      createBatterieAPlat(ctx, (id) => enemies.poseOf(id)),
       createSpecials(ctx),
       createProjectiles(ctx),
       ...FULL_FAMILIES.map((create) => create(ctx)),
@@ -160,12 +143,14 @@ export class Scene implements Renderer {
       this.lastTick = -1;
       this.beatTick = this.shakeTick = this.frame.flashTick = Number.NEGATIVE_INFINITY;
       this.cameraNow = Number.NaN;
+      this.showClock.reset();
       for (const family of this.families) {
         family.reset?.();
       }
     }
     const { frame, layers } = this;
     advanceFrame(frame, lookup(this.sets, state.setId, 'set'), state, alpha);
+    frame.show = this.showClock.read(frame.now, state.status === 'running', performance.now());
     frame.calm = this.options.calmMode;
     applyLight(layers, frame);
     layers.glow.alpha = frame.calm ? CALM.glowAlpha : 1;
@@ -264,7 +249,7 @@ export class Scene implements Renderer {
     const { tick } = state;
     if (event.type === 'beat') {
       this.beatTick = tick;
-    } else if (event.type === 'bombExploded') {
+    } else if (event.type === 'bombExploded' || isBossLanding(event, state)) {
       this.shakeTick = tick;
     } else if (event.type === 'coreHit' && this.flashLimiter.tryStart(tick)) {
       this.frame.flashTick = this.shakeTick = tick;

@@ -1,5 +1,6 @@
 import type { GameplayIntents, MenuIntents } from '../input/intents';
 import type { Vec2 } from '../sim/state';
+import { type Direction, direction } from '../shared/i18n';
 
 export const NO_MENU_INTENTS: Readonly<MenuIntents> = {
   up: false,
@@ -66,9 +67,18 @@ export function createMenuInput(): MenuInput {
       waiting = eachIntent((intent) => held[intent] && (menu[intent] || pushed[intent]));
       const started = menuEdges(menu, previous);
       previous = menu;
-      return eachIntent((intent) => started[intent] && !waiting[intent]);
+      return readingEdges(
+        eachIntent((intent) => started[intent] && !waiting[intent]),
+        direction(),
+      );
     },
   };
+}
+
+// Menus read `left` and `right` as a step back or forward along their rows. A right-to-left
+// language lays those rows out from the right, so a push to the right steps back.
+export function readingEdges(edges: MenuIntents, reading: Direction): MenuIntents {
+  return reading === 'rtl' ? { ...edges, left: edges.right, right: edges.left } : edges;
 }
 
 export interface MenuStep {

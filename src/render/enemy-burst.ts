@@ -8,8 +8,19 @@ import type { Textures } from './textures';
 const TAU = Math.PI * 2;
 const COLORS: readonly PaletteToken[] = ['mage', 'tank', 'healer', 'or', 'turquoise'];
 
+export const BOSS_BURST = 28;
+
 export interface Burst {
-  burst(x: number, y: number, id: number, boss: boolean, now: number, frame: Frame): void;
+  // `count` shards fly off a boss: fewer in calm mode.
+  burst(
+    x: number,
+    y: number,
+    id: number,
+    boss: boolean,
+    now: number,
+    frame: Frame,
+    count?: number,
+  ): void;
   update(now: number): void;
   clear(): void;
 }
@@ -19,8 +30,7 @@ export function createBurst(layers: Layers, textures: Textures): Burst {
   const shards = new Particles(layers.fx, textures.shard, 600);
   const puffs = new Particles(layers.fx, textures.halo, 96);
   return {
-    burst(x, y, id, boss, now, frame) {
-      const count = boss ? 28 : 12;
+    burst(x, y, id, boss, now, frame, count = boss ? BOSS_BURST : 12) {
       const reach = boss ? 140 : 42;
       const offset = (id * 0.618) % 1;
       for (let index = 0; index < count; index += 1) {

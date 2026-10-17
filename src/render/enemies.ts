@@ -1,6 +1,7 @@
 import { Container, Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
 import type { SimEvent, SimState } from '../sim/state';
+import { createBossStage } from './bosses';
 import type { Family, RenderContext } from './context';
 import { Farewells, type FarewellHooks } from './enemy-deaths';
 import { createBurst } from './enemy-burst';
@@ -14,8 +15,9 @@ import { ViewPool } from './views';
 import { mixColor } from './weapon-kit';
 
 const TAU = Math.PI * 2;
-// A mask leans toward its heading, never turns upside down: a face stays readable at 16 pixels.
+// A mask leans toward its heading, never upside down, readable at 16 pixels; a heavy boss barely.
 const LEAN = 0.5;
+const BOSS_LEAN = 0.12;
 const POP = 0.18;
 const FLAT = 0.6;
 const BEAT_SWELL = 0.05;
@@ -32,6 +34,9 @@ export interface EnemyPose {
   readonly y: number;
   readonly tilt: number;
   readonly radius: number;
+  readonly boss: boolean;
+  // The mask as drawn this frame: its position carries the step, its scale the squash.
+  readonly sprite: Sprite;
 }
 
 interface EnemyView {
@@ -69,11 +74,12 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
   const { masks } = textures;
   const maskOf = picker(masks.masks, masks.neutral, warnUnknown);
 
+  const bosses = createBossStage(ctx);
   const bodies = new Container();
   const guards = new Container();
   const smiles = new Container();
   const sleepers = new Container();
-  layers.enemies.addChild(bodies, guards, smiles, sleepers);
+  layers.enemies.addChild(bosses.under, bodies, bosses.over, guards, smiles, sleepers);
 
   const views = new ViewPool<EnemyView>(
     () => ({
@@ -132,12 +138,6 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
     glint.alpha = strength;
   }
 
-  function lower(view: EnemyView): void {
-    for (const z of view.zs ?? []) {
-      z.visible = false;
-    }
-  }
-
   function tintOf(palette: PixiPalette, tone: { token: PaletteToken; amount: number } | undefined) {
     return tone === undefined
       ? palette.badVibeRim
@@ -145,23 +145,24 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
   }
 
   let latest: Frame = createFrame();
+  const hideSprite = (sprite: Sprite): void => {
+    sprite.visible = false;
+  };
   const hooks: FarewellHooks<Sprite> = {
     show(farewell, smile, fade) {
       const sprite = farewell.view;
-      const shape = farewell.boss ? masks.bossSmile : masks.smile;
-      sprite.texture = shape.texture;
+      sprite.texture = masks.smile.texture;
       sprite.visible = true;
       setTint(sprite, latest.palette[farewell.token]);
       sprite.position.set(farewell.x, farewell.y);
-      sprite.scale.set((farewell.radius / shape.radius) * (1 + POP * Math.sin(smile * Math.PI)));
+      const pop = 1 + POP * Math.sin(smile * Math.PI);
+      sprite.scale.set((farewell.radius / masks.smile.radius) * pop);
       sprite.rotation = farewell.tilt;
       sprite.alpha = 1 - fade;
     },
-    hide(sprite) {
-      sprite.visible = false;
-    },
+    hide: hideSprite,
     burst(farewell) {
-      colors.burst(farewell.x, farewell.y, farewell.id, farewell.boss, latest.now, latest);
+      colors.burst(farewell.x, farewell.y, farewell.id, false, latest.now, latest);
     },
   };
 
@@ -187,6 +188,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       const downTint = mixColor(palette.badVibeRim, DOWN_GRAY, DOWN_MIX);
       const guardTint = mixColor(palette.texte, DOWN_GRAY, GUARD_GRAY);
       views.begin();
+      bosses.begin();
       for (const enemy of state.enemies) {
         const mask = maskOf(enemy.kind);
         const view = views.acquire(enemy.id);
@@ -199,12 +201,10 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         const asleep = !down && enemy.stunTicks > 0;
         const { sprite } = view;
         const frames = mask.awake.length;
+        const stagger = enemy.isBoss ? 0 : enemy.id;
+        const loop = mask.face.loopBeats * frame.tempo.ticksPerBeat;
         const index =
-          frames === 1 || calm
-            ? 0
-            : Math.floor(
-                (frame.now / (mask.face.loopBeats * frame.tempo.ticksPerBeat)) * frames + enemy.id,
-              ) % frames;
+          frames === 1 || calm ? 0 : Math.floor((frame.now / loop) * frames + stagger) % frames;
         sprite.texture = down
           ? mask.down
           : asleep
@@ -222,11 +222,16 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         const x = (view.x = held ? view.x : lerp(enemy.prevX, enemy.x, alpha));
         const y = (view.y = held ? view.y : lerp(enemy.prevY, enemy.y, alpha));
         sprite.position.set(x, y);
-        const size = (enemy.radius / mask.radius) * (down ? 1 : 1 + BEAT_SWELL * frame.pulse);
+        const swell = down || enemy.isBoss ? 1 : 1 + BEAT_SWELL * frame.pulse;
+        const size = (enemy.radius / mask.radius) * swell;
         sprite.scale.set(size, down ? size * FLAT : size);
-        sprite.rotation = view.tilt = down ? 0 : LEAN * Math.cos(view.heading);
+        const lean = enemy.isBoss ? BOSS_LEAN : LEAN;
+        sprite.rotation = view.tilt = down ? 0 : lean * Math.cos(view.heading);
         view.radius = enemy.radius;
         view.boss = enemy.isBoss;
+        if (enemy.isBoss) {
+          bosses.dress(enemy, mask, sprite, frame);
+        }
         const shine = down ? 0 : glintAlpha(frame.now, view.glintStart, calm);
         if (shine > 0) {
           guard(view, x, y, shine, guardTint);
@@ -238,16 +243,18 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         } else if (mask.face.drowsy === true && !down) {
           dreams(view, x, y, 0.45, frame);
         } else {
-          lower(view);
+          hide(...(view.zs ?? []));
         }
       }
       views.end();
-
+      bosses.update(state, frame);
       latest = frame;
       farewells.update(frame.now, calm, hooks);
       colors.update(frame.now);
     },
     onEvent(event: SimEvent, state: SimState, frame: Frame): void {
+      const hitRadius = event.type === 'enemyHit' ? views.peek(event.id)?.radius : undefined;
+      bosses.onEvent(event, state, frame, hitRadius);
       const guarded = frontGlintOf(event);
       if (guarded !== undefined) {
         const view = views.peek(guarded);
@@ -257,15 +264,17 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         return;
       }
       if (event.type === 'recruited') {
-        farewells.cancel(event.id, (sprite) => {
-          sprite.visible = false;
-        });
+        farewells.cancel(event.id, hideSprite);
         return;
       }
       if (event.type !== 'enemyDied') {
         return;
       }
       const view = views.peek(event.id);
+      if (ctx.behaviours.get(event.kind) === 'boss') {
+        bosses.farewell(event, view, state, frame);
+        return;
+      }
       const killer = event.byPlayer === null ? undefined : byId(state.players, event.byPlayer);
       farewells.start({
         id: event.id,
@@ -274,18 +283,16 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         y: event.y,
         radius: view?.radius ?? 10,
         tilt: view === undefined ? 0 : LEAN * Math.cos(view.heading),
-        boss: view?.boss ?? false,
         token: (killer && ctx.classTokens.get(killer.classId)) ?? 'or',
       });
     },
     reset(): void {
-      const hideSprite = (sprite: Sprite) => {
-        sprite.visible = false;
-      };
       farewells.clear(hideSprite);
       colors.clear();
+      bosses.reset();
     },
     destroy(): void {
+      bosses.destroy();
       layers.enemies.destroy({ children: true });
     },
   };

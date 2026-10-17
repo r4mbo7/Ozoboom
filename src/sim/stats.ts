@@ -19,11 +19,13 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   pickupRadiusMul: false,
   damageMul: false,
   attackCooldownMul: false,
+  attackRadiusMul: false,
   projectileSpeedMul: false,
   projectileCountAdd: true,
   pierceAdd: true,
   skillCooldownMul: false,
   skillPowerMul: false,
+  skillRadiusMul: false,
   trapDamageMul: false,
   trapRadiusMul: false,
   trapSlotsAdd: true,
@@ -31,6 +33,7 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   lootRadiusMul: false,
   dashRechargeMul: false,
   dashChargesAdd: true,
+  weaponRateMul: false,
 };
 
 export function statValue(
@@ -137,4 +140,12 @@ export function refreshDerivedStats(
 export function onlyGrowsDash(content: Pick<GameContent, 'upgrades'>, id: string): boolean {
   const upgrade = content.upgrades.find((candidate) => candidate.id === id);
   return upgrade?.modifiers.every((modifier) => modifier.stat.startsWith('dash')) === true;
+}
+
+// Whether a form of an upgrade grows nothing but the skill: its card then names the Spéciale.
+export function growsSkillAlone(form: Pick<RarityForm, 'modifiers'>): boolean {
+  return (
+    form.modifiers.length > 0 &&
+    form.modifiers.every((modifier) => modifier.stat.startsWith('skill'))
+  );
 }

@@ -9,7 +9,7 @@ import {
   type StartMessage,
 } from '../net/room';
 import type { PeerId, Role, Seat } from '../net/types';
-import { t } from '../shared/i18n';
+import { t, tn } from '../shared/i18n';
 import type { PlayerId } from '../sim/state';
 import type { LobbyModel, Notice, StageCard, Ui } from '../ui';
 import { formatNumber } from '../ui/format';
@@ -323,9 +323,12 @@ export function createOnline(env: OnlineEnv): Online {
           source?.close();
           interrupt({
             notice: 'connectionLost',
-            details: t('Plus aucun signe de l’hôte depuis {seconds} secondes.', {
-              seconds: formatNumber(HOST_SILENCE_MS / 1000),
-            }),
+            details: tn(
+              HOST_SILENCE_MS / 1000,
+              'Plus aucun signe de l’hôte depuis {seconds} seconde.',
+              'Plus aucun signe de l’hôte depuis {seconds} secondes.',
+              { seconds: formatNumber(HOST_SILENCE_MS / 1000) },
+            ),
           });
         }
       }, WATCH_MS);

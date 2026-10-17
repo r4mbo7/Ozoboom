@@ -1,9 +1,11 @@
 import { Container, type Sprite } from 'pixi.js';
-import type { PlayerId, PlayerState, SimEvent, SimState } from '../sim/state';
+import type { PlayerState, SimEvent, SimState } from '../sim/state';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
 import { DashArc } from './dash-arc';
+import { LifeArc } from './life-arc';
+import { MomentLog } from './player-moments';
 import { createDashBursts } from './dash-bursts';
 import { createDrawn } from './drawings';
 import type { Frame } from './frame';
@@ -47,13 +49,7 @@ interface PlayerView {
   readonly aim: Sprite;
   readonly contour: Sprite;
   readonly dashArc: DashArc;
-}
-
-interface Moments {
-  fired: number;
-  fireCount: number;
-  hit: number;
-  skill: number;
+  readonly lifeArc: LifeArc;
 }
 
 export function createPlayers(ctx: RenderContext): Family {
@@ -64,10 +60,11 @@ export function createPlayers(ctx: RenderContext): Family {
   const marks = layers.players.addChild(new Container());
   const rings = layers.players.addChild(new Container());
   const tags = layers.players.addChild(new Container());
+  const lifeLabels = layers.players.addChild(new Container());
   const revives = new ReviveLog();
   const burster = createBurster(ctx, PLAYER_BURSTS);
   const spawn: Spawn = burster.spawn;
-  const moments = new Map<PlayerId, Moments>();
+  const moments = new MomentLog();
   let beatTick = NEVER;
   let beatIndex = 0;
 
@@ -87,6 +84,7 @@ export function createPlayers(ctx: RenderContext): Family {
       aim: add(marks, t.aim),
       contour: add(marks, t.contour),
       dashArc: new DashArc(ground),
+      lifeArc: new LifeArc(ctx, ground, lifeLabels),
     }),
     // A released view forgets its player, so that the next one starts from rest.
     (view) => {
@@ -95,24 +93,16 @@ export function createPlayers(ctx: RenderContext): Family {
       view.tag.hide();
       view.glow.reset();
       view.dashArc.reset();
+      view.lifeArc.reset();
       hide(view.halo, view.shadow, view.lying, view.aim, view.contour);
       for (const look of view.looks.values()) {
         look.hide();
-        look.reset();
+        look.reset?.();
       }
     },
   );
 
   const input = createLookInput();
-
-  function momentsOf(id: PlayerId): Moments {
-    let found = moments.get(id);
-    if (found === undefined) {
-      found = { fired: NEVER, fireCount: 0, hit: NEVER, skill: NEVER };
-      moments.set(id, found);
-    }
-    return found;
-  }
 
   const dashBursts = createDashBursts(
     ctx,
@@ -129,16 +119,16 @@ export function createPlayers(ctx: RenderContext): Family {
           beatIndex = event.beat;
           break;
         case 'playerFired': {
-          const found = momentsOf(event.playerId);
+          const found = moments.of(event.playerId);
           found.fired = state.tick;
           found.fireCount += 1;
           break;
         }
         case 'playerHit':
-          momentsOf(event.playerId).hit = state.tick;
+          moments.of(event.playerId).hit = state.tick;
           break;
         case 'skillUsed':
-          momentsOf(event.playerId).skill = state.tick;
+          moments.of(event.playerId).skill = state.tick;
           break;
         case 'pickupCollected':
           views.peek(event.playerId)?.glow.collect(state.tick, frame.tempo);
@@ -181,7 +171,6 @@ export function createPlayers(ctx: RenderContext): Family {
           view.looks.set(player.classId, look);
         }
         const { halo, tag, shadow, lying, aim, contour } = view;
-
         const dazzled = (player.dazzledTicks ?? 0) > 0;
         const share = revives.share(player.id, player.downed, now);
         halo.visible = share > 0 || (!player.downed && !((player.suppressedTicks ?? 0) > 0));
@@ -190,17 +179,20 @@ export function createPlayers(ctx: RenderContext): Family {
         halo.scale.set(
           ((player.radius * (dazzled ? 4.6 : 3.2)) / textures.halo.radius) * (1 + 0.1 * pulse),
         );
-        halo.alpha = dazzled ? Math.min(1, light.haloAlpha * 1.6) : light.haloAlpha;
+        const kept = 1 - (frame.drained.players.get(player.id) ?? 0);
+        halo.alpha = (dazzled ? Math.min(1, light.haloAlpha * 1.6) : light.haloAlpha) * kept;
         if (player.downed) {
           halo.scale.set(((player.radius * 2.6) / textures.halo.radius) * (1 + 0.1 * pulse));
-          halo.alpha = light.haloAlpha * 0.8 * share;
+          halo.alpha = light.haloAlpha * 0.8 * share * kept;
         }
 
         tag.place(
           player,
           x,
           y,
-          lookTextures.extent * scale * (player.downed ? 1.3 : 1),
+          player.downed
+            ? lookTextures.extent * scale * 1.3
+            : Math.max(lookTextures.extent * scale, view.lifeArc.extent(player, frame)),
           color,
           share,
           revives.burst(player.id, now),
@@ -231,7 +223,7 @@ export function createPlayers(ctx: RenderContext): Family {
           lying.scale.set(scale * 1.25);
           lying.alpha = 0.6 + 0.4 * pulse;
         } else {
-          const moment = momentsOf(player.id);
+          const moment = moments.of(player.id);
           input.state = state;
           input.player = player;
           input.x = x;
@@ -255,6 +247,7 @@ export function createPlayers(ctx: RenderContext): Family {
         }
 
         view.dashArc.place(player, x, y, color, ctx.dash, frame);
+        view.lifeArc.place(player, x, y, color, now - moments.of(player.id).hit, frame);
 
         const reach = sun.length * (downed ? 1 : lookTextures.height * 3) + lift * 6 * scale;
         shadow.visible = true;
@@ -272,7 +265,7 @@ export function createPlayers(ctx: RenderContext): Family {
           continue;
         }
 
-        aim.visible = true;
+        aim.visible = lookTextures.aimless !== true;
         setTint(aim, color);
         const distance = (lookTextures.extent + 12) * scale;
         aim.position.set(x + player.aim.x * distance, y + player.aim.y * distance);

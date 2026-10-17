@@ -9,6 +9,8 @@ export interface Layers {
   readonly echoes: Container;
   readonly speakers: Container;
   readonly glow: Container;
+  // Darkens the floor before a boss lands.
+  readonly dim: Container;
   readonly enemies: Container;
   readonly enemyShots: Container;
   readonly traps: Container;
@@ -17,6 +19,8 @@ export interface Layers {
   readonly zones: Container;
   readonly bystanders: Container;
   readonly recruits: Container;
+  // A chased boss smiles and bursts above what it dropped.
+  readonly farewells: Container;
   readonly fx: Container;
   readonly shots: Container;
   readonly weapons: Container;
@@ -40,6 +44,7 @@ export function createLayers(stage: Container): Layers {
     echoes: layer(world),
     speakers: layer(world),
     glow: layer(world),
+    dim: layer(world),
     enemies: layer(world),
     enemyShots: layer(world),
     traps: layer(world),
@@ -48,6 +53,7 @@ export function createLayers(stage: Container): Layers {
     zones: layer(world),
     bystanders: layer(world),
     recruits: layer(world),
+    farewells: layer(world),
     fx: layer(world),
     shots: layer(world),
     weapons: layer(world),

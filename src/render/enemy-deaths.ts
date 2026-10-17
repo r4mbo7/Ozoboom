@@ -2,7 +2,6 @@ import type { PaletteToken } from '../shared/palette';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 
 export const SMILE_TICKS = TICKS_PER_BEAT;
-export const BOSS_SMILE_TICKS = 2 * TICKS_PER_BEAT;
 // Calm mode has no burst: after its smile the mask fades.
 export const CALM_FADE_TICKS = TICKS_PER_BEAT;
 
@@ -15,7 +14,6 @@ export interface Farewell<V> {
   y: number;
   radius: number;
   tilt: number;
-  boss: boolean;
   token: PaletteToken;
 }
 
@@ -44,7 +42,6 @@ export class Farewells<V> {
       y: 0,
       radius: 0,
       tilt: 0,
-      boss: false,
       token: 'or',
     }));
   }
@@ -77,15 +74,14 @@ export class Farewells<V> {
       if (!item.live) {
         continue;
       }
-      const smile = item.boss ? BOSS_SMILE_TICKS : SMILE_TICKS;
       const elapsed = now - item.start;
       if (elapsed < 0) {
         item.live = false;
         hooks.hide(item.view);
-      } else if (elapsed < smile) {
-        hooks.show(item, elapsed / smile, 0);
-      } else if (calm && elapsed < smile + CALM_FADE_TICKS) {
-        hooks.show(item, 1, (elapsed - smile) / CALM_FADE_TICKS);
+      } else if (elapsed < SMILE_TICKS) {
+        hooks.show(item, elapsed / SMILE_TICKS, 0);
+      } else if (calm && elapsed < SMILE_TICKS + CALM_FADE_TICKS) {
+        hooks.show(item, 1, (elapsed - SMILE_TICKS) / CALM_FADE_TICKS);
       } else {
         item.live = false;
         hooks.hide(item.view);

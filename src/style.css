@@ -22,6 +22,25 @@
   src: url('/fonts/space-grotesk-variable.woff2') format('woff2');
 }
 
+/* Arabic glyphs only: a page in another language never downloads them. */
+@font-face {
+  font-family: 'Readex Pro';
+  font-style: normal;
+  font-weight: 160 700;
+  font-display: swap;
+  src: url('/fonts/readex-pro-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F;
+}
+
+@font-face {
+  font-family: 'Reem Kufi';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/reem-kufi-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F;
+}
+
 :root {
   --sol: #060a1c;
   --sol-clair: #101a3c;
@@ -35,8 +54,8 @@
   --texte: #f6ecd2;
   --rouge: #ff5a52;
   --beat: 414ms;
-  --font-title: 'Cinzel Decorative', Georgia, serif;
-  --font-body: 'Space Grotesk', system-ui, sans-serif;
+  --font-title: 'Cinzel Decorative', 'Reem Kufi', Georgia, serif;
+  --font-body: 'Space Grotesk', 'Readex Pro', system-ui, sans-serif;
   color-scheme: dark;
 }
 

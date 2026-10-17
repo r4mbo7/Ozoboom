@@ -15,7 +15,7 @@ import {
 } from './toggle';
 import { createSoundControl } from './volume';
 import { createLanguageControl, createLanguageList } from './language';
-import { type Locale, locale, t } from '../shared/i18n';
+import { locale, t, tn, type Locale } from '../shared/i18n';
 
 export interface TitleActions {
   start(): void;
@@ -276,8 +276,9 @@ export function createTitle(actions: TitleActions): TitleScreen {
       autoAim.set(options.autoAim);
     },
     setVisits(count) {
-      const params = { count: formatNumber(count) };
-      const visits = count > 1 ? t('{count} visites', params) : t('{count} visite', params);
+      const visits = tn(count, '{count} visite', '{count} visites', {
+        count: formatNumber(count),
+      });
       setText(meta, `v${__APP_RELEASE__} · ${visits}`);
     },
     setDevice(next) {

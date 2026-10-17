@@ -70,7 +70,8 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
         setTint(halo, color);
         halo.position.set(x, y);
         halo.scale.set((look.radius * 3) / t.halo.radius);
-        halo.alpha = (0.6 + 0.4 * pulse) * light.haloAlpha;
+        halo.alpha =
+          (0.6 + 0.4 * pulse) * light.haloAlpha * (1 - (frame.drained.traps.get(trap.id) ?? 0));
 
         view.reach = trapReach(look.effect, ownerOf(state.players, trap));
         beam.visible = look.effect.kind === 'beam';

@@ -1,4 +1,4 @@
-import { t } from '../shared/i18n';
+import { locale, t } from '../shared/i18n';
 import { createAudioEngine } from '../audio';
 import { EIGHTH_SECONDS } from '../audio/ambience';
 import {
@@ -17,6 +17,7 @@ import { createPortraits, createRenderer } from '../render';
 import { SUN_PALETTES } from '../shared/palette';
 import type { GameMode } from '../shared/stats';
 import { TICK_MS } from '../shared/tempo';
+import { setOf, setTempo } from '../sim/lineup';
 import { parseJoinCode } from '../net/code';
 import { createLocalSource } from '../net/local';
 import { GUEST_BUFFER_TICKS } from '../net/lockstep';
@@ -348,7 +349,6 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   // It darkens to the end screen's night, whatever the time of the set.
   const fade = document.createElement('div');
   fade.className = 'defeat-fade';
-  fade.style.transitionDuration = `${String(endingMs('lost', dev.speed))}ms`;
   fade.style.setProperty('--sol', SUN_PALETTES.nuit.sol);
   fade.style.setProperty('--bad-vibe', SUN_PALETTES.nuit.badVibe);
   root.append(fade);
@@ -590,6 +590,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         mode,
         device: view.merged.device,
         version: __APP_RELEASE__,
+        locale: locale(),
       });
     }
   }
@@ -829,13 +830,11 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     if (screen === 'game' && (status === 'won' || status === 'lost')) {
       online.matchEnded();
       stats.end(session.state, outcomeOf(session.state));
-      endingLeft = endingTicks(status);
-      if (endingLeft === 0) {
-        openEnd();
-      } else {
-        screen = 'ending';
-        fade.classList.add('defeat-fade--on');
-      }
+      const tempo = setTempo(setOf(content, session.state.setId));
+      endingLeft = endingTicks(status, tempo);
+      fade.style.transitionDuration = `${String(endingMs('lost', tempo, dev.speed))}ms`;
+      screen = 'ending';
+      fade.classList.toggle('defeat-fade--on', status === 'lost');
       applySound();
     }
     if (probe !== null) {

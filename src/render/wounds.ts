@@ -19,7 +19,7 @@ interface Wound {
   since: number;
 }
 
-// The cracks a hurt bad vibe wears, laid over its mask where `poseOf` says it was drawn.
+// The cracks a hurt bad vibe wears, bosses aside (`bosses.ts`), laid over its mask where `poseOf` says it was drawn.
 export function createWounds(
   ctx: RenderContext,
   poseOf: (id: EntityId) => EnemyPose | undefined,
@@ -43,7 +43,8 @@ export function createWounds(
     update(state: SimState, _alpha: number, frame: Frame): void {
       views.begin();
       for (const enemy of state.enemies) {
-        const stage = (enemy.downTicks ?? 0) > 0 ? 0 : crackStage(enemy.hp, enemy.maxHp);
+        const stage =
+          enemy.isBoss || (enemy.downTicks ?? 0) > 0 ? 0 : crackStage(enemy.hp, enemy.maxHp);
         const shape = cracks[stage - 1];
         const pose = poseOf(enemy.id);
         if (shape === undefined || pose === undefined) {

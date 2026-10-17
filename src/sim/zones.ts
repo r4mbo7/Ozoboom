@@ -20,6 +20,8 @@ export interface ZonePlacement {
   direction?: Vec2;
   // Multiplies its damage and its heal. Absent means 1.
   power?: number;
+  // Absent, the radius of its definition.
+  radius?: number;
 }
 
 export function layZone(
@@ -39,6 +41,7 @@ export function layZone(
     y: placement.y,
     direction: along.x === 0 && along.y === 0 ? { x: 1, y: 0 } : along,
     power: placement.power ?? 1,
+    radius: placement.radius ?? definition.radius,
     ticksLeft: definition.durationBars * tempo.ticksPerBar,
   };
   laid.push(zone);
@@ -68,7 +71,7 @@ export function zones({ state, content, tempo }: StepContext): void {
     const closing = zone.ticksLeft <= 0 && definition.closeDamage !== undefined;
     for (const enemy of state.enemies) {
       const at = nearestOnAxis(zone, enemy);
-      if (enemy.hp <= 0 || !touches(enemy, at, definition.radius)) {
+      if (enemy.hp <= 0 || !touches(enemy, at, zone.radius)) {
         continue;
       }
       if (definition.slowFactor !== undefined) {
@@ -89,7 +92,7 @@ export function zones({ state, content, tempo }: StepContext): void {
     }
     if (strikes && definition.heal !== undefined) {
       for (const player of state.players) {
-        if (!player.downed && touches(player, nearestOnAxis(zone, player), definition.radius)) {
+        if (!player.downed && touches(player, nearestOnAxis(zone, player), zone.radius)) {
           healPlayer(state, player, definition.heal * power);
         }
       }

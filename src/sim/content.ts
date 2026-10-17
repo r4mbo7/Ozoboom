@@ -18,6 +18,9 @@ import { GAUGES } from './systems/gauges';
 import { SKILLS } from './skills';
 import { SPECIALS } from './specials';
 import { WEAPONS } from './systems/weapons';
+import { lookup } from './lookup';
+
+export { lookup };
 
 export interface ResolvedContent {
   readonly classes: ReadonlyMap<string, ClassDefinition>;
@@ -89,6 +92,14 @@ export function resolveContent(content: GameContent): ResolvedContent {
     for (const weaponId of definition.affinityWeaponIds ?? []) {
       lookup(resolved.weapons, weaponId, `affinity weapon of class "${definition.id}"`);
     }
+    for (const weaponId of definition.excludedWeaponIds ?? []) {
+      lookup(resolved.weapons, weaponId, `excluded weapon of class "${definition.id}"`);
+      if (definition.affinityWeaponIds?.includes(weaponId) === true) {
+        throw new Error(
+          `class "${definition.id}" both favours and excludes the weapon "${weaponId}"`,
+        );
+      }
+    }
     requirePositive(definition.reviveMul, `reviveMul of class "${definition.id}"`);
     if ('knockback' in definition.attack) {
       requireNonNegative(
@@ -159,14 +170,6 @@ export function resolveContent(content: GameContent): ResolvedContent {
   }
 
   return resolved;
-}
-
-export function lookup<T>(table: ReadonlyMap<string, T>, id: string, what: string): T {
-  const entry = table.get(id);
-  if (entry === undefined) {
-    throw new Error(`unknown ${what}: "${id}"`);
-  }
-  return entry;
 }
 
 function circlesOverlap(

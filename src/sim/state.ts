@@ -63,6 +63,10 @@ export interface WeaponSlot {
   trail?: number[];
   // x, y and the tick it fades at, for each point a dash went through; oldest first.
   dashTrail?: number[];
+  // A weapon fired faster than its rhythm (`weaponRateMul`): the share of a shot it has gathered,
+  // and the tick its next ghost shot slips in, on a sixteenth its rhythm leaves free.
+  ghostShare?: number;
+  ghostTick?: number;
 }
 
 export interface PlayerState extends Positioned {
@@ -89,7 +93,7 @@ export interface PlayerState extends Positioned {
   invulnerableTicks?: number;
   // Levels gained whose offer is not drawn yet. Optional so that states built by hand stay valid.
   pendingLevelUps?: number;
-  // Set by a special effect (sigh, cling) and reset to 1 each tick by `specials`.
+  // Set by a special effect (bottle, cling) and reset to 1 each tick by `specials`.
   slowFactor?: number;
   // Tick at which the current slowFactor effect ends, and the value it keeps posing until then.
   // `specials` re-poses it each tick until it expires, even once the enemy that caused it is gone;
@@ -260,6 +264,8 @@ export interface ZoneState {
   direction: Vec2;
   // Multiplies its damage and its heal.
   power: number;
+  // Its definition's, unless the skill that laid it grew it (`skillRadiusMul`).
+  radius: number;
   ticksLeft: number;
 }
 
@@ -276,8 +282,8 @@ export interface RecruitState extends Positioned {
 // vibe, lying on the ground, or flying back to its owner.
 export type PropPhase = 'held' | 'flying' | 'bouncing' | 'grounded' | 'returning';
 
-// What a character throws and gets back, the Jongleur's clubs: the modules of its attack and skill
-// move it, the render draws it by `kind`.
+// What a character throws, the Jongleur's clubs, the Sportif's ball, the Tatoué's dragons: the modules of
+// its attack and skill move it, the render draws it by `kind`.
 export interface PropState extends Positioned {
   id: EntityId;
   kind: string;
@@ -293,8 +299,11 @@ export interface PropState extends Positioned {
   hitIds?: EntityId[];
   // The bad vibe it bounces to.
   targetId?: EntityId;
-  // Caught on the beat: its next throw hits harder.
+  // Hits harder: a club caught on the beat until thrown, a ball kicked at full Élan.
   boosted?: true;
+  // Its rank among the ones its owner let out: a dragon of the Tatoué takes its lane and its
+  // colour from it.
+  rank?: number;
 }
 
 export type PickupKind = 'vibes';

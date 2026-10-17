@@ -1,4 +1,5 @@
 import type { InputDevice } from '../input/intents';
+import type { Locale } from '../shared/languages';
 import type { GameEvent, GameMode, GameOutcome } from '../shared/stats';
 import { TICK_RATE_HZ } from '../shared/tempo';
 import type { SimState } from '../sim/state';
@@ -7,6 +8,7 @@ export interface GameContext {
   readonly mode: GameMode;
   readonly device: InputDevice;
   readonly version: string;
+  readonly locale: Locale;
 }
 
 export interface GameStats {
@@ -16,7 +18,7 @@ export interface GameStats {
 
 export function gameEvent(
   state: SimState,
-  { mode, device, version }: GameContext,
+  { mode, device, version, locale }: GameContext,
   outcome?: GameOutcome,
 ): GameEvent {
   const fields = {
@@ -29,6 +31,7 @@ export function gameEvent(
       .join('+'),
     device: device === 'none' ? 'keyboardMouse' : device,
     version,
+    locale,
   } as const;
   if (outcome === undefined) {
     return { event: 'start', ...fields };

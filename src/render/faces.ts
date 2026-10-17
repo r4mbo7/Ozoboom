@@ -10,7 +10,7 @@ import {
 } from './faces-1';
 import { FULL_FACES } from './full';
 import { bavard, fatigue, filmeur, neutral, zombie } from './faces-2';
-import { batterieAPlat, couvreFeu } from './faces-bosses';
+import { batterieAPlat, batterieAPlatGlad, couvreFeu, couvreFeuGlad } from './faces-bosses';
 
 export { FACE_RADIUS, NEUTRAL, cracks, type Face, type Pose } from './face-kit';
 export { drowsyZ, recruit, smile } from './faces-2';
@@ -38,8 +38,22 @@ export const FACES: Readonly<Record<string, Face>> = {
     loopBeats: 2,
     tone: { token: 'healer', amount: 0.14 },
   },
-  'couvre-feu': { ...MAIN, draw: couvreFeu, frames: 4, loopBeats: 4, boss: true },
-  'batterie-a-plat': { ...MAIN, draw: batterieAPlat, frames: 4, loopBeats: 2, boss: true },
+  'couvre-feu': {
+    ...MAIN,
+    draw: couvreFeu,
+    glad: couvreFeuGlad,
+    frames: 16,
+    loopBeats: 4,
+    boss: true,
+  },
+  'batterie-a-plat': {
+    ...MAIN,
+    draw: batterieAPlat,
+    glad: batterieAPlatGlad,
+    frames: 16,
+    loopBeats: 4,
+    boss: true,
+  },
   ...FULL_FACES,
 };
 

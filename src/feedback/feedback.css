@@ -82,7 +82,7 @@
   font: inherit;
   font-size: 15px;
   font-weight: 600;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -104,9 +104,9 @@
   content: '';
   position: absolute;
   top: 50%;
-  left: calc(-1 * var(--ui-chevron));
+  inset-inline-start: calc(-1 * var(--ui-chevron));
   border-block: 9px solid transparent;
-  border-left: 12px solid var(--turquoise);
+  border-inline-start: 12px solid var(--turquoise);
   transform: translateY(-50%);
 }
 

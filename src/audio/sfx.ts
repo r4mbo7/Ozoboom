@@ -38,9 +38,10 @@ export type SfxName =
   | 'weaponGained'
   | 'weaponEvolved'
   | 'enemyYawn'
-  | 'enemySigh'
+  | 'enemyBottle'
   | 'enemyBabble'
   | 'enemyGrowl'
+  | 'bossWhistle'
   | 'vibesStolen'
   | 'playerShoved'
   | 'bystanderHelped'
@@ -135,7 +136,13 @@ export function coreHitDegree(core: SfxCore): number {
 
 export interface SfxEnemy extends SfxCore {
   readonly id: number;
+  readonly kind?: string;
 }
+
+// What a boss sounds on the one of every bar while it stands.
+const BAR_CALLS: ReadonlyMap<string, SfxName> = new Map<string, SfxName>([
+  ['couvre-feu', 'bossWhistle'],
+]);
 
 // The hit climbs the scale as the bad vibe loses its life, up to the octave once it is gone.
 export function enemyHitDegree(enemy: SfxCore | undefined): number {
@@ -175,9 +182,10 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     weaponGained: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     weaponEvolved: { perFrame: 1, concurrent: 1, seconds: 0.8 },
     enemyYawn: { perFrame: 1, concurrent: 2, seconds: 0.6 },
-    enemySigh: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    enemyBottle: { perFrame: 1, concurrent: 2, seconds: 0.3 },
     enemyBabble: { perFrame: 1, concurrent: 2, seconds: 0.15 },
     enemyGrowl: { perFrame: 1, concurrent: 2, seconds: 0.35 },
+    bossWhistle: { perFrame: 1, concurrent: 1, seconds: 0.2 },
     vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
     playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
@@ -257,7 +265,7 @@ export function sfxOf(
     case 'enemyYawned':
       return 'enemyYawn';
     case 'enemyShot':
-      return lookups.specialKindOf?.(event.kind) === 'sigh' ? 'enemySigh' : null;
+      return lookups.specialKindOf?.(event.kind) === 'bottle' ? 'enemyBottle' : null;
     case 'enemyBabbled':
       return 'enemyBabble';
     case 'enemyRevived':
@@ -886,24 +894,24 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 500 },
     });
   },
-  enemySigh: (out, at, _variant, key) => {
+  enemyBottle: (out, at, _variant, key) => {
     playNoise(out, at, {
-      gain: 0.2,
-      attack: 0.05,
+      gain: 0.16,
+      attack: 0.01,
       hold: 0.03,
-      release: 0.22,
-      filter: { type: 'lowpass', hz: 800, toHz: 250, glide: 0.25 },
+      release: 0.14,
+      filter: { type: 'bandpass', hz: 700, toHz: 2200, glide: 0.16, q: 1.2 },
     });
-    playTone(out, at, {
+    playTone(out, at + 0.02, {
       wave: 'triangle',
-      hz: keyHz(key, 3, 2),
-      toHz: keyHz(key, 0, 2),
-      glide: 0.25,
-      gain: 0.1,
-      attack: 0.04,
-      hold: 0.04,
-      release: 0.18,
-      filter: { type: 'lowpass', hz: 500 },
+      hz: keyHz(key, 5, 3),
+      toHz: keyHz(key, 5, 2),
+      glide: 0.05,
+      gain: 0.12,
+      attack: 0.002,
+      hold: 0.012,
+      release: 0.07,
+      filter: { type: 'lowpass', hz: 2600 },
     });
   },
   enemyBabble: (out, at, variant, key) => {
@@ -939,6 +947,28 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.2,
       filter: { type: 'lowpass', hz: 320, q: 2 },
       vibrato: { hz: 28, cents: 90, delay: 0 },
+    });
+  },
+  // The Couvre-feu's whistle: a short trilled blast on the root, over a breath, kept low in the mix.
+  bossWhistle: (out, at, _variant, key) => {
+    const hz = keyHz(key, 0, 6);
+    playTone(out, at, {
+      wave: 'sine',
+      hz,
+      toHz: hz * 0.94,
+      glide: 0.15,
+      gain: 0.045,
+      attack: 0.006,
+      hold: 0.09,
+      release: 0.06,
+      vibrato: { hz: 31, cents: 70, delay: 0 },
+    });
+    playNoise(out, at, {
+      gain: 0.025,
+      attack: 0.006,
+      hold: 0.08,
+      release: 0.05,
+      filter: { type: 'bandpass', hz, q: 4 },
     });
   },
   vibesStolen: (out, at, _variant, key) => {
@@ -1270,6 +1300,13 @@ export function createSfx(
                 ) + 4
               : variantOf(event, core, enemies);
           VOICES[name](out, now, variant, key);
+        } else if (event.type === 'bar') {
+          for (const enemy of enemies) {
+            const call = enemy.kind === undefined ? undefined : BAR_CALLS.get(enemy.kind);
+            if (call !== undefined && limiter.tryAcquire(call, now)) {
+              VOICES[call](out, now, 0, key);
+            }
+          }
         }
       }
       const note = arp.collect(vibes, now, tempo, clock);

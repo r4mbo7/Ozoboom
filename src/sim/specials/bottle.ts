@@ -1,8 +1,8 @@
 import type { PlayerState, ProjectileState, SimState } from '../state';
 import type { SpecialModule } from './types';
 
-export const sigh: SpecialModule = (ctx, enemy, effect) => {
-  if (effect.kind !== 'sigh') {
+export const bottle: SpecialModule = (ctx, enemy, effect) => {
+  if (effect.kind !== 'bottle') {
     return;
   }
   const { state } = ctx;

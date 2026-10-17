@@ -79,3 +79,20 @@ export function portraitEvents(tick: number, player: PlayerState, effect: SkillE
   }
   return events;
 }
+
+// The size of the drawing buffer of a portrait: as fine as the screen, two pixels a point at most,
+// and within the renderer, its shape kept whatever the cap.
+export function portraitPixels(
+  clientWidth: number,
+  clientHeight: number,
+  devicePixelRatio: number,
+  maxPixels: number,
+): { width: number; height: number } {
+  const ratio = Math.min(
+    devicePixelRatio,
+    2,
+    maxPixels / Math.max(1, clientWidth),
+    maxPixels / Math.max(1, clientHeight),
+  );
+  return { width: Math.round(clientWidth * ratio), height: Math.round(clientHeight * ratio) };
+}

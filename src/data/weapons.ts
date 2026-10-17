@@ -125,7 +125,7 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'anneaux-solaires',
     name: 'Anneaux solaires',
-    description: 'Fusion : trois cerceaux, dont chaque élargissement est une nova.',
+    description: 'Fusion : trois cerceaux, dont chaque élargissement frappe comme ta spéciale.',
     classAffinity: 'mage',
     evolvedFrom: 'cerceaux',
     rhythm: { everyBars: 1, steps: [0, 8] },

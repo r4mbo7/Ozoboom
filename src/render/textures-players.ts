@@ -59,6 +59,8 @@ export interface LookTextures {
   // frames it there. Absent, on the player.
   readonly middle?: number;
   readonly shadow: Shape;
+  // A character who aims at nothing shows no aim line.
+  readonly aimless?: true;
 }
 
 export interface PlayerTextures {

@@ -2,7 +2,8 @@ import type { WeaponEffect, WeaponRhythm } from '../../data/types';
 import { MAIN_TEMPO, type Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
 import { compound } from '../effects';
-import type { EnemyState, PlayerState } from '../state';
+import type { EnemyState, PlayerState, WeaponSlot } from '../state';
+import { statValue } from '../stats';
 import { boomerang } from '../weapons/boomerang';
 import { hoop } from '../weapons/hoop';
 import { lob } from '../weapons/lob';
@@ -42,14 +43,66 @@ export function firesOnTick(
   if (rhythm === 'continuous') {
     return true;
   }
+  return stepOn(rhythm, tick, tempo) !== undefined;
+}
+
+// A sixteenth is not a whole number of ticks on every stage: each step fires on its tick, rounded down.
+function sixteenthTick(step: number, tempo: Tempo): number {
+  return Math.floor((step * tempo.ticksPerBeat) / 4);
+}
+
+function stepOn(
+  rhythm: Exclude<WeaponRhythm, 'continuous'>,
+  tick: number,
+  tempo: Tempo,
+): number | undefined {
   const inPeriod = tick % (rhythm.everyBars * tempo.ticksPerBar);
-  // A sixteenth is not a whole number of ticks on every stage: each step fires on its tick, rounded down.
   for (const step of rhythm.steps) {
-    if (Math.floor((step * tempo.ticksPerBeat) / 4) === inPeriod) {
-      return true;
+    if (sixteenthTick(step, tempo) === inPeriod) {
+      return step;
     }
   }
-  return false;
+  return undefined;
+}
+
+// A weapon fired `rate` times as often as its rhythm says gathers that share of a shot each time it
+// fires; a whole one slips in as a ghost shot on the next sixteenth its rhythm leaves free, so it
+// stays on the grid. A continuous weapon is already always on.
+function gatherGhost(
+  slot: WeaponSlot,
+  rhythm: WeaponRhythm,
+  rate: number,
+  tick: number,
+  tempo: Tempo,
+): void {
+  if (rhythm === 'continuous' || rate <= 1) {
+    return;
+  }
+  const share = Math.min(1, (slot.ghostShare ?? 0) + rate - 1);
+  const pending = slot.ghostTick !== undefined && slot.ghostTick > tick;
+  const ghostTick = share >= 1 && !pending ? nextFreeTick(rhythm, tick, tempo) : undefined;
+  if (ghostTick === undefined) {
+    slot.ghostShare = share;
+    return;
+  }
+  slot.ghostShare = share - 1;
+  slot.ghostTick = ghostTick;
+}
+
+function nextFreeTick(
+  rhythm: Exclude<WeaponRhythm, 'continuous'>,
+  tick: number,
+  tempo: Tempo,
+): number | undefined {
+  const sixteenths = 16 * rhythm.everyBars;
+  const start = tick - (tick % (rhythm.everyBars * tempo.ticksPerBar));
+  const now = stepOn(rhythm, tick, tempo) ?? 0;
+  for (let step = now + 1; step < now + sixteenths; step++) {
+    if (!rhythm.steps.includes(step % sixteenths)) {
+      return start + sixteenthTick(step, tempo);
+    }
+  }
+  return undefined;
 }
 
 export function weapons(ctx: StepContext): void {
@@ -58,9 +111,18 @@ export function weapons(ctx: StepContext): void {
     if (player.downed) {
       continue;
     }
+    const rate = statValue(player, 'weaponRateMul', 1);
     for (const slot of player.weapons ?? []) {
       const definition = content.weapons.get(slot.id);
-      if (definition === undefined || !firesOnTick(definition.rhythm, state.tick, ctx.tempo)) {
+      if (definition === undefined) {
+        continue;
+      }
+      const ghost = slot.ghostTick === state.tick;
+      if (ghost) {
+        delete slot.ghostTick;
+      } else if (firesOnTick(definition.rhythm, state.tick, ctx.tempo)) {
+        gatherGhost(slot, definition.rhythm, rate, state.tick, ctx.tempo);
+      } else {
         continue;
       }
       const target = closestEnemy(ctx, player);

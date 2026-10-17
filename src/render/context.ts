@@ -1,4 +1,5 @@
 import type {
+  AttackDefinition,
   BystanderDefinition,
   DashDefinition,
   ClassDefinition,
@@ -15,6 +16,7 @@ import type {
 import type { PaletteToken } from '../shared/palette';
 import type { SimEvent, SimState } from '../sim/state';
 import type { Frame } from './frame';
+import { classTokens } from './palette';
 import type { Layers } from './layers';
 import type { Textures } from './textures';
 import type { RenderOptions } from './types';
@@ -27,8 +29,9 @@ export type WeaponLook = Pick<
 export interface RenderContent {
   readonly classes: readonly (Pick<ClassDefinition, 'id'> & {
     readonly skill: Pick<SkillDefinition, 'effect'>;
+    readonly attack?: AttackDefinition;
   })[];
-  readonly enemies: readonly Pick<EnemyDefinition, 'id' | 'behaviour' | 'special'>[];
+  readonly enemies: readonly Pick<EnemyDefinition, 'id' | 'behaviour' | 'special' | 'radius'>[];
   readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect'>[];
   readonly sets: readonly SetDefinition[];
   readonly bystanders?: readonly Pick<BystanderDefinition, 'id' | 'helpTicks'>[];
@@ -49,12 +52,16 @@ export interface RenderContext {
   readonly options: RenderOptions;
   readonly classTokens: ReadonlyMap<string, PaletteToken>;
   readonly behaviours: ReadonlyMap<string, EnemyBehaviour>;
+  // Each bad vibe's radius as defined, for one that left before it was drawn.
+  readonly enemyRadii?: ReadonlyMap<string, number>;
   readonly trapLooks: ReadonlyMap<string, TrapLook>;
   readonly specials: ReadonlyMap<string, SpecialEffect>;
   readonly helpTicks: ReadonlyMap<string, number>;
   readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
   readonly weaponLooks: ReadonlyMap<string, WeaponLook>;
   readonly skillEffects: ReadonlyMap<string, SkillEffect>;
+  // Each class's attack, where the content gives it.
+  readonly attacks: ReadonlyMap<string, AttackDefinition>;
   readonly dash: DashDefinition | null;
 }
 
@@ -63,4 +70,41 @@ export interface Family {
   destroy(): void;
   onEvent?(event: SimEvent, state: SimState, frame: Frame): void;
   reset?(): void;
+}
+
+export function createRenderContext(
+  textures: Textures,
+  layers: Layers,
+  options: RenderOptions,
+  content: RenderContent,
+): RenderContext {
+  return {
+    textures,
+    layers,
+    options,
+    classTokens: classTokens(content.classes),
+    behaviours: new Map(content.enemies.map((def) => [def.id, def.behaviour])),
+    enemyRadii: new Map(content.enemies.map((def) => [def.id, def.radius])),
+    trapLooks: new Map(content.traps.map((def) => [def.id, def])),
+    specials: new Map(
+      content.enemies.flatMap((def): [string, SpecialEffect][] =>
+        def.special === undefined ? [] : [[def.id, def.special]],
+      ),
+    ),
+    helpTicks: new Map((content.bystanders ?? []).map((def) => [def.id, def.helpTicks])),
+    speakerLooks: new Map(
+      content.sets.map((set) => [
+        set.id,
+        new Map((set.speakers ?? []).map((def) => [def.id, def])),
+      ]),
+    ),
+    weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
+    skillEffects: new Map(content.classes.map((def) => [def.id, def.skill.effect])),
+    attacks: new Map(
+      content.classes.flatMap((def): [string, AttackDefinition][] =>
+        def.attack === undefined ? [] : [[def.id, def.attack]],
+      ),
+    ),
+    dash: content.dash ?? null,
+  };
 }

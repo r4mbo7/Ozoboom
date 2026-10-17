@@ -6,18 +6,21 @@ export type StatKey =
   | 'pickupRadiusMul'
   | 'damageMul'
   | 'attackCooldownMul'
+  | 'attackRadiusMul'
   | 'projectileSpeedMul'
   | 'projectileCountAdd'
   | 'pierceAdd'
   | 'skillCooldownMul'
   | 'skillPowerMul'
+  | 'skillRadiusMul'
   | 'trapDamageMul'
   | 'trapRadiusMul'
   | 'trapSlotsAdd'
   | 'lootIntervalMul'
   | 'lootRadiusMul'
   | 'dashRechargeMul'
-  | 'dashChargesAdd';
+  | 'dashChargesAdd'
+  | 'weaponRateMul';
 
 export interface StatModifier {
   stat: StatKey;
@@ -120,13 +123,15 @@ export interface ClassDefinition {
   recruits?: RecruitDefinition;
   // Weapons drawn as often for this class as for the one of their `classAffinity`.
   affinityWeaponIds?: readonly string[];
+  // Weapons never drawn for this class.
+  excludedWeaponIds?: readonly string[];
 }
 
 export type EnemyBehaviour = 'rusher' | 'horde' | 'heavy' | 'shooter' | 'boss';
 
 export type SpecialEffect =
   | { kind: 'shove'; knockback: number }
-  | { kind: 'sigh'; slowFactor: number; durationTicks: number }
+  | { kind: 'bottle'; slowFactor: number; durationTicks: number }
   | { kind: 'cling'; slowFactor: number; detachDamage: number }
   | { kind: 'suppress'; radius: number }
   | { kind: 'steal'; fleeSpeedMul: number }

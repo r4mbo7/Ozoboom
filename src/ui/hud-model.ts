@@ -6,7 +6,7 @@ import type {
   TrapDefinition,
   WeaponDefinition,
 } from '../data/types';
-import { t } from '../shared/i18n';
+import { t, tn } from '../shared/i18n';
 import { NIGHT_END, NIGHT_START, type PaletteToken, isClassToken } from '../shared/palette';
 import { setTempo, ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
@@ -57,6 +57,15 @@ export function gaugeReading(
 
 export function classToken(classId: string): PaletteToken {
   return isClassToken(classId) ? classId : 'or';
+}
+
+const DANGER_RATIO = 0.25;
+
+// Whether a player of this screen is low enough on life for the screen to say so.
+export function inDanger(
+  players: readonly Pick<PlayerState, 'hp' | 'maxHp' | 'downed'>[],
+): boolean {
+  return players.some((player) => !player.downed && ratio(player.hp, player.maxHp) <= DANGER_RATIO);
 }
 
 export function playerLabel(player: Pick<PlayerState, 'id' | 'name'>): string {
@@ -191,7 +200,12 @@ const plugHelps = (): readonly string[] => [
 ];
 
 export function plugHelp(bars: number): string {
-  return plugHelps()[bars] ?? t('Reste {bars} mesures pour brancher', { bars: formatNumber(bars) });
+  return (
+    plugHelps()[bars] ??
+    tn(bars, 'Reste {bars} mesure pour brancher', 'Reste {bars} mesures pour brancher', {
+      bars: formatNumber(bars),
+    })
+  );
 }
 
 // The unplugged speaker a living player stands in, if any.
@@ -234,8 +248,9 @@ export function isNight(fraction: number): boolean {
   return fraction >= NIGHT_START && fraction < NIGHT_END;
 }
 
+// Along the reading direction: `start` is from the line-up's start, its right edge in Arabic.
 export interface SlotEdges {
-  left: number;
+  start: number;
   width: number;
 }
 
@@ -249,7 +264,7 @@ export function sunPosition(fraction: number, slots: readonly SlotEdges[]): numb
   const at = Math.min(1, Math.max(0, fraction)) * count;
   const index = Math.min(Math.floor(at), count - 1);
   const slot = slots[index];
-  return slot === undefined ? 0 : slot.left + (at - index) * slot.width;
+  return slot === undefined ? 0 : slot.start + (at - index) * slot.width;
 }
 
 export interface DropReading {

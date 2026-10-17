@@ -93,7 +93,7 @@ export function createBracelet(): Bracelet {
       if (definition === null) {
         skill.title = '';
       } else {
-        const params = { skill: t(definition.skill.name) };
+        const params = { skill: t('Spéciale') };
         skill.title = ready ? t('{skill} : prête', params) : t('{skill} : en recharge', params);
       }
     },

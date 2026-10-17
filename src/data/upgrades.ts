@@ -50,18 +50,18 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'nova-xxl',
-    name: 'Nova XXL',
-    description: 'Ta nova frappe plus fort.',
+    name: 'Spéciale XXL',
+    description: 'Ta spéciale frappe plus fort.',
     family: 'class',
     classId: 'mage',
     modifiers: [{ stat: 'skillPowerMul', mul: 1.55 }],
     rarities: {
       rare: {
-        description: 'Ta nova frappe deux fois plus fort.',
+        description: 'Ta spéciale frappe deux fois plus fort.',
         modifiers: [{ stat: 'skillPowerMul', mul: 2.25 }],
       },
       legendary: {
-        description: 'Ta nova frappe trois fois plus fort.',
+        description: 'Ta spéciale frappe trois fois plus fort.',
         modifiers: [{ stat: 'skillPowerMul', mul: 3 }],
       },
     },
@@ -70,17 +70,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'boucle-vj',
     name: 'Boucle VJ',
-    description: 'Ta nova revient plus vite.',
+    description: 'Ta spéciale revient plus vite.',
     family: 'class',
     classId: 'mage',
     modifiers: [{ stat: 'skillCooldownMul', mul: 0.64 }],
     rarities: {
       rare: {
-        description: 'Ta nova revient bien plus vite.',
+        description: 'Ta spéciale revient bien plus vite.',
         modifiers: [{ stat: 'skillCooldownMul', mul: 0.36 }],
       },
       legendary: {
-        description: 'Ta nova revient presque en continu.',
+        description: 'Ta spéciale revient presque en continu.',
         modifiers: [{ stat: 'skillCooldownMul', mul: 0.16 }],
       },
     },
@@ -322,7 +322,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'console-de-mixage',
     name: 'Console de mixage',
-    description: 'Tu tires plus souvent et ta nova revient plus vite.',
+    description: 'Tu tires plus souvent et ta spéciale revient plus vite.',
     family: 'relic',
     modifiers: [
       { stat: 'attackCooldownMul', mul: 0.8 },

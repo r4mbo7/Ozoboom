@@ -1,3 +1,5 @@
+import { type Locale, isLocale } from './languages';
+
 export type GameMode = 'solo' | 'local' | 'online';
 export type GameDevice = 'keyboardMouse' | 'gamepad' | 'touch';
 // The site a game was played on: the public demo or the full game.
@@ -11,6 +13,8 @@ interface GameFields {
   classes: string;
   device: GameDevice;
   version: string;
+  // Absent from the games of the releases before the game sent it.
+  locale?: Locale;
 }
 
 export interface GameStart extends GameFields {
@@ -51,8 +55,9 @@ export function parseGameEvent(json: string): GameEvent | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
   const event = value as Record<string, unknown>;
   const fields = event.event === 'end' ? END_FIELDS : START_FIELDS;
-  const keys = Object.keys(event);
+  const keys = Object.keys(event).filter((key) => key !== 'locale');
   if (keys.length !== fields.length || !keys.every((k) => fields.includes(k))) return null;
+  if ('locale' in event && !isLocale(event.locale)) return null;
   const { stage, mode, players, classes, device, version } = event;
   const valid =
     isId(stage) &&

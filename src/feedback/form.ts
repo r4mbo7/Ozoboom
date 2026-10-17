@@ -122,6 +122,8 @@ export function openFeedback(
   attach.button.tabIndex = -1;
   const context = el('pre', 'ui-feedback__context', report);
   context.setAttribute('aria-label', t('Contexte de la partie'));
+  // The report is read by developers, in English, whatever the language of the game.
+  context.dir = 'ltr';
 
   const main = el('div', 'ui-feedback__column');
   main.append(typeField, messageField, notice, discord);

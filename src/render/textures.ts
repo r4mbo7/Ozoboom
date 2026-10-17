@@ -28,6 +28,8 @@ import {
   destroyWeaponTextures,
 } from './textures-weapons';
 
+import { paintBottle } from './textures-bottle';
+
 export type { Shape } from './paint';
 
 export type TrapLook = TrapEffect['kind'];
@@ -51,6 +53,7 @@ export interface Textures {
   readonly beam: Shape;
   readonly pip: Shape;
   readonly enemyShot: Shape;
+  readonly bottle: Shape;
   readonly speakers: Readonly<Record<string, Shape>>;
   readonly zone: Shape;
   readonly sweep: Shape;
@@ -239,6 +242,7 @@ export function createTextures(): Textures {
       ctx.lineWidth = 3;
       ctx.stroke();
     }),
+    bottle: paintBottle(),
     names: createNameTextures(),
     arrow: paint(48, 48, 14, (ctx) => {
       ctx.lineJoin = 'round';

@@ -10,14 +10,16 @@ import type { InputDevice, InputSnapshot } from '../input/intents';
 import type { UiFrame } from './types';
 import type { PlayerId, PlayerState, SimState } from '../sim/state';
 import { trapCapacity } from '../sim/stats';
-import { t } from '../shared/i18n';
+import { direction, t, tn } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
+import { createBossBanner } from './boss-banner';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
 import { createDashTile } from './dash-tile';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
-import { formatNumber, ratio } from './format';
+import { formatNumber } from './format';
 import {
   type GearSlotView,
+  type SlotEdges,
   classToken,
   dropReading,
   enteredSpeaker,
@@ -25,6 +27,7 @@ import {
   gaugeReading,
   gearSlots,
   handTiles,
+  inDanger,
   isNight,
   levelReading,
   plugHelp,
@@ -34,11 +37,10 @@ import {
   trapToTake,
   volumeCrans,
 } from './hud-model';
-import { HEART, INFINITY, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
+import { INFINITY, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
 import { type LineupSlot, lineupCursor, lineupSlots, setOf, setTempo } from '../sim/lineup';
 import { heldSlot, selectTrap } from './navigation';
 import { promptsFor } from './prompts';
-import { createWho, fillWho } from './who';
 import { cssName } from './sun';
 
 export interface Hud {
@@ -51,8 +53,6 @@ export interface Hud {
 }
 
 export { skillCharge };
-
-const CRITICAL_RATIO = 0.25;
 
 function section(className: string, label: string): HTMLElement {
   const root = el('section', className);
@@ -121,17 +121,6 @@ export function createHud(): Hud {
   levelRing.append(levelNumber);
   level.append(levelRing);
 
-  const life = section('ui-hud__life', t('Vie'));
-  const lifeBar = el('div', 'ui-bar ui-life__bar');
-  lifeBar.setAttribute('role', 'meter');
-  lifeBar.setAttribute('aria-label', t('Vie'));
-  lifeBar.setAttribute('aria-valuemin', '0');
-  lifeBar.append(el('span', 'ui-bar__fill'));
-  const lifeValue = el('span', 'ui-life__value');
-  const lifeWho = createWho();
-  const lifeIcon = icon('ui-life__icon', HEART);
-  life.append(lifeWho, lifeIcon, lifeBar, lifeValue);
-
   const gear = section('ui-hud__gear', t('Agrès'));
 
   const traps = section('ui-hud__traps', t('Pièges'));
@@ -165,7 +154,7 @@ export function createHud(): Hud {
   gauge.append(gaugeView);
 
   const status = el('div', 'ui-panel ui-hud__status');
-  status.append(level, life, gear);
+  status.append(level, gear);
   const actions = el('div', 'ui-panel ui-hud__actions');
   actions.append(traps, skills, dashTile.section, gauge);
   bar.append(status, actions);
@@ -176,7 +165,11 @@ export function createHud(): Hud {
 
   const top = el('div', 'ui-hud__top');
   top.append(ribbon, help);
-  element.append(top, bracelets, bar);
+  const banner = createBossBanner();
+  // The edges of the screen redden while a player of this screen is low on life.
+  const danger = el('div', 'ui-hud__danger');
+  danger.setAttribute('aria-hidden', 'true');
+  element.append(danger, top, banner.element, bracelets, bar);
 
   let builtFor: GameContent | null = null;
   let set: SetDefinition | null = null;
@@ -193,7 +186,7 @@ export function createHud(): Hud {
   let plugs: HTMLElement[] = [];
   let chips: HTMLElement[] = [];
   let gearKey: string | null = null;
-  let slotEdges: { left: number; width: number }[] = [];
+  let slotEdges: SlotEdges[] = [];
   let sunNight: boolean | null = null;
   let sunAt = -1;
   let beat = false;
@@ -256,17 +249,21 @@ export function createHud(): Hud {
 
   function measureSlots(): void {
     const width = lineupTrack.clientWidth;
+    const rtl = direction() === 'rtl';
     slotEdges =
       width === 0
         ? []
-        : slots.map((slot) => ({ left: slot.offsetLeft / width, width: slot.offsetWidth / width }));
+        : slots.map((slot) => {
+            const start = rtl ? width - slot.offsetLeft - slot.offsetWidth : slot.offsetLeft;
+            return { start: start / width, width: slot.offsetWidth / width };
+          });
   }
 
   function updateSun(fraction: number): void {
     const edges =
       slotEdges.length === slots.length
         ? slotEdges
-        : slots.map((_, index) => ({ left: index / slots.length, width: 1 / slots.length }));
+        : slots.map((_, index) => ({ start: index / slots.length, width: 1 / slots.length }));
     const at = sunPosition(fraction, edges);
     if (Math.abs(at - sunAt) > 0.0005) {
       sunAt = at;
@@ -298,9 +295,12 @@ export function createHud(): Hud {
     const counts = { plugged: formatNumber(plugged), total: formatNumber(levels.length) };
     plugRow.setAttribute(
       'aria-valuetext',
-      plugged > 1
-        ? t('{plugged} enceintes branchées sur {total}', counts)
-        : t('{plugged} enceinte branchée sur {total}', counts),
+      tn(
+        plugged,
+        '{plugged} enceinte branchée sur {total}',
+        '{plugged} enceintes branchées sur {total}',
+        counts,
+      ),
     );
     if (state.events.some((event) => event.type === 'volumeChanged')) {
       beat = !beat;
@@ -371,7 +371,7 @@ export function createHud(): Hud {
     builtDevice = device;
     const prompts = promptsFor(device);
     skill.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(definition.skill.effect)));
-    const name = t(definition.skill.name);
+    const name = t('Spéciale');
     setText(skill.name, name);
     skill.root.title = t('{name} : {description}', {
       name,
@@ -465,20 +465,6 @@ export function createHud(): Hud {
     }
   }
 
-  function updateLife(player: PlayerState, team: boolean): void {
-    const fraction = ratio(player.hp, player.maxHp);
-    setVar(lifeBar, '--fill', String(fraction));
-    lifeBar.setAttribute('aria-valuemax', String(player.maxHp));
-    lifeBar.setAttribute('aria-valuenow', String(Math.round(player.hp)));
-    setText(lifeValue, formatNumber(player.hp));
-    lifeWho.hidden = !team;
-    lifeIcon.hidden = !lifeWho.hidden;
-    if (!lifeWho.hidden) {
-      fillWho(lifeWho, player);
-    }
-    setFlag(life, 'critical', fraction <= CRITICAL_RATIO);
-  }
-
   // On a shared screen every player wears a bracelet; online, the players of other screens do.
   function updateBracelets(
     frame: UiFrame,
@@ -512,11 +498,13 @@ export function createHud(): Hud {
     }
     updateLineup(state, content);
     updateSpeakers(state);
+    banner.update(state, content);
 
     const people = rosterOf(state, frame);
     setFlag(element, 'team', people.team);
     setFlag(element, 'multi', people.team && people.locals.length > 1);
     updateBracelets(frame, content, people.team ? people.locals : [], people.others);
+    setFlag(element, 'danger', inDanger(people.locals));
 
     const local = frame.players[0];
     const snapshot = local?.snapshot ?? frame.snapshot;
@@ -532,12 +520,16 @@ export function createHud(): Hud {
     }
 
     updateLevel(player);
-    level.title = t('Niveau {level} : {vibes} vibes sur {next}', {
-      level: formatNumber(player.level),
-      vibes: formatNumber(player.vibes),
-      next: formatNumber(player.vibesToNextLevel),
-    });
-    updateLife(player, people.team);
+    level.title = tn(
+      player.vibesToNextLevel,
+      'Niveau {level} : {vibes} vibes sur {next}',
+      'Niveau {level} : {vibes} vibes sur {next}',
+      {
+        level: formatNumber(player.level),
+        vibes: formatNumber(player.vibes),
+        next: formatNumber(player.vibesToNextLevel),
+      },
+    );
 
     selectedTrap = selectTrap(selectedTrap, tiles.length, snapshot.gameplay, previousGameplay);
     previousGameplay = snapshot.gameplay;
@@ -618,6 +610,7 @@ export function createHud(): Hud {
       shownLevel = null;
       delete levelRing.dataset.gain;
       delete levelRing.dataset.burst;
+      banner.reset();
     },
   };
 }

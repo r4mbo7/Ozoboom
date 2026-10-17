@@ -2,6 +2,7 @@ import type { Sprite } from 'pixi.js';
 import type { SimState } from '../sim/state';
 import { STREAK_HEAD } from './textures';
 import type { Family, RenderContext } from './context';
+import { enemyShotLook, shotRotation } from './enemy-shots';
 import type { Frame } from './frame';
 import { lerp } from './motion';
 import { add, byId, hide, lookup, placeOutline, setTint } from './util';
@@ -12,12 +13,19 @@ interface ShotView {
   readonly outline: Sprite;
 }
 
+// The thrower's sort is read once per shot: the shot keeps its look after the thrower is gone.
+interface EnemyShotView {
+  readonly sprite: Sprite;
+  kind: string | undefined;
+}
+
 export function createProjectiles(ctx: RenderContext): Family {
   const { textures: t, layers } = ctx;
-  const enemyShots = new ViewPool<Sprite>(
-    () => add(layers.enemyShots, t.enemyShot),
-    (sprite) => {
-      hide(sprite);
+  const enemyShots = new ViewPool<EnemyShotView>(
+    () => ({ sprite: add(layers.enemyShots, t.enemyShot), kind: undefined }),
+    (view) => {
+      hide(view.sprite);
+      view.kind = undefined;
     },
   );
   const lightShots = new ViewPool<ShotView>(
@@ -44,12 +52,26 @@ export function createProjectiles(ctx: RenderContext): Family {
         const y = lerp(projectile.prevY, projectile.y, alpha);
         const rotation = Math.atan2(projectile.vy, projectile.vx);
         if (owner.kind === 'enemy') {
-          const sprite = enemyShots.acquire(projectile.id);
-          setTint(sprite, palette.badVibeRim);
+          const view = enemyShots.acquire(projectile.id);
+          view.kind ??= byId(state.enemies, owner.enemyId)?.kind ?? '';
+          const look = enemyShotLook(view.kind);
+          const shape = t[look.shape];
+          const { sprite } = view;
+          if (sprite.texture !== shape.texture) {
+            sprite.texture = shape.texture;
+          }
+          setTint(sprite, look.tinted ? palette.badVibeRim : 0xffffff);
           sprite.visible = true;
           sprite.position.set(x, y);
-          sprite.rotation = rotation;
-          sprite.scale.set(projectile.radius / t.enemyShot.radius);
+          sprite.rotation = shotRotation(
+            projectile.vx,
+            projectile.vy,
+            frame.now,
+            frame.tempo.ticksPerBeat,
+            look.spins,
+            frame.calm,
+          );
+          sprite.scale.set(projectile.radius / shape.radius);
           continue;
         }
         const { trail, outline } = lightShots.acquire(projectile.id);

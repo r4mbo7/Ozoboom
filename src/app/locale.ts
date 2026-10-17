@@ -1,4 +1,4 @@
-import { type Locale, catalogOf, pickLocale, setLocale, t } from '../shared/i18n';
+import { type Locale, catalogOf, direction, pickLocale, setLocale, t } from '../shared/i18n';
 
 const KEY = 'ozoboom.locale';
 
@@ -6,6 +6,12 @@ export function startLocale(): void {
   const chosen = pickLocale(readChoice(), navigator.languages);
   setLocale(chosen, catalogOf(chosen));
   document.documentElement.lang = chosen;
+  document.documentElement.dir = direction();
+  if (chosen === 'ar') {
+    // A font loads at its first glyph: the menus would flash in a fallback face the first time.
+    void document.fonts.load('700 1em "Reem Kufi"', 'ع');
+    void document.fonts.load('400 1em "Readex Pro"', 'ع');
+  }
   document
     .querySelector('meta[name="description"]')
     ?.setAttribute(

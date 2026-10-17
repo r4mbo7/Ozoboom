@@ -1,5 +1,6 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { SpeakerDefinition } from '../data/types';
+import { t, tn } from '../shared/i18n';
 import type { Tempo } from '../shared/tempo';
 import type { Vec2 } from '../shared/vec';
 import type { SimState, SpeakerState } from '../sim/state';
@@ -12,7 +13,6 @@ import { lookup, setTint } from './util';
 import { ViewPool } from './views';
 
 const NEAR = 170;
-const COUNT_WORDS = ['zéro', 'une', 'deux', 'trois', 'quatre'];
 const PLUGGED = -1;
 const IDLE = 0;
 const MARGIN = 12;
@@ -47,15 +47,31 @@ export function plugStep(
   return Math.max(1, Math.ceil(left / tempo.ticksPerBeat));
 }
 
+function barsLeft(bars: number): string {
+  switch (bars) {
+    case 1:
+      return t('reste une mesure dedans');
+    case 2:
+      return t('reste deux mesures dedans');
+    case 3:
+      return t('reste trois mesures dedans');
+    case 4:
+      return t('reste quatre mesures dedans');
+    default:
+      return tn(bars, 'reste {bars} mesure dedans', 'reste {bars} mesures dedans', { bars });
+  }
+}
+
 function stateLine(step: number, plugBars: number): string {
   if (step === PLUGGED) {
-    return 'branchée';
+    return t('branchée');
   }
   if (step === IDLE) {
-    const word = COUNT_WORDS[plugBars] ?? String(plugBars);
-    return `reste ${word} mesure${plugBars > 1 ? 's' : ''} dedans`;
+    return barsLeft(plugBars);
   }
-  return `branchement : encore ${String(step)} temps`;
+  return tn(step, 'branchement : encore {beats} temps', 'branchement : encore {beats} temps', {
+    beats: step,
+  });
 }
 
 export function cardLines(
@@ -65,10 +81,10 @@ export function cardLines(
   plugBars: number,
 ): readonly string[] {
   return [
-    definition.name,
+    t(definition.name),
     stateLine(step, plugBars),
-    weaponName === null ? 'Volume +1' : `Volume +1 · ouvre ${weaponName}`,
-    definition.description,
+    weaponName === null ? 'Volume +1' : t('Volume +1 · ouvre {weapon}', { weapon: t(weaponName) }),
+    t(definition.description),
   ];
 }
 

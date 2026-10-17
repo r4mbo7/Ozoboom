@@ -6,6 +6,11 @@
     0 10px 30px color-mix(in srgb, var(--sol) 45%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--texte) 12%, transparent);
   --ui-focus: 0 0 0 3px var(--sol), 0 0 0 7px var(--turquoise);
+  --ui-to-end: 90deg;
+}
+
+:is(.ui, .ui-overlay):dir(rtl) {
+  --ui-to-end: 270deg;
 }
 
 .ui {
@@ -80,7 +85,7 @@
   font: inherit;
   font-size: 18px;
   font-weight: 700;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition:
     transform 120ms ease-out,
@@ -106,9 +111,9 @@
   content: '';
   position: absolute;
   top: 50%;
-  left: calc(-1 * var(--ui-chevron));
+  inset-inline-start: calc(-1 * var(--ui-chevron));
   border-block: 9px solid transparent;
-  border-left: 12px solid var(--turquoise);
+  border-inline-start: 12px solid var(--turquoise);
   transform: translateY(-50%);
 }
 
@@ -150,7 +155,7 @@
   min-width: 3.5em;
   color: var(--ui-muted);
   font-size: 15px;
-  text-align: right;
+  text-align: end;
 }
 
 .ui-toggle[aria-checked='true'] .ui-toggle__state {
@@ -170,7 +175,7 @@
 .ui-switch__knob {
   position: absolute;
   top: 3px;
-  left: 3px;
+  inset-inline-start: 3px;
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -186,6 +191,10 @@
 .ui-toggle[aria-checked='true'] .ui-switch__knob {
   background: var(--sol);
   transform: translateX(20px);
+}
+
+.ui-toggle[aria-checked='true'] .ui-switch__knob:dir(rtl) {
+  transform: translateX(-20px);
 }
 
 .ui-volume__control {
@@ -461,7 +470,7 @@
 }
 
 .ui-hint__label {
-  margin-left: 2px;
+  margin-inline-start: 2px;
 }
 
 .ui-kicker {
@@ -862,7 +871,7 @@ svg.ui-title__sun {
 .ui-hero__value {
   font-size: 15px;
   font-weight: 700;
-  text-align: right;
+  text-align: end;
 }
 
 .ui-classcards {
@@ -879,7 +888,8 @@ svg.ui-title__sun {
   align-items: center;
   gap: 10px;
   min-width: 0;
-  padding: 8px 14px 8px 8px;
+  padding-block: 8px;
+  padding-inline: 8px 14px;
   border: 1.5px solid var(--ui-line);
   border-radius: var(--ui-radius);
   background: var(--ui-panel);
@@ -888,7 +898,7 @@ svg.ui-title__sun {
   font: inherit;
   font-size: 16px;
   font-weight: 700;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition:
     border-color 120ms ease-out,
@@ -1033,7 +1043,8 @@ svg.ui-title__sun {
   align-items: center;
   gap: 12px;
   max-width: 100%;
-  padding: 10px 26px 10px 18px;
+  padding-block: 10px;
+  padding-inline: 18px 26px;
   border: 1.5px solid var(--turquoise);
   border-radius: 34px;
   background: color-mix(in srgb, var(--turquoise) 18%, var(--sol-clair));
@@ -1080,7 +1091,8 @@ svg.ui-title__sun {
   align-items: center;
   gap: 12px;
   max-width: 100%;
-  padding: 12px 22px 12px 14px;
+  padding-block: 12px;
+  padding-inline: 14px 22px;
   border: 1.5px solid var(--or);
   border-radius: 34px;
   background: color-mix(in srgb, var(--or) 24%, var(--sol-clair));
@@ -1197,7 +1209,8 @@ svg.ui-title__sun {
   justify-content: space-between;
   gap: 28px;
   width: min(100%, 820px);
-  padding: 18px 24px 18px 28px;
+  padding-block: 18px;
+  padding-inline: 28px 24px;
 }
 
 .ui-lobby__sharetext {
@@ -1294,7 +1307,7 @@ svg.ui-title__sun {
 .ui-seat[data-state='empty'] .ui-seat__head {
   position: absolute;
   top: 18px;
-  left: 18px;
+  inset-inline-start: 18px;
 }
 
 .ui-seat__who {
@@ -1400,8 +1413,13 @@ svg.ui-title__sun {
   height: 22px;
 }
 
-.ui-stepper__glyph--flipped {
+.ui-stepper__glyph--flipped,
+.ui-stepper__glyph:dir(rtl) {
   transform: scaleX(-1);
+}
+
+.ui-stepper__glyph--flipped:dir(rtl) {
+  transform: none;
 }
 
 .ui-stepper__current {
@@ -1557,7 +1575,7 @@ svg.ui-title__sun {
   box-shadow: var(--ui-lift);
   color: var(--texte);
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition:
     border-color 120ms ease-out,
@@ -1639,6 +1657,37 @@ svg.ui-title__sun {
   display: none;
 }
 
+/* A player of the screen low on life: the edges redden and breathe on two beats, never a flash. */
+.ui-hud__danger {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: inset 0 0 8vw 0.5vw rgb(from var(--rouge) r g b / 0.18);
+  transition: opacity 0.6s ease;
+}
+
+.ui-hud[data-danger] .ui-hud__danger {
+  opacity: 1;
+  animation: ui-danger-breathe calc(var(--beat) * 2) ease-in-out infinite;
+}
+
+.calm > .ui .ui-hud[data-danger] .ui-hud__danger {
+  opacity: 0.5;
+  animation: none;
+}
+
+@keyframes ui-danger-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 .ui-panel {
   padding: 14px 20px 16px;
   border: 1px solid var(--ui-line);
@@ -1694,6 +1743,80 @@ svg.ui-title__sun {
   border-radius: 999px;
 }
 
+/* A boss lands: its name alone, large, on a band of night that reads the same at every hour. */
+.ui-boss {
+  position: absolute;
+  top: 21%;
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.ui-boss__name {
+  display: flex;
+  box-sizing: border-box;
+  max-width: calc(100% - 32px);
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.22em clamp(16px, 4vw, 1.9em) 0.26em;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--sol) 72%, transparent) 20%,
+    color-mix(in srgb, var(--sol) 72%, transparent) 80%,
+    transparent
+  );
+  color: var(--noyau);
+  font-family: var(--font-title);
+  font-size: clamp(24px, 5.2vw, 68px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-align: center;
+  text-wrap: balance;
+  text-shadow: 0 0 0.5em color-mix(in srgb, var(--or) 60%, transparent);
+  text-transform: uppercase;
+  animation: ui-boss-land calc(var(--beat) * 9) linear both;
+}
+
+.ui-boss__name::before,
+.ui-boss__name::after {
+  flex: none;
+  width: 0.9em;
+  height: 1px;
+  margin-bottom: 0.08em;
+  background: var(--or);
+  content: '';
+}
+
+/* Nine beats: in a fifth of a beat after the drop, over half a beat; out over the last beat. */
+@keyframes ui-boss-land {
+  0%,
+  2.2% {
+    opacity: 0;
+    transform: translateY(-0.1em);
+  }
+
+  7.8% {
+    opacity: 1;
+  }
+
+  12% {
+    transform: none;
+  }
+
+  86.7% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
 .ui-drop {
   display: flex;
   align-items: baseline;
@@ -1746,12 +1869,16 @@ svg.ui-title__sun {
 .ui-lineup__sun {
   position: absolute;
   top: 0;
-  left: calc(var(--sun) * 100%);
+  inset-inline-start: calc(var(--sun) * 100%);
   width: 22px;
   height: 22px;
   color: var(--ui-or);
   filter: drop-shadow(0 0 calc(7px * var(--ui-halo)) var(--or));
   translate: -50% 0;
+}
+
+.ui-lineup__sun:dir(rtl) {
+  translate: 50% 0;
 }
 
 .ui-lineup__sky {
@@ -1777,7 +1904,7 @@ svg.ui-title__sun {
   flex: none;
   border: 1.5px solid color-mix(in srgb, var(--slot) 55%, transparent);
   background: linear-gradient(
-    90deg,
+    var(--ui-to-end),
     var(--slot) calc(var(--fill) * 100%),
     transparent calc(var(--fill) * 100%)
   );
@@ -1807,7 +1934,7 @@ svg.ui-title__sun {
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  margin-left: 3px;
+  margin-inline-start: 3px;
 }
 
 .ui-slot--break::before {
@@ -1977,7 +2104,8 @@ svg.ui-title__sun {
   justify-self: center;
   gap: 16px;
   max-width: 100%;
-  padding: 8px 18px 8px 8px;
+  padding-block: 8px;
+  padding-inline: 8px 18px;
   border-radius: 999px;
 }
 
@@ -1995,8 +2123,8 @@ svg.ui-title__sun {
 }
 
 .ui-hud__bar section:not(.ui-hud__level) {
-  padding-left: 16px;
-  border-left: 1px solid var(--ui-line);
+  padding-inline-start: 16px;
+  border-inline-start: 1px solid var(--ui-line);
 }
 
 @property --level-fill {
@@ -2102,47 +2230,8 @@ svg.ui-title__sun {
   width: calc(var(--fill) * 100%);
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--or), var(--turquoise));
+  background: linear-gradient(var(--ui-to-end), var(--or), var(--turquoise));
   box-shadow: 0 0 calc(10px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 55%, transparent);
-}
-
-.ui-hud__life {
-  gap: 8px;
-}
-
-.ui-hud__life .ui-who__name {
-  max-width: 9em;
-  font-size: 15px;
-}
-
-.ui-life__icon {
-  width: 20px;
-  height: 20px;
-  color: color-mix(in srgb, var(--who) 80%, var(--texte));
-}
-
-.ui-life__bar {
-  width: 104px;
-}
-
-.ui-life__bar .ui-bar__fill {
-  background: var(--who);
-  box-shadow: none;
-}
-
-.ui-life__value {
-  min-width: 2em;
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.ui-hud__life[data-critical] .ui-life__value {
-  color: var(--ui-tank);
-}
-
-.ui-hud__life[data-critical] .ui-bar__fill {
-  background: var(--tank);
 }
 
 .ui-hud__gear {
@@ -2203,9 +2292,16 @@ svg.ui-title__sun {
   gap: 10px;
 }
 
+/* LB, RB and the number keys sit left to right on every controller and keyboard, in every
+   language: the traps keep that order. */
 .ui-traps {
   display: flex;
   gap: 8px;
+  direction: ltr;
+}
+
+.ui-hud__traps:dir(rtl) {
+  flex-direction: row-reverse;
 }
 
 .ui-trap {
@@ -2243,7 +2339,7 @@ svg.ui-title__sun {
 .ui-trap__key {
   position: absolute;
   top: -7px;
-  left: -7px;
+  inset-inline-start: -7px;
   display: grid;
   place-items: center;
   min-width: 18px;
@@ -2401,14 +2497,14 @@ svg.ui-title__sun {
 .ui-hud__skills .ui-skill__key {
   position: absolute;
   top: 30px;
-  left: 30px;
+  inset-inline-start: 30px;
   margin: 0;
 }
 
 .ui-dash__pearls {
   position: absolute;
   top: 44px;
-  left: 26px;
+  inset-inline-start: 26px;
   display: flex;
   gap: 3px;
   padding: 2px 4px;
@@ -2432,7 +2528,7 @@ svg.ui-title__sun {
 .ui-hud__skills .ui-skill__text {
   align-items: flex-start;
   margin: 0;
-  text-align: left;
+  text-align: start;
 }
 
 @property --gauge-fill {
@@ -2714,11 +2810,13 @@ svg.ui-title__sun {
 }
 
 .ui-card__steps[data-mode='continuous'] .ui-card__step:first-child {
-  border-radius: 4px 0 0 4px;
+  border-start-start-radius: 4px;
+  border-end-start-radius: 4px;
 }
 
 .ui-card__steps[data-mode='continuous'] .ui-card__step:last-child {
-  border-radius: 0 4px 4px 0;
+  border-start-end-radius: 4px;
+  border-end-end-radius: 4px;
 }
 
 .ui-card[aria-current] {
@@ -2795,7 +2893,7 @@ svg.ui-title__sun {
   color: var(--ui-muted);
   font-size: calc(14 * var(--card-unit));
   font-weight: 600;
-  text-align: left;
+  text-align: start;
   white-space: nowrap;
 }
 
@@ -3058,14 +3156,13 @@ svg.ui-title__sun {
   min-width: 0;
 }
 
-.ui-hud[data-multi]
-  :is(.ui-hud__level, .ui-hud__life, .ui-hud__gear, .ui-hud__skills, .ui-hud__gauge) {
+.ui-hud[data-multi] :is(.ui-hud__level, .ui-hud__gear, .ui-hud__skills, .ui-hud__gauge) {
   display: none;
 }
 
 .ui-hud[data-multi] .ui-hud__traps {
-  padding-left: 0;
-  border-left: 0;
+  padding-inline-start: 0;
+  border-inline-start: 0;
 }
 
 .ui-bracelet {
@@ -3076,7 +3173,8 @@ svg.ui-title__sun {
   gap: 12px;
   width: 264px;
   max-width: 100%;
-  padding: 7px 14px 8px 12px;
+  padding-block: 7px 8px;
+  padding-inline: 12px 14px;
   border-color: color-mix(in srgb, var(--who) 50%, var(--ui-line));
   border-radius: 999px;
 }
@@ -3114,7 +3212,7 @@ svg.ui-title__sun {
 }
 
 .ui-bracelet__level {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--ui-muted);
 }
 
@@ -3163,7 +3261,7 @@ svg.ui-title__sun {
 
 .ui-bracelet__key {
   flex: none;
-  margin-left: -4px;
+  margin-inline-start: -4px;
 }
 
 .ui-bracelet[data-downed] {
@@ -3469,13 +3567,14 @@ svg.ui-title__sun {
   flex: 1 1 180px;
   gap: 4px;
   max-width: 240px;
-  padding: 14px 18px 14px 16px;
+  padding-block: 14px;
+  padding-inline: 16px 18px;
   border: 1px solid var(--ui-line);
-  border-left: 5px solid var(--who);
+  border-inline-start: 5px solid var(--who);
   border-radius: var(--ui-radius);
   background: var(--ui-panel);
   box-shadow: var(--ui-lift);
-  text-align: left;
+  text-align: start;
 }
 
 .ui-team__class {
@@ -3492,7 +3591,7 @@ svg.ui-title__sun {
 }
 
 .ui-team__member[data-downed='true'] {
-  border-left-color: var(--bad-vibe);
+  border-inline-start-color: var(--bad-vibe);
 }
 
 .ui-end__wait {
@@ -3791,15 +3890,11 @@ svg.ui-title__sun {
 @media (max-width: 960px) {
   .ui-hud__bar {
     gap: 8px;
-    padding-right: 14px;
+    padding-inline-end: 14px;
   }
 
   .ui-hud__bar section:not(.ui-hud__level) {
-    padding-left: 8px;
-  }
-
-  .ui-life__bar {
-    width: 64px;
+    padding-inline-start: 8px;
   }
 }
 
@@ -3946,12 +4041,8 @@ svg.ui-title__sun {
   }
 
   .ui-hud__bar section:not(.ui-hud__level) {
-    padding-left: 0;
-    border-left: 0;
-  }
-
-  .ui-life__bar {
-    width: 72px;
+    padding-inline-start: 0;
+    border-inline-start: 0;
   }
 
   .ui-hud__skills .ui-skill__text,
@@ -4022,7 +4113,7 @@ svg.ui-title__sun {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     column-gap: 12px;
-    text-align: left;
+    text-align: start;
   }
 
   .ui-card__medal,
@@ -4211,7 +4302,7 @@ svg.ui-title__sun {
 }
 
 /* Short screens, a phone held sideways: the HUD keeps to the corners, clear of the speakers at the top and the
-   bottom of the stage. Only the line-up, the pause, the level, the life, the traps and the skill stay. */
+   bottom of the stage. Only the line-up, the pause, the level, the traps and the skill stay. */
 
 @media (max-height: 520px) and (min-width: 600px) {
   .ui-hud,
@@ -4288,11 +4379,12 @@ svg.ui-title__sun {
   }
 
   .ui-hud__status {
-    padding: 5px 16px 5px 5px;
+    padding-block: 5px;
+    padding-inline: 5px 16px;
   }
 
   .ui-hud__actions {
-    margin-left: auto;
+    margin-inline-start: auto;
     padding: 6px;
   }
 
@@ -4300,8 +4392,6 @@ svg.ui-title__sun {
   .ui-drop,
   .ui-plugs,
   .ui-hud__bar .ui-hud__gear,
-  .ui-life__bar,
-  .ui-hud__life .ui-who__name,
   .ui-traps__name,
   .ui-hud__skills .ui-skill__text,
   .ui-gauge__text {
@@ -4309,7 +4399,7 @@ svg.ui-title__sun {
   }
 
   [data-touch] .ui-hud__pause {
-    margin-left: auto;
+    margin-inline-start: auto;
     border-color: var(--ui-line);
     background: var(--ui-panel);
     box-shadow: var(--ui-lift);
@@ -4368,13 +4458,13 @@ svg.ui-title__sun {
   }
 
   .ui-hud__bar section:not(.ui-hud__level) {
-    padding-left: 10px;
-    border-left: 1px solid var(--ui-line);
+    padding-inline-start: 10px;
+    border-inline-start: 1px solid var(--ui-line);
   }
 
   .ui-hud__actions section:first-child {
-    padding-left: 4px;
-    border-left: 0;
+    padding-inline-start: 4px;
+    border-inline-start: 0;
   }
 
   .ui-level {
@@ -4390,19 +4480,6 @@ svg.ui-title__sun {
     width: 32px;
     height: 32px;
     font-size: 16px;
-  }
-
-  .ui-hud__life {
-    gap: 6px;
-  }
-
-  .ui-life__icon {
-    width: 18px;
-    height: 18px;
-  }
-
-  .ui-life__value {
-    min-width: 0;
   }
 
   .ui-trap {
@@ -4428,12 +4505,12 @@ svg.ui-title__sun {
 
   .ui-hud__skills .ui-skill__key {
     top: 26px;
-    left: 26px;
+    inset-inline-start: 26px;
   }
 
   .ui-dash__pearls {
     top: 40px;
-    left: 24px;
+    inset-inline-start: 24px;
   }
 }
 

@@ -14,8 +14,9 @@ import { CRACK_STAGES } from './hit-marks';
 import type { Ctx, Shape } from './paint';
 
 const CELL = 144;
+export const BOSS_SCALE = 2;
+export const BOSS_CELL = CELL * BOSS_SCALE;
 const CRACK_STAGE_LIST = Array.from({ length: CRACK_STAGES }, (_, index) => index + 1);
-const BOSS_SCALE = 2;
 
 export interface Mask {
   readonly face: Face;
@@ -30,7 +31,6 @@ export interface MaskSet {
   readonly masks: ReadonlyMap<string, Mask>;
   readonly neutral: Mask;
   readonly smile: Shape;
-  readonly bossSmile: Shape;
   readonly drowsy: Shape;
   // One per stage of a hurt mask, each holding the cracks of the stages before it.
   readonly cracks: readonly Shape[];
@@ -110,7 +110,7 @@ export function createMasks(): MaskSet {
       },
     })),
   ];
-  const largeCells = [...large.flatMap(([, face]) => poseCells(face)), { draw: smile }];
+  const largeCells = large.flatMap(([, face]) => poseCells(face));
   const smallTextures = atlas(smallCells, CELL, 1);
   const largeTextures = atlas(largeCells, CELL * BOSS_SCALE, BOSS_SCALE);
 
@@ -130,17 +130,11 @@ export function createMasks(): MaskSet {
     return at;
   };
   const smallEnd = take(smallTextures, small, 1);
-  const largeEnd = take(largeTextures, large, BOSS_SCALE);
+  take(largeTextures, large, BOSS_SCALE);
   const neutral = masks.get(NEUTRAL);
   const smileTexture = smallTextures[smallEnd];
   const drowsyTexture = smallTextures[smallEnd + 1];
-  const bossSmileTexture = largeTextures[largeEnd];
-  if (
-    neutral === undefined ||
-    smileTexture === undefined ||
-    drowsyTexture === undefined ||
-    bossSmileTexture === undefined
-  ) {
+  if (neutral === undefined || smileTexture === undefined || drowsyTexture === undefined) {
     throw new Error('Mask atlas is missing a texture');
   }
   masks.delete(NEUTRAL);
@@ -149,7 +143,6 @@ export function createMasks(): MaskSet {
     masks,
     neutral,
     smile: { texture: smileTexture, radius: FACE_RADIUS },
-    bossSmile: { texture: bossSmileTexture, radius: FACE_RADIUS * BOSS_SCALE },
     drowsy: { texture: drowsyTexture, radius: 9 },
     cracks: crackTextures.map((texture) => ({ texture, radius: FACE_RADIUS })),
     destroy() {

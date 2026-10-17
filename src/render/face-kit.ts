@@ -35,6 +35,9 @@ export interface Face {
   readonly tone?: { readonly token: PaletteToken; readonly amount: number };
   // Sleepers and the Fatigué let small "z" rise above them.
   readonly drowsy?: boolean;
+  // A boss chased: its silhouette is filled bright, white at heart, in the color of whoever chased
+  // it, and wears this smile in ink; `gladFace` without it.
+  readonly glad?: (ctx: Ctx) => void;
 }
 
 export function wave(pose: Pose, turns = 1, shift = 0): number {
@@ -64,6 +67,25 @@ export function body(ctx: Ctx, trace: () => void): void {
   ctx.lineWidth = RIM;
   ctx.strokeStyle = MARK;
   ctx.stroke();
+}
+
+// The rim all outside the outline, as wide as the masks' own: shapes traced together, overlapping,
+// share one rim round them all.
+export function bodyRimOutside(ctx: Ctx, trace: () => void): void {
+  trace();
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2 * RIM;
+  ctx.strokeStyle = MARK;
+  ctx.stroke();
+  ctx.save();
+  trace();
+  ctx.clip();
+  const light = ctx.createRadialGradient(-10, -14, 4, 0, 0, 56);
+  light.addColorStop(0, MASK_BODY_LIT);
+  light.addColorStop(1, MASK_BODY);
+  ctx.fillStyle = light;
+  ctx.fillRect(-80, -80, 160, 160);
+  ctx.restore();
 }
 
 // The smile of a chased bad vibe is painted bright, to take the color of whoever chased it.
@@ -202,6 +224,49 @@ export function mouthArc(
   ctx.lineWidth = width;
   ctx.strokeStyle = color;
   ctx.stroke();
+}
+
+export interface GladPlace {
+  readonly eyeY?: number;
+  readonly eyeX?: number;
+  readonly mouthY?: number;
+  readonly mouthWidth?: number;
+  // The blushes go on the tinted body, the smile over the white light at its heart.
+  readonly part?: 'blush' | 'smile';
+}
+
+// The smile of a chased boss, in ink on its bright body: eyes shut with joy, an open mouth, blushes.
+export function gladFace(ctx: Ctx, place: GladPlace = {}): void {
+  const { eyeY = -4, eyeX = 13, mouthY = 12, mouthWidth = 15, part } = place;
+  if (part !== 'smile') {
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(side * (eyeX + 9), eyeY + 12, 5.5, 3.6, 0, 0, TAU);
+      ctx.fillStyle = SHADE_SOFT;
+      ctx.fill();
+    }
+  }
+  if (part === 'blush') {
+    return;
+  }
+  for (const side of [-1, 1]) {
+    mouthArc(ctx, side * eyeX, eyeY + 3, 6, 1.1, 1.9, 4.4, INK);
+  }
+  ctx.beginPath();
+  ctx.moveTo(-mouthWidth, mouthY);
+  ctx.quadraticCurveTo(0, mouthY + mouthWidth * 1.3, mouthWidth, mouthY);
+  ctx.closePath();
+  ctx.fillStyle = INK;
+  ctx.fill();
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-mouthWidth * 0.5, mouthY + mouthWidth * 0.55);
+  ctx.quadraticCurveTo(0, mouthY + mouthWidth * 0.85, mouthWidth * 0.5, mouthY + mouthWidth * 0.55);
+  ctx.fillStyle = SHADE_SOFT;
+  ctx.fill();
 }
 
 type Crack = readonly [PaletteToken, ...(readonly [number, number])[]];

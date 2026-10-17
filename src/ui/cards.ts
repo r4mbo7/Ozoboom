@@ -1,7 +1,7 @@
 import type { GameContent, Rarity, UpgradeFamily, WeaponDefinition } from '../data/types';
 import type { PlayerId, PlayerState, SimEvent, UpgradeOffer } from '../sim/state';
 import { t } from '../shared/i18n';
-import { upgradeForm } from '../sim/stats';
+import { growsSkillAlone, upgradeForm } from '../sim/stats';
 import { formatNumber } from './format';
 
 export const SIXTEENTHS_PER_BAR = 16;
@@ -104,6 +104,7 @@ export function cardFor(
   const upgrade = content.upgrades.find((entry) => entry.id === id);
   if (upgrade !== undefined) {
     const rarity = offer.rarities[offer.options.indexOf(id)] ?? 'common';
+    const form = upgradeForm(upgrade, rarity);
     const className =
       upgrade.family === 'class'
         ? content.classes.find((entry) => entry.id === upgrade.classId)?.name
@@ -114,12 +115,14 @@ export function cardFor(
       kind: 'upgrade',
       id,
       name: t(upgrade.name),
-      description: t(upgradeForm(upgrade, rarity).description),
+      description: t(form.description),
       family: upgrade.family,
       label:
         className === undefined
           ? familyLabels()[upgrade.family]
-          : t('Classe · {className}', { className: t(className) }),
+          : growsSkillAlone(form)
+            ? t('Spéciale')
+            : t('Classe · {className}', { className: t(className) }),
       rank: rankOf(upgrade.family, stacks),
       pearls:
         upgrade.family === 'relic'
@@ -162,15 +165,13 @@ export function cardFor(
   }
   const level = player?.weapons?.find((slot) => slot.id === id)?.level ?? 0;
   const next = formatNumber(level + 1);
-  const className = content.classes.find((entry) => entry.id === weapon.classAffinity)?.name;
   return {
     kind: 'weapon',
     id,
     name: t(weapon.name),
     description: t(weapon.description),
     weapon,
-    label:
-      className === undefined ? t('Agrès') : t('Agrès · {className}', { className: t(className) }),
+    label: t('Agrès'),
     rank: level === 0 ? t('Nouveau') : t('Niveau {level}', { level: next }),
     pearls: {
       rank: level + 1,

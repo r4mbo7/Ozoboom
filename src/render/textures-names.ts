@@ -3,7 +3,7 @@ import { CanvasSource, Texture } from 'pixi.js';
 export const LABEL_FONT_PX = 13;
 const SCALE = 2;
 const EDGE = 1.5;
-const FAMILY = '"Space Grotesk", system-ui, sans-serif';
+const FAMILY = '"Space Grotesk", "Readex Pro", system-ui, sans-serif';
 
 // A name is drawn twice, white: the letters, and the letters thickened to hold a backing or a dark contour.
 export interface NameLabel {
