@@ -21,7 +21,7 @@ import { type ClassFxTextures, createClassFxTextures } from './textures-class';
 import { type NameTextures, createNameTextures } from './textures-names';
 import { createSpeakerShapes } from './textures-speakers';
 import { comet } from './textures-pickups';
-import { bomb, crate, trap } from './textures-traps';
+import { bomb, cone, crate, droplet, trap } from './textures-traps';
 import {
   type WeaponTextures,
   createWeaponTextures,
@@ -51,6 +51,8 @@ export interface Textures {
   readonly core: Shape;
   readonly coreRay: Shape;
   readonly beam: Shape;
+  readonly cone: Shape;
+  readonly droplet: Shape;
   readonly pip: Shape;
   readonly enemyShot: Shape;
   readonly bottle: Shape;
@@ -74,6 +76,7 @@ export const TRAP_TOKENS: Readonly<Record<TrapLook, PaletteToken>> = {
   mist: 'healer',
   lure: 'or',
   strobe: 'texte',
+  breeze: 'healer',
 };
 
 type Point = readonly [number, number];
@@ -221,6 +224,8 @@ export function createTextures(): Textures {
       ctx.fillStyle = fade;
       ctx.fillRect(-half, -16, BEAM_LENGTH, 32);
     }),
+    cone: cone(),
+    droplet: droplet(),
     pip: paint(16, 8, 4, (ctx) => {
       ctx.lineCap = 'round';
       ctx.lineWidth = 3;
@@ -264,6 +269,7 @@ export function createTextures(): Textures {
       mist: trap('mist'),
       lure: trap('lure'),
       strobe: trap('strobe'),
+      breeze: trap('breeze'),
     },
     specials: createSpecialTextures(),
     weapons: createWeaponTextures(),

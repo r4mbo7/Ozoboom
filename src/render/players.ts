@@ -12,15 +12,16 @@ import type { Frame } from './frame';
 import { shadowAt } from './ground-sun';
 import { lerp } from './motion';
 import { TAU } from './paint';
+import { Downed } from './player-downed';
 import { PlayerGlow } from './player-glow';
 import { type Look, type Spawn, createLookInput } from './player-look';
 import { PlayerTag, ReviveLog } from './player-tags';
 import { CONTOUR_RING, REFERENCE } from './textures-players';
+import { DOWNED_REACH } from './textures-players-downed';
 import { add, hide, lookup, setTint } from './util';
 import { ViewPool } from './views';
 
 const TEINTS = [0xf1c9a5, 0xd9a07a, 0xa86f4c, 0x7a4a31];
-const DOWNED_TINT = 0x8e8e98;
 const CONTOUR_MARGIN = 4;
 const MAX_STEP_TICKS = 3;
 const NEVER = Number.NEGATIVE_INFINITY;
@@ -45,7 +46,7 @@ interface PlayerView {
   readonly glow: PlayerGlow;
   readonly tag: PlayerTag;
   readonly shadow: Sprite;
-  readonly lying: Sprite;
+  readonly lying: Downed;
   readonly aim: Sprite;
   readonly contour: Sprite;
   readonly dashArc: DashArc;
@@ -58,7 +59,6 @@ export function createPlayers(ctx: RenderContext): Family {
   const ground = layers.players.addChild(new Container());
   const bodies = layers.players.addChild(new Container());
   const marks = layers.players.addChild(new Container());
-  const rings = layers.players.addChild(new Container());
   const tags = layers.players.addChild(new Container());
   const lifeLabels = layers.players.addChild(new Container());
   const revives = new ReviveLog();
@@ -78,9 +78,9 @@ export function createPlayers(ctx: RenderContext): Family {
       looks: new Map(),
       halo: add(layers.glow, textures.halo),
       glow: new PlayerGlow(ctx, marks),
-      tag: new PlayerTag(ctx, rings, tags),
+      tag: new PlayerTag(ctx, tags),
       shadow: add(ground, t.looks.poi.shadow),
-      lying: add(bodies, t.looks.poi.downed),
+      lying: new Downed(ctx, bodies, marks),
       aim: add(marks, t.aim),
       contour: add(marks, t.contour),
       dashArc: new DashArc(ground),
@@ -94,7 +94,8 @@ export function createPlayers(ctx: RenderContext): Family {
       view.glow.reset();
       view.dashArc.reset();
       view.lifeArc.reset();
-      hide(view.halo, view.shadow, view.lying, view.aim, view.contour);
+      hide(view.halo, view.shadow, view.aim, view.contour);
+      view.lying.hide();
       for (const look of view.looks.values()) {
         look.hide();
         look.reset?.();
@@ -173,6 +174,7 @@ export function createPlayers(ctx: RenderContext): Family {
         const { halo, tag, shadow, lying, aim, contour } = view;
         const dazzled = (player.dazzledTicks ?? 0) > 0;
         const share = revives.share(player.id, player.downed, now);
+        const burst = revives.burst(player.id, now);
         halo.visible = share > 0 || (!player.downed && !((player.suppressedTicks ?? 0) > 0));
         setTint(halo, dazzled ? palette.texte : color);
         halo.position.set(x, y);
@@ -191,11 +193,10 @@ export function createPlayers(ctx: RenderContext): Family {
           x,
           y,
           player.downed
-            ? lookTextures.extent * scale * 1.3
+            ? DOWNED_REACH * scale
             : Math.max(lookTextures.extent * scale, view.lifeArc.extent(player, frame)),
           color,
-          share,
-          revives.burst(player.id, now),
+          burst,
           frame,
           state.players.length > 1,
         );
@@ -212,16 +213,10 @@ export function createPlayers(ctx: RenderContext): Family {
         view.moving += ((speed > 0.15 ? 1 : 0) - view.moving) * (1 - Math.exp(-dt * 0.5));
 
         let lift = 0;
-        lying.visible = downed;
+        lying.place(downed, x, y, angle, scale, color, share, burst, frame);
         if (downed) {
           look.hide();
           hide(aim, contour);
-          lying.texture = lookTextures.downed.texture;
-          setTint(lying, DOWNED_TINT);
-          lying.position.set(x, y);
-          lying.rotation = angle;
-          lying.scale.set(scale * 1.25);
-          lying.alpha = 0.6 + 0.4 * pulse;
         } else {
           const moment = moments.of(player.id);
           input.state = state;
@@ -249,21 +244,19 @@ export function createPlayers(ctx: RenderContext): Family {
         view.dashArc.place(player, x, y, color, ctx.dash, frame);
         view.lifeArc.place(player, x, y, color, now - moments.of(player.id).hit, frame);
 
-        const reach = sun.length * (downed ? 1 : lookTextures.height * 3) + lift * 6 * scale;
-        shadow.visible = true;
-        shadow.texture = lookTextures.shadow.texture;
-        setTint(shadow, 0x000000);
-        shadow.alpha = sun.alpha * (downed ? 0.5 : 1);
-        shadow.rotation = sun.angle - Math.PI / 2;
-        shadow.position.set(x + sunX * reach, y + sunY * reach);
-        const shrink = 1 - 0.14 * lift;
-        shadow.scale.set(
-          scale * (downed ? 0.6 : 1) * shrink,
-          scale * (0.85 + 0.1 * sun.length) * shrink,
-        );
+        // Lying flat, an outline of light casts no shadow.
+        shadow.visible = !downed;
         if (downed) {
           continue;
         }
+        const reach = sun.length * lookTextures.height * 3 + lift * 6 * scale;
+        shadow.texture = lookTextures.shadow.texture;
+        setTint(shadow, 0x000000);
+        shadow.alpha = sun.alpha;
+        shadow.rotation = sun.angle - Math.PI / 2;
+        shadow.position.set(x + sunX * reach, y + sunY * reach);
+        const shrink = 1 - 0.14 * lift;
+        shadow.scale.set(scale * shrink, scale * (0.85 + 0.1 * sun.length) * shrink);
 
         aim.visible = lookTextures.aimless !== true;
         setTint(aim, color);

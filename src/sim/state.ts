@@ -282,8 +282,8 @@ export interface RecruitState extends Positioned {
 // vibe, lying on the ground, or flying back to its owner.
 export type PropPhase = 'held' | 'flying' | 'bouncing' | 'grounded' | 'returning';
 
-// What a character throws, the Jongleur's clubs, the Sportif's ball, the Tatoué's dragons: the modules of
-// its attack and skill move it, the render draws it by `kind`.
+// What a character throws, the Jongleur's clubs, the Sportif's ball, the Tatoué's dragons, the Super
+// fan's glowsticks: the modules of its attack and skill move it, the render draws it by `kind`.
 export interface PropState extends Positioned {
   id: EntityId;
   kind: string;
@@ -302,7 +302,7 @@ export interface PropState extends Positioned {
   // Hits harder: a club caught on the beat until thrown, a ball kicked at full Élan.
   boosted?: true;
   // Its rank among the ones its owner let out: a dragon of the Tatoué takes its lane and its
-  // colour from it.
+  // colour from it, a glowstick of the Super fan, the beat it left on, its hand and how far it flies.
   rank?: number;
 }
 

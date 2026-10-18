@@ -170,10 +170,27 @@ export type TrapCadence = 'beat' | 'bar' | 'drop' | 'continuous';
 
 export type TrapEffect =
   | { kind: 'shockwave'; damage: number; radius: number; knockback: number }
-  | { kind: 'beam'; damagePerTick: number; length: number; width: number }
+  | {
+      kind: 'beam';
+      damagePerTick: number;
+      length: number;
+      width: number;
+      // The arc swept around the placed direction, two beats out and two back; absent, it stays put.
+      sweepDegrees?: number;
+    }
   | { kind: 'mist'; slowFactor: number; healPerBar: number; radius: number }
   | { kind: 'lure'; radius: number; markedDamageMul: number }
-  | { kind: 'strobe'; stunTicks: number; radius: number };
+  | { kind: 'strobe'; stunTicks: number; radius: number }
+  | {
+      kind: 'breeze';
+      slowFactor: number;
+      healPerBeat: number;
+      // The cone of mist blown from the trap: its length, its opening, and the arc it sweeps
+      // around the placed direction, one bar out and one bar back.
+      length: number;
+      coneDegrees: number;
+      sweepDegrees: number;
+    };
 
 export interface TrapDefinition {
   id: string;

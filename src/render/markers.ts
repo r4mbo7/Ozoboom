@@ -9,7 +9,20 @@ import { ViewPool } from './views';
 const INSET = 34;
 const SIZE = 1.25;
 const HALO = 40;
-const DOWNED_ALPHA = 0.65;
+// Behind the arrow of a downed ally, three fireflies in its colour, in screen pixels along the arrow.
+const FIREFLIES = [
+  { along: -26, across: -7, phase: 0 },
+  { along: -34, across: 4, phase: 2.1 },
+  { along: -24, across: 9, phase: 4.2 },
+] as const;
+const FIREFLY_SIZE = 1.5;
+const FIREFLY_HALO = 11;
+const TAU = Math.PI * 2;
+
+// A firefly blinks softly over two beats, out of step with the others; steady in calm mode.
+export function arrowFireflyAlpha(beats: number, phase: number, calm: boolean): number {
+  return calm ? 0.85 : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin((beats / 2) * TAU + phase));
+}
 
 // Screen space, in the class color: an arrow on the border toward each player out of view.
 export function createMarkers(ctx: RenderContext): Family {
@@ -20,9 +33,16 @@ export function createMarkers(ctx: RenderContext): Family {
       halo: add(root, textures.halo),
       outline: add(root, textures.arrow),
       arrow: add(root, textures.arrow),
+      flies: FIREFLIES.map(() => ({
+        halo: add(root, textures.halo),
+        core: add(root, textures.players.downed.firefly),
+      })),
     }),
     (view) => {
       hide(view.halo, view.outline, view.arrow);
+      for (const { halo, core } of view.flies) {
+        hide(halo, core);
+      }
     },
   );
   const marker: EdgeMarker = { x: 0, y: 0, angle: 0 };
@@ -38,18 +58,15 @@ export function createMarkers(ctx: RenderContext): Family {
         if (!edgeMarker(frame.camera, point, INSET, marker)) {
           continue;
         }
-        const { halo, outline, arrow } = views.acquire(player.id);
+        const { halo, outline, arrow, flies } = views.acquire(player.id);
         const color = palette[lookup(ctx.classTokens, player.classId, 'class')];
-        const fade = player.downed ? DOWNED_ALPHA : 1;
 
         arrow.visible = true;
         setTint(arrow, color);
         arrow.position.set(marker.x, marker.y);
         arrow.rotation = marker.angle;
         arrow.scale.set(SIZE * (1 + 0.12 * pulse));
-        arrow.alpha = fade;
         placeOutline(outline, arrow, textures.arrow.texture, textures.arrow.radius, frame);
-        outline.alpha = fade;
 
         const blend = light.additive ? 'add' : 'normal';
         if (halo.blendMode !== blend) {
@@ -59,7 +76,32 @@ export function createMarkers(ctx: RenderContext): Family {
         setTint(halo, color);
         halo.position.set(marker.x, marker.y);
         halo.scale.set(HALO / textures.halo.radius);
-        halo.alpha = light.haloAlpha * fade;
+        halo.alpha = light.haloAlpha;
+
+        const cos = Math.cos(marker.angle);
+        const sin = Math.sin(marker.angle);
+        const beats = frame.now / frame.tempo.ticksPerBeat;
+        for (const [index, fly] of flies.entries()) {
+          const spot = FIREFLIES[index];
+          fly.halo.visible = fly.core.visible = player.downed && spot !== undefined;
+          if (spot === undefined || !player.downed) {
+            continue;
+          }
+          const x = marker.x + spot.along * cos - spot.across * sin;
+          const y = marker.y + spot.along * sin + spot.across * cos;
+          const shine = arrowFireflyAlpha(beats, spot.phase, frame.calm);
+          setTint(fly.core, color);
+          fly.core.position.set(x, y);
+          fly.core.scale.set(FIREFLY_SIZE);
+          fly.core.alpha = shine;
+          if (fly.halo.blendMode !== blend) {
+            fly.halo.blendMode = blend;
+          }
+          setTint(fly.halo, color);
+          fly.halo.position.set(x, y);
+          fly.halo.scale.set(FIREFLY_HALO / textures.halo.radius);
+          fly.halo.alpha = light.haloAlpha * shine;
+        }
       }
       views.end();
     },

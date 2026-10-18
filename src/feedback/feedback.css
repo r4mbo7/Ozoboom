@@ -87,7 +87,7 @@
 }
 
 .ui-feedback__discord-link {
-  color: var(--ui-turquoise);
+  color: color-mix(in srgb, var(--ui-turquoise) 75%, var(--texte));
   text-decoration: underline;
   text-underline-offset: 3px;
 }

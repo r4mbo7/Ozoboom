@@ -1,5 +1,6 @@
 import {
   SHADE_DEEP,
+  TAU,
   WHITE,
   circle,
   doubleStroke,
@@ -69,6 +70,24 @@ export function trap(look: TrapLook): Shape {
       case 'strobe':
         star(ctx, 8, r, r * 0.5);
         outlined(ctx);
+        break;
+      case 'breeze':
+        ctx.beginPath();
+        ctx.roundRect(-r * 1.05, -r * 0.42, r * 0.5, r * 0.84, r * 0.14);
+        outlined(ctx);
+        circle(ctx, r * 0.78);
+        outlined(ctx);
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 5;
+        for (let blade = 0; blade < 3; blade += 1) {
+          const angle = (blade / 3) * TAU;
+          const at = (turn: number, reach: number) =>
+            [Math.cos(angle + turn) * r * reach, Math.sin(angle + turn) * r * reach] as const;
+          ctx.beginPath();
+          ctx.moveTo(...at(0, 0.2));
+          ctx.quadraticCurveTo(...at(0.15, 0.5), ...at(0.75, 0.52));
+          ctx.stroke();
+        }
         break;
     }
     ctx.fillStyle = WHITE;
@@ -142,5 +161,46 @@ export function bomb(): Shape {
     ctx.moveTo(11, -9);
     ctx.quadraticCurveTo(20, -13, BOMB_FUSE_TIP.x, BOMB_FUSE_TIP.y);
     ctx.stroke();
+  });
+}
+
+// The cone of the misting fan, painted from its tip on the left at the opening of the data.
+export const CONE_LENGTH = 128;
+export const CONE_DEGREES = 50;
+
+export function cone(): Shape {
+  return paint(CONE_LENGTH, CONE_LENGTH, CONE_LENGTH / 2, (ctx) => {
+    const tip = -CONE_LENGTH / 2;
+    const half = (CONE_DEGREES * Math.PI) / 360;
+    const reach = CONE_LENGTH - 2;
+    const mist = ctx.createRadialGradient(tip, 0, 0, tip, 0, reach);
+    mist.addColorStop(0, 'rgb(255 255 255 / 0.55)');
+    mist.addColorStop(1, 'rgb(255 255 255 / 0.1)');
+    ctx.fillStyle = mist;
+    ctx.beginPath();
+    ctx.moveTo(tip, 0);
+    ctx.arc(tip, 0, reach, -half, half);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgb(255 255 255 / 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 6]);
+    ctx.beginPath();
+    for (const side of [-half, half]) {
+      ctx.moveTo(tip + Math.cos(side) * 14, Math.sin(side) * 14);
+      ctx.lineTo(tip + Math.cos(side) * reach, Math.sin(side) * reach);
+    }
+    ctx.stroke();
+  });
+}
+
+export const DROPLET_RADIUS = 3;
+
+export function droplet(): Shape {
+  return paint(16, 16, DROPLET_RADIUS, (ctx) => {
+    glow(ctx, WHITE, 3);
+    ctx.fillStyle = WHITE;
+    circle(ctx, DROPLET_RADIUS);
+    ctx.fill();
   });
 }

@@ -1,79 +1,71 @@
-import { SHADE, SHADE_SOFT, TAU, WHITE, circle, polygon, rim, type Ctx } from './paint';
+import { TAU, WHITE, type Ctx, type Piece } from './paint';
+import { REFERENCE } from './textures-looks';
 
-type PlayerLook = 'poi' | 'bag' | 'parasol';
+// Every class lies down the same: its body and its head, fallen backwards, the head behind the aim.
+const BODY = { x: 2, rx: 11, ry: 22 };
+export const DOWNED_HEAD = { x: -18, radius: 10 };
+const LINE = 3;
+// How far the outline reaches from the player, in reference pixels, whichever way it lies.
+export const DOWNED_REACH = BODY.ry + LINE;
+const INNER = { inset: 3.5, width: 1.1 };
 
-// Lying along x, head to the left, its object laid on the ground beside it.
-export function lyingBody(ctx: Ctx): void {
-  ctx.fillStyle = SHADE_SOFT;
-  ctx.lineCap = 'round';
+function silhouette(ctx: Ctx, grow: number): void {
   ctx.beginPath();
-  ctx.ellipse(-4, 0, 16, 10, 0, 0, TAU);
-  ctx.fill();
-  circle(ctx, 9, -26, 0);
-  ctx.fillStyle = WHITE;
-  ctx.fill();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = SHADE_SOFT;
-  for (const y of [-4, 4]) {
-    ctx.beginPath();
-    ctx.moveTo(10, y);
-    ctx.lineTo(34, y * 1.6);
-    ctx.stroke();
-  }
+  ctx.ellipse(BODY.x, 0, BODY.rx + grow, BODY.ry + grow, 0, 0, TAU);
+  ctx.moveTo(DOWNED_HEAD.x + DOWNED_HEAD.radius + grow, 0);
+  ctx.arc(DOWNED_HEAD.x, 0, DOWNED_HEAD.radius + grow, 0, TAU);
 }
 
-export function lyingObject(look: PlayerLook, ctx: Ctx): void {
-  ctx.save();
-  ctx.translate(0, 38);
-  ctx.lineCap = 'round';
-  if (look === 'poi') {
-    ctx.strokeStyle = SHADE;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-6, 0);
-    ctx.bezierCurveTo(-26, 12, -6, 18, -18, 4);
-    ctx.moveTo(6, 0);
-    ctx.bezierCurveTo(26, 12, 6, 18, 18, 4);
+function stroked(grow: number, width: number) {
+  return (ctx: Ctx) => {
+    silhouette(ctx, grow);
+    ctx.lineWidth = width;
+    ctx.strokeStyle = WHITE;
     ctx.stroke();
-    for (const x of [-18, 18]) {
-      circle(ctx, 5.5, x, 4);
+  };
+}
+
+export const DOWNED_PIECES = {
+  downedFill: [
+    128,
+    128,
+    REFERENCE,
+    (ctx) => {
+      silhouette(ctx, 0);
       ctx.fillStyle = WHITE;
       ctx.fill();
-      rim(ctx, 2);
-    }
-  } else if (look === 'bag') {
-    ctx.rotate(0.12);
-    ctx.beginPath();
-    ctx.ellipse(-4, 0, 17, 12, 0, 0, TAU);
-    ctx.fillStyle = SHADE_SOFT;
-    ctx.fill();
-    rim(ctx, 2);
-    ctx.beginPath();
-    ctx.roundRect(14, -10, 9, 20, 4.5);
-    ctx.fillStyle = WHITE;
-    ctx.fill();
-    rim(ctx, 1.6);
-  } else {
-    ctx.rotate(-0.08);
-    polygon(ctx, [
-      [-26, 0],
-      [0, -7],
-      [26, 0],
-      [0, 7],
-    ]);
-    ctx.fillStyle = WHITE;
-    ctx.fill();
-    rim(ctx, 2);
-    ctx.fillStyle = SHADE;
-    for (const x of [-10, 10]) {
-      polygon(ctx, [
-        [x - 6, 0],
-        [x, -6 + Math.abs(x) * 0.2],
-        [x + 6, 0],
-        [x, 6 - Math.abs(x) * 0.2],
-      ]);
+    },
+  ],
+  downedLine: [128, 128, REFERENCE, stroked(0, LINE)],
+  downedInner: [128, 128, REFERENCE, stroked(-INNER.inset, INNER.width)],
+  // The veil over the world of a downed player: clear in the middle, opaque from its radius to the
+  // corners of the square, so that scaled to that radius it covers the whole screen.
+  downedVeil: [
+    128,
+    128,
+    48,
+    (ctx) => {
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 48);
+      gradient.addColorStop(0, 'rgb(255 255 255 / 0)');
+      gradient.addColorStop(0.35, 'rgb(255 255 255 / 0)');
+      gradient.addColorStop(1, 'rgb(255 255 255 / 1)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(-64, -64, 128, 128);
+    },
+  ],
+  // A firefly, white to take the colour of who it watches, ringed in black to show on the sand.
+  firefly: [
+    16,
+    16,
+    REFERENCE,
+    (ctx) => {
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.4, 0, TAU);
+      ctx.fillStyle = WHITE;
       ctx.fill();
-    }
-  }
-  ctx.restore();
-}
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#000000';
+      ctx.stroke();
+    },
+  ],
+} satisfies Record<string, Piece>;

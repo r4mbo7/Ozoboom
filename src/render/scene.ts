@@ -34,6 +34,7 @@ import { createBombs } from './bombs';
 import { createLoots } from './loots';
 import { createPickupBursts } from './pickup-bursts';
 import { createPickups } from './pickups';
+import { createDownedScreen } from './downed-screen';
 import { createMarkers } from './markers';
 import { createStageMarker } from './stage-marker';
 import { createPlayers } from './players';
@@ -126,6 +127,7 @@ export class Scene implements Renderer {
       ...FULL_FAMILIES.map((create) => create(ctx)),
       createWeapons(ctx),
       createPlayers(ctx),
+      createDownedScreen(ctx),
       createSpeakerCards(ctx),
       createMarkers(ctx),
       createStageMarker(ctx),

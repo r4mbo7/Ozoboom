@@ -27,6 +27,7 @@ import {
   gaugeReading,
   gearSlots,
   handTiles,
+  allDown,
   inDanger,
   isNight,
   levelReading,
@@ -169,7 +170,10 @@ export function createHud(): Hud {
   // The edges of the screen redden while a player of this screen is low on life.
   const danger = el('div', 'ui-hud__danger');
   danger.setAttribute('aria-hidden', 'true');
-  element.append(danger, top, banner.element, bracelets, bar);
+  // A player of this screen lying down learns that the fireflies watch over them.
+  const watched = el('p', 'ui-hud__watched');
+  watched.setAttribute('role', 'status');
+  element.append(danger, watched, top, banner.element, bracelets, bar);
 
   let builtFor: GameContent | null = null;
   let set: SetDefinition | null = null;
@@ -505,6 +509,9 @@ export function createHud(): Hud {
     setFlag(element, 'multi', people.team && people.locals.length > 1);
     updateBracelets(frame, content, people.team ? people.locals : [], people.others);
     setFlag(element, 'danger', inDanger(people.locals));
+    const down = allDown(people.locals);
+    setFlag(element, 'watched', down);
+    setText(watched, down ? t('Les lucioles veillent sur toi') : '');
 
     const local = frame.players[0];
     const snapshot = local?.snapshot ?? frame.snapshot;

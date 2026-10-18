@@ -44,8 +44,11 @@ export function createBracelet(): Bracelet {
   const who = createWho();
   const level = el('span', 'ui-bracelet__level');
   const status = el('span', 'ui-bracelet__status');
+  const fireflies = el('span', 'ui-bracelet__fireflies');
+  fireflies.setAttribute('aria-hidden', 'true');
+  fireflies.append(...[0, 1, 2].map(() => el('span', 'ui-bracelet__firefly')));
   const head = el('div', 'ui-bracelet__head');
-  head.append(who, level, status);
+  head.append(fireflies, who, level, status);
   const life = el('div', 'ui-bar ui-bracelet__life');
   life.setAttribute('role', 'meter');
   life.setAttribute('aria-label', t('Vie'));

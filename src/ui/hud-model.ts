@@ -68,6 +68,11 @@ export function inDanger(
   return players.some((player) => !player.downed && ratio(player.hp, player.maxHp) <= DANGER_RATIO);
 }
 
+// Whether every player of this screen lies down: the screen then waits for the relève.
+export function allDown(players: readonly Pick<PlayerState, 'downed'>[]): boolean {
+  return players.length > 0 && players.every((player) => player.downed);
+}
+
 export function playerLabel(player: Pick<PlayerState, 'id' | 'name'>): string {
   return player.name ?? defaultName(player.id);
 }

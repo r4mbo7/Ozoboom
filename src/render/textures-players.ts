@@ -16,7 +16,7 @@ import {
   type Piece,
   type Shape,
 } from './paint';
-import { lyingBody, lyingObject } from './textures-players-downed';
+import { DOWNED_PIECES } from './textures-players-downed';
 import {
   BAG_PIECES,
   POI_BALL,
@@ -50,7 +50,6 @@ const PARASOL_REACH = 56;
 export interface LookTextures {
   // The object drawn whole, for the looks that do not move its parts on their own.
   readonly object?: Shape;
-  readonly downed: Shape;
   // Outer reach of the object, in reference pixels: where the aim line starts and the contour sits.
   readonly extent: number;
   // How high the object is held above the ground: it stretches the shadow.
@@ -63,11 +62,21 @@ export interface LookTextures {
   readonly aimless?: true;
 }
 
+// A downed player, whatever the class: the fill comes back during the relève, over the ground.
+export interface DownedTextures {
+  readonly fill: Shape;
+  readonly line: Shape;
+  readonly inner: Shape;
+  readonly firefly: Shape;
+  readonly veil: Shape;
+}
+
 export interface PlayerTextures {
   readonly shoulders: Shape;
   readonly head: Shape;
   readonly aim: Shape;
   readonly contour: Shape;
+  readonly downed: DownedTextures;
   readonly looks: Readonly<Record<PlayerLook, LookTextures>>;
   readonly poi: PoiParts;
   readonly bag: BagParts;
@@ -139,18 +148,6 @@ function softBlob(width: number, height: number, roundness: number): Piece {
   ];
 }
 
-function downed(kind: PlayerLook): Piece {
-  return [
-    128,
-    128,
-    REFERENCE,
-    (ctx) => {
-      lyingBody(ctx);
-      lyingObject(kind, ctx);
-    },
-  ];
-}
-
 const PIECES = {
   shoulders: [64, 64, REFERENCE, shoulders],
   head: [32, 32, REFERENCE, head],
@@ -182,13 +179,11 @@ const PIECES = {
       ctx.stroke();
     },
   ],
-  poiDowned: downed('poi'),
   poiShadow: softBlob(14, 24, 1),
-  bagDowned: downed('bag'),
   bagShadow: softBlob(26, 28, 1),
   parasol: [112, 112, REFERENCE, parasol],
-  parasolDowned: downed('parasol'),
   parasolShadow: softBlob(PARASOL_RADIUS - 4, PARASOL_RADIUS - 4, 1),
+  ...DOWNED_PIECES,
   ...POI_PIECES,
   ...BAG_PIECES,
   ...PARASOL_PIECES,
@@ -203,12 +198,18 @@ export function playerTextures(): PlayerTextures {
     head: t.head,
     aim: t.aim,
     contour: t.contour,
+    downed: {
+      fill: t.downedFill,
+      line: t.downedLine,
+      inner: t.downedInner,
+      firefly: t.firefly,
+      veil: t.downedVeil,
+    },
     looks: {
-      poi: { downed: t.poiDowned, extent: POI_ORBIT + POI_BALL, height: 1, shadow: t.poiShadow },
-      bag: { downed: t.bagDowned, extent: BAG_REACH, height: 1.4, shadow: t.bagShadow },
+      poi: { extent: POI_ORBIT + POI_BALL, height: 1, shadow: t.poiShadow },
+      bag: { extent: BAG_REACH, height: 1.4, shadow: t.bagShadow },
       parasol: {
         object: t.parasol,
-        downed: t.parasolDowned,
         extent: PARASOL_REACH,
         height: 2.4,
         shadow: t.parasolShadow,

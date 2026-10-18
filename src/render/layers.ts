@@ -24,6 +24,8 @@ export interface Layers {
   readonly fx: Container;
   readonly shots: Container;
   readonly weapons: Container;
+  // Mutes the world round a player of this screen who lies down, under the players and their marks.
+  readonly veil: Container;
   readonly players: Container;
   readonly bubbles: Container;
 }
@@ -57,6 +59,7 @@ export function createLayers(stage: Container): Layers {
     fx: layer(world),
     shots: layer(world),
     weapons: layer(world),
+    veil: layer(world),
     players: layer(world),
     bubbles: layer(world),
     screen: layer(stage),

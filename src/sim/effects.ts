@@ -126,12 +126,20 @@ export function keepWhere<T>(items: T[], keep: (item: T) => boolean): void {
   items.length = kept;
 }
 
-export function slowEnemies(state: SimState, at: Point, radius: number, slowFactor: number): void {
+export function slowEnemies(
+  state: SimState,
+  at: Point,
+  radius: number,
+  slowFactor: number,
+): boolean {
+  let reached = false;
   for (const enemy of state.enemies) {
     if (enemy.hp > 0 && touches(enemy, at, radius)) {
       enemy.slowFactor = Math.min(enemy.slowFactor, slowFactor);
+      reached = true;
     }
   }
+  return reached;
 }
 
 export function healPlayer(state: SimState, player: PlayerState, amount: number): void {
@@ -169,13 +177,16 @@ export function shockwave(
   knockback: number,
   markedMul: number,
   by: PlayerId | null,
-): void {
+): boolean {
+  let reached = false;
   for (const enemy of state.enemies) {
     if (enemy.hp > 0 && touches(enemy, at, radius)) {
       hurtEnemy(state, enemy, damage, markedMul, by, at);
       knockBack(enemy, at, knockback);
+      reached = true;
     }
   }
+  return reached;
 }
 
 // The lure replaces the step the steering just gave the enemy: same speed, slows and statuses, new goal.

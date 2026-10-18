@@ -1,9 +1,9 @@
 import { FULL_CATALOGS } from './full';
 import { LOCALES, type Locale, isLocale } from './languages';
-import ar from './locales/ar.json';
-import en from './locales/en.json';
-import es from './locales/es.json';
-import ptBR from './locales/pt-BR.json';
+import ar from './locales/ar.json' with { type: 'json' };
+import en from './locales/en.json' with { type: 'json' };
+import es from './locales/es.json' with { type: 'json' };
+import ptBR from './locales/pt-BR.json' with { type: 'json' };
 
 // The game is written in French and translated at each release (ADR 0017): a French text is its own key, and
 // stands in for a translation the catalog lacks.

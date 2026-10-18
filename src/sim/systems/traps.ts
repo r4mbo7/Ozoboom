@@ -1,10 +1,13 @@
 import type { TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
-import type { Tempo } from '../../shared/tempo';
+import { isBeatTick, type Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
+import { breezeDirection, inBreeze } from '../breeze';
 import type { PlayerAction } from '../commands';
+import { beamDirection } from '../beam';
 import { lookup, type ResolvedContent } from '../content';
 import {
   drawTo,
+  healPlayer,
   healPlayersOnBar,
   hurtEnemy,
   markEnemy,
@@ -60,14 +63,7 @@ export function traps(ctx: StepContext): void {
       const definition = trapDefinition(content, trap);
       if (firing[definition.cadence] && (definition.effect.kind === 'lure') === lures) {
         const owner = ownerOf(state, trap);
-        state.events.push({
-          type: 'trapFired',
-          id: trap.id,
-          kind: trap.kind,
-          x: trap.x,
-          y: trap.y,
-        });
-        fire({
+        const reached = fire({
           state,
           tempo: ctx.tempo,
           at: trap,
@@ -79,6 +75,10 @@ export function traps(ctx: StepContext): void {
           radiusMul: statValue(owner, 'trapRadiusMul', 1),
           markedMul,
         });
+        if (reached || definition.cadence !== 'continuous') {
+          const { id, kind, x, y } = trap;
+          state.events.push({ type: 'trapFired', id, kind, x, y });
+        }
       }
     }
   };
@@ -191,11 +191,13 @@ function cadencesFiring(state: SimState): Readonly<Record<TrapCadence, boolean>>
   return { beat, bar, drop, continuous: true };
 }
 
-export function fire(firing: Firing): void {
+// Says whether the effect reached a bad vibe.
+export function fire(firing: Firing): boolean {
   const { state, tempo, at, effect, contact, by, power, damageMul, radiusMul, markedMul } = firing;
+  let reached = false;
   switch (effect.kind) {
     case 'shockwave':
-      shockwave(
+      return shockwave(
         state,
         at,
         effect.radius * radiusMul,
@@ -204,42 +206,71 @@ export function fire(firing: Firing): void {
         markedMul,
         by,
       );
-      return;
-    case 'beam':
+    case 'beam': {
+      const direction = beamDirection(effect, at.direction, state.tick, tempo);
+      const length = effect.length * radiusMul;
       for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && inBeam(enemy, at, effect.length * radiusMul, effect.width / 2)) {
+        if (enemy.hp > 0 && inBeam(enemy, at, direction, length, effect.width / 2)) {
           hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, by, at);
+          reached = true;
         }
       }
-      return;
+      return reached;
+    }
     case 'mist': {
       const radius = effect.radius * radiusMul;
-      slowEnemies(state, at, radius, effect.slowFactor);
       healPlayersOnBar(state, tempo, at, radius, effect.healPerBar * power);
-      return;
+      return slowEnemies(state, at, radius, effect.slowFactor);
     }
     case 'lure':
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
           markEnemy(state, enemy, LURE_MARK_TICKS);
           drawTo(enemy, at, contact + enemy.radius);
+          reached = true;
         }
       }
-      return;
+      return reached;
     case 'strobe': {
       const stun = wholeTicks(effect.stunTicks * power);
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
           enemy.stunTicks = Math.max(enemy.stunTicks, stun);
+          reached = true;
         }
       }
-      return;
+      return reached;
+    }
+    case 'breeze': {
+      const direction = breezeDirection(effect, at.direction, state.tick, tempo);
+      const length = effect.length * radiusMul;
+      const blows = (body: Vec2 & { radius: number }) =>
+        inBreeze(body, at, direction, length, effect.coneDegrees);
+      if (isBeatTick(state.tick, tempo)) {
+        for (const player of state.players) {
+          if (!player.downed && blows(player)) {
+            healPlayer(state, player, effect.healPerBeat * power);
+          }
+        }
+      }
+      for (const enemy of state.enemies) {
+        if (enemy.hp > 0 && blows(enemy)) {
+          enemy.slowFactor = Math.min(enemy.slowFactor, effect.slowFactor);
+          reached = true;
+        }
+      }
+      return reached;
     }
   }
 }
 
-function inBeam(enemy: EnemyState, trap: Emitter, length: number, halfWidth: number): boolean {
-  const { direction } = trap;
+function inBeam(
+  enemy: EnemyState,
+  trap: Vec2,
+  direction: Vec2,
+  length: number,
+  halfWidth: number,
+): boolean {
   const dx = enemy.x - trap.x;
   const dy = enemy.y - trap.y;
   const along = dx * direction.x + dy * direction.y;

@@ -14,7 +14,7 @@ export type SfxName =
   | 'enemyDied'
   | 'coreHit'
   | 'trapSub'
-  | 'trapBreath'
+  | 'trapCrackle'
   | 'cardDealt'
   | 'cardsReady'
   | 'cardRare'
@@ -158,7 +158,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     enemyDied: { perFrame: 3, concurrent: 6, seconds: 0.24 },
     coreHit: { perFrame: 1, concurrent: 1, seconds: 0.36 },
     trapSub: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-    trapBreath: { perFrame: 1, concurrent: 2, seconds: 0.16 },
+    trapCrackle: { perFrame: 1, concurrent: 1, seconds: 0.1 },
     cardDealt: { perFrame: 1, concurrent: 4, seconds: 0.2 },
     cardsReady: { perFrame: 1, concurrent: 1, seconds: 0.3 },
     cardRare: { perFrame: 1, concurrent: 2, seconds: 0.4 },
@@ -277,7 +277,7 @@ export function sfxOf(
       if (effect === 'shockwave') {
         return 'trapSub';
       }
-      return effect === 'beam' ? 'trapBreath' : null;
+      return effect === 'beam' ? 'trapCrackle' : null;
     }
     default:
       return null;
@@ -409,13 +409,16 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.24,
     });
   },
-  trapBreath: (out, at) => {
-    playNoise(out, at, {
-      gain: 0.07,
-      attack: 0.04,
-      hold: 0.04,
-      release: 0.08,
-      filter: { type: 'bandpass', hz: 2600, q: 0.8 },
+  // The laser crackles only while it burns a bad vibe: each spark lands a little late and aside.
+  trapCrackle: (out, at) => {
+    const scatter = Math.abs(Math.sin(at * 78.233) * 43_758.545) % 1;
+    playNoise(out, at + scatter * 0.03, {
+      gain: 0.05,
+      attack: 0.001,
+      hold: 0.004,
+      release: 0.025,
+      pan: scatter * 1.2 - 0.6,
+      filter: { type: 'highpass', hz: 5500, q: 0.7 },
     });
   },
   // A card lands: one note of the scale per card, over the rustle of its fall.

@@ -81,6 +81,14 @@ export function trapIcon(effect: TrapEffect): string {
       );
     case 'strobe':
       return '<path d="m12 2 2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z" fill="currentColor"/>';
+    case 'breeze':
+      return (
+        '<circle cx="9" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<g fill="currentColor"><ellipse cx="9" cy="8.4" rx="1.7" ry="2.9" transform="rotate(25 9 12)"/>' +
+        '<ellipse cx="9" cy="8.4" rx="1.7" ry="2.9" transform="rotate(145 9 12)"/>' +
+        '<ellipse cx="9" cy="8.4" rx="1.7" ry="2.9" transform="rotate(265 9 12)"/>' +
+        '<circle cx="19.5" cy="7.5" r="1.2"/><circle cx="21.5" cy="12" r="1.2"/><circle cx="19.5" cy="16.5" r="1.2"/></g>'
+      );
   }
 }
 

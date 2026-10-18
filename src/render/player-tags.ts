@@ -1,4 +1,4 @@
-import { Container, type Sprite } from 'pixi.js';
+import type { Container, Sprite } from 'pixi.js';
 import type { PlayerId, PlayerState, SimEvent } from '../sim/state';
 import { defaultName } from '../shared/i18n';
 import { TICKS_PER_BEAT } from '../shared/tempo';
@@ -7,10 +7,6 @@ import type { Frame } from './frame';
 import { NAME_TEXTURE_SCALE } from './textures-names';
 import { add, setTint } from './util';
 
-const TAU = Math.PI * 2;
-const BEADS = 24;
-const RING_TEXTURE_REACH = 54;
-const RING_SHARE = 3;
 const REVIVE_GRACE = 3;
 const REVIVED_TICKS = 2 * TICKS_PER_BEAT;
 const NAME_GAP = 3;
@@ -39,7 +35,7 @@ export class ReviveLog {
     }
   }
 
-  // The ring fills while the progress keeps being reported, and only for a player lying down.
+  // The share of the relève done, while it keeps being reported, and only for a player lying down.
   share(id: PlayerId, downed: boolean, now: number): number {
     const revive = this.items.get(id);
     if (revive === undefined || !downed || now - revive.tick > REVIVE_GRACE) {
@@ -74,26 +70,17 @@ export class ReviveLog {
   }
 }
 
-interface Ring {
-  readonly container: Container;
-  readonly track: Sprite;
-  readonly beads: readonly Sprite[];
-}
-
-// What a player carries besides the body: the name above, the relève ring, the halo of a revival.
+// What a player carries besides the body: the name above, the halo of a revival.
 export class PlayerTag {
   private readonly nameEdge: Sprite;
   private readonly name: Sprite;
   private readonly burst: Sprite;
-  private ring: Ring | null = null;
 
   private readonly ctx: RenderContext;
-  private readonly rings: Container;
 
-  constructor(ctx: RenderContext, rings: Container, tags: Container) {
+  constructor(ctx: RenderContext, tags: Container) {
     const { textures, layers } = ctx;
     this.ctx = ctx;
-    this.rings = rings;
     this.burst = add(layers.glow, textures.halo);
     this.nameEdge = add(tags, textures.halo);
     this.name = add(tags, textures.halo);
@@ -101,9 +88,6 @@ export class PlayerTag {
 
   hide(): void {
     this.burst.visible = this.name.visible = this.nameEdge.visible = false;
-    if (this.ring !== null) {
-      this.ring.container.visible = false;
-    }
   }
 
   // `reach` is how far the body extends, in world units, above its center.
@@ -113,15 +97,12 @@ export class PlayerTag {
     y: number,
     reach: number,
     color: number,
-    share: number,
     burst: number,
     frame: Frame,
     team: boolean,
   ): void {
     this.placeBurst(player, x, y, color, burst, frame);
-    this.placeRing(player, x, y, color, share, frame);
-    const room = share > 0 ? Math.max(reach, player.radius * RING_SHARE * 1.15) : reach;
-    this.placeName(player, x, y, room, color, frame, team);
+    this.placeName(player, x, y, reach, color, frame, team);
   }
 
   private placeBurst(
@@ -144,36 +125,6 @@ export class PlayerTag {
     burst.scale.set((player.radius * (3 + 3 * grow)) / halo.radius);
     burst.alpha =
       frame.light.haloAlpha * (frame.calm ? 0.6 : 1.4) * (1 - progress) * (1 - progress);
-  }
-
-  private placeRing(
-    player: PlayerState,
-    x: number,
-    y: number,
-    color: number,
-    share: number,
-    frame: Frame,
-  ): void {
-    if (share <= 0) {
-      if (this.ring !== null) {
-        this.ring.container.visible = false;
-      }
-      return;
-    }
-    const { container, track, beads } = (this.ring ??= this.createRing());
-    const { light, palette } = frame;
-    container.visible = true;
-    container.position.set(x, y);
-    container.scale.set((player.radius * RING_SHARE) / this.ctx.textures.ring.radius);
-    setTint(track, light.additive ? color : palette.texte);
-    track.alpha = light.additive ? 0.3 : 0.55;
-    for (let index = 0; index < BEADS; index += 1) {
-      const bead = beads[index];
-      if (bead !== undefined) {
-        setTint(bead, color);
-        bead.alpha = Math.min(1, Math.max(0, share * BEADS - index));
-      }
-    }
   }
 
   private placeName(
@@ -213,21 +164,5 @@ export class PlayerTag {
     setTint(nameEdge, light.additive ? palette.sol : palette.texte);
     name.alpha = fade;
     nameEdge.alpha = (light.additive ? 0.7 : 0.9) * fade;
-  }
-
-  private createRing(): Ring {
-    const { textures } = this.ctx;
-    const container = this.rings.addChild(new Container());
-    const track = add(container, textures.ring);
-    const beads: Sprite[] = [];
-    for (let index = 0; index < BEADS; index += 1) {
-      const angle = (index / BEADS) * TAU - Math.PI / 2;
-      const bead = add(container, textures.pip);
-      bead.position.set(Math.cos(angle) * RING_TEXTURE_REACH, Math.sin(angle) * RING_TEXTURE_REACH);
-      bead.rotation = angle + Math.PI / 2;
-      bead.scale.set(1.15, 1.6);
-      beads.push(bead);
-    }
-    return { container, track, beads };
   }
 }
