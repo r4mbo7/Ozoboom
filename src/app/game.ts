@@ -12,7 +12,10 @@ import {
 import { TRACKS } from '../data/tracks';
 import type { SetDefinition } from '../data/types';
 import { createInputHub } from '../input';
+import { navigatorGamepads } from '../input/gamepad';
 import type { DeviceId, InputSnapshot } from '../input/intents';
+import { learnKeyboardLayout } from '../input/key-names';
+import { DEFAULT_KEY_PROFILE, setKeyProfile } from '../input/profile';
 import { createPortraits, createRenderer } from '../render';
 import { SUN_PALETTES } from '../shared/palette';
 import type { GameMode } from '../shared/stats';
@@ -32,13 +35,16 @@ import {
   type SoundLevel,
   type StageCard,
   type UiFrame,
+  type RemapScreen,
   VOLUME_STEPS,
+  createControlsButton,
   createFeedbackButton,
   createAutoAimToggle,
   createAutoFireToggle,
   createHitSoundToggle,
   createSoundControl,
   createUi,
+  openRemap,
   prefersCalmMode,
   stepSound,
 } from '../ui';
@@ -48,6 +54,8 @@ import {
   benchScene,
   benchSlots,
   bossScene,
+  fireScene,
+  sunriseScene,
   createDevProbe,
 } from './dev';
 import { createFpsMeter } from './fps';
@@ -110,7 +118,10 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     trackId: '',
     endless: false,
     festival: false,
+    keys: DEFAULT_KEY_PROFILE,
   });
+  setKeyProfile(prefs.keys);
+  void learnKeyboardLayout();
   if (!classIds.includes(prefs.classId)) {
     prefs.classId = classIds.includes(DEFAULT_CLASS_ID) ? DEFAULT_CLASS_ID : (classIds[0] ?? '');
   }
@@ -166,6 +177,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   let uiPlayers: readonly LocalPlayer[] = [];
   let played = false;
   let feedback: FeedbackDialog | null = null;
+  let remap: RemapScreen | null = null;
   const fps = createFpsMeter();
   const probe =
     dev.mode === null
@@ -227,6 +239,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       onToggleAutoAim: setAutoAim,
       onChooseLocale: chooseLocale,
       onFeedback: openForm,
+      onControls: openControls,
       onPlayTogether: openLobby,
       onChooseClass(classId) {
         if (classIds.includes(classId)) {
@@ -414,6 +427,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         setAutoAim(!prefs.autoAim);
       },
     },
+    { label: t('Contrôles'), element: createControlsButton(), activate: openControls },
     { label: t('Ton avis'), element: createFeedbackButton(), activate: openForm },
     {
       label: t('Quitter la partie'),
@@ -521,6 +535,25 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     });
   }
 
+  // Like the form, from the title or the pause: it takes every input until it closes.
+  function openControls(): void {
+    if (remap !== null || feedback !== null) {
+      return;
+    }
+    remap = openRemap(root, {
+      device: uiSnapshot?.device ?? 'none',
+      profile: prefs.keys,
+      onChange(profile) {
+        prefs.keys = profile;
+        savePref(storage, 'keys', profile);
+        setKeyProfile(profile);
+      },
+      onClose() {
+        remap = null;
+      },
+    });
+  }
+
   function setSound({ volume, muted }: SoundLevel): void {
     prefs.volume = volume;
     prefs.muted = muted;
@@ -612,6 +645,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     }
     if (dev.boss !== null) {
       bossScene(match.session.state, dev.boss);
+    }
+    if (dev.mode === 'feu') {
+      fireScene(match.session.state, content);
+    }
+    if (dev.mode === 'sunrise') {
+      sunriseScene(match.session.state, content);
     }
     screen = 'game';
     // An online guest may still be fading out when the host plays again.
@@ -749,6 +788,10 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     const { merged } = view;
     if (feedback !== null) {
       feedback.update(merged);
+      return;
+    }
+    if (remap !== null) {
+      remap.update(merged, navigatorGamepads());
       return;
     }
     uiSnapshot = merged;
@@ -931,7 +974,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     const start = performance.now();
     renderer.render(session.frame, alpha);
     const rendered = performance.now();
-    if (uiSnapshot !== null && feedback === null) {
+    if (uiSnapshot !== null && feedback === null && remap === null) {
       ui.update(session.frame, uiFrame(uiSnapshot), content);
     }
     session.endFrame();

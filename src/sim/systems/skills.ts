@@ -12,7 +12,7 @@ export function skills(ctx: StepContext): void {
   for (const player of state.players) {
     player.skillCooldown = Math.max(0, player.skillCooldown - 1);
     player.invulnerableTicks = Math.max(0, (player.invulnerableTicks ?? 0) - 1);
-    if (player.downed) {
+    if (player.downed || player.carrying !== undefined) {
       continue;
     }
     const input = commands.get(player.id)?.input ?? IDLE_INPUT;

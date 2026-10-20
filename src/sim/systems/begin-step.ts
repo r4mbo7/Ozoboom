@@ -12,6 +12,7 @@ export function beginStep({ state }: StepContext): void {
   rememberPositions(state.placed ?? []);
   rememberPositions(state.recruits ?? []);
   rememberPositions(state.props ?? []);
+  rememberPositions(state.summon?.heavy ?? []);
   if (state.status === 'running') {
     state.tick += 1;
   }

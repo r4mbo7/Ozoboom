@@ -147,6 +147,8 @@ export interface UiCallbacks {
   // Only shows the « Ton avis » button when set. Route menu intents to the form until it closes.
   // `details` is what an interruption reports (the tick of a divergence): it prefills the form.
   onFeedback?(details?: string): void;
+  // Opens the screen that changes the keys: menu intents go to it until it closes.
+  onControls(): void;
 }
 
 export interface Ui {

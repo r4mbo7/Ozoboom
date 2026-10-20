@@ -2,7 +2,7 @@ import { BYSTANDERS } from './bystanders';
 import { DASH } from './dash';
 import { CLASSES } from './classes';
 import { ENEMIES } from './enemies';
-import { FULL_PATHS } from './full';
+import { FULL_PATHS, FULL_SUMMONS } from './full';
 import { FUSIONS } from './fusions';
 import { SETS } from './sets';
 import { TRAPS } from './traps';
@@ -22,4 +22,5 @@ export const CONTENT: GameContent = {
   rarityWeights: RARITY_WEIGHTS,
   dash: DASH,
   paths: FULL_PATHS,
+  summons: FULL_SUMMONS,
 };

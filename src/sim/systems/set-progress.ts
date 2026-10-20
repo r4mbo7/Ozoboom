@@ -34,11 +34,7 @@ export function endlessMinutes({ tick, set }: SimState): number {
 }
 
 export function isLastBossDown(state: SimState, set: SetDefinition): boolean {
-  return (
-    isLastTier(state.set, set) &&
-    state.set.segment === 'drop' &&
-    !state.enemies.some((enemy) => enemy.isBoss)
-  );
+  return isLastTier(state.set, set) && state.set.segment === 'drop' && !bossLeft(state);
 }
 
 function currentTier(progress: SetProgress, set: SetDefinition): TierDefinition | undefined {
@@ -53,8 +49,13 @@ function isSegmentOver(state: SimState, tier: TierDefinition, tempo: Tempo): boo
     case 'break':
       return bars >= tier.breakBars;
     case 'drop':
-      return bars >= MIN_DROP_BARS && !state.enemies.some((enemy) => enemy.isBoss);
+      return bars >= MIN_DROP_BARS && !bossLeft(state);
   }
+}
+
+// A boss on the floor, or still to come in this drop.
+function bossLeft(state: SimState): boolean {
+  return state.bossesDue !== undefined || state.enemies.some((enemy) => enemy.isBoss);
 }
 
 function advance(state: SimState, content: ResolvedContent, set: SetDefinition): void {

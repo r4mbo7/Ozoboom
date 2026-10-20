@@ -1,6 +1,7 @@
 import type { GameContent } from '../data/types';
 import { layoutGround, shoreAt } from '../render/ground-layout';
 import { hashState } from '../sim/replay';
+import { setTempo } from '../sim/lineup';
 import { spawnEnemy } from '../sim/systems/spawning';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId, SimState } from '../sim/state';
@@ -15,13 +16,18 @@ import type { PlayerId, SimState } from '../sim/state';
 // - `?dev=boss&boss=<id>`: the real set at normal speed, started at the break of the first drop,
 //   with that boss and no other. `&tier=2` gives it the force of the second drop, `&stage=<id>` picks
 //   its only stage, the first by default. An unknown boss, tier or stage shows an error on the page.
+// - `?dev=feu&stage=<id>`: that stage only, at normal speed, started a phrase before its first break, the
+//   players beside its pile of logs or its spores: to bring offerings to its fire or giants and meet the
+//   bosses they call. The Main stage by default; a stage without a fire or giants shows an error.
+// - `?dev=sunrise`: every stage at normal speed, the game started at the sunrise of the stage picked: in a Full
+//   festival its exits open at once, to walk a path.
 // `fast` and `bench` play on the first stage only, so that « Jouer » starts at once; `&stages` keeps
 // every stage.
 // All draw the seed of every game at random, unless `&seed=` fixes it to replay the same game.
 // All expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
 // A browser test's player set in `window.ozoboom.onStep` plays after every step of the game, and the
 // next step reads what it did on the devices, however few frames a loaded machine draws.
-export type DevMode = 'fast' | 'bench' | 'boss';
+export type DevMode = 'fast' | 'bench' | 'boss' | 'sunrise' | 'feu';
 
 // The boss of `?dev=boss`, and the index of the tier whose break the game starts at.
 export interface DevBoss {
@@ -58,6 +64,20 @@ export function readDevOptions(search: string, content: GameContent): DevOptions
   const mode = params.get('dev');
   if (mode === 'boss') {
     return bossOptions(params, content);
+  }
+  if (mode === 'feu') {
+    return fireOptions(params, content);
+  }
+  if (mode === 'sunrise') {
+    return {
+      mode,
+      speed: 1,
+      players: 1,
+      content,
+      light: false,
+      seed: readSeed(params),
+      boss: null,
+    };
   }
   if (mode !== null && !params.has('stages')) {
     return readDevOptions(`${search}&stages`, { ...content, sets: content.sets.slice(0, 1) });
@@ -116,6 +136,41 @@ function bossOptions(params: URLSearchParams, content: GameContent): DevOptions 
   };
 }
 
+function fireOptions(params: URLSearchParams, content: GameContent): DevOptions {
+  const stageIds = (content.summons ?? []).map((summon) => summon.setId);
+  const stageId = params.get('stage') ?? stageIds[0] ?? '';
+  const set = content.sets.find((candidate) => candidate.id === stageId);
+  if (set === undefined || !stageIds.includes(stageId)) {
+    throw new DevUrlError(
+      `No fire nor giants on stage "${stageId}" in ?dev=feu, pick one of: ${stageIds.join(', ')}`,
+    );
+  }
+  return {
+    mode: 'feu',
+    speed: 1,
+    players: 1,
+    content: { ...content, sets: [set] },
+    light: false,
+    seed: readSeed(params),
+    boss: null,
+  };
+}
+
+// The game starts a phrase before the first break, its players beside the first source of offerings.
+export function fireScene(state: SimState, content: GameContent): void {
+  const set = content.sets.find((candidate) => candidate.id === state.setId);
+  const source = content.summons?.find((summon) => summon.setId === state.setId)?.sources[0];
+  if (set === undefined || source === undefined) {
+    throw new Error(`no fire nor giants on "${state.setId}" for ?dev=feu`);
+  }
+  const phrases = set.tiers[0]?.buildupPhrases ?? 1;
+  state.set.segmentStartTick = state.tick - (phrases - 1) * setTempo(set).ticksPerPhrase;
+  state.players.forEach((player, index) => {
+    player.x = player.prevX = source.x - (source.radius + 30) * (index % 2 === 0 ? 1 : -1);
+    player.y = player.prevY = source.y - 40 * Math.floor(index / 2);
+  });
+}
+
 // The game starts at the break of the tier, its boss already drawn so that its arrival shows.
 export function bossScene(state: SimState, boss: DevBoss): void {
   state.set.tier = boss.tier;
@@ -124,6 +179,16 @@ export function bossScene(state: SimState, boss: DevBoss): void {
   state.bosses = [boss.id];
   state.events = state.events.filter((event) => event.type !== 'segment');
   state.events.push({ type: 'segment', segment: 'break', tier: boss.tier });
+}
+
+// The game starts as its stage's last drop ends.
+export function sunriseScene(state: SimState, content: GameContent): void {
+  const set = content.sets.find((candidate) => candidate.id === state.setId);
+  if (set === undefined) {
+    throw new Error(`no stage "${state.setId}" for ?dev=sunrise`);
+  }
+  state.set.tier = set.tiers.length;
+  state.set.segment = 'drop';
 }
 
 function readSeed(params: URLSearchParams): number | null {

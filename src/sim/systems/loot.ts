@@ -2,7 +2,7 @@ import type { TrapDefinition } from '../../data/types';
 import { type RngState, nextFloat } from '../../shared/prng';
 import { barOfTick, isBarTick } from '../../shared/tempo';
 import { touches } from '../effects';
-import { statValue } from '../stats';
+import { handFree, statValue } from '../stats';
 import type { StepContext } from './types';
 
 // Every `everyBars` bars, fewer with the talkie-walkie of any player, a loot falls due; the first
@@ -86,7 +86,7 @@ export function loots({ state, set }: StepContext): void {
     const taker = state.players.find(
       (player) =>
         !player.downed &&
-        (player.hand?.length ?? 0) < set.handSize &&
+        handFree(player, set) &&
         touches(player, loot, statValue(player, 'lootRadiusMul', rules.radius)),
     );
     if (taker !== undefined) {

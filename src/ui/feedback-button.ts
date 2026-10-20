@@ -1,6 +1,6 @@
 import { t } from '../shared/i18n';
 import { el, icon } from './dom';
-import { SPEECH } from './icons';
+import { KEYBOARD, SPEECH } from './icons';
 
 export function createActionButton(
   label: string,
@@ -12,6 +12,17 @@ export function createActionButton(
   const text = el('span', 'ui-action__text');
   text.append(el('span', 'ui-action__label', label), el('span', 'ui-action__hint', hint));
   button.append(text, icon('ui-action__icon', svgBody));
+  return button;
+}
+
+// A touch screen has no keys to choose: the button only shows elsewhere.
+export function createControlsButton(): HTMLButtonElement {
+  const button = createActionButton(
+    t('Contrôles'),
+    t('Choisis tes touches et tes boutons'),
+    KEYBOARD,
+  );
+  button.classList.add('ui-action--keys');
   return button;
 }
 

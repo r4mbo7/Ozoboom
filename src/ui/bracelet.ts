@@ -5,7 +5,7 @@ import { t } from '../shared/i18n';
 import { el, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
 import { playerLabel, skillCharge } from './hud-model';
-import { promptsFor } from './prompts';
+import { promptsFor, promptsVersion } from './prompts';
 import { createWho, fillWho, whoColor } from './who';
 
 export interface SkillView {
@@ -61,6 +61,7 @@ export function createBracelet(): Bracelet {
   element.append(body, skill, key);
 
   let builtDevice: InputDevice | null = null;
+  let builtKeys = -1;
 
   return {
     element,
@@ -80,8 +81,9 @@ export function createBracelet(): Bracelet {
       setText(level, t('Niv. {level}', { level: player.level }));
       setText(status, player.downed ? t('À terre') : '');
       element.setAttribute('aria-label', playerLabel(player));
-      if (device !== builtDevice) {
+      if (device !== builtDevice || builtKeys !== promptsVersion()) {
         builtDevice = device;
+        builtKeys = promptsVersion();
         const prompts = device === null ? null : promptsFor(device);
         key.replaceChildren(...(prompts === null ? [] : [keycap(prompts.skill, prompts.style)]));
         key.hidden = prompts === null;

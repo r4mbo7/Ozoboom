@@ -68,7 +68,8 @@ export function hurtEnemy(
   }
   const marked = enemy.marked ? damage * markedMul : damage;
   const frontMul = from === null ? 1 : frontDamageMul(enemy, from);
-  const dealt = marked * frontMul;
+  const armorMul = enemy.armor === undefined || enemy.armor.open ? 1 : enemy.armor.damageMul;
+  const dealt = marked * frontMul * armorMul;
   enemy.hp -= dealt;
   if (by !== null) {
     enemy.lastHitBy = by;
@@ -83,6 +84,9 @@ export function hurtEnemy(
   };
   if (frontMul !== 1) {
     hit.front = true;
+  }
+  if (armorMul !== 1) {
+    hit.armored = true;
   }
   if (by !== null) {
     hit.by = by;

@@ -109,3 +109,35 @@ export function lineBlocked(
   }
   return false;
 }
+
+// The share of the straight line from (x0, y0) to (x1, y1) a circle of `radius` covers before it touches an
+// obstacle: 1 when nothing is in the way. An obstacle it already overlaps does not hold it, so that it can get out.
+export function freeShare(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  radius: number,
+  obstacles: readonly ObstacleDefinition[],
+): number {
+  const lx = x1 - x0;
+  const ly = y1 - y0;
+  const lengthSquared = lx * lx + ly * ly;
+  let share = 1;
+  if (lengthSquared === 0) {
+    return share;
+  }
+  for (const obstacle of obstacles) {
+    const ox = x0 - obstacle.x;
+    const oy = y0 - obstacle.y;
+    const touch = radius + obstacle.radius;
+    const outside = ox * ox + oy * oy - touch * touch;
+    const toward = ox * lx + oy * ly;
+    const discriminant = toward * toward - lengthSquared * outside;
+    if (outside <= 0 || toward >= 0 || discriminant < 0) {
+      continue;
+    }
+    share = Math.min(share, (-toward - Math.sqrt(discriminant)) / lengthSquared);
+  }
+  return share;
+}

@@ -166,17 +166,20 @@ export function volumeCrans(set: SetDefinition, state: SimState): Cran[] {
 export interface HandTile {
   trapId: string | null;
   available: boolean;
+  // The slot after the traps holds an offering for the fire or a giant.
+  offering?: true;
 }
 
 // The kind of the trap the trap key would take back where the player stands, if a hand is free.
 export function trapToTake(
   definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
   state: Pick<SimState, 'traps'>,
-  player: Pick<PlayerState, 'x' | 'y' | 'hand'>,
+  player: Pick<PlayerState, 'x' | 'y' | 'hand' | 'offering'>,
   handSize: number,
 ): string | null {
   const under = trapAt(definitions, state.traps, player);
-  return under === undefined || (player.hand?.length ?? 0) >= handSize ? null : under.kind;
+  const held = (player.hand?.length ?? 0) + (player.offering === true ? 1 : 0);
+  return under === undefined || held >= handSize ? null : under.kind;
 }
 
 // One tile per hand slot. A held trap is available unless the field is full or a trap stands where
@@ -184,13 +187,17 @@ export function trapToTake(
 export function handTiles(
   definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
   state: Pick<SimState, 'traps'>,
-  player: Pick<PlayerState, 'x' | 'y' | 'hand'>,
+  player: Pick<PlayerState, 'x' | 'y' | 'hand' | 'offering'>,
   handSize: number,
   capacity: number,
 ): HandTile[] {
   const free =
     state.traps.length < capacity && trapAt(definitions, state.traps, player) === undefined;
+  const traps = player.hand?.length ?? 0;
   return Array.from({ length: handSize }, (_, index) => {
+    if (index === traps && player.offering === true) {
+      return { trapId: null, available: false, offering: true };
+    }
     const trapId = player.hand?.[index] ?? null;
     return { trapId, available: trapId !== null && free };
   });

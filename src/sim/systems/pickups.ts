@@ -1,10 +1,12 @@
 import { lookup, type ResolvedContent } from '../content';
+import { gustDrift } from '../gusts';
 import type { PickupState, PlayerState, SimState } from '../state';
 import { statValue } from '../stats';
 import { volumeMul } from '../volume';
 import type { StepContext } from './types';
 
 export function pickups({ state, content, set }: StepContext): void {
+  const drift = gustDrift(state);
   let kept = 0;
   for (const pickup of state.pickups) {
     if (pickup.flight !== undefined) {
@@ -17,6 +19,10 @@ export function pickups({ state, content, set }: StepContext): void {
       continue;
     }
     pickup.ticksLeft -= 1;
+    if (drift !== undefined) {
+      pickup.x = Math.min(Math.max(pickup.x + drift.x, 0), state.arena.width);
+      pickup.y = Math.min(Math.max(pickup.y + drift.y, 0), state.arena.height);
+    }
     const collector = nearestCollector(state, content, pickup);
     if (collector !== undefined && attract(pickup, collector, set.pickups.speed)) {
       collect(state, pickup, collector);

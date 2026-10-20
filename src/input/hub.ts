@@ -7,6 +7,7 @@ import {
   type GamepadLike,
   type GamepadState,
 } from './gamepad';
+import type { InputBindings } from './bindings';
 import type { DeviceId, InputHub, InputSnapshot } from './intents';
 import { attachKeyboardMouse } from './keyboard-mouse';
 import {
@@ -18,6 +19,7 @@ import {
   type MergeState,
   type TouchFrame,
 } from './merge';
+import { DEFAULT_INPUT_BINDINGS, inputBindings } from './profile';
 import { attachTouch } from './touch';
 
 interface PadState {
@@ -71,6 +73,7 @@ export function stepHub(
   now: number,
   // The touch screen plays the merged view only: it is not a seat of the local coop.
   touch: TouchFrame = IDLE_TOUCH_FRAME,
+  bindings: InputBindings = DEFAULT_INPUT_BINDINGS,
 ): {
   snapshots: ReadonlyMap<DeviceId, InputSnapshot>;
   merged: InputSnapshot;
@@ -85,7 +88,7 @@ export function stepHub(
   for (const pad of pads) {
     if (pad?.connected !== true) continue;
     const previous = state.pads.get(pad.index);
-    const reduced = reduceGamepad(previous?.gamepad ?? INITIAL_GAMEPAD_STATE, [pad]);
+    const reduced = reduceGamepad(previous?.gamepad ?? INITIAL_GAMEPAD_STATE, [pad], bindings);
     const merged = mergeFrames(
       previous?.merge ?? INITIAL_MERGE_STATE,
       IDLE_KEYBOARD_MOUSE_FRAME,
@@ -96,7 +99,7 @@ export function stepHub(
     snapshots.set(gamepadDeviceId(pad.index), { ...merged.snapshot, device: 'gamepad' });
   }
 
-  const mergedGamepad = reduceGamepad(state.merged.gamepad, pads);
+  const mergedGamepad = reduceGamepad(state.merged.gamepad, pads, bindings);
   const merged = mergeFrames(state.merged.merge, keyboardMouse, mergedGamepad.frame, now, touch);
 
   return {
@@ -129,6 +132,7 @@ export function createInputHub(target: HTMLElement): InputHub {
         navigatorGamepads(),
         performance.now(),
         touch.take(),
+        inputBindings(),
       );
       state = stepped.state;
       merged = stepped.merged;

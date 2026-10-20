@@ -36,6 +36,7 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   weaponRateMul: false,
   kiffDamageAdd: true,
   zoneCountAdd: true,
+  rootsGrowthMul: false,
 };
 
 export function statValue(
@@ -85,6 +86,11 @@ export function dashRechargeBeats(
 ): number {
   const beats = Math.floor(statValue(player, 'dashRechargeMul', dash.rechargeBeats) + 0.5);
   return Math.max(dash.minRechargeBeats, beats);
+}
+
+// A trap hand is free unless traps or an offering fill it.
+export function handFree(player: PlayerState, set: Pick<SetDefinition, 'handSize'>): boolean {
+  return (player.hand?.length ?? 0) + (player.offering === true ? 1 : 0) < set.handSize;
 }
 
 export function trapCapacity(

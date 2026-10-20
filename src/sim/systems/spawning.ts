@@ -1,7 +1,7 @@
 import type { EnemyDefinition, SetDefinition } from '../../data/types';
 import { nextFloat, nextInt, pick } from '../../shared/prng';
 import { BARS_PER_PHRASE, barOfTick, isBarTick, type Tempo } from '../../shared/tempo';
-import { lookup } from '../content';
+import { lookup } from '../lookup';
 import { compound } from '../effects';
 import { clearOfObstacles } from '../obstacles';
 import { volumeMul } from '../volume';
@@ -94,10 +94,30 @@ function spawnAtEdge(
   const edge = isBoss
     ? edgePosition(state.rng, state.arena, definition.radius)
     : ruleSpawnPosition(state, set, tempo, definition.radius);
-  const { x, y } = clearOfObstacles(edge, definition.radius, set.obstacles ?? []);
+  spawnScaled(state, set, definition, edge, isBoss);
+}
+
+// A boss of the drop brought in at `at`, scaled as the drop's own.
+export function spawnBossAt(
+  state: SimState,
+  set: SetDefinition,
+  definition: EnemyDefinition,
+  at: Vec2,
+): EnemyState {
+  return spawnScaled(state, set, definition, at, true);
+}
+
+function spawnScaled(
+  state: SimState,
+  set: SetDefinition,
+  definition: EnemyDefinition,
+  at: Vec2,
+  isBoss: boolean,
+): EnemyState {
+  const { x, y } = clearOfObstacles(at, definition.radius, set.obstacles ?? []);
   const minutes = endlessMinutes(state);
   const scale = state.enemyScale ?? NO_SCALE;
-  spawnEnemy(
+  return spawnEnemy(
     state,
     definition,
     x,

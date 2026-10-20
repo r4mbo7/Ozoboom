@@ -8,6 +8,7 @@ import {
 import type { InputSource } from './intents';
 import { attachKeyboardMouse } from './keyboard-mouse';
 import { INITIAL_MERGE_STATE, mergeFrames } from './merge';
+import { inputBindings } from './profile';
 
 export function createInputSource(target: HTMLElement): InputSource {
   const keyboardMouse = attachKeyboardMouse(target);
@@ -16,7 +17,7 @@ export function createInputSource(target: HTMLElement): InputSource {
 
   return {
     poll() {
-      const gamepad = reduceGamepad(gamepadState, navigatorGamepads());
+      const gamepad = reduceGamepad(gamepadState, navigatorGamepads(), inputBindings());
       gamepadState = gamepad.state;
       const merged = mergeFrames(
         mergeState,

@@ -1,11 +1,11 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { el, fillHint, keycap, setText } from './dom';
 import { formatNumber } from './format';
-import { createActionButton, createFeedbackButton } from './feedback-button';
+import { createActionButton, createControlsButton, createFeedbackButton } from './feedback-button';
 import { openDiscord } from './discord';
 import { DISCORD } from './icons';
 import { type Menu, createMenu } from './menu';
-import { promptsFor } from './prompts';
+import { promptsFor, promptsVersion } from './prompts';
 import { TITLE_AT_REST, type TitleLight, heardFrom, titleLightAt } from './title-light';
 import {
   createAutoAimToggle,
@@ -26,6 +26,7 @@ export interface TitleActions {
   toggleHitSound(): void;
   toggleAutoFire(): void;
   toggleAutoAim(): void;
+  controls(): void;
   chooseLocale(locale: Locale): void;
   feedback?(): void;
 }
@@ -154,6 +155,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
   const hitSound = createHitSoundToggle();
   const autoFire = createAutoFireToggle();
   const autoAim = createAutoAimToggle();
+  const keys = createControlsButton();
   const language = createLanguageControl(locale());
 
   const items = [
@@ -164,6 +166,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
     hitSound.button,
     autoFire.button,
     autoAim.button,
+    keys,
     language,
   ];
   if (actions.feedback !== undefined) {
@@ -227,6 +230,9 @@ export function createTitle(actions: TitleActions): TitleScreen {
       actions.toggleAutoAim();
     },
     () => {
+      actions.controls();
+    },
+    () => {
       languages.open();
     },
     () => {
@@ -252,6 +258,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
   menu.setItems(items);
 
   let device: InputDevice | null = null;
+  let keysShown = -1;
 
   return {
     element,
@@ -282,10 +289,11 @@ export function createTitle(actions: TitleActions): TitleScreen {
       setText(meta, `v${__APP_RELEASE__} · ${visits}`);
     },
     setDevice(next) {
-      if (next === device) {
+      if (next === device && keysShown === promptsVersion()) {
         return;
       }
       device = next;
+      keysShown = promptsVersion();
       languages.setDevice(next);
       const prompts = promptsFor(next);
       setText(controlsTitle, t('Commandes · {device}', { device: prompts.name }));

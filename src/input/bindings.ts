@@ -40,33 +40,19 @@ export const TRAP_SLOT_CONTROLS = [
 
 export type Bindings<K extends string | number> = Readonly<Partial<Record<K, readonly Control[]>>>;
 
-const up = ['moveUp', 'menuUp'] as const;
-const down = ['moveDown', 'menuDown'] as const;
-const left = ['moveLeft', 'menuLeft'] as const;
-const right = ['moveRight', 'menuRight'] as const;
-
-// Keys are KeyboardEvent.code, the physical position on a US layout: KeyW is the Z of an AZERTY
-// keyboard, so ZQSD and WASD are the same physical keys whatever the system layout.
-export const KEY_BINDINGS: Bindings<string> = {
-  KeyW: up,
-  KeyA: left,
-  KeyS: down,
-  KeyD: right,
-  ArrowUp: up,
-  ArrowLeft: left,
-  ArrowDown: down,
-  ArrowRight: right,
-  Space: ['fire'],
-  KeyF: ['placeTrap'],
-  Tab: ['nextTrap', 'menuNext'],
+// The keys that stay whatever the player chooses: the menus, the pause and the trap slots. Keys are
+// KeyboardEvent.code, the physical position on a US layout: KeyW is the Z of an AZERTY keyboard.
+export const FIXED_KEY_BINDINGS: Bindings<string> = {
+  ArrowUp: ['menuUp'],
+  ArrowLeft: ['menuLeft'],
+  ArrowDown: ['menuDown'],
+  ArrowRight: ['menuRight'],
+  Tab: ['menuNext'],
   Digit1: ['selectTrap1'],
   Digit2: ['selectTrap2'],
   Digit3: ['selectTrap3'],
   Digit4: ['selectTrap4'],
   Digit5: ['selectTrap5'],
-  KeyE: ['skill'],
-  ShiftLeft: ['dash'],
-  ShiftRight: ['dash'],
   Escape: ['pause', 'back'],
   Enter: ['confirm'],
   NumpadEnter: ['confirm'],
@@ -78,15 +64,21 @@ export const SHIFTED_KEY_BINDINGS: Bindings<string> = {
 
 export const SHIFT_KEYS: readonly string[] = ['ShiftLeft', 'ShiftRight'];
 
-export const MOUSE_BUTTON_BINDINGS: Bindings<number> = {
-  0: ['fire'],
-  2: ['placeTrap'],
-};
+export type Wheel = 'down' | 'up';
 
-export const WHEEL_BINDINGS: Readonly<Record<'down' | 'up', readonly Control[]>> = {
-  down: ['nextTrap'],
-  up: ['previousTrap'],
-};
+export interface Stick {
+  readonly x: number;
+  readonly y: number;
+}
+
+// What every input does, built from the player's key profile (`src/input/profile.ts`).
+export interface InputBindings {
+  readonly keys: Bindings<string>;
+  readonly mouseButtons: Bindings<number>;
+  readonly wheel: Readonly<Record<Wheel, readonly Control[]>>;
+  readonly gamepadButtons: Bindings<number>;
+  readonly sticks: { readonly move: Stick; readonly aim: Stick };
+}
 
 // Button indices of the "standard" Gamepad API mapping, named after the Xbox controller.
 export const StandardButton = {
@@ -109,13 +101,12 @@ export const StandardButton = {
   Guide: 16,
 } as const;
 
-export const GAMEPAD_BUTTON_BINDINGS: Bindings<number> = {
-  [StandardButton.RT]: ['fire'],
-  [StandardButton.A]: ['placeTrap', 'confirm'],
-  [StandardButton.B]: ['back', 'dash'],
-  [StandardButton.LT]: ['skill'],
-  [StandardButton.LB]: ['previousTrap', 'menuPrevious'],
-  [StandardButton.RB]: ['nextTrap', 'menuNext'],
+// The buttons that stay whatever the player chooses: A and B validate and go back in the menus.
+export const FIXED_GAMEPAD_BUTTON_BINDINGS: Bindings<number> = {
+  [StandardButton.A]: ['confirm'],
+  [StandardButton.B]: ['back'],
+  [StandardButton.LB]: ['menuPrevious'],
+  [StandardButton.RB]: ['menuNext'],
   [StandardButton.DpadUp]: ['menuUp', 'emoteUp'],
   [StandardButton.DpadDown]: ['menuDown', 'emoteDown'],
   [StandardButton.DpadLeft]: ['menuLeft', 'emoteLeft'],
@@ -124,10 +115,8 @@ export const GAMEPAD_BUTTON_BINDINGS: Bindings<number> = {
 };
 
 // Axis indices of the "standard" mapping; y grows downwards, like screen coordinates.
-export const GAMEPAD_STICKS = {
-  move: { x: 0, y: 1 },
-  aim: { x: 2, y: 3 },
-} as const;
+export const LEFT_STICK: Stick = { x: 0, y: 1 };
+export const RIGHT_STICK: Stick = { x: 2, y: 3 };
 
 // In a game, each arrow of the directional pad makes the player's gesture of that side.
 export const EMOTE_CONTROLS: Readonly<Record<Emote, Control>> = {
@@ -148,7 +137,7 @@ export const MENU_DIRECTION_CONTROLS: Readonly<Record<MenuDirection, Control>> =
   right: 'menuRight',
 };
 
-// The left stick walks the menus like the directional pad: a push past MENU_STICK_PRESS on its
+// The moving stick walks the menus like the directional pad: a push past MENU_STICK_PRESS on its
 // dominant axis is one press, held until the stick comes back under MENU_STICK_RELEASE.
 export const MENU_STICK_PRESS = 0.6;
 export const MENU_STICK_RELEASE = 0.3;

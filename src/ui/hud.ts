@@ -15,7 +15,7 @@ import { beatPeriodMs } from '../shared/tempo';
 import { createBossBanner } from './boss-banner';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
 import { createDashTile } from './dash-tile';
-import { FULL_HUD } from './full';
+import { FULL_HUD, FULL_OFFERING_ICONS } from './full';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber } from './format';
 import {
@@ -49,7 +49,7 @@ import {
   setTempo,
 } from '../sim/lineup';
 import { heldSlot, selectTrap } from './navigation';
-import { promptsFor } from './prompts';
+import { promptsFor, promptsVersion } from './prompts';
 import { cssName } from './sun';
 
 export interface Hud {
@@ -194,6 +194,7 @@ export function createHud(): Hud {
   let trapDefinitions: ReadonlyMap<string, TrapDefinition> = new Map();
   let classDef: ClassDefinition | null = null;
   let builtDevice: InputDevice | null = null;
+  let builtKeys = -1;
   let selectedTrap = 0;
   let previousGameplay: InputSnapshot['gameplay'] | null = null;
   let plugs: HTMLElement[] = [];
@@ -382,6 +383,7 @@ export function createHud(): Hud {
   function buildSkills(definition: ClassDefinition, device: InputDevice): void {
     classDef = definition;
     builtDevice = device;
+    builtKeys = promptsVersion();
     const prompts = promptsFor(device);
     skill.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(definition.skill.effect)));
     const name = t('Spéciale');
@@ -534,7 +536,10 @@ export function createHud(): Hud {
       return;
     }
     const definition = content.classes.find((entry) => entry.id === player.classId) ?? null;
-    if (definition !== null && (definition !== classDef || snapshot.device !== builtDevice)) {
+    if (
+      definition !== null &&
+      (definition !== classDef || snapshot.device !== builtDevice || builtKeys !== promptsVersion())
+    ) {
       buildSkills(definition, snapshot.device);
     }
 
@@ -553,7 +558,7 @@ export function createHud(): Hud {
     selectedTrap = selectTrap(selectedTrap, tiles.length, snapshot.gameplay, previousGameplay);
     previousGameplay = snapshot.gameplay;
     updateGear(player, state, content);
-    updateHand(player, state);
+    updateHand(player, state, content);
 
     if (definition !== null) {
       const skillReady = player.skillCooldown <= 0;
@@ -569,7 +574,7 @@ export function createHud(): Hud {
     }
   }
 
-  function updateHand(player: PlayerState, state: SimState): void {
+  function updateHand(player: PlayerState, state: SimState, content: GameContent): void {
     const capacity = set === null ? 0 : trapCapacity(set, state);
     const views = handTiles(trapDefinitions, state, player, tiles.length, capacity);
     const selected = heldSlot(selectedTrap, player.hand?.length ?? 0);
@@ -578,19 +583,33 @@ export function createHud(): Hud {
       if (tile === undefined) {
         return;
       }
-      if (tileTraps[index] !== view.trapId) {
-        tileTraps[index] = view.trapId;
+      const look = content.summons?.find((summon) => summon.setId === state.setId)?.look;
+      const held = view.offering === true ? `offering:${look ?? ''}` : view.trapId;
+      if (tileTraps[index] !== held) {
+        tileTraps[index] = held;
         const trap = view.trapId === null ? undefined : trapDefinitions.get(view.trapId);
+        const offering =
+          view.offering === true && look !== undefined ? FULL_OFFERING_ICONS[look] : undefined;
         tile.querySelector('.ui-trap__icon')?.remove();
         if (trap !== undefined) {
           tile.append(icon('ui-trap__icon', trapIcon(trap.effect)));
+        } else if (offering !== undefined) {
+          tile.append(icon('ui-trap__icon', offering));
         }
         tile.title =
-          trap === undefined
-            ? t('Main libre')
-            : t('{name} : {description}', { name: t(trap.name), description: t(trap.description) });
+          view.offering === true
+            ? look === 'giants'
+              ? t('Des spores, à porter à un géant')
+              : t('Un bâton, à jeter au feu')
+            : trap === undefined
+              ? t('Main libre')
+              : t('{name} : {description}', {
+                  name: t(trap.name),
+                  description: t(trap.description),
+                });
       }
-      setFlag(tile, 'empty', view.trapId === null);
+      setFlag(tile, 'empty', view.trapId === null && view.offering !== true);
+      setFlag(tile, 'offering', view.offering === true);
       setFlag(tile, 'selected', index === selected);
       setFlag(tile, 'blocked', view.trapId !== null && !view.available);
     });

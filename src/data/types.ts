@@ -22,7 +22,8 @@ export type StatKey =
   | 'dashChargesAdd'
   | 'weaponRateMul'
   | 'kiffDamageAdd'
-  | 'zoneCountAdd';
+  | 'zoneCountAdd'
+  | 'rootsGrowthMul';
 
 export interface StatModifier {
   stat: StatKey;
@@ -120,6 +121,8 @@ export interface ClassDefinition {
   pickupRadius: number;
   // Shades the players within, from the sun of the Canicule: the parasol of the Hygie.
   shadeRadius?: number;
+  // The share of a gust's push that drifts this class; absent, all of it. The Enraciné holds fast.
+  gustMul?: number;
   reviveMul?: number;
   attack: AttackDefinition;
   skill: SkillDefinition;
@@ -473,6 +476,38 @@ export interface DashDefinition {
   onBeatDistanceMul: number;
 }
 
+// How a team calls more bosses on a stage of the full game (src/data/full/summons.ts): what it brings
+// from the sources to the sites, alone in a trap hand or two to a heavy offering.
+export type SummonLook = 'fire' | 'giants';
+
+export interface SummonSource {
+  x: number;
+  y: number;
+  radius: number;
+  // Offerings it gives for the whole stage.
+  items: number;
+}
+
+export interface SummonSite {
+  x: number;
+  y: number;
+  radius: number;
+  // Offerings it takes for the whole stage.
+  capacity: number;
+  // Where the bosses it calls come in; absent, anywhere on the edge, as a drawn boss.
+  gates?: readonly { x: number; y: number }[];
+}
+
+export interface SummonDefinition {
+  // The set where a team calls more bosses this way.
+  setId: string;
+  look: SummonLook;
+  sources: readonly SummonSource[];
+  sites: readonly SummonSite[];
+  // How far past a source, a site or the end of a heavy offering the pose key reaches.
+  reach: number;
+}
+
 export interface GameContent {
   classes: readonly ClassDefinition[];
   enemies: readonly EnemyDefinition[];
@@ -487,6 +522,8 @@ export interface GameContent {
   dash?: DashDefinition;
   // The sets a game walks through between two stages (ADR 0018), never offered at the stage choice.
   paths?: readonly SetDefinition[];
+  // The sets where a team can call more bosses, one each.
+  summons?: readonly SummonDefinition[];
 }
 
 export type MusicVoiceId =

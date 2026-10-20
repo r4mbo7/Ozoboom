@@ -1,4 +1,4 @@
-import type { EdgeSide, Rarity, StatKey, ZoneDefinition } from '../data/types';
+import type { EdgeSide, Rarity, StatKey, SummonLook, ZoneDefinition } from '../data/types';
 import type { Emote } from './commands';
 
 export type { EdgeSide };
@@ -127,6 +127,10 @@ export interface PlayerState extends Positioned {
   dashBeats?: number;
   // The move of each tick of a dash under way, and its ticks left; absent outside a dash.
   dash?: { dx: number; dy: number; ticksLeft: number };
+  // A light offering held in a trap hand, alone at a stage with a fire or giants; absent otherwise.
+  offering?: true;
+  // The end of a heavy offering this player holds; absent otherwise.
+  carrying?: { logId: EntityId; end: 0 | 1 };
 }
 
 // The maximum hp is left out: a bonus that ends never takes hp points away.
@@ -191,8 +195,13 @@ export interface EnemyState extends Positioned {
   carriesLoot?: boolean;
   // Carries a bomb it drops when it dies.
   carriesBomb?: boolean;
+  // A boss a fire or a giant called into the drop.
+  called?: true;
   // Mâle alpha: its last step, which faces the hits it takes at `damageMul`.
   front?: { x: number; y: number; damageMul: number };
+  // Larsen: the hits it takes at `damageMul` while its window is shut; its special opens it on the
+  // one and the three of every bar.
+  armor?: { damageMul: number; open: boolean };
 }
 
 export type ProjectileOwner =
@@ -338,6 +347,17 @@ export interface PickupState extends Positioned {
   flight?: { ticksLeft: number; ticks: number; fromX: number; fromY: number };
 }
 
+// A gust: its direction, a unit vector, the tick its warning began, the tick it blows from, the
+// tick it ends, and how far it drifts what is light a tick at full blow.
+export interface GustState {
+  x: number;
+  y: number;
+  warnTick: number;
+  blowTick: number;
+  endTick: number;
+  push: number;
+}
+
 export interface LootState extends Positioned {
   id: EntityId;
   trapId: string;
@@ -400,12 +420,43 @@ export interface SimStats {
   phrasesHeld: number;
   damageDealt: number;
   vibesCollected: number;
+  // Called bosses down; absent until the first.
+  calledDown?: number;
+}
+
+// A heavy offering (a log, a giant mushroom cap) lying or carried by two: its centre, and the unit
+// axis from the centre to its end 0.
+export interface HeavyOfferingState extends Positioned {
+  id: EntityId;
+  ax: number;
+  ay: number;
+  // Who holds each end.
+  ends: [PlayerId | null, PlayerId | null];
+  // The site it touched: it falls in on the next bar.
+  site?: number;
+}
+
+// What a team brought to the fire or the giants of the stage it plays (`setId`).
+export interface SummonState {
+  setId: string;
+  // Offerings taken from each source, and burnt at each site.
+  taken: number[];
+  burnt: number[];
+  // The sites in the order they took their offerings: the n-th called boss comes through the n-th.
+  order: number[];
+  // The site of each light offering thrown in, burning on the next bar.
+  falling: number[];
+  heavy: HeavyOfferingState[];
+  // The bosses called into the current drop.
+  called: string[];
 }
 
 export type SimEvent =
   | { type: 'beat'; beat: number }
   | { type: 'bar'; bar: number }
   | { type: 'phrase'; phrase: number }
+  // The gust of the Coup de vent begins to blow toward (x, y), a unit vector.
+  | { type: 'gust'; x: number; y: number }
   | { type: 'segment'; segment: SetSegment; tier: number }
   | { type: 'enemySpawned'; id: EntityId; kind: string; x: number; y: number }
   | {
@@ -415,6 +466,8 @@ export type SimEvent =
       x: number;
       y: number;
       front?: true;
+      // Scaled down by an armor shut between its windows: the Larsen's.
+      armored?: true;
       // The player credited with the hit and where it came from, when the sim knows them.
       by?: PlayerId;
       fromX?: number;
@@ -497,6 +550,21 @@ export type SimEvent =
   | { type: 'speakerPlugged'; speakerId: string }
   | { type: 'volumeChanged'; volume: number }
   | { type: 'relicOffered'; playerId: PlayerId; options: readonly string[] }
+  | { type: 'offeringTaken'; playerId: PlayerId; x: number; y: number; heavy: boolean }
+  | { type: 'offeringThrown'; playerId: PlayerId; site: number; x: number; y: number }
+  | { type: 'heavyGrabbed'; id: EntityId; playerId: PlayerId }
+  | { type: 'heavyDropped'; id: EntityId; playerId: PlayerId }
+  // An offering fell in on the 1: `burnt` at this site, `total` at the stage.
+  | {
+      type: 'offeringBurnt';
+      look: SummonLook;
+      site: number;
+      burnt: number;
+      total: number;
+      x: number;
+      y: number;
+    }
+  | { type: 'bossCalled'; id: EntityId; kind: string; site: number; x: number; y: number }
   | { type: 'festivalSceneHeld'; setId: string }
   | { type: 'festivalLeft'; setId: string; side: EdgeSide }
   | { type: 'festivalArrived'; setId: string }
@@ -545,6 +613,8 @@ export interface SimState {
   recruits?: RecruitState[];
   // Optional like `walls`: created with the first puddle laid, removed when the last one dries.
   puddles?: PuddleState[];
+  // The gust of the Coup de vent, from its warning to its end; absent between two.
+  gust?: GustState;
   // Optional like `bystanders`: created with the first prop of a character who throws them.
   props?: PropState[];
   // The sides of the current window of `SetDefinition.sidedWaves`, drawn at its first rule spawn;
@@ -553,6 +623,10 @@ export interface SimState {
   // The bosses drawn so far, one as each break starts: the last one is the boss of the coming or
   // current drop. Created with the first draw.
   bosses?: string[];
+  // Full game: what the team brought to the fire or the giants, created with the first offering taken.
+  summon?: SummonState;
+  // Bosses still to come in the current drop: the drop goes on until none is left.
+  bossesDue?: number;
   // What the bad vibes gain on top of their own scaling, at spawn: absent means none.
   enemyScale?: { hp: number; damage: number };
   // Full festival games only.

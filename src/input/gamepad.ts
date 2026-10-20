@@ -1,15 +1,15 @@
 import type { Vec2 } from '../sim/state';
 import {
-  GAMEPAD_BUTTON_BINDINGS,
-  GAMEPAD_STICKS,
   MENU_DIRECTION_CONTROLS,
   MENU_STICK_PRESS,
   MENU_STICK_RELEASE,
   STICK_DEADZONE,
   type Control,
+  type InputBindings,
   type MenuDirection,
 } from './bindings';
 import type { GamepadFrame } from './merge';
+import { DEFAULT_INPUT_BINDINGS } from './profile';
 
 export interface GamepadButtonLike {
   readonly pressed: boolean;
@@ -62,6 +62,7 @@ export function selectGamepad(
 export function reduceGamepad(
   state: GamepadState,
   pads: readonly (GamepadLike | null)[],
+  bindings: InputBindings = DEFAULT_INPUT_BINDINGS,
 ): { frame: GamepadFrame; state: GamepadState } {
   const pad = selectGamepad(pads, state.index);
   if (pad === null) {
@@ -84,14 +85,15 @@ export function reduceGamepad(
   const presses: Control[] = [];
   buttons.forEach((down, index) => {
     if (!down) return;
-    const controls = GAMEPAD_BUTTON_BINDINGS[index] ?? [];
+    const controls = bindings.gamepadButtons[index] ?? [];
     for (const control of controls) held.add(control);
     if (previousButtons[index] !== true) presses.push(...controls);
   });
   const previousDirection = pad.index === state.index ? state.menuDirection : null;
+  const { sticks } = bindings;
   const menuDirection = stickMenuDirection(
-    pad.axes[GAMEPAD_STICKS.move.x] ?? 0,
-    pad.axes[GAMEPAD_STICKS.move.y] ?? 0,
+    pad.axes[sticks.move.x] ?? 0,
+    pad.axes[sticks.move.y] ?? 0,
     previousDirection,
   );
   if (menuDirection !== null) {
@@ -103,8 +105,8 @@ export function reduceGamepad(
 
   const stick = ({ x, y }: { x: number; y: number }) =>
     applyRadialDeadzone(pad.axes[x] ?? 0, pad.axes[y] ?? 0);
-  const move = stick(GAMEPAD_STICKS.move);
-  const aimStick = stick(GAMEPAD_STICKS.aim);
+  const move = stick(sticks.move);
+  const aimStick = stick(sticks.aim);
   const aimLength = Math.sqrt(aimStick.x * aimStick.x + aimStick.y * aimStick.y);
   const sticksMoved = !sameVec(move, state.move) || !sameVec(aimStick, state.aim);
 

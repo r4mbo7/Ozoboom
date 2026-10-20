@@ -4,7 +4,7 @@ import { lookup, resolveContent } from './content';
 import { enemyStatuses } from './enemy-status';
 import { setBindings } from './enter-set';
 import { createInitialState, type PlayerSlot } from './initial-state';
-import { FULL_MODES } from './full';
+import { FULL_MODES, FULL_STEPS } from './full';
 import type { GameMode } from './mode';
 import { playerBoosts } from './player-boosts';
 import { recruits } from './recruits';
@@ -39,6 +39,7 @@ import { traps } from './systems/traps';
 import { upgradeChoice } from './systems/upgrade-choice';
 import { weapons } from './systems/weapons';
 import type { StepContext, System } from './systems/types';
+import { gusts } from './gusts';
 import { puddles } from './puddles';
 import { walls } from './walls';
 import { zones } from './zones';
@@ -67,13 +68,16 @@ const RUNNING: readonly System[] = [
   upgradeChoice,
   emotes,
   dashes,
+  gusts,
   playerMovement,
+  ...(FULL_STEPS.afterMovement ?? []),
   revive,
   playerAttack,
   weapons,
   placedZones,
   skills,
   spawning,
+  ...(FULL_STEPS.afterSpawning ?? []),
   lootCarriers,
   bombCarriers,
   enemySteering,

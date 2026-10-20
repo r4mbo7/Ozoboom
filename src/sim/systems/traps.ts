@@ -19,7 +19,8 @@ import {
 import { touchesObstacle } from '../obstacles';
 import { trapPointing } from '../pointing';
 import type { EnemyState, PlayerId, PlayerState, SimState, TrapState, Vec2 } from '../state';
-import { statValue, trapCapacity } from '../stats';
+import { FULL_STEPS } from '../full';
+import { handFree, statValue, trapCapacity } from '../stats';
 import type { StepContext } from './types';
 
 // Marks the lure does not renew lapse after the next tick, whose earlier systems still see it.
@@ -50,7 +51,8 @@ export function traps(ctx: StepContext): void {
   const { state, content, commands } = ctx;
   for (const player of state.players) {
     for (const action of commands.get(player.id)?.actions ?? []) {
-      if (action.type === 'placeTrap' || action.type === 'takeTrap') {
+      const trapKey = action.type === 'placeTrap' || action.type === 'takeTrap';
+      if (trapKey && FULL_STEPS.posed?.(ctx, player.id) !== true) {
         useTrapSpot(ctx, player, action);
       }
     }
@@ -108,7 +110,7 @@ function useTrapSpot(ctx: StepContext, player: PlayerState, action: PlaceTrap | 
   const { state, content, set } = ctx;
   const under = trapAt(content.traps, state.traps, action);
   if (under !== undefined) {
-    if ((player.hand?.length ?? 0) < set.handSize) {
+    if (handFree(player, set)) {
       state.traps.splice(state.traps.indexOf(under), 1);
       (player.hand ??= []).push(under.kind);
       const { id, kind, x, y } = under;

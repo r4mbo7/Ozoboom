@@ -10,6 +10,7 @@ import { createHud } from './hud';
 import { createLobby } from './lobby';
 import { createMenuInput } from './navigation';
 import { createNotice } from './notice';
+import { promptsVersion } from './prompts';
 import { createStagePicker } from './stage';
 import { createSunFollower } from './sun';
 import { createTitle } from './title';
@@ -42,7 +43,8 @@ export type {
   UiCallbacks,
   UiFrame,
 } from './types';
-export { createFeedbackButton } from './feedback-button';
+export { createControlsButton, createFeedbackButton } from './feedback-button';
+export { type RemapScreen, openRemap } from './remap';
 export { createAutoAimToggle, createAutoFireToggle, createHitSoundToggle } from './toggle';
 export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './volume';
 export { heldSlot, selectTrap } from './navigation';
@@ -96,6 +98,7 @@ export function createUi(
   let autoFire = false;
   let autoAim = false;
   let device: InputDevice = 'none';
+  let keysShown = promptsVersion();
   let acted = false;
   let lastContent: GameContent | null = null;
   const menuInput = createMenuInput();
@@ -151,6 +154,10 @@ export function createUi(
       autoAim = !autoAim;
       applyOptions();
       callbacks.onToggleAutoAim(autoAim);
+    },
+    controls() {
+      menuInput.open();
+      callbacks.onControls();
     },
     chooseLocale(next) {
       callbacks.onChooseLocale(next);
@@ -304,6 +311,7 @@ export function createUi(
 
   function applyDevice(next: InputDevice): void {
     device = next;
+    keysShown = promptsVersion();
     setFlag(root, 'touch', next === 'touch');
     title.setDevice(next);
     end.setDevice(next);
@@ -404,7 +412,7 @@ export function createUi(
     update(state, frame, content) {
       lastContent = content;
       const snapshot = frame.snapshot;
-      if (snapshot.device !== device) {
+      if (snapshot.device !== device || keysShown !== promptsVersion()) {
         applyDevice(snapshot.device);
       }
       const edges = menuInput.edges(snapshot.menu, snapshot.gameplay.move);

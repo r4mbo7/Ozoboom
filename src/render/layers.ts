@@ -27,6 +27,8 @@ export interface Layers {
   // Mutes the world round a player of this screen who lies down, under the players and their marks.
   readonly veil: Container;
   readonly players: Container;
+  // What the players walk under: the roofs and garlands of a path.
+  readonly canopy: Container;
   readonly bubbles: Container;
 }
 
@@ -61,6 +63,7 @@ export function createLayers(stage: Container): Layers {
     weapons: layer(world),
     veil: layer(world),
     players: layer(world),
+    canopy: layer(world),
     bubbles: layer(world),
     screen: layer(stage),
   };

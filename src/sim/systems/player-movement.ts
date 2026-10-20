@@ -1,16 +1,19 @@
 import { length, normalize } from '../../shared/vec';
 import { IDLE_INPUT } from '../commands';
+import { gustDrift } from '../gusts';
 import { resolveObstacles } from '../obstacles';
 import type { Vec2 } from '../state';
 import type { StepContext } from './types';
 
-export function playerMovement({ state, set, commands }: StepContext): void {
+export function playerMovement({ state, set, content, commands }: StepContext): void {
   const { arena } = state;
   const obstacles = set.obstacles ?? [];
+  const drift = gustDrift(state) ?? { x: 0, y: 0 };
   for (const player of state.players) {
     if (player.downed) {
       continue;
     }
+    const gustMul = content.classes.get(player.classId)?.gustMul ?? 1;
     if (player.dash?.ticksLeft === 0) {
       delete player.dash;
     }
@@ -18,8 +21,12 @@ export function playerMovement({ state, set, commands }: StepContext): void {
     const { dx, dy } = player.dash ?? walk(input.move, player.speed * (player.slowFactor ?? 1));
     const fromX = player.x;
     const fromY = player.y;
-    player.x = clamp(player.x + dx, player.radius, arena.width - player.radius);
-    player.y = clamp(player.y + dy, player.radius, arena.height - player.radius);
+    player.x = clamp(player.x + dx + drift.x * gustMul, player.radius, arena.width - player.radius);
+    player.y = clamp(
+      player.y + dy + drift.y * gustMul,
+      player.radius,
+      arena.height - player.radius,
+    );
     if (player.dash !== undefined) {
       player.dash.ticksLeft -= 1;
     }

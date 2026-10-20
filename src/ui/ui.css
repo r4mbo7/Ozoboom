@@ -4648,7 +4648,7 @@ svg.ui-title__sun {
   height: 18px;
 }
 
-[data-touch] :is(.ui-hint, .ui-trap__key, .ui-skill__key, .ui-toggle--assist) {
+[data-touch] :is(.ui-hint, .ui-trap__key, .ui-skill__key, .ui-toggle--assist, .ui-action--keys) {
   display: none;
 }
 

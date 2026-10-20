@@ -52,6 +52,10 @@ export const SPEECH =
   '<path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
   '<path d="M7.5 8.5h9M7.5 12.5h5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
 
+export const KEYBOARD =
+  '<rect x="2.5" y="6" width="19" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
+  '<path d="M6.5 10h1M10 10h1M13 10h1M16.5 10h1M6.5 14h1M16.5 14h1M10 14h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+
 export const LOCK =
   '<rect x="5" y="10.5" width="14" height="10.5" rx="2.5" fill="currentColor"/>' +
   '<path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>';

@@ -50,6 +50,9 @@ export function deaths(ctx: StepContext): void {
       byPlayer: enemy.lastHitBy ?? null,
     });
     state.stats.kills += 1;
+    if (enemy.called === true) {
+      state.stats.calledDown = (state.stats.calledDown ?? 0) + 1;
+    }
     recruitFallen(ctx, enemy, definition);
     if (enemy.isBoss && !isLastTier(state.set, set)) {
       offerRelics(ctx);

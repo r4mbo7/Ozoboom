@@ -19,14 +19,14 @@ export interface FlowFields {
   classes: readonly SizeClass[];
 }
 
-// One field per distinct bad vibe radius, built once from the set: a breadth-first search from the
+// One field per distinct bad vibe radius, built once from a set where bad vibes come: a breadth-first search from the
 // core over a grid of cells where a circle of that radius fits. Integers and + - * / only.
 export function createFlowFields(
   set: SetDefinition,
   radii: readonly number[],
 ): FlowFields | undefined {
   const obstacles = set.obstacles ?? [];
-  if (obstacles.length === 0) {
+  if (obstacles.length === 0 || set.tiers.length === 0) {
     return undefined;
   }
   const cols = Math.ceil(set.arena.width / CELL);

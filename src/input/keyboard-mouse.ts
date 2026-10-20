@@ -1,12 +1,7 @@
 import type { Vec2 } from '../sim/state';
-import {
-  KEY_BINDINGS,
-  MOUSE_BUTTON_BINDINGS,
-  SHIFTED_KEY_BINDINGS,
-  SHIFT_KEYS,
-  WHEEL_BINDINGS,
-  type Control,
-} from './bindings';
+import { SHIFTED_KEY_BINDINGS, SHIFT_KEYS, type Control, type InputBindings } from './bindings';
+import { learnKeyName } from './key-names';
+import { DEFAULT_INPUT_BINDINGS, inputBindings } from './profile';
 import { clampLength, type KeyboardMouseFrame } from './merge';
 
 export interface KeyboardMouseState {
@@ -38,7 +33,11 @@ export const INITIAL_KEYBOARD_MOUSE_STATE: KeyboardMouseState = {
   active: false,
 };
 
-export function reduceKeyboard(state: KeyboardMouseState, event: KeyEventLike): KeyboardMouseState {
+export function reduceKeyboard(
+  state: KeyboardMouseState,
+  event: KeyEventLike,
+  bindings: InputBindings = DEFAULT_INPUT_BINDINGS,
+): KeyboardMouseState {
   if (event.type === 'keyup') {
     if (!state.keys.has(event.code)) return state;
     return { ...state, keys: without(state.keys, event.code), active: true };
@@ -47,7 +46,7 @@ export function reduceKeyboard(state: KeyboardMouseState, event: KeyEventLike): 
   return {
     ...state,
     keys: new Set(state.keys).add(event.code),
-    presses: [...state.presses, ...keyControls(event.code, isShiftHeld(state.keys))],
+    presses: [...state.presses, ...keyControls(bindings, event.code, isShiftHeld(state.keys))],
     active: true,
   };
 }
@@ -55,6 +54,7 @@ export function reduceKeyboard(state: KeyboardMouseState, event: KeyEventLike): 
 export function reducePointer(
   state: KeyboardMouseState,
   event: PointerEventLike,
+  bindings: InputBindings = DEFAULT_INPUT_BINDINGS,
 ): KeyboardMouseState {
   switch (event.type) {
     case 'move':
@@ -64,7 +64,7 @@ export function reducePointer(
       return {
         ...state,
         buttons: new Set(state.buttons).add(event.button),
-        presses: [...state.presses, ...(MOUSE_BUTTON_BINDINGS[event.button] ?? [])],
+        presses: [...state.presses, ...(bindings.mouseButtons[event.button] ?? [])],
         pointer: { x: event.x, y: event.y },
         active: true,
       };
@@ -75,7 +75,7 @@ export function reducePointer(
       if (event.deltaY === 0) return state;
       return {
         ...state,
-        presses: [...state.presses, ...WHEEL_BINDINGS[event.deltaY > 0 ? 'down' : 'up']],
+        presses: [...state.presses, ...bindings.wheel[event.deltaY > 0 ? 'down' : 'up']],
         active: true,
       };
   }
@@ -85,15 +85,20 @@ export function releaseAll(state: KeyboardMouseState): KeyboardMouseState {
   return { ...state, keys: new Set(), buttons: new Set() };
 }
 
-export function takeKeyboardMouseFrame(state: KeyboardMouseState): {
+export function takeKeyboardMouseFrame(
+  state: KeyboardMouseState,
+  bindings: InputBindings = DEFAULT_INPUT_BINDINGS,
+): {
   frame: KeyboardMouseFrame;
   state: KeyboardMouseState;
 } {
   const shift = isShiftHeld(state.keys);
   const held = new Set<Control>();
-  for (const code of state.keys) for (const control of keyControls(code, shift)) held.add(control);
+  for (const code of state.keys) {
+    for (const control of keyControls(bindings, code, shift)) held.add(control);
+  }
   for (const button of state.buttons) {
-    for (const control of MOUSE_BUTTON_BINDINGS[button] ?? []) held.add(control);
+    for (const control of bindings.mouseButtons[button] ?? []) held.add(control);
   }
   const axis = (negative: Control, positive: Control) =>
     (held.has(positive) ? 1 : 0) - (held.has(negative) ? 1 : 0);
@@ -137,7 +142,10 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
   const onKeyDown = (event: KeyboardEvent) => {
     if (isEditable(event.target)) return;
     if (KEYS_WITH_BROWSER_DEFAULT.has(event.code)) event.preventDefault();
-    state = reduceKeyboard(state, { type: 'keydown', code: event.code });
+    if (!(event.shiftKey || event.altKey || event.ctrlKey || event.metaKey)) {
+      learnKeyName(event.code, event.key);
+    }
+    state = reduceKeyboard(state, { type: 'keydown', code: event.code }, inputBindings());
   };
   const onKeyUp = (event: KeyboardEvent) => {
     state = reduceKeyboard(state, { type: 'keyup', code: event.code });
@@ -149,7 +157,11 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
     state = reducePointer(state, { type: 'move', ...local(event) });
   };
   const onMouseDown = (event: MouseEvent) => {
-    state = reducePointer(state, { type: 'down', button: event.button, ...local(event) });
+    state = reducePointer(
+      state,
+      { type: 'down', button: event.button, ...local(event) },
+      inputBindings(),
+    );
   };
   // A clicked button would keep the browser focus: Space would then press it, and any key show
   // its focus ring, which looks like the selection. The click still fires; focus only leaves.
@@ -165,7 +177,7 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
   };
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
-    state = reducePointer(state, { type: 'wheel', deltaY: event.deltaY });
+    state = reducePointer(state, { type: 'wheel', deltaY: event.deltaY }, inputBindings());
   };
   const onContextMenu = (event: MouseEvent) => {
     event.preventDefault();
@@ -183,7 +195,7 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
 
   return {
     take() {
-      const taken = takeKeyboardMouseFrame(state);
+      const taken = takeKeyboardMouseFrame(state, inputBindings());
       state = taken.state;
       return taken.frame;
     },
@@ -201,8 +213,8 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
   };
 }
 
-function keyControls(code: string, shift: boolean): readonly Control[] {
-  return (shift ? SHIFTED_KEY_BINDINGS[code] : undefined) ?? KEY_BINDINGS[code] ?? [];
+function keyControls(bindings: InputBindings, code: string, shift: boolean): readonly Control[] {
+  return (shift ? SHIFTED_KEY_BINDINGS[code] : undefined) ?? bindings.keys[code] ?? [];
 }
 
 function isShiftHeld(keys: ReadonlySet<string>): boolean {

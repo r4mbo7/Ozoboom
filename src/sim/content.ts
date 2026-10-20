@@ -9,6 +9,7 @@ import type {
   RarityWeights,
   RecruitDefinition,
   SetDefinition,
+  SummonDefinition,
   TrapDefinition,
   UpgradeDefinition,
   WeaponDefinition,
@@ -33,6 +34,8 @@ export interface ResolvedContent {
   readonly fusions: readonly FusionDefinition[];
   readonly rarityWeights: readonly RarityWeights[];
   readonly dash: DashDefinition | null;
+  // By set id, the sets where a team calls more bosses.
+  readonly summons: ReadonlyMap<string, SummonDefinition>;
 }
 
 export function resolveContent(content: GameContent): ResolvedContent {
@@ -47,8 +50,21 @@ export function resolveContent(content: GameContent): ResolvedContent {
     fusions: content.fusions ?? [],
     rarityWeights: content.rarityWeights ?? [],
     dash: content.dash ?? null,
+    summons: new Map((content.summons ?? []).map((summon) => [summon.setId, summon])),
   };
 
+  for (const [setId, summon] of resolved.summons) {
+    if (summon.sources.length === 0 || summon.sites.length === 0) {
+      throw new Error(`the summon of set "${setId}" needs a source and a site`);
+    }
+    if (
+      [...summon.sources.map((s) => s.items), ...summon.sites.map((s) => s.capacity)].some(
+        (n) => n <= 0,
+      )
+    ) {
+      throw new Error(`the summon of set "${setId}" has a source or a site that holds nothing`);
+    }
+  }
   for (const enemy of content.enemies) {
     if (enemy.special !== undefined && !Object.hasOwn(SPECIALS, enemy.special.kind)) {
       throw new Error(`unknown special module for enemy "${enemy.id}": "${enemy.special.kind}"`);

@@ -9,7 +9,7 @@ export function playerAttack(ctx: StepContext): void {
       delete player.chargeTicks;
       continue;
     }
-    if (player.dash !== undefined) {
+    if (player.dash !== undefined || player.carrying !== undefined) {
       continue;
     }
     const { attack } = lookup(ctx.content.classes, player.classId, 'class');

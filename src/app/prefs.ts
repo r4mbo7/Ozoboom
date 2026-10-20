@@ -1,3 +1,4 @@
+import { type KeyProfile, parseKeyProfile } from '../input/profile';
 import { VOLUME_STEPS } from '../ui/volume';
 
 export interface Prefs {
@@ -19,6 +20,8 @@ export interface Prefs {
   endless: boolean;
   // Whether the last game played the whole festival: the next one proposes it again.
   festival: boolean;
+  // The keys and buttons the player chose for each action.
+  keys: KeyProfile;
 }
 
 const KEYS: Readonly<Record<keyof Prefs, string>> = {
@@ -33,6 +36,7 @@ const KEYS: Readonly<Record<keyof Prefs, string>> = {
   trackId: 'ozoboom.trackId',
   endless: 'ozoboom.endless',
   festival: 'ozoboom.festival',
+  keys: 'ozoboom.keys',
 };
 
 // Storage can be missing or throw (private browsing, blocked site data): the game then plays with
@@ -50,6 +54,7 @@ export function loadPrefs(storage: () => Storage, defaults: Prefs): Prefs {
     trackId: readText(storage, KEYS.trackId) ?? defaults.trackId,
     endless: readFlag(storage, KEYS.endless) ?? defaults.endless,
     festival: readFlag(storage, KEYS.festival) ?? defaults.festival,
+    keys: parseKeyProfile(readText(storage, KEYS.keys)) ?? defaults.keys,
   };
 }
 
@@ -59,10 +64,17 @@ export function savePref<K extends keyof Prefs>(
   value: Prefs[K],
 ): void {
   try {
-    storage().setItem(KEYS[key], typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
+    storage().setItem(KEYS[key], stored(value));
   } catch {
     // Not remembered: the choice still applies to this visit.
   }
+}
+
+function stored(value: Prefs[keyof Prefs]): string {
+  if (typeof value === 'boolean') {
+    return value ? '1' : '0';
+  }
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
 function readFlag(storage: () => Storage, key: string): boolean | null {

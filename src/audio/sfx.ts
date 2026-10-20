@@ -7,7 +7,7 @@ import { beatSeconds, timeToTick, type Anchor } from './clock';
 import { chordRootOfBar, keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 import { createVibeArp } from './vibe-arp';
-import { FULL_BAR_CALLS } from './full';
+import { FULL_BAR_CALLS, FULL_EVENT_CALLS } from './full';
 
 export type SfxName =
   | 'playerFired'
@@ -44,6 +44,10 @@ export type SfxName =
   | 'enemyGrowl'
   | 'bossWhistle'
   | 'bossThunder'
+  | 'bossFeedback'
+  | 'bossGust'
+  | 'fireBurnt'
+  | 'giantWoken'
   | 'vibesStolen'
   | 'playerShoved'
   | 'bystanderHelped'
@@ -190,6 +194,10 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     enemyGrowl: { perFrame: 1, concurrent: 2, seconds: 0.35 },
     bossWhistle: { perFrame: 1, concurrent: 1, seconds: 0.2 },
     bossThunder: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+    bossFeedback: { perFrame: 1, concurrent: 1, seconds: 0.8 },
+    bossGust: { perFrame: 1, concurrent: 1, seconds: 1.2 },
+    fireBurnt: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    giantWoken: { perFrame: 1, concurrent: 2, seconds: 1 },
     vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
     playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
@@ -284,8 +292,15 @@ export function sfxOf(
       return effect === 'beam' ? 'trapCrackle' : null;
     }
     default:
-      return null;
+      return callOf(FULL_EVENT_CALLS[event.type], event);
   }
+}
+
+function callOf(
+  call: SfxName | ((event: SimEvent) => SfxName | null) | undefined,
+  event: SimEvent,
+): SfxName | null {
+  return typeof call === 'function' ? call(event) : (call ?? null);
 }
 
 export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): SfxLimiter {
@@ -976,6 +991,105 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       hold: 0.08,
       release: 0.05,
       filter: { type: 'bandpass', hz, q: 4 },
+    });
+  },
+  // The Larsen's feedback: a soft whine on the fifth that swells and bends up a hair, over a breath
+  // of air through a narrow band, kept mid and low in the mix: never shrill, never loud.
+  bossFeedback: (out, at, _variant, key) => {
+    const hz = keyHz(key, 4, 3);
+    playTone(out, at, {
+      wave: 'sine',
+      hz,
+      toHz: hz * 1.03,
+      glide: 0.6,
+      gain: 0.03,
+      attack: 0.25,
+      hold: 0.25,
+      release: 0.35,
+      vibrato: { hz: 5, cents: 12, delay: 0.25 },
+    });
+    playNoise(out, at, {
+      gain: 0.012,
+      attack: 0.2,
+      hold: 0.25,
+      release: 0.3,
+      filter: { type: 'bandpass', hz: hz * 2, q: 8 },
+    });
+  },
+  // Wood falls in the fire on the one: a breath of flame that sweeps up, then the wood crackles.
+  fireBurnt: (out, at) => {
+    playNoise(out, at, {
+      gain: 0.09,
+      attack: 0.03,
+      hold: 0.12,
+      release: 0.5,
+      filter: { type: 'bandpass', hz: 300, toHz: 1600, glide: 0.4, q: 1.1 },
+    });
+    for (let spark = 0; spark < 7; spark++) {
+      const scatter = Math.abs(Math.sin((at + spark) * 78.233) * 43_758.545) % 1;
+      playNoise(out, at + 0.12 + spark * 0.07 + scatter * 0.05, {
+        gain: 0.06 * (1 - spark / 9),
+        attack: 0.001,
+        hold: 0.004,
+        release: 0.03,
+        pan: scatter * 1.2 - 0.6,
+        filter: { type: 'highpass', hz: 3500, q: 0.7 },
+      });
+    }
+  },
+  // A giant of the Dome wakes on the one: a singing bowl rings under a soft chord of voices, in the
+  // key of the track.
+  giantWoken: (out, at, _variant, key) => {
+    const hz = keyHz(key, 0, 3);
+    for (const [ratio, gain, release, pan] of [
+      [1, 0.09, 4, -0.2],
+      [1.004, 0.07, 4, 0.2],
+      [2.76, 0.04, 2.5, -0.35],
+      [5.4, 0.02, 1.4, 0.35],
+    ] as const) {
+      playTone(out, at, {
+        wave: 'sine',
+        hz: hz * ratio,
+        gain,
+        attack: 0.008,
+        hold: 0.05,
+        release,
+        pan,
+      });
+    }
+    for (const [degree, pan] of [
+      [0, -0.3],
+      [2, 0],
+      [4, 0.3],
+    ] as const) {
+      playTone(out, at + 0.05, {
+        wave: 'triangle',
+        hz: keyHz(key, degree, 4),
+        gain: 0.025,
+        attack: 0.5,
+        hold: 0.6,
+        release: 1.2,
+        pan,
+        filter: { type: 'lowpass', hz: 1800, q: 0.7 },
+      });
+    }
+  },
+  // The Coup de vent's gust: a breath of air that swells and sweeps up through the mids, then
+  // falls away, kept soft in the mix.
+  bossGust: (out, at) => {
+    playNoise(out, at, {
+      gain: 0.06,
+      attack: 0.35,
+      hold: 0.3,
+      release: 0.6,
+      filter: { type: 'bandpass', hz: 400, toHz: 1400, glide: 0.7, q: 1.2 },
+    });
+    playNoise(out, at + 0.1, {
+      gain: 0.03,
+      attack: 0.3,
+      hold: 0.2,
+      release: 0.5,
+      filter: { type: 'lowpass', hz: 300, toHz: 180, glide: 0.8, q: 0.8 },
     });
   },
   // The Orage's thunder: a low rumble of noise that swells and rolls away, under a deep root that
