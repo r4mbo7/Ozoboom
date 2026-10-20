@@ -1,5 +1,5 @@
 import type { DashDefinition } from '../data/types';
-import type { Tempo } from '../shared/tempo';
+import { ticksIntoBeat, type Tempo } from '../shared/tempo';
 import type { PlayerState } from './state';
 import { dashCharges, dashRechargeBeats } from './stats';
 
@@ -19,14 +19,14 @@ export function dashGauge(
   >,
   dash: DashDefinition,
   now: number,
-  { ticksPerBeat }: Pick<Tempo, 'ticksPerBeat'>,
+  tempo: Tempo,
 ): DashGauge {
   const charges = dashCharges(player, dash);
   const spent = Math.min(charges, player.dashesSpent ?? 0);
   if (spent === 0) {
     return { charges, ready: charges, fill: 0 };
   }
-  const phase = (((now % ticksPerBeat) + ticksPerBeat) % ticksPerBeat) / ticksPerBeat;
+  const phase = ticksIntoBeat(now, tempo) / tempo.ticksPerBeat;
   const fill = Math.min(1, ((player.dashBeats ?? 0) + phase) / dashRechargeBeats(player, dash));
   return { charges, ready: charges - spent, fill };
 }

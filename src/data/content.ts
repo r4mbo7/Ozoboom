@@ -2,6 +2,7 @@ import { BYSTANDERS } from './bystanders';
 import { DASH } from './dash';
 import { CLASSES } from './classes';
 import { ENEMIES } from './enemies';
+import { FULL_PATHS } from './full';
 import { FUSIONS } from './fusions';
 import { SETS } from './sets';
 import { TRAPS } from './traps';
@@ -20,4 +21,5 @@ export const CONTENT: GameContent = {
   fusions: FUSIONS,
   rarityWeights: RARITY_WEIGHTS,
   dash: DASH,
+  paths: FULL_PATHS,
 };

@@ -69,7 +69,7 @@ import { createSeats, type LaunchedSeats } from './seats';
 import { soundOf, type Screen } from './sound';
 import { createGameStats, outcomeOf, sendGameEvent } from './stats';
 import { createToast } from './toast';
-import { drawTrack, stageTracks, trackOf } from './track';
+import { drawTrack, seededRandom, stageTracks, trackOf } from './track';
 import { countVisit } from './visits';
 import { playerLabel } from '../ui/hud-model';
 import { stageCards } from '../ui/lobby-model';
@@ -109,6 +109,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     stageId: defaultSet.id,
     trackId: '',
     endless: false,
+    festival: false,
   });
   if (!classIds.includes(prefs.classId)) {
     prefs.classId = classIds.includes(DEFAULT_CLASS_ID) ? DEFAULT_CLASS_ID : (classIds[0] ?? '');
@@ -124,7 +125,15 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const renderer = await createRenderer(stage, { calmMode: prefs.calmMode }, content, dev.light);
   const hub = createInputHub(stage);
   const audio = createAudioEngine({
-    setOf: (setId) => content.sets.find((candidate) => candidate.id === setId),
+    setOf: (setId) =>
+      [...content.sets, ...(content.paths ?? [])].find((candidate) => candidate.id === setId),
+    // Every peer of a festival walks into the same track of the stage ahead.
+    trackFor: (set) =>
+      drawTrack(
+        stageTracks(TRACKS, set.trackIds),
+        prefs.trackId,
+        seededRandom(match.session.state.seed, set.id),
+      ),
     breakBars: (tier) =>
       setNamed(match.session.state.setId).tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,
     trapEffectOf: (id) => content.traps.find((trap) => trap.id === id)?.effect.kind ?? id,
@@ -301,7 +310,23 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         } else if (screen === 'class') {
           ui.showClassPicker(classPicker());
         } else if (onlineLobby) {
-          online.setEndless(enabled);
+          online.setNight(enabled, false);
+        } else {
+          ui.updateLobby(localLobby());
+        }
+      },
+      onChooseNight(night) {
+        if (onlineLobby && online.role !== 'host') {
+          return;
+        }
+        prefs.endless = night === 'endless';
+        prefs.festival = night === 'festival';
+        savePref(storage, 'endless', prefs.endless);
+        savePref(storage, 'festival', prefs.festival);
+        if (screen === 'stage') {
+          ui.showStagePicker(stagePicker());
+        } else if (onlineLobby) {
+          online.setNight(prefs.endless, prefs.festival);
         } else {
           ui.updateLobby(localLobby());
         }
@@ -322,6 +347,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     stages,
     stageId: () => stageId,
     endless: () => prefs.endless,
+    festival: () => prefs.festival,
     classIds,
     classId: () => prefs.classId,
     trackId: nextTrackId,
@@ -435,6 +461,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       seed: dev.seed ?? crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
       setId: stageId,
       endless: prefs.endless,
+      festival: prefs.festival,
       content,
       slots,
       locals,
@@ -536,7 +563,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function localLobby(): LobbyModel {
-    return { ...seats.model(), stages, stageId, endless: prefs.endless };
+    return {
+      ...seats.model(),
+      stages,
+      stageId,
+      endless: prefs.endless,
+      festival: prefs.festival,
+    };
   }
 
   function classPicker(): ClassPickerModel {
@@ -548,7 +581,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function stagePicker(): StagePickerModel {
-    return { stages, stageId, endless: prefs.endless };
+    return { stages, stageId, endless: prefs.endless, festival: prefs.festival };
   }
 
   function openClassPicker(): void {
@@ -633,12 +666,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     interruption = null;
     launched = null;
     toast.clear();
-    const { seed, setId, players, endless = false } = started.start;
+    const { seed, setId, players, endless = false, festival = false } = started.start;
     setMatch(
       createMatch({
         seed,
         setId,
         endless,
+        festival,
         content,
         slots: players,
         locals: new Map([[started.localPlayer, null]]),
@@ -797,14 +831,18 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     if (screen !== 'game') {
       return;
     }
+    // Online, a test's player plays after every step too: each peer changes its state the same way at
+    // the same tick, and its keys reach the others as commands.
     if (!stepOnce()) {
       return false;
     }
+    probe?.afterStep();
     while (catchUp > 0 && match.source.pending > GUEST_BUFFER_TICKS && playing()) {
       catchUp -= 1;
       if (!stepOnce()) {
         break;
       }
+      probe?.afterStep();
     }
   }
 

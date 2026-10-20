@@ -1,9 +1,10 @@
 import { Container, type Sprite } from 'pixi.js';
 import type { PlayerState, SimEvent, SimState } from '../sim/state';
-import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import { MAIN_TEMPO, type Tempo, ticksIntoBeat } from '../shared/tempo';
 import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
 import { DashArc } from './dash-arc';
+import { PlayerEmote } from './emotes';
 import { LifeArc } from './life-arc';
 import { MomentLog } from './player-moments';
 import { createDashBursts } from './dash-bursts';
@@ -28,8 +29,8 @@ const NEVER = Number.NEGATIVE_INFINITY;
 const PLAYER_BURSTS = 48;
 
 // The contour breathes on the beat, smoothly: never a flash.
-export function contourAlpha(now: number, { ticksPerBeat }: Tempo = MAIN_TEMPO): number {
-  const phase = (((now % ticksPerBeat) + ticksPerBeat) % ticksPerBeat) / ticksPerBeat;
+export function contourAlpha(now: number, tempo: Tempo = MAIN_TEMPO): number {
+  const phase = ticksIntoBeat(now, tempo) / tempo.ticksPerBeat;
   return 0.3 + 0.35 * (1 + Math.sin(phase * TAU));
 }
 
@@ -51,6 +52,7 @@ interface PlayerView {
   readonly contour: Sprite;
   readonly dashArc: DashArc;
   readonly lifeArc: LifeArc;
+  readonly emote: PlayerEmote;
 }
 
 export function createPlayers(ctx: RenderContext): Family {
@@ -61,6 +63,7 @@ export function createPlayers(ctx: RenderContext): Family {
   const marks = layers.players.addChild(new Container());
   const tags = layers.players.addChild(new Container());
   const lifeLabels = layers.players.addChild(new Container());
+  const gestures = layers.players.addChild(new Container());
   const revives = new ReviveLog();
   const burster = createBurster(ctx, PLAYER_BURSTS);
   const spawn: Spawn = burster.spawn;
@@ -85,6 +88,7 @@ export function createPlayers(ctx: RenderContext): Family {
       contour: add(marks, t.contour),
       dashArc: new DashArc(ground),
       lifeArc: new LifeArc(ctx, ground, lifeLabels),
+      emote: new PlayerEmote(ctx, gestures),
     }),
     // A released view forgets its player, so that the next one starts from rest.
     (view) => {
@@ -94,6 +98,7 @@ export function createPlayers(ctx: RenderContext): Family {
       view.glow.reset();
       view.dashArc.reset();
       view.lifeArc.reset();
+      view.emote.reset();
       hide(view.halo, view.shadow, view.aim, view.contour);
       view.lying.hide();
       for (const look of view.looks.values()) {
@@ -137,6 +142,9 @@ export function createPlayers(ctx: RenderContext): Family {
         case 'dashed':
         case 'dashBack':
           dashBursts.onEvent(event, state, frame);
+          break;
+        case 'emoted':
+          views.peek(event.playerId)?.emote.begin(event.emote, state.tick);
           break;
         case 'dashEmpty':
           views.peek(event.playerId)?.dashArc.empty(state.tick);
@@ -188,7 +196,7 @@ export function createPlayers(ctx: RenderContext): Family {
           halo.alpha = light.haloAlpha * 0.8 * share * kept;
         }
 
-        tag.place(
+        const top = tag.place(
           player,
           x,
           y,
@@ -217,7 +225,9 @@ export function createPlayers(ctx: RenderContext): Family {
         if (downed) {
           look.hide();
           hide(aim, contour);
+          view.emote.reset();
         } else {
+          view.emote.place(x, y, angle, scale, top, color, teintOf(player), frame);
           const moment = moments.of(player.id);
           input.state = state;
           input.player = player;

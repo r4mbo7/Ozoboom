@@ -45,7 +45,7 @@ export function upgradeChoice(ctx: StepContext): void {
         state.events.push({ type: 'upgradeChosen', playerId: player.id, upgradeId: upgrade.id });
       }
       state.pendingUpgrades.splice(index, 1);
-      presentNextOffer(state, content, set, player);
+      presentNextOffer(ctx, player);
     }
   }
 }

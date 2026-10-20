@@ -6,9 +6,10 @@ import {
   isPhraseTick,
   phraseOfTick,
 } from '../../shared/tempo';
+import { isSetFinished } from './set-progress';
 import type { StepContext } from './types';
 
-export function tempo({ state, tempo: grid }: StepContext): void {
+export function tempo({ state, tempo: grid, set: definition }: StepContext): void {
   const { tick, set, events } = state;
   if (!isBeatTick(tick, grid)) {
     return;
@@ -24,7 +25,10 @@ export function tempo({ state, tempo: grid }: StepContext): void {
     return;
   }
   set.phrase = phraseOfTick(tick, grid);
-  // The game freezes once lost, so the phrases started are the phrases held to their end.
-  state.stats.phrasesHeld = set.phrase;
+  // The game freezes once lost, so each phrase started past a set's first is one held to its end, set after set;
+  // a set held, or without tiers, has nothing left to hold.
+  if (set.phrase > 0 && !isSetFinished(set, definition)) {
+    state.stats.phrasesHeld += 1;
+  }
   events.push({ type: 'phrase', phrase: set.phrase });
 }

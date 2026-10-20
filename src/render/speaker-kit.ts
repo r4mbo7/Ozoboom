@@ -1,6 +1,6 @@
 import type { Graphics, Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
-import { TICKS_PER_BAR, type Tempo } from '../shared/tempo';
+import { TICKS_PER_BAR, type Tempo, ticksIntoBeat } from '../shared/tempo';
 import type { SimState, SpeakerState } from '../sim/state';
 import { setTint } from './util';
 
@@ -113,7 +113,7 @@ export function drawWaves(
   frame: { readonly calm: boolean; readonly now: number; readonly tempo: Tempo },
 ): void {
   const { waves } = view;
-  const phase = frame.calm ? 0 : (frame.now / frame.tempo.ticksPerBeat) % 1;
+  const phase = frame.calm ? 0 : ticksIntoBeat(frame.now, frame.tempo) / frame.tempo.ticksPerBeat;
   setTint(waves, color);
   waves.visible = true;
   waves.position.copyFrom(body.position);

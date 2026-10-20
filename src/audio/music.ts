@@ -1,5 +1,12 @@
-import { MAIN_TEMPO, barOfTick, phraseOfTick, type Tempo } from '../shared/tempo';
-import { setTempo } from '../sim/lineup';
+import {
+  MAIN_TEMPO,
+  barOfTick,
+  isBarTick,
+  phraseOfTick,
+  ticksIntoBar,
+  type Tempo,
+} from '../shared/tempo';
+import { playedTempo } from '../sim/lineup';
 import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state';
 import {
   LATE_TOLERANCE_SECONDS,
@@ -71,6 +78,8 @@ export interface Music {
   // Fades the set back in over one bar, on the grid of the next update.
   fadeIn(): void;
   setTrack(track: MusicTrack): void;
+  // The track it plays: the one set, or the one a festival's next stage drew.
+  track(): MusicTrack;
   // The tempo of the set it plays, the main stage's before any set.
   tempo(): Tempo;
   // The clock the set is scheduled on, null when none plays.
@@ -92,7 +101,6 @@ interface Bus {
   echoReturn: GainNode;
   feedback: number;
   ret: number;
-  reverb: Reverb | null;
 }
 
 export const THEME_TIER = 1;
@@ -478,7 +486,7 @@ function downlifter(out: AudioNode, at: number, soft: boolean) {
   crash(out, at, soft ? 0.03 : 0.09);
 }
 
-function impact(out: AudioNode, at: number) {
+export function impact(out: AudioNode, at: number) {
   playTone(out, at, {
     wave: 'sine',
     hz: 160,
@@ -549,6 +557,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let { track } = options;
   let tempo = MAIN_TEMPO;
   let acoustics: Acoustics | undefined;
+  let room: { acoustics: Acoustics; reverb: Reverb } | null = null;
   let setId: string | null = null;
   const context = out.context;
   const level = context.createGain();
@@ -619,12 +628,30 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     }
     echoFeedback.connect(echo);
     echoReturn.connect(input);
-    const reverb = acoustics === undefined ? null : createReverb(output, acoustics);
+    const reverb = roomOf();
     if (reverb !== null) {
-      input.connect(reverb.input);
+      output.connect(reverb.input);
     }
-    bus = { input, cutoff, output, lead, echo, echoFeedback, echoReturn, feedback, ret, reverb };
+    bus = { input, cutoff, output, lead, echo, echoFeedback, echoReturn, feedback, ret };
     return bus;
+  }
+
+  // The room rings for every bus of the set: a bus opens on each resync, its own reverb would pile up.
+  // A set in another room lets the last one ring out.
+  function roomOf(): Reverb | null {
+    if (room?.acoustics !== acoustics) {
+      const left = room;
+      if (left !== null) {
+        setTimeout(
+          () => {
+            left.reverb.disconnect();
+          },
+          (left.acoustics.reverbSeconds + BUS_TAIL_SECONDS) * 1000,
+        );
+      }
+      room = acoustics === undefined ? null : { acoustics, reverb: createReverb(level, acoustics) };
+    }
+    return room?.reverb ?? null;
   }
 
   function retire(old: Bus | null, fadeSeconds: number) {
@@ -636,7 +663,6 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       () => {
         old.output.disconnect();
         old.echoFeedback.disconnect();
-        old.reverb?.disconnect();
       },
       (fadeSeconds + LOOKAHEAD_SECONDS + BUS_TAIL_SECONDS) * 1000,
     );
@@ -676,9 +702,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     const { set, tick } = state;
     const layers = layersFor(set.segment, set.tier, set.phrase);
     const bar = barOfTick(tick, tempo);
-    const barEnd = tickToTime(clock, (bar + 1) * tempo.ticksPerBar);
+    const barEnd = tickToTime(clock, tempo.originTick + (bar + 1) * tempo.ticksPerBar);
     const end = Math.min(barEnd, cutTime(clock));
-    if (layers.pad && tick % tempo.ticksPerBar !== 0 && end > from) {
+    if (layers.pad && !isBarTick(tick, tempo) && end > from) {
       const release = end < barEnd ? PAD_CUT_RELEASE : PAD_RELEASE;
       pad(
         target.input,
@@ -750,7 +776,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     ]);
     const key = keyOf(track, layers);
     const bar = barOfTick(step, tempo);
-    const sixteenth = Math.round((step % tempo.ticksPerBar) / stepTicks());
+    const sixteenth = Math.round(ticksIntoBar(step, tempo) / stepTicks());
     const thump = pulseGain(sixteenth, pulsing, choking);
     if (thump > 0) {
       pulse(input, at, thump, track);
@@ -857,7 +883,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       });
     }
     if (layers.pad && sixteenth === 0) {
-      const barEnd = tickToTime(clock, (bar + 1) * tempo.ticksPerBar);
+      const barEnd = tickToTime(clock, tempo.originTick + (bar + 1) * tempo.ticksPerBar);
       const end = Math.min(barEnd, until);
       const release = end < barEnd ? PAD_CUT_RELEASE : PAD_RELEASE;
       pad(
@@ -880,18 +906,26 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     tempo() {
       return tempo;
     },
+    track() {
+      return track;
+    },
     clock() {
       return anchor;
     },
     update(state, now, currentTime) {
       last = state;
       if (state.setId !== setId) {
+        const first = setId === null;
         setId = state.setId;
         const set = options.setOf?.(setId);
-        tempo = set === undefined ? MAIN_TEMPO : setTempo(set);
+        const next = set === undefined ? MAIN_TEMPO : playedTempo(set, state);
+        // Another set at another tempo starts its grid where it starts; one at the same tempo goes on as it is.
+        if (first || next.ticksPerBeat !== tempo.ticksPerBeat) {
+          anchor = null;
+          followedTick = -1;
+        }
+        tempo = next;
         acoustics = set?.acoustics;
-        anchor = null;
-        followedTick = -1;
       }
       diveTo(diveCutoff(state.status), currentTime);
       const nextMode = modeOf(state.status);
@@ -939,6 +973,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         cursor = firstStepAtOrAfter(
           followed.resynced ? state.tick : Math.max(state.tick, timeToTick(clock, currentTime)),
           stepTicks(),
+          tempo.originTick,
         );
         const at = Math.max(tickToTime(clock, state.tick), currentTime);
         if (entered && previous !== null && set.segment === 'drop') {
@@ -960,6 +995,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         currentTime - LATE_TOLERANCE_SECONDS,
         currentTime + LOOKAHEAD_SECONDS,
         stepTicks(),
+        tempo.originTick,
       );
       for (let step = range.from; step < range.until; step += stepTicks()) {
         playStep(target, step, state, clock, currentTime);
@@ -981,6 +1017,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         currentTime - LATE_TOLERANCE_SECONDS,
         currentTime + barSeconds(tempo),
         stepTicks(),
+        tempo.originTick,
       );
       const until = Math.min(range.until, dropTick ?? Infinity);
       for (let step = range.from; step < until; step += stepTicks()) {
@@ -988,8 +1025,11 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       }
       cursor = Math.max(cursor, until);
       anchor = null;
-      const beat =
-        Math.ceil(timeToTick(clock, currentTime) / tempo.ticksPerBeat) * tempo.ticksPerBeat;
+      const beat = firstStepAtOrAfter(
+        timeToTick(clock, currentTime),
+        tempo.ticksPerBeat,
+        tempo.originTick,
+      );
       return Math.max(currentTime, tickToTime(clock, beat));
     },
     fadeIn() {

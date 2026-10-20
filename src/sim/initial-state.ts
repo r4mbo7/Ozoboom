@@ -1,7 +1,8 @@
 import type { ClassDefinition, SetDefinition } from '../data/types';
 import { seedRng } from '../shared/prng';
 import { IDLE_INPUT } from './commands';
-import { lookup, type ResolvedContent } from './content';
+import type { ResolvedContent } from './content';
+import { lookup } from './lookup';
 import type { CoreState, PlayerId, PlayerState, SimState, SpeakerState, Vec2 } from './state';
 
 export interface PlayerSlot {
@@ -35,13 +36,7 @@ export function createInitialState(
     throw new Error(`player ids must be unique, got ${slots.map((slot) => slot.id).join(', ')}`);
   }
 
-  const core: CoreState = {
-    x: set.arena.width / 2,
-    y: set.arena.height / 2,
-    radius: set.core.radius,
-    hp: set.core.maxHp,
-    maxHp: set.core.maxHp,
-  };
+  const core = createCore(set);
 
   return {
     seed,
@@ -77,7 +72,17 @@ export function createInitialState(
   };
 }
 
-function createSpeakers(set: SetDefinition): SpeakerState[] {
+export function createCore(set: SetDefinition): CoreState {
+  return {
+    x: set.arena.width / 2,
+    y: set.arena.height / 2,
+    radius: set.core.radius,
+    hp: set.core.maxHp,
+    maxHp: set.core.maxHp,
+  };
+}
+
+export function createSpeakers(set: SetDefinition): SpeakerState[] {
   return (set.speakers ?? []).map((speaker) => ({
     id: speaker.id,
     x: speaker.x,

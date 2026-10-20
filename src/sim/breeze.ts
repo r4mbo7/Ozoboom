@@ -15,7 +15,12 @@ export function breezeDirection(
   tick: number,
   tempo: Tempo,
 ): Vec2 {
-  return sweptDirection(facing, effect.sweepDegrees, tick, tempo.ticksPerBar * SWEEP_BARS);
+  return sweptDirection(
+    facing,
+    effect.sweepDegrees,
+    tick - tempo.originTick,
+    tempo.ticksPerBar * SWEEP_BARS,
+  );
 }
 
 // Whether a body stands in the cone: its center inside it, or the body over the fan itself.

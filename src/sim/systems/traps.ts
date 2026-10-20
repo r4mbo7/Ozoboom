@@ -1,9 +1,8 @@
 import type { TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
 import { isBeatTick, type Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
-import { breezeDirection, inBreeze } from '../breeze';
+import { inBreeze } from '../breeze';
 import type { PlayerAction } from '../commands';
-import { beamDirection } from '../beam';
 import { lookup, type ResolvedContent } from '../content';
 import {
   drawTo,
@@ -18,6 +17,7 @@ import {
   wholeTicks,
 } from '../effects';
 import { touchesObstacle } from '../obstacles';
+import { trapPointing } from '../pointing';
 import type { EnemyState, PlayerId, PlayerState, SimState, TrapState, Vec2 } from '../state';
 import { statValue, trapCapacity } from '../stats';
 import type { StepContext } from './types';
@@ -61,7 +61,8 @@ export function traps(ctx: StepContext): void {
   const fireAll = (lures: boolean) => {
     for (const trap of state.traps) {
       const definition = trapDefinition(content, trap);
-      if (firing[definition.cadence] && (definition.effect.kind === 'lure') === lures) {
+      const shorted = (trap.shortedTicks ?? 0) > 0;
+      if (firing[definition.cadence] && (definition.effect.kind === 'lure') === lures && !shorted) {
         const owner = ownerOf(state, trap);
         const reached = fire({
           state,
@@ -89,6 +90,14 @@ export function traps(ctx: StepContext): void {
     enemy.stunTicks = Math.max(0, enemy.stunTicks - 1);
   }
   fireAll(false);
+  for (const trap of state.traps) {
+    if (trap.shortedTicks !== undefined) {
+      trap.shortedTicks -= 1;
+      if (trap.shortedTicks <= 0) {
+        delete trap.shortedTicks;
+      }
+    }
+  }
 }
 
 // A trap on the spot is taken back when a hand is free; free ground takes the trap placed.
@@ -207,10 +216,15 @@ export function fire(firing: Firing): boolean {
         by,
       );
     case 'beam': {
-      const direction = beamDirection(effect, at.direction, state.tick, tempo);
+      const direction = trapPointing(effect, at.direction, state.tick, tempo);
+      const before = trapPointing(effect, at.direction, state.tick - 1, tempo);
       const length = effect.length * radiusMul;
       for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && inBeam(enemy, at, direction, length, effect.width / 2)) {
+        if (
+          enemy.hp > 0 &&
+          (inBeam(enemy, at, direction, length, effect.width / 2) ||
+            sweptOver(enemy, at, before, direction, length))
+        ) {
           hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, by, at);
           reached = true;
         }
@@ -242,7 +256,7 @@ export function fire(firing: Firing): boolean {
       return reached;
     }
     case 'breeze': {
-      const direction = breezeDirection(effect, at.direction, state.tick, tempo);
+      const direction = trapPointing(effect, at.direction, state.tick, tempo);
       const length = effect.length * radiusMul;
       const blows = (body: Vec2 & { radius: number }) =>
         inBreeze(body, at, direction, length, effect.coneDegrees);
@@ -277,6 +291,22 @@ function inBeam(
   const across = Math.abs(dx * direction.y - dy * direction.x);
   return (
     along >= -enemy.radius && along <= length + enemy.radius && across <= halfWidth + enemy.radius
+  );
+}
+
+// Far out, a sweeping beam turns further in a step than it is wide: what it passed over is hit too.
+function sweptOver(enemy: EnemyState, trap: Vec2, from: Vec2, to: Vec2, length: number): boolean {
+  const turn = from.x * to.y - from.y * to.x;
+  if (turn === 0) {
+    return false;
+  }
+  const dx = enemy.x - trap.x;
+  const dy = enemy.y - trap.y;
+  const reach = length + enemy.radius;
+  return (
+    dx * dx + dy * dy <= reach * reach &&
+    (from.x * dy - from.y * dx) * turn >= 0 &&
+    (dx * to.y - dy * to.x) * turn >= 0
   );
 }
 

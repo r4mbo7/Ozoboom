@@ -33,6 +33,18 @@ export const SUN =
 export const INFINITY =
   '<path d="M6.5 8.5c-2.2 0-4 1.6-4 3.5s1.8 3.5 4 3.5c4 0 7-7 11-7 2.2 0 4 1.6 4 3.5s-1.8 3.5-4 3.5c-4 0-7-7-11-7z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>';
 
+// The nights a game can play: one stage to its sunrise, and the whole festival, from stage to stage.
+export const SUNRISE =
+  '<path d="M3 17.5h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+  '<path d="M6.5 17.5a5.5 5.5 0 0 1 11 0" fill="none" stroke="currentColor" stroke-width="2"/>' +
+  '<path d="M12 5v3M5.3 9.3l1.8 1.6M18.7 9.3l-1.8 1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+
+export const STAGES =
+  '<path d="M4 17.5c3-7 5.5 1 8.5-5.5s5-4.5 7.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 2.6"/>' +
+  '<circle cx="4" cy="17.5" r="2.2" fill="currentColor"/>' +
+  '<g fill="none" stroke="currentColor" stroke-width="1.8">' +
+  '<circle cx="9.5" cy="12.5" r="2"/><circle cx="14.5" cy="11" r="2"/><circle cx="20" cy="6.5" r="2"/></g>';
+
 export const MOON =
   '<path d="M19.5 14.6A8.2 8.2 0 0 1 9.4 4.5a8.2 8.2 0 1 0 10.1 10.1z" fill="currentColor"/>';
 

@@ -1,4 +1,4 @@
-import type { PlayerInput } from '../sim/commands';
+import type { Emote, PlayerInput } from '../sim/commands';
 import type { Vec2 } from '../sim/state';
 
 export type InputDevice = 'keyboardMouse' | 'gamepad' | 'touch' | 'none';
@@ -6,6 +6,7 @@ export type InputDevice = 'keyboardMouse' | 'gamepad' | 'touch' | 'none';
 export interface GameplayIntents extends PlayerInput {
   placeTrap: boolean;
   dash: boolean;
+  emote: Emote | null;
   nextTrap: boolean;
   previousTrap: boolean;
   selectTrap: number | null;
@@ -17,6 +18,9 @@ export interface MenuIntents {
   down: boolean;
   left: boolean;
   right: boolean;
+  // The tab before or after, on a screen with tabs: LB and RB, Shift+Tab and Tab.
+  previous: boolean;
+  next: boolean;
   confirm: boolean;
   back: boolean;
 }

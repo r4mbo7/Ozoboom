@@ -51,12 +51,22 @@ function sixteenthTick(step: number, tempo: Tempo): number {
   return Math.floor((step * tempo.ticksPerBeat) / 4);
 }
 
+// Ticks into the rhythm's period of bars, counted from the set's start.
+function ticksIntoPeriod(
+  rhythm: Exclude<WeaponRhythm, 'continuous'>,
+  tick: number,
+  tempo: Tempo,
+): number {
+  const period = rhythm.everyBars * tempo.ticksPerBar;
+  return (((tick - tempo.originTick) % period) + period) % period;
+}
+
 function stepOn(
   rhythm: Exclude<WeaponRhythm, 'continuous'>,
   tick: number,
   tempo: Tempo,
 ): number | undefined {
-  const inPeriod = tick % (rhythm.everyBars * tempo.ticksPerBar);
+  const inPeriod = ticksIntoPeriod(rhythm, tick, tempo);
   for (const step of rhythm.steps) {
     if (sixteenthTick(step, tempo) === inPeriod) {
       return step;
@@ -95,7 +105,7 @@ function nextFreeTick(
   tempo: Tempo,
 ): number | undefined {
   const sixteenths = 16 * rhythm.everyBars;
-  const start = tick - (tick % (rhythm.everyBars * tempo.ticksPerBar));
+  const start = tick - ticksIntoPeriod(rhythm, tick, tempo);
   const now = stepOn(rhythm, tick, tempo) ?? 0;
   for (let step = now + 1; step < now + sixteenths; step++) {
     if (!rhythm.steps.includes(step % sixteenths)) {

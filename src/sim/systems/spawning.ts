@@ -82,6 +82,8 @@ export function spawnEnemy(
   return enemy;
 }
 
+const NO_SCALE = { hp: 1, damage: 1 };
+
 function spawnAtEdge(
   state: SimState,
   set: SetDefinition,
@@ -94,6 +96,7 @@ function spawnAtEdge(
     : ruleSpawnPosition(state, set, tempo, definition.radius);
   const { x, y } = clearOfObstacles(edge, definition.radius, set.obstacles ?? []);
   const minutes = endlessMinutes(state);
+  const scale = state.enemyScale ?? NO_SCALE;
   spawnEnemy(
     state,
     definition,
@@ -101,8 +104,9 @@ function spawnAtEdge(
     y,
     isBoss,
     perPlayerMul(state, set.perPlayer?.enemyHpMul) *
-      compound(set.endlessPerMinute?.hp ?? 1, minutes),
-    compound(set.endlessPerMinute?.damage ?? 1, minutes),
+      compound(set.endlessPerMinute?.hp ?? 1, minutes) *
+      scale.hp,
+    compound(set.endlessPerMinute?.damage ?? 1, minutes) * scale.damage,
   );
 }
 

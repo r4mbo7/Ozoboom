@@ -1,4 +1,5 @@
 import type { StepContext } from '../systems/types';
+import { isBarTick } from '../../shared/tempo';
 import { shoot } from './shoot';
 import type { WeaponModule } from './types';
 
@@ -9,7 +10,7 @@ export const lob: WeaponModule = {
       return;
     }
     const raining = effect.dropRain === true && ctx.state.set.segment === 'drop';
-    if (effect.dropRain === true && !raining && ctx.state.tick % ctx.tempo.ticksPerBar !== 0) {
+    if (effect.dropRain === true && !raining && !isBarTick(ctx.state.tick, ctx.tempo)) {
       return;
     }
     const range = raining

@@ -11,6 +11,7 @@ import {
   touches,
 } from './effects';
 import type { PlayerState, SimState, ZoneState } from './state';
+import { statValue } from './stats';
 import type { StepContext } from './systems/types';
 
 export interface ZonePlacement {
@@ -123,9 +124,10 @@ function makeRoom(
 ): void {
   const isMine = (zone: ZoneState) =>
     zone.playerId === player.id && zone.definition.id === definition.id;
+  const most = statValue(player, 'zoneCountAdd', definition.maxPerPlayer);
   let mine = laid.filter(isMine).length;
   keepWhere(laid, (zone) => {
-    if (mine < definition.maxPerPlayer || !isMine(zone)) {
+    if (mine < most || !isMine(zone)) {
       return true;
     }
     mine -= 1;

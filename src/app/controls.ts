@@ -3,6 +3,7 @@ import { heldSlot, selectTrap } from '../ui';
 import { distanceSquared, length, normalize } from '../shared/vec';
 import {
   IDLE_INPUT,
+  type Emote,
   type PlayerAction,
   type PlayerCommand,
   type PlayerInput,
@@ -31,6 +32,7 @@ export interface CommandRequest {
   readonly trapId: string | undefined;
   readonly placeTrap: boolean;
   readonly dash: boolean;
+  readonly emote: Emote | null;
   readonly upgradeId: string | null;
   readonly assist: Assist;
   // The bad vibe the assist aims or fires at.
@@ -89,6 +91,9 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
   if (request.dash) {
     actions.push({ type: 'dash' });
   }
+  if (request.emote !== null) {
+    actions.push({ type: 'emote', emote: request.emote });
+  }
   if (request.upgradeId !== null) {
     actions.push({ type: 'chooseUpgrade', upgradeId: request.upgradeId });
   }
@@ -133,6 +138,7 @@ export class Controls {
   private heldAim: Vec2;
   private placeTrap = false;
   private dash = false;
+  private emote: Emote | null = null;
   private trapScreen: Vec2 | null = null;
   private upgradeId: string | null = null;
   private trapIndex = 0;
@@ -156,6 +162,7 @@ export class Controls {
       this.trapScreen = snapshot.device === 'touch' ? snapshot.pointerScreen : null;
     }
     this.dash ||= gameplay.dash;
+    this.emote = gameplay.emote ?? this.emote;
     this.snapshot = snapshot;
   }
 
@@ -185,6 +192,7 @@ export class Controls {
       trapId: player.hand?.[heldSlot(this.trapIndex, player.hand.length)],
       placeTrap: this.placeTrap,
       dash: this.dash,
+      emote: this.emote,
       upgradeId: this.upgradeId,
       assist,
       target: assist.autoFire || assist.autoAim ? autoTarget(player, enemies, reach) : null,
@@ -192,6 +200,7 @@ export class Controls {
     });
     this.placeTrap = false;
     this.dash = false;
+    this.emote = null;
     this.trapScreen = null;
     this.upgradeId = null;
     if (chargeTicks === 0) {

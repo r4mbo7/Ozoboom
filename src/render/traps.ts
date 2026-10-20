@@ -1,9 +1,7 @@
 import type { Sprite } from 'pixi.js';
-import type { TrapEffect } from '../data/types';
-import type { Tempo } from '../shared/tempo';
-import { beamDirection } from '../sim/beam';
-import { type BreezeEffect, breezeDirection } from '../sim/breeze';
-import type { EntityId, PlayerState, SimState, TrapState, Vec2 } from '../sim/state';
+import type { BreezeEffect } from '../sim/breeze';
+import { trapPointing } from '../sim/pointing';
+import type { EntityId, PlayerState, SimState, TrapState } from '../sim/state';
 import { BEAM_LENGTH, TRAP_TOKENS } from './textures';
 import { CONE_DEGREES, CONE_LENGTH, DROPLET_RADIUS } from './textures-traps';
 import type { Family, RenderContext } from './context';
@@ -12,6 +10,11 @@ import { lerp } from './motion';
 import { trapReach } from './reach';
 import { add, byId, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
+import { mixColor } from './weapon-kit';
+
+// A trap drowned in a puddle goes out: grayed, its halo down.
+const DROWNED_GRAY = 0x6a6f85;
+const DROWNED_MIX = 0.7;
 
 interface TrapView {
   readonly halo: Sprite;
@@ -81,17 +84,6 @@ function drawBreeze(
   }
 }
 
-function pointingOf(effect: TrapEffect, placed: Vec2, tick: number, tempo: Tempo): Vec2 {
-  switch (effect.kind) {
-    case 'beam':
-      return beamDirection(effect, placed, tick, tempo);
-    case 'breeze':
-      return breezeDirection(effect, placed, tick, tempo);
-    default:
-      return placed;
-  }
-}
-
 export function createTraps(ctx: RenderContext): TrapsFamily {
   const { textures: t, layers } = ctx;
   const views = new ViewPool<TrapView>(
@@ -123,11 +115,12 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
         const kind = look.effect.kind;
         const shape = t.traps[kind];
         const color = palette[TRAP_TOKENS[kind]];
-        const pointing = pointingOf(look.effect, trap.direction, tick, frame.tempo);
+        const drowned = (trap.shortedTicks ?? 0) > 0;
+        const pointing = trapPointing(look.effect, trap.direction, tick, frame.tempo);
         const facing = Math.atan2(pointing.y, pointing.x);
         const { body, halo, beam, outline } = view;
         body.texture = shape.texture;
-        setTint(body, color);
+        setTint(body, drowned ? mixColor(color, DROWNED_GRAY, DROWNED_MIX) : color);
         body.visible = true;
         body.position.set(x, y);
         body.scale.set(look.radius / shape.radius);
@@ -138,12 +131,12 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
         setTint(halo, color);
         halo.position.set(x, y);
         halo.scale.set((look.radius * 3) / t.halo.radius);
-        halo.alpha =
-          (0.6 + 0.4 * pulse) * light.haloAlpha * (1 - (frame.drained.traps.get(trap.id) ?? 0));
+        const kept = (drowned ? 0.2 : 1) * (1 - (frame.drained.traps.get(trap.id) ?? 0));
+        halo.alpha = (0.6 + 0.4 * pulse) * light.haloAlpha * kept;
 
         view.reach = trapReach(look.effect, ownerOf(state.players, trap));
-        beam.visible = look.effect.kind === 'beam';
-        if (look.effect.kind === 'beam') {
+        beam.visible = look.effect.kind === 'beam' && !drowned;
+        if (look.effect.kind === 'beam' && !drowned) {
           setTint(beam, color);
           beam.position.set(x, y);
           beam.rotation = facing;

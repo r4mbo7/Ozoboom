@@ -20,7 +20,9 @@ export type StatKey =
   | 'lootRadiusMul'
   | 'dashRechargeMul'
   | 'dashChargesAdd'
-  | 'weaponRateMul';
+  | 'weaponRateMul'
+  | 'kiffDamageAdd'
+  | 'zoneCountAdd';
 
 export interface StatModifier {
   stat: StatKey;
@@ -116,6 +118,8 @@ export interface ClassDefinition {
   speed: number;
   radius: number;
   pickupRadius: number;
+  // Shades the players within, from the sun of the Canicule: the parasol of the Hygie.
+  shadeRadius?: number;
   reviveMul?: number;
   attack: AttackDefinition;
   skill: SkillDefinition;
@@ -140,7 +144,6 @@ export type SpecialEffect =
   | { kind: 'dazzle'; radius: number }
   | { kind: 'babble'; everyBars: number }
   | { kind: 'frontGuard'; frontDamageMul: number }
-  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents -- never until the first effect of the full game, and in the demo.
   | FullSpecialEffect;
 
 export interface EnemyDefinition {
@@ -199,6 +202,8 @@ export interface TrapDefinition {
   radius: number;
   cadence: TrapCadence;
   effect: TrapEffect;
+  // Shades the players within, from the sun of the Canicule.
+  shade?: number;
   // Odds of this trap in a loot against the other traps, the same for every class.
   lootWeight: number;
 }
@@ -291,6 +296,8 @@ export interface WeaponDefinition {
   effect: WeaponEffect;
   maxLevel: number;
   levelMul: number;
+  // Its zones shade the players within, from the sun of the Canicule.
+  shade?: number;
 }
 
 export interface FusionDefinition {
@@ -441,6 +448,8 @@ export interface SetDefinition {
   sidedWaves?: { everyBars: number; chance: number; randomShare: number };
 }
 
+export type EdgeSide = 'top' | 'right' | 'bottom' | 'left';
+
 // A character or a stage of the full game, shown locked in the demo (ADR 0014): its name and colour, never its data.
 export interface TeaserDefinition {
   kind: 'class' | 'stage';
@@ -476,6 +485,8 @@ export interface GameContent {
   rarityWeights?: readonly RarityWeights[];
   // Absent, nobody dashes.
   dash?: DashDefinition;
+  // The sets a game walks through between two stages (ADR 0018), never offered at the stage choice.
+  paths?: readonly SetDefinition[];
 }
 
 export type MusicVoiceId =

@@ -1,6 +1,6 @@
 import { CanvasSource, Rectangle, Texture } from 'pixi.js';
-import { BOSS_CELL, BOSS_SCALE } from './textures-enemies';
-import { FACE_RADIUS, INK, gladFace, type Face } from './face-kit';
+import { BOSS_CELL } from './textures-enemies';
+import { BOSS_SCALE, FACE_RADIUS, INK, gladFace, type Face } from './face-kit';
 import { TAU, WHITE, type Ctx, type Shape } from './paint';
 
 // Rim band, in mask units: what the rim gains when it breathes or whitens.

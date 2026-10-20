@@ -46,6 +46,8 @@ export interface OnlineEnv {
   stageId(): string;
   // Whether the host proposes an endless set when it opens a room: as in the last game.
   endless(): boolean;
+  // Whether the host proposes the whole festival when it opens a room: as in the last game.
+  festival(): boolean;
   readonly classIds: readonly string[];
   // Milliseconds, injectable for the watchdog tests.
   now?(): number;
@@ -78,8 +80,8 @@ export interface Online {
   setSeatClass(classId: string): void;
   // Host only: the scene of the next set, sent to the guests.
   setStage(setId: string): void;
-  // Host only: whether the next set is endless, sent to the guests.
-  setEndless(endless: boolean): void;
+  // Host only: whether the next game is endless or the whole festival, sent to the guests.
+  setNight(endless: boolean, festival: boolean): void;
   launch(): void;
   // The end screen shows: a guest tells the host its game is over.
   matchEnded(): void;
@@ -188,6 +190,7 @@ export function createOnline(env: OnlineEnv): Online {
       stages: env.stages,
       stageId: room?.setId ?? env.stageId(),
       endless: room?.endless ?? env.endless(),
+      festival: room?.festival ?? env.festival(),
     };
   }
 
@@ -380,6 +383,7 @@ export function createOnline(env: OnlineEnv): Online {
         classIds: env.classIds,
         setId: env.stageId(),
         endless: env.endless(),
+        festival: env.festival(),
       });
       room = joined;
       joined.onChange(showLobby);
@@ -464,8 +468,9 @@ export function createOnline(env: OnlineEnv): Online {
     setStage(setId) {
       room?.setStage(setId);
     },
-    setEndless(endless) {
+    setNight(endless, festival) {
       room?.setEndless(endless);
+      room?.setFestival(festival);
     },
     launch() {
       if (room === null || role !== 'host' || !model().canLaunch) {
@@ -502,6 +507,7 @@ export function createOnline(env: OnlineEnv): Online {
         trackId: env.trackId(),
         players: present.map(playerSlot),
         ...(room.endless ? { endless: true } : {}),
+        ...(room.festival ? { festival: true } : {}),
       };
       for (const seat of present) {
         if (seat.peer !== null && seat.peer !== transport.id) {

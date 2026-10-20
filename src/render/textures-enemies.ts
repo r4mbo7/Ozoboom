@@ -1,4 +1,5 @@
 import { CanvasSource, Rectangle, Texture } from 'pixi.js';
+import { BOSS_SCALE } from './face-kit';
 import {
   FACES,
   FACE_RADIUS,
@@ -14,7 +15,6 @@ import { CRACK_STAGES } from './hit-marks';
 import type { Ctx, Shape } from './paint';
 
 const CELL = 144;
-export const BOSS_SCALE = 2;
 export const BOSS_CELL = CELL * BOSS_SCALE;
 const CRACK_STAGE_LIST = Array.from({ length: CRACK_STAGES }, (_, index) => index + 1);
 

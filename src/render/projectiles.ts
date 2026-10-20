@@ -66,7 +66,7 @@ export function createProjectiles(ctx: RenderContext): Family {
           sprite.rotation = shotRotation(
             projectile.vx,
             projectile.vy,
-            frame.now,
+            frame.now - frame.tempo.originTick,
             frame.tempo.ticksPerBeat,
             look.spins,
             frame.calm,

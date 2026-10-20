@@ -10,6 +10,7 @@ import type {
 export const FULL_CLASSES: readonly ClassDefinition[] = [];
 export const FULL_UPGRADES: readonly UpgradeDefinition[] = [];
 export const FULL_SETS: readonly SetDefinition[] = [];
+export const FULL_PATHS: readonly SetDefinition[] = [];
 export const FULL_TRACKS: readonly MusicTrack[] = [];
 export const FULL_ENEMIES: readonly EnemyDefinition[] = [];
 export const FULL_TEASERS: readonly TeaserDefinition[] = [

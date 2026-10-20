@@ -7,6 +7,7 @@ import { beatSeconds, timeToTick, type Anchor } from './clock';
 import { chordRootOfBar, keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 import { createVibeArp } from './vibe-arp';
+import { FULL_BAR_CALLS } from './full';
 
 export type SfxName =
   | 'playerFired'
@@ -42,6 +43,7 @@ export type SfxName =
   | 'enemyBabble'
   | 'enemyGrowl'
   | 'bossWhistle'
+  | 'bossThunder'
   | 'vibesStolen'
   | 'playerShoved'
   | 'bystanderHelped'
@@ -142,6 +144,7 @@ export interface SfxEnemy extends SfxCore {
 // What a boss sounds on the one of every bar while it stands.
 const BAR_CALLS: ReadonlyMap<string, SfxName> = new Map<string, SfxName>([
   ['couvre-feu', 'bossWhistle'],
+  ...Object.entries(FULL_BAR_CALLS),
 ]);
 
 // The hit climbs the scale as the bad vibe loses its life, up to the octave once it is gone.
@@ -186,6 +189,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     enemyBabble: { perFrame: 1, concurrent: 2, seconds: 0.15 },
     enemyGrowl: { perFrame: 1, concurrent: 2, seconds: 0.35 },
     bossWhistle: { perFrame: 1, concurrent: 1, seconds: 0.2 },
+    bossThunder: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
     playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
@@ -972,6 +976,29 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       hold: 0.08,
       release: 0.05,
       filter: { type: 'bandpass', hz, q: 4 },
+    });
+  },
+  // The Orage's thunder: a low rumble of noise that swells and rolls away, under a deep root that
+  // sinks, kept low in the mix. Heard, never seen.
+  bossThunder: (out, at, _variant, key) => {
+    const hz = keyHz(key, 0, 1);
+    playNoise(out, at, {
+      gain: 0.08,
+      attack: 0.12,
+      hold: 0.3,
+      release: 0.7,
+      filter: { type: 'lowpass', hz: 220, toHz: 90, glide: 0.9, q: 1.4 },
+    });
+    playTone(out, at + 0.05, {
+      wave: 'triangle',
+      hz,
+      toHz: hz * 0.75,
+      glide: 0.8,
+      gain: 0.05,
+      attack: 0.08,
+      hold: 0.25,
+      release: 0.6,
+      filter: { type: 'lowpass', hz: 200 },
     });
   },
   vibesStolen: (out, at, _variant, key) => {

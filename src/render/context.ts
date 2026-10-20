@@ -27,19 +27,21 @@ export type WeaponLook = Pick<
 >;
 
 export interface RenderContent {
-  readonly classes: readonly (Pick<ClassDefinition, 'id'> & {
+  readonly classes: readonly (Pick<ClassDefinition, 'id' | 'shadeRadius'> & {
     readonly skill: Pick<SkillDefinition, 'effect'>;
     readonly attack?: AttackDefinition;
   })[];
   readonly enemies: readonly Pick<EnemyDefinition, 'id' | 'behaviour' | 'special' | 'radius'>[];
-  readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect'>[];
+  readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect' | 'shade'>[];
   readonly sets: readonly SetDefinition[];
+  // The paths a festival walks between two stages, drawn like a stage.
+  readonly paths?: readonly SetDefinition[];
   readonly bystanders?: readonly Pick<BystanderDefinition, 'id' | 'helpTicks'>[];
   readonly weapons?: readonly (WeaponLook & Pick<WeaponDefinition, 'id'>)[];
   readonly dash?: DashDefinition;
 }
 
-export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect'>;
+export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect' | 'shade'>;
 
 export type SpeakerLook = Pick<
   SpeakerDefinition,
@@ -58,8 +60,12 @@ export interface RenderContext {
   readonly specials: ReadonlyMap<string, SpecialEffect>;
   readonly helpTicks: ReadonlyMap<string, number>;
   readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
+  // Every set a game may play, the paths of a festival included, by id.
+  readonly stages: ReadonlyMap<string, SetDefinition>;
   readonly weaponLooks: ReadonlyMap<string, WeaponLook>;
   readonly skillEffects: ReadonlyMap<string, SkillEffect>;
+  // The shade each class casts around its players, by class id: the parasol of the Hygie.
+  readonly shadeRadii: ReadonlyMap<string, number>;
   // Each class's attack, where the content gives it.
   readonly attacks: ReadonlyMap<string, AttackDefinition>;
   readonly dash: DashDefinition | null;
@@ -92,6 +98,7 @@ export function createRenderContext(
       ),
     ),
     helpTicks: new Map((content.bystanders ?? []).map((def) => [def.id, def.helpTicks])),
+    stages: new Map([...content.sets, ...(content.paths ?? [])].map((set) => [set.id, set])),
     speakerLooks: new Map(
       content.sets.map((set) => [
         set.id,
@@ -100,6 +107,11 @@ export function createRenderContext(
     ),
     weaponLooks: new Map((content.weapons ?? []).map((def) => [def.id, def])),
     skillEffects: new Map(content.classes.map((def) => [def.id, def.skill.effect])),
+    shadeRadii: new Map(
+      content.classes.flatMap((def): [string, number][] =>
+        def.shadeRadius === undefined ? [] : [[def.id, def.shadeRadius]],
+      ),
+    ),
     attacks: new Map(
       content.classes.flatMap((def): [string, AttackDefinition][] =>
         def.attack === undefined ? [] : [[def.id, def.attack]],

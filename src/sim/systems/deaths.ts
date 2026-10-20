@@ -74,6 +74,9 @@ export function deaths(ctx: StepContext): void {
 
 function offerRelics({ state, content }: StepContext): void {
   for (const player of state.players) {
+    if (player.gone === true) {
+      continue;
+    }
     const options = drawRelics(state.rng, state, content, player);
     if (options.length > 0) {
       const rarities = options.map(() => 'common' as const);

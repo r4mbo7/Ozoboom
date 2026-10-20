@@ -36,8 +36,8 @@ export function isSpeakerLayerId(id: string): id is SpeakerLayerId {
 
 // The first beat that is still to be scheduled: a layer never starts between two beats.
 export function entryTickOf(tick: number, cursor: number, tempo: Tempo = MAIN_TEMPO): number {
-  const beat = tempo.ticksPerBeat;
-  return Math.ceil(Math.max(tick + 1, cursor) / beat) * beat;
+  const { ticksPerBeat: beat, originTick } = tempo;
+  return originTick + Math.ceil((Math.max(tick + 1, cursor) - originTick) / beat) * beat;
 }
 
 // A speaker that is being plugged, or plugged but not yet in, is heard muffled and quiet; from its

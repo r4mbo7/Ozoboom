@@ -1,6 +1,7 @@
 import type { Vec2 } from '../sim/state';
-import { IDLE_INPUT } from '../sim/commands';
+import { EMOTES, IDLE_INPUT } from '../sim/commands';
 import {
+  EMOTE_CONTROLS,
   MENU_DIRECTION_CONTROLS,
   MENU_REPEAT_DELAY_MS,
   MENU_REPEAT_INTERVAL_MS,
@@ -84,6 +85,8 @@ export function mergeFrames(
     down: repeat('down'),
     left: repeat('left'),
     right: repeat('right'),
+    previous: pressed('menuPrevious'),
+    next: pressed('menuNext'),
     confirm: pressed('confirm'),
     back: pressed('back'),
   };
@@ -101,6 +104,7 @@ export function mergeFrames(
         skill: held('skill'),
         placeTrap: pressed('placeTrap'),
         dash: pressed('dash'),
+        emote: EMOTES.find((emote) => pressed(EMOTE_CONTROLS[emote])) ?? null,
         nextTrap: pressed('nextTrap'),
         previousTrap: pressed('previousTrap'),
         selectTrap: selectedTrap(keyboardMouse.presses, gamepad.presses, touch.presses),

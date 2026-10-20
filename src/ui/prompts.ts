@@ -14,6 +14,8 @@ export interface DevicePrompts {
   // Through a list from top to bottom, and through items side by side.
   navigate: readonly string[];
   navigateRow: readonly string[];
+  // The tab before and the tab after, on a screen with tabs.
+  tabs: readonly string[];
   confirm: string;
   back: string;
   skill: string;
@@ -25,6 +27,7 @@ const keyboard = (): DevicePrompts => ({
   style: 'key',
   navigate: ['↑', '↓'],
   navigateRow: ['←', '→'],
+  tabs: [t('Maj+Tab'), 'Tab'],
   confirm: t('Entrée'),
   back: t('Échap'),
   skill: 'E',
@@ -34,7 +37,7 @@ const keyboard = (): DevicePrompts => ({
     { action: t('Tirer'), keys: [t('Clic gauche'), t('Espace')] },
     { action: t('Choisir un piège'), keys: [t('Molette'), t('1 à 5')] },
     { action: t('Poser le piège'), keys: [t('Clic droit'), 'F'] },
-    { action: t('Compétence'), keys: ['E'] },
+    { action: t('Spéciale'), keys: ['E'] },
     { action: t('Dash'), keys: [t('Maj')] },
     { action: t('Pause'), keys: [t('Échap')] },
   ],
@@ -45,6 +48,7 @@ const gamepad = (): DevicePrompts => ({
   style: 'button',
   navigate: [t('Stick gauche'), t('Croix')],
   navigateRow: [t('Stick gauche'), t('Croix')],
+  tabs: ['LB', 'RB'],
   confirm: 'A',
   back: 'B',
   skill: 'LT',
@@ -54,7 +58,7 @@ const gamepad = (): DevicePrompts => ({
     { action: t('Tirer'), keys: ['RT'] },
     { action: t('Choisir un piège'), keys: ['LB', 'RB'] },
     { action: t('Poser le piège'), keys: ['A'] },
-    { action: t('Compétence'), keys: ['LT'] },
+    { action: t('Spéciale'), keys: ['LT'] },
     { action: t('Dash'), keys: ['B'] },
     { action: t('Pause'), keys: ['Start'] },
   ],
@@ -66,6 +70,7 @@ const touch = (): DevicePrompts => ({
   style: 'key',
   navigate: [],
   navigateRow: [],
+  tabs: [],
   confirm: t('Toucher'),
   back: t('Retour'),
   skill: '',
@@ -74,7 +79,7 @@ const touch = (): DevicePrompts => ({
     { action: t('Viser et tirer'), keys: [t('Automatique')] },
     { action: t('Poser un piège à ses pieds'), keys: [t('Toucher sa tuile')] },
     { action: t('Le poser ailleurs'), keys: [t('Glisser sa tuile')] },
-    { action: t('Compétence'), keys: [t('Toucher sa tuile')] },
+    { action: t('Spéciale'), keys: [t('Toucher sa tuile')] },
     { action: t('Dash'), keys: [t('Toucher sa tuile')] },
     { action: t('Pause'), keys: ['❚❚'] },
   ],
@@ -93,7 +98,10 @@ export function promptsFor(device: InputDevice): DevicePrompts {
 
 // The keys that reach the endless switch under the cards of a picker: none to show when they are
 // the keys that choose a card, or on a touch screen.
-export function endlessHint(prompts: DevicePrompts): { keys: readonly string[]; label: string }[] {
+export function endlessHint(
+  prompts: DevicePrompts,
+  night = false,
+): { keys: readonly string[]; label: string }[] {
   const same = prompts.navigate.join() === prompts.navigateRow.join();
-  return same ? [] : [{ keys: prompts.navigate, label: t('sans fin') }];
+  return same ? [] : [{ keys: prompts.navigate, label: night ? t('la nuit') : t('sans fin') }];
 }

@@ -1,9 +1,10 @@
 import type { Container } from 'pixi.js';
-import type { DecorId } from '../data/types';
+import type { DecorId, SetDefinition } from '../data/types';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { FULL_LOOKS } from './full';
+import { FULL_CLEARINGS, FULL_LOOKS } from './full';
+import { releaseDrawing } from './util';
 import { createFireflies } from './ground-fireflies';
 import { type Layout, layoutGround } from './ground-layout';
 import { createLake } from './ground-lake';
@@ -33,25 +34,57 @@ export function createGround(ctx: RenderContext): Family {
     ...FULL_LOOKS.map((look): [DecorId, Ground] => [look.decor, look.ground(parent)]),
   ]);
   const fireflies = createFireflies(ctx, parent);
-  let drawnKey = '';
+  // Each ground keeps what it last drew: the one a festival walks toward is drawn ahead, unseen.
+  const drawn = new Map<DecorId, string>();
+  let shownKey = '';
   let styledAt = Number.NaN;
+
+  function groundOf(decor: DecorId): Ground {
+    const ground = grounds.get(decor);
+    if (ground === undefined) {
+      throw new Error(`No ground for the decor ${decor}`);
+    }
+    return ground;
+  }
+
+  // A festival keeps its exits clear of trees.
+  function layoutOf(set: SetDefinition, state: SimState): Layout {
+    const clearings = state.festival === undefined ? [] : (FULL_CLEARINGS[set.id] ?? []);
+    return layoutGround(state.seed, set.arena, clearings);
+  }
+
+  function drawAhead(set: SetDefinition, state: SimState, layout?: Layout): void {
+    const key = `${set.id}:${String(state.seed)}:${String(state.festival !== undefined)}`;
+    if (drawn.get(set.decor) !== key) {
+      drawn.set(set.decor, key);
+      groundOf(set.decor).draw(layout ?? layoutOf(set, state), state.seed);
+    }
+  }
 
   return {
     update(state: SimState, _alpha: number, frame: Frame): void {
-      const { arena, seed } = state;
-      const { decor } = frame.set;
-      const ground = grounds.get(decor);
-      if (ground === undefined) {
-        throw new Error(`No ground for the decor ${decor}`);
+      const { seed } = state;
+      const { set, upcoming } = frame;
+      const { decor } = set;
+      const ground = groundOf(decor);
+      if (upcoming !== undefined && upcoming.decor !== decor) {
+        drawAhead(upcoming, state);
       }
-      const key = `${String(arena.width)}x${String(arena.height)}:${String(seed)}:${decor}`;
-      if (key !== drawnKey) {
-        drawnKey = key;
-        const layout = layoutGround(seed, arena);
+      // A festival leaves stages behind: their grounds give their shapes back until they come again.
+      for (const [left, key] of drawn) {
+        if (key !== '' && left !== decor && left !== upcoming?.decor) {
+          releaseDrawing(groundOf(left).root);
+          drawn.set(left, '');
+        }
+      }
+      const key = `${set.id}:${String(seed)}:${String(state.festival !== undefined)}`;
+      if (key !== shownKey) {
+        shownKey = key;
+        const layout = layoutOf(set, state);
+        drawAhead(set, state, layout);
         for (const [id, { root }] of grounds) {
           root.visible = id === decor;
         }
-        ground.draw(layout, seed);
         fireflies.draw(layout, seed);
         styledAt = Number.NaN;
       }

@@ -1,4 +1,5 @@
 import { unitFromAngle } from '../../shared/angle';
+import { ticksIntoBar } from '../../shared/tempo';
 import { keepWhere } from '../effects';
 import type { PlayerState, ProjectileState } from '../state';
 import type { WeaponModule } from './types';
@@ -52,7 +53,7 @@ export const orbit: WeaponModule = {
       }
     }
     slot.phase = (slot.phase + (TWO_PI * effect.turnsPerBar) / tempo.ticksPerBar) % TWO_PI;
-    const forgets = state.tick % (tempo.ticksPerBar / 2) === 0;
+    const forgets = ticksIntoBar(state.tick, tempo) % (tempo.ticksPerBar / 2) === 0;
     const { width, height } = state.arena;
     bodies.forEach((body, i) => {
       const direction = unitFromAngle(slot.phase + (i * TWO_PI) / effect.count);

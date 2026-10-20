@@ -71,6 +71,8 @@ export class Scene implements Renderer {
   private readonly dropTrails: ReturnType<typeof createDropTrails>;
 
   private lastState: SimState | null = null;
+  // The set the game played at the last image, and the tick it started at: a festival enters another.
+  private lastStage = '';
   private lastTick = -1;
   private readonly flashLimiter = new FlashLimiter();
   private readonly showClock = new ShowClock();
@@ -94,7 +96,7 @@ export class Scene implements Renderer {
     this.options = { ...options };
     this.textures = createTextures();
     checkDrawings(content.classes, this.textures.players.drawings);
-    this.sets = new Map(content.sets.map((set) => [set.id, set]));
+    this.sets = new Map([...content.sets, ...(content.paths ?? [])].map((set) => [set.id, set]));
     this.camera = frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, width, height);
     this.layers = createLayers(this.stage);
     this.frame.resolution = pixi.resolution;
@@ -124,7 +126,7 @@ export class Scene implements Renderer {
       createBatterieAPlat(ctx, (id) => enemies.poseOf(id)),
       createSpecials(ctx),
       createProjectiles(ctx),
-      ...FULL_FAMILIES.map((create) => create(ctx)),
+      ...FULL_FAMILIES.map((create) => create(ctx, (id) => enemies.poseOf(id))),
       createWeapons(ctx),
       createPlayers(ctx),
       createDownedScreen(ctx),
@@ -140,8 +142,10 @@ export class Scene implements Renderer {
   }
 
   render(state: SimState, alpha: number): void {
-    if (state !== this.lastState) {
+    const stage = `${state.setId}@${String(state.set.startTick ?? 0)}`;
+    if (state !== this.lastState || stage !== this.lastStage) {
       this.lastState = state;
+      this.lastStage = stage;
       this.lastTick = -1;
       this.beatTick = this.shakeTick = this.frame.flashTick = Number.NEGATIVE_INFINITY;
       this.cameraNow = Number.NaN;
@@ -151,7 +155,14 @@ export class Scene implements Renderer {
       }
     }
     const { frame, layers } = this;
-    advanceFrame(frame, lookup(this.sets, state.setId, 'set'), state, alpha);
+    const toward = state.festival?.taken?.setId;
+    advanceFrame(
+      frame,
+      lookup(this.sets, state.setId, 'set'),
+      state,
+      alpha,
+      toward === undefined ? undefined : lookup(this.sets, toward, 'set'),
+    );
     frame.show = this.showClock.read(frame.now, state.status === 'running', performance.now());
     frame.calm = this.options.calmMode;
     applyLight(layers, frame);

@@ -2,7 +2,7 @@ import { MAIN_STAGE } from '../data/sets';
 import type { SetDefinition } from '../data/types';
 import { type Light, lightAt, paletteAt } from '../shared/palette';
 import type { Tempo } from '../shared/tempo';
-import { setFraction, setTempo } from '../sim/lineup';
+import { playedTempo, setFraction, setTempo } from '../sim/lineup';
 import type { EntityId, PlayerId, SimState } from '../sim/state';
 import { dropFilterIntensity } from './drop-filter';
 import { type Camera, frameCamera } from './camera';
@@ -14,6 +14,8 @@ export interface Frame {
   // `now`, going on in real time while the sim waits for a choice or has ended (`ShowClock`).
   show: number;
   set: SetDefinition;
+  // The stage a festival walks toward, on its path: its decor is drawn ahead, unseen.
+  upcoming: SetDefinition | undefined;
   tempo: Tempo;
   fraction: number;
   palette: PixiPalette;
@@ -38,6 +40,7 @@ export function createFrame(set: SetDefinition = MAIN_STAGE): Frame {
     now: 0,
     show: 0,
     set,
+    upcoming: undefined,
     tempo: setTempo(set),
     fraction: Number.NaN,
     palette: createPixiPalette(),
@@ -54,12 +57,17 @@ export function createFrame(set: SetDefinition = MAIN_STAGE): Frame {
   };
 }
 
-export function advanceFrame(frame: Frame, set: SetDefinition, state: SimState, alpha: number) {
+export function advanceFrame(
+  frame: Frame,
+  set: SetDefinition,
+  state: SimState,
+  alpha: number,
+  upcoming?: SetDefinition,
+) {
   frame.now = state.tick + alpha;
-  if (set !== frame.set) {
-    frame.set = set;
-    frame.tempo = setTempo(set);
-  }
+  frame.set = set;
+  frame.upcoming = upcoming;
+  frame.tempo = playedTempo(set, state);
   frame.dropFilter = dropFilterIntensity(state, frame.now, frame.tempo);
   frame.groundFilter = state.set.tier >= 1 ? frame.dropFilter : 0;
   const fraction = setFraction(set, state);
@@ -68,4 +76,16 @@ export function advanceFrame(frame: Frame, set: SetDefinition, state: SimState, 
     writePixiPalette(frame.palette, paletteAt(fraction));
     frame.light = lightAt(fraction);
   }
+}
+
+// The set whose `decor` a decor family draws: the one played, or the one a festival walks toward, drawn ahead
+// so that nothing is drawn on arrival.
+export function decorSet(
+  frame: Pick<Frame, 'set' | 'upcoming'>,
+  decor: string,
+): SetDefinition | undefined {
+  if (frame.set.decor === decor) {
+    return frame.set;
+  }
+  return frame.upcoming?.decor === decor ? frame.upcoming : undefined;
 }

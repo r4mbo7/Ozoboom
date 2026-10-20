@@ -112,6 +112,12 @@ export function createCore(ctx: RenderContext): CoreFamily {
     },
     update(state: SimState, _alpha: number, frame: Frame): void {
       const { core } = state;
+      // A path between two stages has no core to defend.
+      layers.core.visible = core.radius > 0;
+      if (!layers.core.visible) {
+        flash.visible = false;
+        return;
+      }
       const { pulse, palette, light } = frame;
       segments = litSegments(core);
       const ringRadius = core.radius * RING_REACH;

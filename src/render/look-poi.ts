@@ -1,5 +1,5 @@
 import type { Container, Sprite } from 'pixi.js';
-import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import { MAIN_TEMPO, type Tempo, ticksIntoBar } from '../shared/tempo';
 import { TAU } from './paint';
 import { type Look, type LookInput, type Spawn, angleSpring, fade, lerpAngle } from './player-look';
 import type { Textures } from './textures';
@@ -15,8 +15,8 @@ const RECOIL = 5;
 const NOVA_TICKS = 48;
 
 // The poi make a turn per bar: they follow the time, not the frame.
-export function poiAngle(now: number, { ticksPerBar }: Tempo = MAIN_TEMPO): number {
-  return (((now % ticksPerBar) + ticksPerBar) % ticksPerBar) * (TAU / ticksPerBar);
+export function poiAngle(now: number, tempo: Tempo = MAIN_TEMPO): number {
+  return ticksIntoBar(now, tempo) * (TAU / tempo.ticksPerBar);
 }
 
 // The last ball thrown alternates: the first shot throws ball 0.

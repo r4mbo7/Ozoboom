@@ -133,7 +133,10 @@ const HALO_ATTACK = 1.3;
 const GATE_TOP_HZ = 2200;
 
 function sweepOf(step: number, tempo: Tempo): number {
-  return 0.5 - 0.5 * Math.cos((2 * Math.PI * step) / (SWEEP_BARS * tempo.ticksPerBar));
+  return (
+    0.5 -
+    0.5 * Math.cos((2 * Math.PI * (step - tempo.originTick)) / (SWEEP_BARS * tempo.ticksPerBar))
+  );
 }
 
 function echoed(ctx: MusicVoiceContext, level: number): AudioNode {

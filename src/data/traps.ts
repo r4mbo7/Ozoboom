@@ -35,5 +35,6 @@ export const TRAPS: readonly TrapDefinition[] = [
       sweepDegrees: 90,
     },
     lootWeight: 0.1,
+    shade: 110,
   },
 ];

@@ -10,6 +10,9 @@ import { TICKS_PER_BAR } from '../shared/tempo';
 import { quantizeCommand } from './wire';
 import type { CommandSource, PeerId, Seat, Transport } from './types';
 
+// The action a host sends for a guest who left, on each frame.
+const LEAVE: PlayerAction = { type: 'leave' };
+
 export const GUEST_BUFFER_TICKS = 2;
 export const GUEST_CATCH_UP_TICKS = 6;
 // A tab paused for longer than this (under five minutes) loses its place: onFellBehind.
@@ -152,7 +155,7 @@ export function createHostSource(
     const slot = guest.ring[index];
     guest.ring[index] = undefined;
     if (guest.gone) {
-      return { playerId: guest.playerId, input: IDLE_INPUT, actions: [] };
+      return { playerId: guest.playerId, input: IDLE_INPUT, actions: [LEAVE] };
     }
     if (slot?.tick === tick) {
       guest.lastInput = slot.input;

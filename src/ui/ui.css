@@ -1636,6 +1636,190 @@ svg.ui-title__sun {
   font-weight: 700;
 }
 
+/* The night of the game, as tabs over the stage choice. In a festival the stage picked is where it starts. */
+.ui-nights {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.ui-nights[hidden] {
+  display: none;
+}
+
+.ui-nights__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+}
+
+.ui-nights__key:empty {
+  display: none;
+}
+
+.ui-nights__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1.5px solid var(--ui-line);
+  border-radius: 34px;
+  background: color-mix(in srgb, var(--sol) 60%, var(--ui-panel));
+}
+
+.ui-nights__tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 28px;
+  background: transparent;
+  color: var(--ui-muted);
+  font: inherit;
+  font-size: 19px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ui-nights__tab:hover {
+  color: var(--texte);
+}
+
+.ui-nights__tab[aria-selected='true'] {
+  background: var(--or);
+  color: var(--sol);
+}
+
+.ui-nights__icon svg {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+
+.ui-nights[data-readonly] .ui-nights__tab {
+  cursor: default;
+}
+
+.ui-nights[data-readonly] .ui-nights__tab:not([aria-selected='true']) {
+  opacity: 0.6;
+}
+
+.ui-nights__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 17px;
+}
+
+.ui-nights__length {
+  padding: 3px 12px;
+  border: 1.5px solid var(--ui-line);
+  border-radius: 20px;
+  color: var(--ui-or);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .ui-nights__key {
+    display: none;
+  }
+
+  .ui-nights__tabs {
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .ui-nights__tab {
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  .ui-nights__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ui-nights__line {
+    gap: 8px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .ui-nights__icon {
+    display: none;
+  }
+}
+
+.ui-stage__tag {
+  position: absolute;
+  top: -12px;
+  left: 18px;
+  z-index: 1;
+  padding: 3px 12px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--texte) 16%, var(--sol-clair));
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ui-stage__tag[data-start] {
+  background: var(--or);
+  color: var(--sol);
+}
+
+.ui-stage__tag[hidden] {
+  display: none;
+}
+
+.ui-stagecards[data-festival] .ui-stage:not([aria-checked='true']) .ui-stage__preview {
+  opacity: 0.6;
+}
+
+.ui-stagepicker__note {
+  margin: 0;
+  color: var(--ui-muted);
+  font-size: 16px;
+  text-align: center;
+}
+
+.ui-stagepicker__note[hidden] {
+  display: none;
+}
+
+/* The launch button says what it launches, under its label. */
+.ui-launch {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ui-launch__detail {
+  color: var(--ui-muted);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ui-launch__detail:empty {
+  display: none;
+}
+
 /* HUD */
 
 .ui-hud {
@@ -4218,6 +4402,45 @@ svg.ui-title__sun {
   }
 }
 
+/* Two rows of five relics or six fit a screen only with the medallion beside the title. */
+
+@media (min-height: 701px) and (min-width: 600px) {
+  .ui-cards:is([data-count='5'], [data-count='6']) {
+    grid-template-columns: repeat(3, minmax(0, calc(340 * var(--card-unit))));
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: calc(6 * var(--card-unit)) calc(16 * var(--card-unit));
+    min-height: 0;
+    text-align: start;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__medal {
+    grid-row: span 2;
+    width: calc(64 * var(--card-unit));
+    height: calc(64 * var(--card-unit));
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card > :nth-child(n + 4) {
+    grid-column: 1 / -1;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__family {
+    justify-content: flex-start;
+  }
+}
+
+@media (min-height: 701px) and (min-width: 600px) and (max-width: 960px) {
+  .ui-cards:is([data-count='5'], [data-count='6']) {
+    grid-template-columns: repeat(2, minmax(0, calc(340 * var(--card-unit))));
+  }
+}
+
 /* Short screens, a phone held sideways: a menu fits the screen, it never scrolls. */
 
 @media (max-height: 520px) and (min-width: 600px) {
@@ -4344,6 +4567,59 @@ svg.ui-title__sun {
     width: auto;
     min-width: 180px;
     min-height: 48px;
+  }
+}
+
+/* Five relics or six on a short screen: two rows of three, without the medallion that every relic
+   shares, the button beside the family. */
+
+@media (max-height: 700px) and (min-width: 600px) {
+  .ui-cards:is([data-count='5'], [data-count='6']) {
+    grid-template-columns: repeat(3, minmax(0, 260px));
+    grid-auto-flow: row;
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    gap: 4px 12px;
+    min-height: 0;
+    padding: 8px 14px;
+    border-radius: 24px;
+    text-align: start;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__family {
+    justify-content: flex-start;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__medal {
+    display: none;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__name {
+    grid-column: 1 / -1;
+    font-size: 16px;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__foot {
+    grid-area: 1 / 2;
+    min-height: 0;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__cta {
+    padding: 2px 10px;
+    font-size: 12px;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__desc {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    line-height: 1.3;
   }
 }
 

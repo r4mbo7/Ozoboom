@@ -37,7 +37,11 @@ export function createVibeArp(): VibeArp {
   // The next sixteenth not yet consumed, once the next call would come too late to schedule it.
   function dueStep(now: number, tempo: Tempo, anchor: Anchor): { at: number; bar: number } | null {
     const earliest = Math.max(now - LATE_TOLERANCE_SECONDS, consumed + sixteenthSeconds(tempo) / 2);
-    const step = firstStepAtOrAfter(timeToTick(anchor, earliest), tempo.ticksPerBeat / 4);
+    const step = firstStepAtOrAfter(
+      timeToTick(anchor, earliest),
+      tempo.ticksPerBeat / 4,
+      tempo.originTick,
+    );
     const time = tickToTime(anchor, step);
     if (time >= now + TICK_SECONDS) {
       return null;

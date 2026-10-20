@@ -1,7 +1,7 @@
 import type { SetDefinition } from '../data/types';
 import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
-import { setTempo } from '../sim/lineup';
+import { setTempo, stageMinutes } from '../sim/lineup';
 import type { PlayerId } from '../sim/state';
 import { formatNumber } from './format';
 import type { LobbyModel, LobbySeat, StageCard } from './types';
@@ -91,7 +91,6 @@ export type Row =
   | 'name'
   | 'class'
   | 'stage'
-  | 'endless'
   | 'launch'
   | 'online'
   | 'leave';
@@ -103,6 +102,7 @@ export function stageCards(sets: readonly SetDefinition[]): StageCard[] {
     style: set.style ?? '',
     bpm: setTempo(set).bpm,
     decor: set.decor,
+    minutes: stageMinutes(set),
   }));
 }
 
@@ -128,7 +128,7 @@ export function rowsOf(model: LobbyModel): readonly Row[] {
     if (hasStageChoice(model)) {
       rows.push('stage');
     }
-    rows.push('endless', 'launch');
+    rows.push('launch');
   }
   rows.push('leave');
   return rows;
@@ -139,8 +139,8 @@ export function seatRows(seat: LobbySeat, model: LobbyModel): readonly Row[] {
     return ['name', 'class'];
   }
   return hasStageChoice(model)
-    ? ['name', 'class', 'stage', 'endless', 'launch', 'online']
-    : ['name', 'class', 'endless', 'launch', 'online'];
+    ? ['name', 'class', 'stage', 'launch', 'online']
+    : ['name', 'class', 'launch', 'online'];
 }
 
 export interface RowStep {

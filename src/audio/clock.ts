@@ -45,8 +45,9 @@ export function timeToTick(anchor: Anchor, time: number): number {
   return anchor.tick + (time - anchor.time) / TICK_SECONDS;
 }
 
-export function firstStepAtOrAfter(tick: number, stepTicks = STEP_TICKS): number {
-  const step = Math.ceil(tick / stepTicks - STEP_EPSILON) * stepTicks;
+// Steps fall every `stepTicks` from `originTick`, the tick the set started at.
+export function firstStepAtOrAfter(tick: number, stepTicks = STEP_TICKS, originTick = 0): number {
+  const step = originTick + Math.ceil((tick - originTick) / stepTicks - STEP_EPSILON) * stepTicks;
   return step === 0 ? 0 : step; // turns -0 into 0
 }
 
@@ -72,11 +73,15 @@ export function stepsToSchedule(
   earliest: number,
   horizon: number,
   stepTicks = STEP_TICKS,
+  originTick = 0,
 ): StepRange {
   const from = Math.max(
-    firstStepAtOrAfter(cursor, stepTicks),
-    firstStepAtOrAfter(timeToTick(anchor, earliest), stepTicks),
+    firstStepAtOrAfter(cursor, stepTicks, originTick),
+    firstStepAtOrAfter(timeToTick(anchor, earliest), stepTicks, originTick),
   );
-  const until = Math.max(from, firstStepAtOrAfter(timeToTick(anchor, horizon), stepTicks));
+  const until = Math.max(
+    from,
+    firstStepAtOrAfter(timeToTick(anchor, horizon), stepTicks, originTick),
+  );
   return { from, until };
 }

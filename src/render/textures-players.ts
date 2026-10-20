@@ -17,6 +17,7 @@ import {
   type Shape,
 } from './paint';
 import { DOWNED_PIECES } from './textures-players-downed';
+import { EMOTE_PIECES } from './textures-players-emotes';
 import {
   BAG_PIECES,
   POI_BALL,
@@ -71,12 +72,25 @@ export interface DownedTextures {
   readonly veil: Shape;
 }
 
+// The gestures of the directional pad, whatever the class.
+export interface EmoteTextures {
+  readonly sun: Shape;
+  readonly stroke: Shape;
+  readonly plate: Shape;
+  readonly heartFill: Shape;
+  readonly heartLine: Shape;
+  readonly heartInner: Shape;
+  readonly star: Shape;
+  readonly burst: Shape;
+}
+
 export interface PlayerTextures {
   readonly shoulders: Shape;
   readonly head: Shape;
   readonly aim: Shape;
   readonly contour: Shape;
   readonly downed: DownedTextures;
+  readonly emote: EmoteTextures;
   readonly looks: Readonly<Record<PlayerLook, LookTextures>>;
   readonly poi: PoiParts;
   readonly bag: BagParts;
@@ -184,6 +198,7 @@ const PIECES = {
   parasol: [112, 112, REFERENCE, parasol],
   parasolShadow: softBlob(PARASOL_RADIUS - 4, PARASOL_RADIUS - 4, 1),
   ...DOWNED_PIECES,
+  ...EMOTE_PIECES,
   ...POI_PIECES,
   ...BAG_PIECES,
   ...PARASOL_PIECES,
@@ -204,6 +219,16 @@ export function playerTextures(): PlayerTextures {
       inner: t.downedInner,
       firefly: t.firefly,
       veil: t.downedVeil,
+    },
+    emote: {
+      sun: t.emoteSun,
+      stroke: t.emoteStroke,
+      plate: t.emotePlate,
+      heartFill: t.emoteHeartFill,
+      heartLine: t.emoteHeartLine,
+      heartInner: t.emoteHeartInner,
+      star: t.emoteStar,
+      burst: t.emoteBurst,
     },
     looks: {
       poi: { extent: POI_ORBIT + POI_BALL, height: 1, shadow: t.poiShadow },

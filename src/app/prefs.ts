@@ -17,6 +17,8 @@ export interface Prefs {
   trackId: string;
   // Whether the last game went on past its last boss: the next one proposes it again.
   endless: boolean;
+  // Whether the last game played the whole festival: the next one proposes it again.
+  festival: boolean;
 }
 
 const KEYS: Readonly<Record<keyof Prefs, string>> = {
@@ -30,6 +32,7 @@ const KEYS: Readonly<Record<keyof Prefs, string>> = {
   stageId: 'ozoboom.stageId',
   trackId: 'ozoboom.trackId',
   endless: 'ozoboom.endless',
+  festival: 'ozoboom.festival',
 };
 
 // Storage can be missing or throw (private browsing, blocked site data): the game then plays with
@@ -46,6 +49,7 @@ export function loadPrefs(storage: () => Storage, defaults: Prefs): Prefs {
     stageId: readText(storage, KEYS.stageId) ?? defaults.stageId,
     trackId: readText(storage, KEYS.trackId) ?? defaults.trackId,
     endless: readFlag(storage, KEYS.endless) ?? defaults.endless,
+    festival: readFlag(storage, KEYS.festival) ?? defaults.festival,
   };
 }
 

@@ -9,6 +9,8 @@ import { endStats, formatDuration } from './format';
 import { DISCORD, FOG, SUN } from './icons';
 import { type Menu, createMenu } from './menu';
 import { promptsFor } from './prompts';
+import type { Ending } from './end-parts';
+import { FULL_END } from './full';
 import type { EndSession } from './types';
 import { createWho, fillWho, whoColor } from './who';
 
@@ -19,10 +21,7 @@ export interface EndScreen {
   setDevice(device: InputDevice): void;
 }
 
-export interface Ending {
-  title: string;
-  text: string;
-}
+export type { Ending } from './end-parts';
 
 const sunrise = (): Ending => ({
   title: t('Sunrise\u202f!'),
@@ -85,7 +84,8 @@ export function createEnd(
   actions.append(restart, wait, quit, ...(feedback === null ? [] : [feedback]), discord);
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-end__body');
-  body.append(emblem, title, text, team, stats, actions, hint);
+  const details = el('div', 'ui-end__details');
+  body.append(emblem, title, text, details, team, stats, actions, hint);
   element.append(body);
 
   let items: HTMLElement[] = [];
@@ -146,9 +146,14 @@ export function createEnd(
       const won = state.status === 'won';
       element.dataset.outcome = won ? 'won' : 'lost';
       emblem.replaceChildren(icon('ui-end__icon', won ? SUN : FOG));
-      const ending = endingOf(state);
+      const part = Object.values(FULL_END)
+        .map((partOf) => partOf(state, content))
+        .find((found) => found !== null);
+      const ending = part?.ending ?? endingOf(state);
       setText(title, ending.title);
       setText(text, ending.text);
+      details.replaceChildren(...(part === undefined ? [] : [part.details]));
+      details.hidden = part === undefined;
       fillTeam(state, content);
       stats.replaceChildren(
         ...endStats(state).map((stat) => {

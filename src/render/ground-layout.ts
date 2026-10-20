@@ -41,8 +41,9 @@ export function shoreAt(layout: Layout, y: number): number {
   return x;
 }
 
-// The lake's left shore and the trees come from the seed of the run: same arena, same seed, same shore.
-export function layoutGround(seed: number, arena: Arena): Layout {
+// The lake's left shore and the trees come from the seed of the run: same arena, same seed, same shore. No tree
+// stands in a clearing, as a festival's exits.
+export function layoutGround(seed: number, arena: Arena, clearings: readonly Tree[] = []): Layout {
   const rng = seedRng(seed >>> 0);
   const waves = [
     { amplitude: arena.width * 0.035, frequency: 5.2, phase: nextFloat(rng) * Math.PI * 2 },
@@ -67,7 +68,8 @@ export function layoutGround(seed: number, arena: Arena): Layout {
     const clear =
       Math.hypot(x - cx, y - cy) > floorRadius * 1.12 + radius &&
       x - radius > shoreAt(base, y) + SHORE_MARGIN &&
-      trees.every((tree) => Math.hypot(x - tree.x, y - tree.y) > (radius + tree.radius) * 1.8);
+      trees.every((tree) => Math.hypot(x - tree.x, y - tree.y) > (radius + tree.radius) * 1.8) &&
+      clearings.every((spot) => Math.hypot(x - spot.x, y - spot.y) > radius + spot.radius);
     if (clear) {
       trees.push({ x, y, radius });
     }

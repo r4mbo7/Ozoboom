@@ -57,6 +57,13 @@ export const FACES: Readonly<Record<string, Face>> = {
   ...FULL_FACES,
 };
 
+// What `picker` warns with in development: an unknown sort is a drawing that lags behind the content.
+export const warnUnknown = (message: string): void => {
+  if (import.meta.env.DEV) {
+    console.warn(message);
+  }
+};
+
 // Looks a mask up by sort. A sort the renderer does not know gets the fallback and a warning,
 // once, never an error: the content may be ahead of the drawings.
 export function picker<T>(

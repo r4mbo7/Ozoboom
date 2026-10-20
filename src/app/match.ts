@@ -23,6 +23,8 @@ export interface MatchOptions {
   readonly seed: number;
   readonly setId: string;
   readonly endless: boolean;
+  // Absent means one stage.
+  readonly festival?: boolean;
   readonly content: GameContent;
   readonly slots: readonly PlayerSlot[];
   // The players of this screen and what drives them. The others come from the source.
@@ -62,6 +64,7 @@ const IDLE_GAMEPLAY = {
   ...IDLE_INPUT,
   placeTrap: false,
   dash: false,
+  emote: null,
   nextTrap: false,
   previousTrap: false,
   selectTrap: null,
@@ -73,6 +76,8 @@ const NO_MENU = {
   down: false,
   left: false,
   right: false,
+  previous: false,
+  next: false,
   confirm: false,
   back: false,
 } as const;
@@ -96,6 +101,7 @@ export function withoutPresses(snapshot: InputSnapshot): InputSnapshot {
       skill: false,
       placeTrap: false,
       dash: false,
+      emote: null,
       nextTrap: false,
       previousTrap: false,
       selectTrap: null,
@@ -122,6 +128,7 @@ export function createMatch(options: MatchOptions): Match {
     setId: options.setId,
     content,
     endless: options.endless,
+    ...(options.festival === true ? { festival: true } : {}),
   });
   const controls = new Map<PlayerId, Controls>();
   const { handSize } = setOf(content, options.setId);

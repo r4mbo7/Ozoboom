@@ -1,4 +1,5 @@
 import type { MusicTrack } from '../data/types';
+import { nextFloat, seedRng } from '../shared/prng';
 
 // Any track but the last one played, so that two games in a row never sound the same.
 export function drawTrack(
@@ -29,4 +30,14 @@ function pickOf(tracks: readonly MusicTrack[], index: number): MusicTrack {
     throw new Error('No track to play');
   }
   return track;
+}
+
+// The same draw on every peer of a game: a generator seeded by the game's seed and `key`.
+export function seededRandom(seed: number, key: string): () => number {
+  let hash = (0x811c9dc5 ^ seed) >>> 0;
+  for (const char of key) {
+    hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
+  }
+  const rng = seedRng(hash);
+  return () => nextFloat(rng);
 }

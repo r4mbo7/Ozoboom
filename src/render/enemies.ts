@@ -1,11 +1,11 @@
 import { Container, Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
-import type { SimEvent, SimState } from '../sim/state';
+import type { EntityId, SimEvent, SimState } from '../sim/state';
 import { createBossStage } from './bosses';
 import type { Family, RenderContext } from './context';
 import { Farewells, type FarewellHooks } from './enemy-deaths';
 import { createBurst } from './enemy-burst';
-import { picker } from './faces';
+import { picker, warnUnknown } from './faces';
 import { frontGlintOf, glintAlpha, glintStart, placeGlint } from './front-glint';
 import { type Frame, createFrame } from './frame';
 import { blinkLit, lerp } from './motion';
@@ -54,6 +54,8 @@ interface EnemyView {
   glintStart: number;
 }
 
+export type PoseOf = (id: EntityId) => EnemyPose | undefined;
+
 export interface EnemiesFamily extends Family {
   blink(id: number, untilTick: number): void;
   // A mask stays where it was drawn until that tick: the stop of a heavy hit.
@@ -62,12 +64,6 @@ export interface EnemiesFamily extends Family {
   // The colors a chased bad vibe bursts into, for what leaves the party the same way.
   burst(x: number, y: number, id: number, frame: Frame): void;
 }
-
-const warnUnknown = (message: string): void => {
-  if (import.meta.env.DEV) {
-    console.warn(message);
-  }
-};
 
 export function createEnemies(ctx: RenderContext): EnemiesFamily {
   const { textures, layers } = ctx;

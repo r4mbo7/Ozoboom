@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import { MAIN_TEMPO, type Tempo, ticksIntoBar } from '../shared/tempo';
 import type { Frame } from './frame';
 import { ofSpeaker, plugShare } from './speaker-kit';
 import { setTint } from './util';
@@ -71,7 +71,7 @@ export function litLeds(
 
 export function standbyOn(frame: Pick<Frame, 'now' | 'calm' | 'tempo'>): boolean {
   const { ticksPerBar } = frame.tempo;
-  return frame.calm || frame.now % ticksPerBar < ticksPerBar / 4;
+  return frame.calm || ticksIntoBar(frame.now, frame.tempo) < ticksPerBar / 4;
 }
 
 export function createLedViews(): Pick<LedView, 'leds' | 'standby'> {

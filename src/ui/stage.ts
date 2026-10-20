@@ -1,17 +1,26 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
-import { el, fillHint } from './dom';
-import { createEndlessRow } from './endless';
+import { el, fillHint, setText } from './dom';
+import {
+  createNightTabs,
+  launchDetail,
+  launchLabel,
+  nightLength,
+  nightNote,
+  nightOf,
+  stageQuestion,
+} from './night';
 import { formatTempo } from './format';
 import { stepClass } from './lobby-model';
-import { endlessHint, promptsFor } from './prompts';
+import { promptsFor } from './prompts';
 import { stagePreview } from './stage-preview';
 import { STAGE_TEASERS, stageTeaser } from './teaser';
-import type { StageCard, StagePickerModel } from './types';
+import type { Night, StageCard, StagePickerModel } from './types';
 
 export interface StageCards {
   readonly element: HTMLElement;
-  set(stages: readonly StageCard[], stageId: string): void;
+  // In a festival the stage picked is where it starts, the others follow.
+  set(stages: readonly StageCard[], stageId: string, festival?: boolean): void;
   // A guest sees the host's pick and cannot change it.
   setReadonly(readonly: boolean): void;
 }
@@ -39,7 +48,9 @@ function card(stage: StageCard, onChoose: (setId: string) => void, readonly: () 
     el('span', 'ui-stage__chip', t(stage.style)),
     el('span', 'ui-stage__chip', formatTempo(stage.bpm)),
   );
-  node.append(stagePreview(stage.decor), el('span', 'ui-stage__name', t(stage.name)), meta);
+  const tag = el('span', 'ui-stage__tag');
+  tag.hidden = true;
+  node.append(tag, stagePreview(stage.decor), el('span', 'ui-stage__name', t(stage.name)), meta);
   node.addEventListener('click', (event) => {
     event.stopPropagation();
     if (!readonly()) {
@@ -68,14 +79,23 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
 
   return {
     element,
-    set(next, stageId) {
+    set(next, stageId, festival = false) {
       if (!same(next)) {
         stages = next;
         nodes = next.map((stage) => card(stage, onChoose, () => locked));
         element.replaceChildren(...nodes, ...teasers);
       }
+      element.toggleAttribute('data-festival', festival);
       stages.forEach((stage, index) => {
-        nodes[index]?.setAttribute('aria-checked', String(stage.setId === stageId));
+        const node = nodes[index];
+        const picked = stage.setId === stageId;
+        node?.setAttribute('aria-checked', String(picked));
+        const tag = node?.querySelector<HTMLElement>('.ui-stage__tag');
+        if (tag) {
+          tag.hidden = !festival;
+          tag.toggleAttribute('data-start', picked);
+          setText(tag, picked ? t('Départ') : t('Ensuite'));
+        }
       });
     },
     setReadonly(readonly) {
@@ -88,7 +108,7 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
 
 export interface StagePickerActions {
   choose(setId: string): void;
-  toggleEndless(enabled: boolean): void;
+  chooseNight(night: Night): void;
   confirm(): void;
   leave(): void;
 }
@@ -102,27 +122,29 @@ export interface StagePickerScreen {
   update(edges: MenuIntents): void;
 }
 
-// Solo: after the class, pick the scene. Left and right choose, Enter launches, Escape goes back.
+// Solo: after the class, pick the night and the scene. The tab keys choose the night, left and right the scene,
+// Enter launches, Escape goes back.
 export function createStagePicker(actions: StagePickerActions): StagePickerScreen {
   let model: StagePickerModel = { stages: [], stageId: '', endless: false };
 
   const element = el('section', 'ui-screen ui-stagepicker');
   element.setAttribute('aria-label', t('Choix de la scène'));
   const header = el('header', 'ui-lobby__header');
-  header.append(
-    el('p', 'ui-kicker', t('Avant de lancer')),
-    el('h2', 'ui-lobby__title', t('Choisis la scène')),
-    el('p', 'ui-lobby__lead', t('Où se passe la nuit ?')),
-  );
+  const title = el('h2', 'ui-lobby__title');
+  header.append(el('p', 'ui-kicker', t('Avant de lancer')), title);
+  const nights = createNightTabs((night) => {
+    actions.chooseNight(night);
+  });
   const cards = createStageCards(t('Scènes'), (setId) => {
     actions.choose(setId);
   });
-  const endless = createEndlessRow(cards.element, (enabled) => {
-    actions.toggleEndless(enabled);
-  });
-  const launch = el('button', 'ui-button ui-button--primary', t('Lancer le set'));
+  const note = el('p', 'ui-stagepicker__note');
+  const launch = el('button', 'ui-button ui-button--primary ui-launch');
   launch.type = 'button';
   launch.tabIndex = -1;
+  const launchText = el('span', 'ui-launch__label');
+  const launchMore = el('span', 'ui-launch__detail');
+  launch.append(launchText, launchMore);
   const back = el('button', 'ui-button', t('Retour au perso'));
   back.type = 'button';
   back.tabIndex = -1;
@@ -136,7 +158,7 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
   footer.append(launch, back);
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-lobby__body');
-  body.append(header, cards.element, endless.toggle.button, footer, hint);
+  body.append(header, nights.element, cards.element, note, footer, hint);
   element.append(body);
 
   let device: InputDevice | null = null;
@@ -146,15 +168,13 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
       return;
     }
     const prompts = promptsFor(device);
+    nights.setKeys(prompts.tabs, prompts.style);
     fillHint(
       hint,
       [
-        { keys: prompts.navigateRow, label: t('choisir') },
-        ...endlessHint(prompts),
-        {
-          keys: [prompts.confirm],
-          label: endless.row === 'endless' ? t('changer') : t('lancer'),
-        },
+        ...(prompts.tabs.length === 0 ? [] : [{ keys: prompts.tabs, label: t('mode') }]),
+        { keys: prompts.navigateRow, label: t('scène') },
+        { keys: [prompts.confirm], label: t('lancer') },
         { keys: [prompts.back], label: t('retour') },
       ],
       prompts.style,
@@ -164,13 +184,18 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
   return {
     element,
     open() {
-      endless.reset();
       paintHint();
     },
     setModel(next) {
       model = next;
-      cards.set(next.stages, next.stageId);
-      endless.set(next.endless, true);
+      const night = nightOf(next);
+      setText(title, stageQuestion(night));
+      nights.set(night, nightLength(night, next.stages, next.stageId));
+      cards.set(next.stages, next.stageId, night === 'festival');
+      setText(note, nightNote(night));
+      note.hidden = nightNote(night) === '';
+      setText(launchText, launchLabel(night));
+      setText(launchMore, launchDetail(night, next.stages, next.stageId));
     },
     setDevice(next) {
       if (next !== device) {
@@ -179,12 +204,7 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
       }
     },
     update(edges) {
-      const row = endless.row;
-      const taken = endless.handle(edges);
-      if (endless.row !== row) {
-        paintHint();
-      }
-      if (taken) {
+      if (nights.handle(edges)) {
         return;
       }
       const delta = (edges.right ? 1 : 0) - (edges.left ? 1 : 0);

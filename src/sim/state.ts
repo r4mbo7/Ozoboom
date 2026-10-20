@@ -1,4 +1,7 @@
-import type { Rarity, StatKey, ZoneDefinition } from '../data/types';
+import type { EdgeSide, Rarity, StatKey, ZoneDefinition } from '../data/types';
+import type { Emote } from './commands';
+
+export type { EdgeSide };
 
 export type EntityId = number;
 export type PlayerId = 0 | 1 | 2 | 3;
@@ -28,6 +31,8 @@ export interface SetProgress {
   // Endless games only: the tick at which the last boss first fell and its tier started over, null
   // until then.
   endlessFromTick?: number | null;
+  // The tick this set started at, the origin of its beats, bars and phrases (ADR 0018). Absent means 0.
+  startTick?: number;
 }
 
 export interface RngState {
@@ -41,8 +46,6 @@ export interface Arena {
   width: number;
   height: number;
 }
-
-export type EdgeSide = 'top' | 'right' | 'bottom' | 'left';
 
 export interface CoreState {
   x: number;
@@ -104,6 +107,8 @@ export interface PlayerState extends Positioned {
   suppressedTicks?: number;
   // Set by dazzle, decremented by `specials`.
   dazzledTicks?: number;
+  // Ticks left in the sun of the Canicule (src/sim/full/heat.ts): they smoke meanwhile.
+  sunTicks?: number;
   // Timed stat bonuses posed through `applyPlayerBoost`; absent while it carries none.
   boosts?: PlayerBoost[];
   weapons?: WeaponSlot[];
@@ -115,6 +120,8 @@ export interface PlayerState extends Positioned {
   reviveTicks?: number;
   // Only on a player whose class has a gauge; read through `gaugeValue`, written through `setGauge`.
   gauge?: number;
+  // Online, the player's peer has left: the player stays where they are, and a festival goes on without them.
+  gone?: true;
   // Dashes spent and not back yet, and the beats counted toward the next; absent while all are in.
   dashesSpent?: number;
   dashBeats?: number;
@@ -221,6 +228,20 @@ export interface TrapState extends Positioned {
   kind: string;
   ownerId: PlayerId;
   direction: Vec2;
+  // Ticks left shorted by a puddle (src/sim/puddles.ts): it fires no more meanwhile, as
+  // `suppressedTicks` holds a player.
+  shortedTicks?: number;
+}
+
+// A puddle a bad vibe laid (src/sim/puddles.ts), wet until `driesTick`.
+export interface PuddleState {
+  id: EntityId;
+  byId: EntityId;
+  x: number;
+  y: number;
+  radius: number;
+  bornTick: number;
+  driesTick: number;
 }
 
 export interface SpeakerState {
@@ -339,6 +360,32 @@ export interface BystanderState extends Positioned {
   ticksLeft: number;
 }
 
+export type FestivalPhase = 'scene' | 'sunrise' | 'path';
+
+// An exit open at sunrise, toward a stage still to play: a disc on the edge `side`.
+export interface FestivalExit {
+  setId: string;
+  side: EdgeSide;
+  x: number;
+  y: number;
+  radius: number;
+}
+
+// A Full festival game (src/sim/full/festival.ts).
+export interface FestivalState {
+  phase: FestivalPhase;
+  // Each stage played, in order, the tick it started at and, once held, the tick of its sunrise.
+  scenes: { setId: string; fromTick: number; toTick?: number }[];
+  // At sunrise, one exit per stage still to play.
+  exits: FestivalExit[];
+  // The index in `exits` each player stands in, same order as `players`, null outside any.
+  standing: (number | null)[];
+  // Ticks the whole team has stood in the same exit.
+  departTicks: number;
+  // The exit taken, from leaving until the next stage starts.
+  taken?: FestivalExit;
+}
+
 export interface UpgradeOffer {
   playerId: PlayerId;
   options: readonly string[];
@@ -392,6 +439,7 @@ export type SimEvent =
   | { type: 'dashed'; playerId: PlayerId; dx: number; dy: number; onBeat?: true }
   | { type: 'dashEmpty'; playerId: PlayerId }
   | { type: 'dashBack'; playerId: PlayerId }
+  | { type: 'emoted'; playerId: PlayerId; emote: Emote }
   | { type: 'coreHit'; damage: number }
   | { type: 'coreRepaired'; amount: number }
   | { type: 'trapPlaced'; id: EntityId; kind: string; x: number; y: number }
@@ -449,6 +497,9 @@ export type SimEvent =
   | { type: 'speakerPlugged'; speakerId: string }
   | { type: 'volumeChanged'; volume: number }
   | { type: 'relicOffered'; playerId: PlayerId; options: readonly string[] }
+  | { type: 'festivalSceneHeld'; setId: string }
+  | { type: 'festivalLeft'; setId: string; side: EdgeSide }
+  | { type: 'festivalArrived'; setId: string }
   | { type: 'gameWon' }
   | { type: 'gameLost' };
 
@@ -492,6 +543,8 @@ export interface SimState {
   zones?: ZoneState[];
   // Optional like `walls`: created with the first recruit, removed when the last one leaves.
   recruits?: RecruitState[];
+  // Optional like `walls`: created with the first puddle laid, removed when the last one dries.
+  puddles?: PuddleState[];
   // Optional like `bystanders`: created with the first prop of a character who throws them.
   props?: PropState[];
   // The sides of the current window of `SetDefinition.sidedWaves`, drawn at its first rule spawn;
@@ -500,6 +553,10 @@ export interface SimState {
   // The bosses drawn so far, one as each break starts: the last one is the boss of the coming or
   // current drop. Created with the first draw.
   bosses?: string[];
+  // What the bad vibes gain on top of their own scaling, at spawn: absent means none.
+  enemyScale?: { hp: number; damage: number };
+  // Full festival games only.
+  festival?: FestivalState;
   pendingUpgrades: UpgradeOffer[];
   nextEntityId: EntityId;
   stats: SimStats;

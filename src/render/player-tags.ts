@@ -90,7 +90,8 @@ export class PlayerTag {
     this.burst.visible = this.name.visible = this.nameEdge.visible = false;
   }
 
-  // `reach` is how far the body extends, in world units, above its center.
+  // `reach` is how far the body extends, in world units, above its center. Gives the top of what it
+  // draws above the player.
   place(
     player: PlayerState,
     x: number,
@@ -100,9 +101,9 @@ export class PlayerTag {
     burst: number,
     frame: Frame,
     team: boolean,
-  ): void {
+  ): number {
     this.placeBurst(player, x, y, color, burst, frame);
-    this.placeName(player, x, y, reach, color, frame, team);
+    return this.placeName(player, x, y, reach, color, frame, team);
   }
 
   private placeBurst(
@@ -135,7 +136,7 @@ export class PlayerTag {
     color: number,
     frame: Frame,
     team: boolean,
-  ): void {
+  ): number {
     const { name, nameEdge } = this;
     const label =
       player.name !== undefined && player.name !== ''
@@ -145,7 +146,7 @@ export class PlayerTag {
           : null;
     name.visible = nameEdge.visible = label !== null;
     if (label === null) {
-      return;
+      return y - reach;
     }
     const { light, palette, camera } = frame;
     const texts = this.ctx.textures.names.get(label);
@@ -164,5 +165,6 @@ export class PlayerTag {
     setTint(nameEdge, light.additive ? palette.sol : palette.texte);
     name.alpha = fade;
     nameEdge.alpha = (light.additive ? 0.7 : 0.9) * fade;
+    return y - above - texts.fill.height / NAME_TEXTURE_SCALE / 2 / camera.scale;
   }
 }

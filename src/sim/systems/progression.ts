@@ -1,11 +1,12 @@
 import type { SetDefinition } from '../../data/types';
-import type { ResolvedContent } from '../content';
 import { drawOffer } from '../draw';
-import type { PlayerState, SimState } from '../state';
+import { finishWins } from '../mode';
+import type { PlayerState } from '../state';
 import { isLastBossDown } from './set-progress';
 import type { StepContext } from './types';
 
-export function progression({ state, content, set }: StepContext): void {
+export function progression(ctx: StepContext): void {
+  const { state, set } = ctx;
   for (const player of state.players) {
     while (player.vibes >= player.vibesToNextLevel) {
       player.vibes -= player.vibesToNextLevel;
@@ -14,20 +15,17 @@ export function progression({ state, content, set }: StepContext): void {
       player.pendingLevelUps = (player.pendingLevelUps ?? 0) + 1;
       state.events.push({ type: 'levelUp', playerId: player.id, level: player.level });
     }
-    presentNextOffer(state, content, set, player);
+    presentNextOffer(ctx, player);
   }
 }
 
 // Draws the player's next offer only once the current one is answered, with the eligibility of
 // that moment: queued offers would ignore the upgrades chosen in between.
-export function presentNextOffer(
-  state: SimState,
-  content: ResolvedContent,
-  set: SetDefinition,
-  player: PlayerState,
-): void {
+export function presentNextOffer(ctx: StepContext, player: PlayerState): void {
+  const { state, content, set } = ctx;
   if (
-    isLastBossDown(state, set) ||
+    player.gone === true ||
+    (isLastBossDown(state, set) && finishWins(ctx)) ||
     state.pendingUpgrades.some((offer) => offer.playerId === player.id)
   ) {
     return;

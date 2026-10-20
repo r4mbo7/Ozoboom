@@ -1,4 +1,5 @@
 import { hurtEnemy, markedDamageMul, knockBack, touches } from '../effects';
+import { ticksIntoBar } from '../../shared/tempo';
 import type { WeaponModule } from './types';
 
 const BEAT_ONE = 0;
@@ -9,7 +10,7 @@ export const hoop: WeaponModule = {
     if (effect.kind !== 'hoop') {
       throw new Error(`hoop fired for a "${effect.kind}" weapon`);
     }
-    const inBar = state.tick % tempo.ticksPerBar;
+    const inBar = ticksIntoBar(state.tick, tempo);
     const beatThree = tempo.ticksPerBar / 2;
     const radius = inBar === BEAT_ONE || inBar === beatThree ? effect.wideRadius : effect.radius;
     const markedMul = markedDamageMul(content);

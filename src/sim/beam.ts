@@ -9,5 +9,5 @@ export type BeamEffect = Extract<TrapEffect, { kind: 'beam' }>;
 export function beamDirection(effect: BeamEffect, facing: Vec2, tick: number, tempo: Tempo): Vec2 {
   return effect.sweepDegrees === undefined
     ? facing
-    : sweptDirection(facing, effect.sweepDegrees, tick, tempo.ticksPerBar);
+    : sweptDirection(facing, effect.sweepDegrees, tick - tempo.originTick, tempo.ticksPerBar);
 }

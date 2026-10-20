@@ -1,4 +1,4 @@
-import type { PlayerAction, PlayerCommand } from '../sim/commands';
+import { EMOTES, type PlayerAction, type PlayerCommand } from '../sim/commands';
 import type { PlayerId } from '../sim/state';
 import type { NetMessage } from './types';
 
@@ -26,6 +26,8 @@ const PLACE_TRAP = 0;
 const CHOOSE_UPGRADE = 1;
 const TAKE_TRAP = 2;
 const DASH = 3;
+const EMOTE = 4;
+const LEAVE = 5;
 const AXIS_SCALE = 32767;
 const MAX_COUNT = 255;
 const MAX_PLAYER_ID = 3;
@@ -170,6 +172,11 @@ function writeAction(writer: Writer, action: PlayerAction): void {
     writer.f32(action.y);
   } else if (action.type === 'dash') {
     writer.u8(DASH);
+  } else if (action.type === 'emote') {
+    writer.u8(EMOTE);
+    writer.u8(EMOTES.indexOf(action.emote));
+  } else if (action.type === 'leave') {
+    writer.u8(LEAVE);
   } else {
     writer.u8(CHOOSE_UPGRADE);
     writer.id(action.upgradeId);
@@ -197,6 +204,17 @@ function readAction(reader: Reader): PlayerAction {
   }
   if (type === DASH) {
     return { type: 'dash' };
+  }
+  if (type === LEAVE) {
+    return { type: 'leave' };
+  }
+  if (type === EMOTE) {
+    const index = reader.u8();
+    const emote = EMOTES[index];
+    if (emote === undefined) {
+      throw new RangeError(`unknown emote ${String(index)}`);
+    }
+    return { type: 'emote', emote };
   }
   throw new RangeError(`unknown action ${String(type)}`);
 }

@@ -212,6 +212,7 @@ export function createPortraits(
       layers,
       options: { calmMode: false },
       dash: null,
+      stages: new Map(),
       classTokens: tokens,
       behaviours: new Map(),
       trapLooks: new Map(),
@@ -220,6 +221,7 @@ export function createPortraits(
       speakerLooks: new Map(),
       weaponLooks: new Map(),
       skillEffects,
+      shadeRadii: new Map(),
       attacks: new Map(),
     };
     const first = classes[0];

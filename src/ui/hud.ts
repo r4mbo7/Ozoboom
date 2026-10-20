@@ -15,6 +15,7 @@ import { beatPeriodMs } from '../shared/tempo';
 import { createBossBanner } from './boss-banner';
 import { type Bracelet, createBracelet, createSkillView } from './bracelet';
 import { createDashTile } from './dash-tile';
+import { FULL_HUD } from './full';
 import { el, icon, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber } from './format';
 import {
@@ -39,7 +40,14 @@ import {
   volumeCrans,
 } from './hud-model';
 import { INFINITY, MOON, PAUSE, PLUG, SUN, skillIcon, trapIcon, weaponIcon } from './icons';
-import { type LineupSlot, lineupCursor, lineupSlots, setOf, setTempo } from '../sim/lineup';
+import {
+  type LineupSlot,
+  lineupCursor,
+  lineupSlots,
+  playedTempo,
+  setOf,
+  setTempo,
+} from '../sim/lineup';
 import { heldSlot, selectTrap } from './navigation';
 import { promptsFor } from './prompts';
 import { cssName } from './sun';
@@ -133,7 +141,7 @@ export function createHud(): Hud {
   const trapName = el('div', 'ui-traps__name');
   traps.append(cyclePrevious, trapTiles, cycleNext, trapName);
 
-  const skills = section('ui-hud__skills', t('Compétence'));
+  const skills = section('ui-hud__skills', t('Spéciale'));
   const skill = createSkillView();
   skill.root.dataset.touchControl = 'skill';
   skills.append(skill.root);
@@ -174,6 +182,7 @@ export function createHud(): Hud {
   const watched = el('p', 'ui-hud__watched');
   watched.setAttribute('role', 'status');
   element.append(danger, watched, top, banner.element, bracelets, bar);
+  const parts = Object.values(FULL_HUD).map((create) => create({ ribbon, overlay: element }));
 
   let builtFor: GameContent | null = null;
   let set: SetDefinition | null = null;
@@ -503,6 +512,9 @@ export function createHud(): Hud {
     updateLineup(state, content);
     updateSpeakers(state);
     banner.update(state, content);
+    for (const part of parts) {
+      part.update(state, content);
+    }
 
     const people = rosterOf(state, frame);
     setFlag(element, 'team', people.team);
@@ -549,7 +561,7 @@ export function createHud(): Hud {
       setFlag(skill.root, 'ready', skillReady);
       setText(skill.status, skillReady ? t('Prête') : t('Recharge'));
       if (set !== null) {
-        dashTile.update(player, content.dash, snapshot.device, state.tick, setTempo(set));
+        dashTile.update(player, content.dash, snapshot.device, state.tick, playedTempo(set, state));
       }
       if (definition.gauge !== undefined) {
         updateGauge(player, definition.gauge);

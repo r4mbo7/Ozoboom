@@ -70,6 +70,7 @@ export const CLASSES: readonly ClassDefinition[] = [
     speed: 7,
     radius: 14,
     pickupRadius: 140,
+    shadeRadius: 60,
     reviveMul: 2,
     attack: {
       kind: 'straight',

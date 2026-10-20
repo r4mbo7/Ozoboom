@@ -19,6 +19,8 @@ export interface RoomProfile {
   setId?: string;
   // Host only: whether the room starts on an endless set.
   endless?: boolean;
+  // Host only: whether the room plays the whole festival.
+  festival?: boolean;
 }
 
 export interface Room {
@@ -34,6 +36,10 @@ export interface Room {
   readonly endless: boolean;
   // Host only: changes it and tells the room.
   setEndless(endless: boolean): void;
+  // Whether the host picked the whole festival, as the room knows it.
+  readonly festival: boolean;
+  // Host only: changes it and tells the room.
+  setFestival(festival: boolean): void;
   // Changes this peer's own name and/or class and tells the room.
   setSeat(change: { name?: string; classId?: string }): void;
   // Host only: freezes the room, sends the start to the guests and fires onStart here too.
@@ -74,6 +80,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
   let started = false;
   let setId: string | null = role === 'host' ? (profile.setId ?? null) : null;
   let endless = role === 'host' && profile.endless === true;
+  let festival = role === 'host' && profile.festival === true;
 
   const notify = (): void => {
     for (const listener of [...changeListeners]) {
@@ -87,6 +94,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
       seats,
       ...(setId === null ? {} : { setId }),
       ...(endless ? { endless } : {}),
+      ...(festival ? { festival } : {}),
     };
     for (const seat of seats) {
       if (seat.peer !== null && seat.peer !== transport.id) {
@@ -177,6 +185,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         seats = [...message.seats];
         setId = message.setId ?? null;
         endless = message.endless === true;
+        festival = message.festival === true;
         notify();
         return;
       case 'refused':
@@ -244,6 +253,15 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         publish();
       }
     },
+    get festival() {
+      return festival;
+    },
+    setFestival(next) {
+      if (role === 'host' && !started && next !== festival) {
+        festival = next;
+        publish();
+      }
+    },
     setSeat(change) {
       if (started) {
         return;
@@ -274,6 +292,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         trackId,
         players,
         ...(endless ? { endless } : {}),
+        ...(festival ? { festival } : {}),
       };
       for (const seat of seats) {
         if (seat.peer !== null && seat.peer !== transport.id) {

@@ -34,6 +34,8 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   dashRechargeMul: false,
   dashChargesAdd: true,
   weaponRateMul: false,
+  kiffDamageAdd: true,
+  zoneCountAdd: true,
 };
 
 export function statValue(

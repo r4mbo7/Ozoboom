@@ -1,9 +1,7 @@
 import { rotate } from '../shared/angle';
 import type { Vec2 } from '../shared/vec';
 
-// Out to one end of the arc and back over `periodTicks`, eased at both ends. Every sweep starts its
-// period at the same end, so the traps that share a period sweep together; a fractional tick lets
-// the render draw them between two steps.
+// Every sweep starts its period at the same end, so the traps that share a period sweep together.
 export function sweptDirection(
   facing: Vec2,
   sweepDegrees: number,

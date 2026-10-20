@@ -1,4 +1,4 @@
-import { type Container, Sprite, type Texture } from 'pixi.js';
+import { type Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { Frame } from './frame';
 import type { Shape } from './textures';
 
@@ -62,4 +62,17 @@ export function placeOutline(
   outline.rotation = body.rotation;
   outline.alpha = body.alpha;
   outline.scale.set(body.scale.x + grow, body.scale.y + grow);
+}
+
+// Frees what the shapes under `root` hold, for a decor left behind: drawn again when it comes back.
+export function releaseDrawing(root: Container): void {
+  for (const child of root.children) {
+    if (child.isCachedAsTexture) {
+      child.cacheAsTexture(false);
+    }
+    if (child instanceof Graphics) {
+      child.clear();
+    }
+    releaseDrawing(child);
+  }
 }

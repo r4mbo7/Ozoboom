@@ -16,7 +16,13 @@ export interface Seat {
 export type NetMessage =
   | { type: 'hello'; version: string; name: string; classId: string }
   | { type: 'refused'; reason: 'version' | 'full' | 'started'; version: string }
-  | { type: 'lobby'; seats: readonly Seat[]; setId?: string; endless?: boolean }
+  | {
+      type: 'lobby';
+      seats: readonly Seat[];
+      setId?: string;
+      endless?: boolean;
+      festival?: boolean;
+    }
   | { type: 'seat'; name?: string; classId?: string }
   | {
       type: 'start';
@@ -27,6 +33,8 @@ export type NetMessage =
       players: readonly PlayerSlot[];
       // The last boss down, the set goes on. Absent means it ends.
       endless?: boolean;
+      // The game plays the whole festival from `setId`. Absent means one stage.
+      festival?: boolean;
     }
   | { type: 'command'; tick: number; command: PlayerCommand }
   | { type: 'frame'; tick: number; commands: readonly PlayerCommand[] }

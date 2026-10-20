@@ -1,4 +1,5 @@
 import { normalize } from '../../shared/vec';
+import { ticksIntoBeat } from '../../shared/tempo';
 import { detachCling } from '../specials/cling';
 import type { PlayerState, Vec2 } from '../state';
 import { dashCharges, dashRechargeBeats } from '../stats';
@@ -38,7 +39,7 @@ export function dashes(ctx: StepContext): void {
       normalize(command.input.aim),
       player.aim,
     );
-    const phase = state.tick % ctx.tempo.ticksPerBeat;
+    const phase = ticksIntoBeat(state.tick, ctx.tempo);
     const onBeat = Math.min(phase, ctx.tempo.ticksPerBeat - phase) <= definition.onBeatTicks;
     const distance = definition.distance * (onBeat ? definition.onBeatDistanceMul : 1);
     const step = distance / definition.ticks;

@@ -216,8 +216,8 @@ export function createUi(
       chooseStage(setId) {
         callbacks.onChooseStage(setId);
       },
-      toggleEndless(enabled) {
-        callbacks.onToggleEndless(enabled);
+      chooseNight(night) {
+        callbacks.onChooseNight(night);
       },
       ...(callbacks.onGoOnline === undefined
         ? {}
@@ -250,8 +250,8 @@ export function createUi(
     choose(setId) {
       callbacks.onChooseStage(setId);
     },
-    toggleEndless(enabled) {
-      callbacks.onToggleEndless(enabled);
+    chooseNight(night) {
+      callbacks.onChooseNight(night);
     },
     confirm() {
       once(() => {

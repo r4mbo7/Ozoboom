@@ -2,6 +2,7 @@ import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { MusicTrack, SetDefinition } from '../data/types';
 import type { SimState } from '../sim/state';
 import { createAmbience, type Ambience } from './ambience';
+import { FULL_MUSIC } from './full';
 import { createMasterChain, type MasterChain } from './master';
 import { createMusic, type Music } from './music';
 import { createSfx, type Sfx, type SfxLookups, type TrapEffectOf } from './sfx';
@@ -12,6 +13,8 @@ export interface AudioEngineOptions {
   readonly breakBars?: (tier: number) => number;
   // The set a game plays, by id: its beat length and its room. Absent means the main stage.
   readonly setOf?: (setId: string) => SetDefinition | undefined;
+  // A track of a set a festival enters, when the one playing is not among its tracks.
+  readonly trackFor?: (set: SetDefinition) => MusicTrack;
   readonly trapEffectOf?: TrapEffectOf;
   readonly sfxLookups?: SfxLookups;
   readonly createContext?: () => BaseAudioContext;
@@ -121,6 +124,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     const now = heardNow(context);
     if (now !== null) {
       music.update(state, now, context.currentTime);
+      if (music.track() !== track) {
+        track = music.track();
+        sfx.setKey(track);
+      }
       sfx.setTempo(music.tempo());
       sfx.setClock(music.clock());
     }
@@ -136,12 +143,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     return {
       context,
       master,
-      music: createMusic(master.music, {
-        track,
-        breakBars,
-        setOf: options.setOf,
-        onKickScheduled: options.onKickScheduled,
-      }),
+      music: (FULL_MUSIC.festival ?? createMusic)(
+        master.music,
+        { track, breakBars, setOf: options.setOf, onKickScheduled: options.onKickScheduled },
+        options.trackFor,
+      ),
       sfx,
       ambience: createAmbience(master.music),
     };

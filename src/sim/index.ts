@@ -2,18 +2,20 @@ import type { GameContent } from '../data/types';
 import type { PlayerCommand } from './commands';
 import { lookup, resolveContent } from './content';
 import { enemyStatuses } from './enemy-status';
-import { createFlowFields } from './flow-field';
+import { setBindings } from './enter-set';
 import { createInitialState, type PlayerSlot } from './initial-state';
-import { setTempo } from './lineup';
+import { FULL_MODES } from './full';
+import type { GameMode } from './mode';
 import { playerBoosts } from './player-boosts';
 import { recruits } from './recruits';
-import { SpatialHash } from './spatial-hash';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
 import { bombCarriers, bombs } from './systems/bomb';
 import { bystanders } from './systems/bystanders';
 import { dashes } from './systems/dashes';
+import { emotes } from './systems/emotes';
 import { deaths } from './systems/deaths';
+import { departures } from './systems/departures';
 import { enemyAttacks } from './systems/enemy-attacks';
 import { enemySteering } from './systems/enemy-steering';
 import { gauges } from './systems/gauges';
@@ -37,6 +39,7 @@ import { traps } from './systems/traps';
 import { upgradeChoice } from './systems/upgrade-choice';
 import { weapons } from './systems/weapons';
 import type { StepContext, System } from './systems/types';
+import { puddles } from './puddles';
 import { walls } from './walls';
 import { zones } from './zones';
 
@@ -47,6 +50,8 @@ export interface SimulationOptions {
   content: GameContent;
   // The last boss down, its tier starts over instead of winning the game.
   endless?: boolean;
+  // Plays every stage of the festival in one game, from `setId` (ADR 0018).
+  festival?: boolean;
 }
 
 export interface Simulation {
@@ -54,52 +59,70 @@ export interface Simulation {
   step(commands: readonly PlayerCommand[]): void;
 }
 
-const ENEMY_GRID_CELL_SIZE = 64;
+const RUNNING: readonly System[] = [
+  beginStep,
+  departures,
+  tempo,
+  setProgress,
+  upgradeChoice,
+  emotes,
+  dashes,
+  playerMovement,
+  revive,
+  playerAttack,
+  weapons,
+  placedZones,
+  skills,
+  spawning,
+  lootCarriers,
+  bombCarriers,
+  enemySteering,
+  placedTotems,
+  specials,
+  bystanders,
+  projectiles,
+  puddles,
+  traps,
+  zones,
+  speakers,
+  vibeRain,
+  recruits,
+  walls,
+  enemyAttacks,
+  enemyStatuses,
+  bombs,
+  deaths,
+  gauges,
+  pickups,
+  loots,
+  playerBoosts,
+  progression,
+];
 
-const PIPELINES: Readonly<Record<GameStatus, readonly System[]>> = {
-  running: [
-    beginStep,
-    tempo,
-    setProgress,
-    upgradeChoice,
-    dashes,
-    playerMovement,
-    revive,
-    playerAttack,
-    weapons,
-    placedZones,
-    skills,
-    spawning,
-    lootCarriers,
-    bombCarriers,
-    enemySteering,
-    placedTotems,
-    specials,
-    bystanders,
-    projectiles,
-    traps,
-    zones,
-    speakers,
-    vibeRain,
-    recruits,
-    walls,
-    enemyAttacks,
-    enemyStatuses,
-    bombs,
-    deaths,
-    gauges,
-    pickups,
-    loots,
-    playerBoosts,
-    progression,
-    status,
-  ],
-  choosingUpgrade: [beginStep, upgradeChoice, status],
-  won: [beginStep],
-  lost: [beginStep],
-};
+function pipelines(mode: GameMode | undefined): Readonly<Record<GameStatus, readonly System[]>> {
+  return {
+    running: [...RUNNING, ...(mode?.systems ?? []), status],
+    choosingUpgrade: [beginStep, departures, upgradeChoice, status],
+    won: [beginStep],
+    lost: [beginStep],
+  };
+}
 
-export function createSimulation(options: SimulationOptions): Simulation {
+function modeOf(options: SimulationOptions): GameMode | undefined {
+  if (options.festival !== true) {
+    return undefined;
+  }
+  if (FULL_MODES.festival === undefined) {
+    throw new Error('this build has no Full festival');
+  }
+  return FULL_MODES.festival;
+}
+
+// `mode` is the options' own, but a test may play a set through one of its own.
+export function createSimulation(
+  options: SimulationOptions,
+  mode: GameMode | undefined = modeOf(options),
+): Simulation {
   const content = resolveContent(options.content);
   const set = lookup(content.sets, options.setId, 'set');
   const state = createInitialState(
@@ -110,23 +133,12 @@ export function createSimulation(options: SimulationOptions): Simulation {
     options.endless === true,
   );
   const commands = new Map<PlayerId, PlayerCommand>();
-  const enemyGrid = new SpatialHash(set.arena.width, set.arena.height, ENEMY_GRID_CELL_SIZE);
-  const flowFields = createFlowFields(
-    set,
-    options.content.enemies.map((enemy) => enemy.radius),
-  );
-  const ctx: StepContext = {
-    state,
-    content,
-    set,
-    tempo: setTempo(set),
-    commands,
-    enemyGrid,
-    flowFields,
-  };
+  const ctx: StepContext = { state, content, commands, mode, ...setBindings(set, content, 0) };
+  const steps = pipelines(mode);
 
   tempo(ctx);
   state.events.push({ type: 'segment', segment: state.set.segment, tier: state.set.tier });
+  mode?.start?.(ctx);
 
   return {
     state,
@@ -141,7 +153,7 @@ export function createSimulation(options: SimulationOptions): Simulation {
         }
         commands.set(command.playerId, command);
       }
-      for (const system of PIPELINES[state.status]) {
+      for (const system of steps[state.status]) {
         system(ctx);
       }
     },

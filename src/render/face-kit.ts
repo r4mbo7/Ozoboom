@@ -2,6 +2,8 @@ import { type PaletteToken, SUN_PALETTES } from '../shared/palette';
 import { SHADE_SOFT, TAU, WHITE, circle, type Ctx } from './paint';
 
 export const FACE_RADIUS = 40;
+// A boss mask is painted, and drawn, at twice a bad vibe's size.
+export const BOSS_SCALE = 2;
 export const NEUTRAL = 'neutral';
 
 export const INK = '#141414';

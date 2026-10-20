@@ -1,3 +1,5 @@
+import type { Emote } from '../sim/commands';
+
 export type Control =
   | 'moveUp'
   | 'moveDown'
@@ -14,11 +16,17 @@ export type Control =
   | 'selectTrap5'
   | 'skill'
   | 'dash'
+  | 'emoteUp'
+  | 'emoteDown'
+  | 'emoteLeft'
+  | 'emoteRight'
   | 'pause'
   | 'menuUp'
   | 'menuDown'
   | 'menuLeft'
   | 'menuRight'
+  | 'menuPrevious'
+  | 'menuNext'
   | 'confirm'
   | 'back';
 
@@ -50,7 +58,7 @@ export const KEY_BINDINGS: Bindings<string> = {
   ArrowRight: right,
   Space: ['fire'],
   KeyF: ['placeTrap'],
-  Tab: ['nextTrap'],
+  Tab: ['nextTrap', 'menuNext'],
   Digit1: ['selectTrap1'],
   Digit2: ['selectTrap2'],
   Digit3: ['selectTrap3'],
@@ -65,7 +73,7 @@ export const KEY_BINDINGS: Bindings<string> = {
 };
 
 export const SHIFTED_KEY_BINDINGS: Bindings<string> = {
-  Tab: ['previousTrap'],
+  Tab: ['previousTrap', 'menuPrevious'],
 };
 
 export const SHIFT_KEYS: readonly string[] = ['ShiftLeft', 'ShiftRight'];
@@ -106,12 +114,12 @@ export const GAMEPAD_BUTTON_BINDINGS: Bindings<number> = {
   [StandardButton.A]: ['placeTrap', 'confirm'],
   [StandardButton.B]: ['back', 'dash'],
   [StandardButton.LT]: ['skill'],
-  [StandardButton.LB]: ['previousTrap'],
-  [StandardButton.RB]: ['nextTrap'],
-  [StandardButton.DpadUp]: ['menuUp'],
-  [StandardButton.DpadDown]: ['menuDown'],
-  [StandardButton.DpadLeft]: ['menuLeft'],
-  [StandardButton.DpadRight]: ['menuRight'],
+  [StandardButton.LB]: ['previousTrap', 'menuPrevious'],
+  [StandardButton.RB]: ['nextTrap', 'menuNext'],
+  [StandardButton.DpadUp]: ['menuUp', 'emoteUp'],
+  [StandardButton.DpadDown]: ['menuDown', 'emoteDown'],
+  [StandardButton.DpadLeft]: ['menuLeft', 'emoteLeft'],
+  [StandardButton.DpadRight]: ['menuRight', 'emoteRight'],
   [StandardButton.Menu]: ['pause'],
 };
 
@@ -120,6 +128,14 @@ export const GAMEPAD_STICKS = {
   move: { x: 0, y: 1 },
   aim: { x: 2, y: 3 },
 } as const;
+
+// In a game, each arrow of the directional pad makes the player's gesture of that side.
+export const EMOTE_CONTROLS: Readonly<Record<Emote, Control>> = {
+  sunrise: 'emoteUp',
+  fireworks: 'emoteDown',
+  heart: 'emoteLeft',
+  arrow: 'emoteRight',
+};
 
 export const STICK_DEADZONE = 0.2;
 

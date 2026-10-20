@@ -12,7 +12,7 @@ import { openDiscord } from './discord';
 import { el, fillHint, setFlag, setText } from './dom';
 import { createActionButton } from './feedback-button';
 import { DISCORD } from './icons';
-import { createEndlessToggle } from './endless';
+import { createNightTabs, launchDetail, launchLabel, nightLength, nightOf } from './night';
 import { formatNumber } from './format';
 import {
   NAME_LENGTH,
@@ -39,7 +39,7 @@ import { createStageCards, stepStage } from './stage';
 import { showsStageChoice } from './teaser';
 import { onMouseMove } from './pointer';
 import { promptsFor } from './prompts';
-import type { ClassPortrait, CreatePortrait, LobbyModel, LobbySeat, UiFrame } from './types';
+import type { ClassPortrait, CreatePortrait, LobbyModel, LobbySeat, Night, UiFrame } from './types';
 
 export interface LobbyActions {
   joinSeat(device: DeviceId): void;
@@ -48,7 +48,7 @@ export interface LobbyActions {
   seatClass(playerId: PlayerId, classId: string): void;
   seatName(playerId: PlayerId, name: string): void;
   chooseStage(setId: string): void;
-  toggleEndless(enabled: boolean): void;
+  chooseNight(night: Night): void;
   createRoom(): void;
   joinRoom(code: string): void;
   launch(): void;
@@ -234,9 +234,16 @@ export function createLobby(
   const stagePanel = el('div', 'ui-lobby__stage');
   stagePanel.append(stageLabel, stageCards.element);
 
-  const endless = createEndlessToggle();
+  const nights = createNightTabs((night) => {
+    if (model.role === 'host') {
+      actions.chooseNight(night);
+    }
+  });
   const onlineButton = button(t('Jouer en ligne'));
-  const launchButton = button(t('Lancer le set'), 'ui-button ui-button--primary');
+  const launchButton = button('', 'ui-button ui-button--primary ui-launch');
+  const launchText = el('span', 'ui-launch__label');
+  const launchMore = el('span', 'ui-launch__detail');
+  launchButton.append(launchText, launchMore);
   const waiting = el('p', 'ui-lobby__waiting', t('En attente de l’hôte'));
   waiting.setAttribute('role', 'status');
   const leaveButton = button(t('Retour au titre'));
@@ -251,9 +258,9 @@ export function createLobby(
     error,
     entry,
     share,
+    nights.element,
     seatList,
     stagePanel,
-    endless.button,
     footer,
     hint,
   );
@@ -283,12 +290,6 @@ export function createLobby(
     const code = normalizeRoomCode(codeInput.value);
     if (code !== '') {
       actions.joinRoom(code);
-    }
-  }
-
-  function toggleEndlessNow(): void {
-    if (model.role === 'host') {
-      actions.toggleEndless(model.endless !== true);
     }
   }
 
@@ -323,7 +324,6 @@ export function createLobby(
   onPointerClick(discordButton, openDiscord);
   onPointerClick(joinButton, joinNow);
   onPointerClick(copyButton, copyNow);
-  onPointerClick(endless.button, toggleEndlessNow);
   onPointerClick(launchButton, launchNow);
   onPointerClick(onlineButton, () => {
     actions.goOnline?.();
@@ -389,8 +389,6 @@ export function createLobby(
         return card?.stepper.element ?? null;
       case 'stage':
         return stageCards.element;
-      case 'endless':
-        return endless.button;
       case 'launch':
         return launchButton;
       case 'online':
@@ -423,7 +421,6 @@ export function createLobby(
       joinButton,
       copyButton,
       stageCards.element,
-      endless.button,
       launchButton,
       onlineButton,
       leaveButton,
@@ -468,7 +465,6 @@ export function createLobby(
     [codeField, 'code'],
     [joinButton, 'join'],
     [copyButton, 'copy'],
-    [endless.button, 'endless'],
     [launchButton, 'launch'],
     [leaveButton, 'leave'],
   ];
@@ -511,9 +507,6 @@ export function createLobby(
       case 'stage':
         stepNow(1);
         break;
-      case 'endless':
-        toggleEndlessNow();
-        break;
       case 'launch':
         launchNow();
         break;
@@ -538,10 +531,6 @@ export function createLobby(
       stepNow(direction);
       return;
     }
-    if (row === 'endless') {
-      toggleEndlessNow();
-      return;
-    }
     if (seat === null || row !== 'class') {
       return;
     }
@@ -552,6 +541,9 @@ export function createLobby(
   }
 
   function updateOnline(edges: MenuIntents): void {
+    if (lobbyView(model) !== 'entry' && nights.handle(edges)) {
+      return;
+    }
     const rows = rowsOf(model);
     const step = stepRow(rows.length, Math.min(cursor, rows.length - 1), edges);
     const row = rows[step.index];
@@ -596,13 +588,16 @@ export function createLobby(
       }
       const input = seatInput(seat.playerId);
       const own = input.edges(player.snapshot.menu, player.snapshot.gameplay.move);
+      if (Object.values(own).some(Boolean)) {
+        activeSeat = seat.playerId;
+      }
+      if (seat.host && nights.handle(own)) {
+        continue;
+      }
       const rows = rowsOfSeat(seat);
       const step = stepRow(rows.length, seatCursors.get(seat.playerId) ?? 0, own);
       const row = rows[step.index];
       seatCursors.set(seat.playerId, step.index);
-      if (Object.values(own).some(Boolean)) {
-        activeSeat = seat.playerId;
-      }
       if (step.side !== 0) {
         side(seat, rows[step.index], step.side);
       }
@@ -652,11 +647,17 @@ export function createLobby(
       return;
     }
     const prompts = promptsFor(device);
+    nights.setKeys(model.role === 'host' ? prompts.tabs : [], prompts.style);
+    const tabs =
+      model.role === 'host' && prompts.tabs.length > 0 && lobbyView(model) !== 'entry'
+        ? [{ keys: prompts.tabs, label: t('mode') }]
+        : [];
     if (model.mode === 'local') {
       fillHint(
         hint,
         [
           { keys: [t('Entrée'), 'A'], label: t('rejoindre') },
+          ...tabs,
           {
             keys: prompts.navigateRow,
             label: hasStageChoice(model) ? t('classe, scène') : t('classe'),
@@ -672,6 +673,7 @@ export function createLobby(
       hint,
       [
         { keys: prompts.navigate, label: t('naviguer') },
+        ...tabs,
         ...(lobbyView(model) === 'entry'
           ? []
           : [
@@ -758,13 +760,23 @@ export function createLobby(
 
     const stages = model.stages ?? [];
     const guest = view === 'room' && !hosting;
-    stageCards.set(stages, model.stageId ?? '');
+    const night = nightOf(model);
+    stageCards.set(stages, model.stageId ?? '', night === 'festival');
     stageCards.setReadonly(guest);
     stagePanel.hidden = view === 'entry' || !showsStageChoice(stages.length);
-    setText(stageLabel, guest ? t('L’hôte choisit la scène') : t('Scène'));
-    endless.set(model.endless === true);
-    endless.button.hidden = view === 'entry';
-    endless.button.setAttribute('aria-disabled', String(guest));
+    setText(
+      stageLabel,
+      guest
+        ? t('L’hôte choisit la scène')
+        : night === 'festival'
+          ? t('Scène du départ')
+          : t('Scène'),
+    );
+    nights.set(night, nightLength(night, stages, model.stageId ?? ''));
+    nights.element.hidden = view === 'entry';
+    nights.setReadonly(guest);
+    setText(launchText, launchLabel(night));
+    setText(launchMore, launchDetail(night, stages, model.stageId ?? ''));
     launchButton.hidden = guest || view === 'entry';
     onlineButton.hidden = view !== 'local' || actions.goOnline === undefined;
     launchButton.setAttribute('aria-disabled', String(!model.canLaunch));

@@ -1,10 +1,9 @@
 import type { Sprite } from 'pixi.js';
 import { PEARL } from './batterie-cables';
 import { GAUGE, type Point } from './batterie-moments';
-import { FACE_RADIUS } from './face-kit';
+import { BOSS_SCALE, FACE_RADIUS } from './face-kit';
 import { batterieAPlatFlanks } from './faces-bosses';
 import { WHITE, circle, glow, paint, type Shape } from './paint';
-import { BOSS_SCALE } from './textures-enemies';
 
 // Painted twice finer than the mask units they are drawn in.
 const FINE = 2;

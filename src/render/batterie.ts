@@ -15,11 +15,10 @@ import {
 import { BURST_AT, FROZEN_BEATS, bossCrackStage, farewellPose } from './boss-moments';
 import type { Family, RenderContext } from './context';
 import type { EnemyPose } from './enemies';
-import { FACE_RADIUS } from './face-kit';
+import { BOSS_SCALE, FACE_RADIUS } from './face-kit';
 import type { Frame } from './frame';
 import { lerp } from './motion';
 import { TRAP_TOKENS } from './textures';
-import { BOSS_SCALE } from './textures-enemies';
 import { add, hide, lookup, setTint } from './util';
 import { ViewPool } from './views';
 import { mixColor } from './weapon-kit';

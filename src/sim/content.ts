@@ -41,7 +41,7 @@ export function resolveContent(content: GameContent): ResolvedContent {
     enemies: indexById(content.enemies, 'enemy'),
     traps: indexById(content.traps, 'trap'),
     upgrades: indexById(content.upgrades, 'upgrade'),
-    sets: indexById(content.sets, 'set'),
+    sets: indexById([...content.sets, ...(content.paths ?? [])], 'set'),
     bystanders: indexById(content.bystanders ?? [], 'bystander'),
     weapons: indexById(content.weapons ?? [], 'weapon'),
     fusions: content.fusions ?? [],

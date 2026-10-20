@@ -24,6 +24,9 @@ export function specials(ctx: StepContext): void {
     if (player.dazzledTicks !== undefined) {
       player.dazzledTicks = Math.max(0, player.dazzledTicks - 1);
     }
+    if (player.sunTicks !== undefined) {
+      player.sunTicks = Math.max(0, player.sunTicks - 1);
+    }
   }
   for (const enemy of state.enemies) {
     if (enemy.hp <= 0) {

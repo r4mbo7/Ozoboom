@@ -23,13 +23,20 @@ export interface StageCard {
   style: string;
   bpm: number;
   decor: DecorId;
+  // About how long its set lasts, in whole minutes.
+  minutes: number;
 }
+
+// One stage played to its sunrise, one that goes on past its last boss, or the whole Full festival.
+export type Night = 'stage' | 'endless' | 'festival';
 
 export interface StagePickerModel {
   stages: readonly StageCard[];
   stageId: string;
   // Whether the set goes on past its last boss.
   endless: boolean;
+  // Whether the game plays the whole festival from the stage picked.
+  festival?: boolean;
 }
 
 // Solo: the class picked, and whether confirming launches the set or leads to the scene.
@@ -72,6 +79,8 @@ export interface LobbyModel {
   stageId?: string;
   // Whether the set goes on past its last boss; only the host can change it.
   endless?: boolean;
+  // Whether the game plays the whole festival; only the host can change it.
+  festival?: boolean;
 }
 
 export type Notice = 'desync' | 'hostLeft' | 'connectionLost';
@@ -126,6 +135,8 @@ export interface UiCallbacks {
   onChooseStage(setId: string): void;
   // Whether the next set goes on past its last boss, wherever a set is launched from.
   onToggleEndless(enabled: boolean): void;
+  // Which night the next game plays, from the stage picker or the lobby.
+  onChooseNight(night: Night): void;
   // Solo: validates the picked scene.
   onConfirmStage(): void;
   // Solo: back to the class picker.

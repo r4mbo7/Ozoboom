@@ -1,7 +1,7 @@
 import type { VibeRainRules } from '../../data/types';
 import { rotate } from '../../shared/angle';
 import { nextFloat } from '../../shared/prng';
-import { BEATS_PER_BAR } from '../../shared/tempo';
+import { BEATS_PER_BAR, ticksIntoBar } from '../../shared/tempo';
 import { clearOfObstacles } from '../obstacles';
 import type { SpeakerState } from '../state';
 import type { StepContext } from './types';
@@ -28,7 +28,7 @@ export function vibeRain(ctx: StepContext): void {
   const perBar = rules.dropsPerBar * sources.length;
   // On the beats, then the eighths, then the sixteenths, as the shower thickens.
   const grid = BEATS_PER_BAR * (perBar <= BEATS_PER_BAR ? 1 : perBar <= 2 * BEATS_PER_BAR ? 2 : 4);
-  const inBar = state.tick % tempo.ticksPerBar;
+  const inBar = ticksIntoBar(state.tick, tempo);
   for (let step = 0; step < grid; step++) {
     if (Math.floor((step * tempo.ticksPerBar) / grid) !== inBar) {
       continue;

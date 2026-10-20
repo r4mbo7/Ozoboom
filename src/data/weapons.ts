@@ -67,6 +67,7 @@ export const WEAPONS: readonly WeaponDefinition[] = [
     },
     maxLevel: 3,
     levelMul: 1.38,
+    shade: 70,
   },
   {
     id: 'totem',

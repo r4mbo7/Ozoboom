@@ -1,5 +1,5 @@
 import type { GameContent, SetDefinition, TierDefinition } from '../data/types';
-import { TICKS_PER_BEAT, tempoOf, type Tempo } from '../shared/tempo';
+import { TICKS_PER_BEAT, TICK_RATE_HZ, tempoOf, type Tempo } from '../shared/tempo';
 import type { GameStatus, SetProgress } from './state';
 
 export type LineupSlotKind = 'phrase' | 'break' | 'drop' | 'sunrise';
@@ -22,22 +22,38 @@ export interface LineupInput {
 }
 
 export function setOf(content: GameContent, setId: string): SetDefinition {
-  const set = content.sets.find((candidate) => candidate.id === setId);
+  const set = [...content.sets, ...(content.paths ?? [])].find(
+    (candidate) => candidate.id === setId,
+  );
   if (set === undefined) {
     throw new Error(`unknown set "${setId}"`);
   }
   return set;
 }
 
-const TEMPOS = new WeakMap<SetDefinition, Tempo>();
+const TEMPOS = new WeakMap<SetDefinition, Map<number, Tempo>>();
 
-export function setTempo(set: SetDefinition): Tempo {
-  let tempo = TEMPOS.get(set);
+// The set's tempo, its grid counted from `startTick`, the tick the set started at (ADR 0018).
+export function setTempo(set: SetDefinition, startTick = 0): Tempo {
+  let byStart = TEMPOS.get(set);
+  if (byStart === undefined) {
+    byStart = new Map();
+    TEMPOS.set(set, byStart);
+  }
+  let tempo = byStart.get(startTick);
   if (tempo === undefined) {
-    tempo = tempoOf(set.ticksPerBeat ?? TICKS_PER_BEAT);
-    TEMPOS.set(set, tempo);
+    tempo = tempoOf(set.ticksPerBeat ?? TICKS_PER_BEAT, startTick);
+    byStart.set(startTick, tempo);
   }
   return tempo;
+}
+
+// The tempo of the set a game plays, as the sim counts it.
+export function playedTempo(
+  set: SetDefinition,
+  state: { set: Pick<SetProgress, 'startTick'> },
+): Tempo {
+  return setTempo(set, state.set.startTick ?? 0);
 }
 
 export function lineupSlots(set: SetDefinition): LineupSlot[] {
@@ -80,6 +96,10 @@ export function lineupCursor(set: SetDefinition, state: LineupInput): LineupCurs
 }
 
 export function setFraction(set: SetDefinition, state: LineupInput): number {
+  // A set without a tier is a path between two stages: it walks into the dusk of the next one.
+  if (set.tiers.length === 0) {
+    return 0;
+  }
   const slots = slotCount(set.tiers);
   // The last tier starts over in an endless game: the hour holds where its drop left it.
   if (typeof state.set.endlessFromTick === 'number' && state.status !== 'won') {
@@ -110,4 +130,21 @@ function elapsedInSegment(state: LineupInput): number {
 
 function slotCount(tiers: readonly TierDefinition[]): number {
   return tiers.reduce((count, tier) => count + tier.buildupPhrases + 2, 1);
+}
+
+// A drop lasts as long as its boss stands: about this long.
+const DROP_SECONDS = 45;
+
+// About how long a stage lasts, in whole minutes: its buildups and breaks at its tempo, and its drops.
+export function stageMinutes(set: SetDefinition): number {
+  const { ticksPerBar, ticksPerPhrase } = setTempo(set);
+  const ticks = set.tiers.reduce(
+    (sum, tier) =>
+      sum +
+      tier.buildupPhrases * ticksPerPhrase +
+      tier.breakBars * ticksPerBar +
+      DROP_SECONDS * TICK_RATE_HZ,
+    0,
+  );
+  return Math.round(ticks / (60 * TICK_RATE_HZ));
 }

@@ -43,7 +43,7 @@ export function createStageMarker(ctx: RenderContext): Family {
   return {
     update(state: SimState, _alpha: number, frame: Frame): void {
       const { core } = state;
-      const shown = edgeMarker(frame.camera, core, INSET, marker);
+      const shown = core.radius > 0 && edgeMarker(frame.camera, core, INSET, marker);
       for (const part of parts) {
         part.visible = shown;
       }

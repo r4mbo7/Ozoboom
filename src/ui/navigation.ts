@@ -7,6 +7,8 @@ export const NO_MENU_INTENTS: Readonly<MenuIntents> = {
   down: false,
   left: false,
   right: false,
+  previous: false,
+  next: false,
   confirm: false,
   back: false,
 };
@@ -17,6 +19,8 @@ export const HELD_MENU_INTENTS: Readonly<MenuIntents> = {
   down: true,
   left: true,
   right: true,
+  previous: true,
+  next: true,
   confirm: true,
   back: true,
 };
@@ -32,6 +36,8 @@ function eachIntent(value: (intent: keyof MenuIntents) => boolean): MenuIntents 
     down: value('down'),
     left: value('left'),
     right: value('right'),
+    previous: value('previous'),
+    next: value('next'),
     confirm: value('confirm'),
     back: value('back'),
   };
@@ -60,6 +66,8 @@ export function createMenuInput(): MenuInput {
         down: move.y > 0,
         left: move.x < 0,
         right: move.x > 0,
+        previous: false,
+        next: false,
         confirm: false,
         back: false,
       };
@@ -78,7 +86,9 @@ export function createMenuInput(): MenuInput {
 // Menus read `left` and `right` as a step back or forward along their rows. A right-to-left
 // language lays those rows out from the right, so a push to the right steps back.
 export function readingEdges(edges: MenuIntents, reading: Direction): MenuIntents {
-  return reading === 'rtl' ? { ...edges, left: edges.right, right: edges.left } : edges;
+  return reading === 'rtl'
+    ? { ...edges, left: edges.right, right: edges.left, previous: edges.next, next: edges.previous }
+    : edges;
 }
 
 export interface MenuStep {

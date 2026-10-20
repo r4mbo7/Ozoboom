@@ -75,7 +75,7 @@ export function isBossLanding(event: SimEvent, state: Pick<SimState, 'enemies'>)
 
 // One step on every beat: how high the mask is lifted, in boss radii.
 export function stepLift(now: number, tempo: Tempo, calm: boolean): number {
-  return calm ? 0 : STEP_LIFT * hop(now / tempo.ticksPerBeat);
+  return calm ? 0 : STEP_LIFT * hop((now - tempo.originTick) / tempo.ticksPerBeat);
 }
 
 export interface Drawn<T> {
