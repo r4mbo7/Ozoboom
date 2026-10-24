@@ -43,13 +43,16 @@ function place(
   };
 }
 
+// `viewHeight` is the height of world the screen shows, smaller for a close view.
 export function frameCamera(
   focus: Vec2,
   arena: Arena,
   screenWidth: number,
   screenHeight: number,
+  viewHeight = VIEW_HEIGHT,
 ): Camera {
-  return place(focus.x, focus.y, baseScale(screenHeight), arena, screenWidth, screenHeight);
+  const scale = Math.max(screenHeight, 1) / viewHeight;
+  return place(focus.x, focus.y, scale, arena, screenWidth, screenHeight);
 }
 
 // Frames a box, margin included, backing off down to MIN_SCALE_SHARE of the usual scale, and never past

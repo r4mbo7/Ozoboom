@@ -7,7 +7,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'baton-de-feu',
     name: 'Bâton de feu',
-    description: 'Tu le fais tournoyer devant toi : il frappe en arc à chaque temps.',
+    description: 'Il frappe en arc devant toi à chaque temps.',
+    roles: ['hitFront'],
     rhythm: { everyBars: 1, steps: EVERY_BEAT },
     effect: { kind: 'sweep', damage: 12, radius: 90, arcDegrees: 120 },
     maxLevel: 3,
@@ -16,7 +17,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'baton-du-diable',
     name: 'Bâton du diable',
-    description: 'Trois frappes après chaque kick, chacune lance une étincelle qui traverse.',
+    description: 'Après chaque kick, trois étincelles qui transpercent.',
+    roles: ['hitFar'],
     classAffinity: 'mage',
     rhythm: { everyBars: 1, steps: [1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15] },
     effect: { kind: 'spark', damage: 3.8, speed: 18, pierce: 3, rangeTicks: 24 },
@@ -26,7 +28,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'cerceaux',
     name: 'Cerceaux',
-    description: 'Un cerceau tourne autour de toi et repousse ; sur le 1 et le 3 il s’élargit.',
+    description: 'Un cerceau tourne autour de toi, repousse et s’élargit.',
+    roles: ['hitAround', 'push'],
     classAffinity: 'mage',
     rhythm: { everyBars: 1, steps: [0, 8] },
     effect: { kind: 'hoop', damage: 18, radius: 70, wideRadius: 120, knockback: 30 },
@@ -36,7 +39,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'diabolo',
     name: 'Diabolo',
-    description: 'Lancé sur le 1, il retombe sur le 3 au milieu des bad vibes et claque.',
+    description: 'Lancé sur le 1, il retombe sur les bad vibes et claque.',
+    roles: ['hitFar'],
     classAffinity: 'mage',
     rhythm: { everyBars: 1, steps: [0] },
     effect: { kind: 'lob', damage: 45, radius: 80, range: 260, flightTicks: TICKS_PER_BAR / 2 },
@@ -46,7 +50,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'frisbee',
     name: 'Frisbee',
-    description: 'Il frappe à l’aller, puis revient soigner un allié (toi, en solo).',
+    description: 'Il frappe à l’aller, revient soigner un allié.',
+    roles: ['hitFar', 'heal'],
     rhythm: { everyBars: 1, steps: [4, 12] },
     effect: { kind: 'boomerang', damage: 21, heal: 9, range: 280, speed: 16 },
     maxLevel: 3,
@@ -55,7 +60,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'assiettes-chinoises',
     name: 'Assiettes chinoises',
-    description: 'Tu poses des zones qui ralentissent les bad vibes et soignent tes alliés.',
+    description: 'Ses zones freinent les bad vibes et soignent tes alliés.',
+    roles: ['slow', 'heal'],
     rhythm: { everyBars: 1, steps: [8] },
     effect: {
       kind: 'plate',
@@ -72,7 +78,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'totem',
     name: 'Totem',
-    description: 'Planté au sol, il attire les bad vibes puis les repousse d’une onde.',
+    description: 'Il attire les bad vibes, puis les repousse d’une onde.',
+    roles: ['pull', 'push'],
     rhythm: { everyBars: 2, steps: [0] },
     effect: { kind: 'totem', damage: 75, knockback: 40, radius: 120, durationBars: 4 },
     maxLevel: 3,
@@ -82,6 +89,7 @@ export const WEAPONS: readonly WeaponDefinition[] = [
     id: 'eventails-de-feu',
     name: 'Éventails de feu',
     description: 'Deux éventails tournent autour de toi sans jamais s’arrêter.',
+    roles: ['hitAround'],
     rhythm: 'continuous',
     effect: { kind: 'orbit', damage: 9, count: 2, radius: 22, orbitRadius: 70, turnsPerBar: 2 },
     maxLevel: 3,
@@ -90,7 +98,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'monocycle',
     name: 'Monocycle',
-    description: 'Tu roules plus vite ; ta traînée ralentit les bad vibes et soigne tes alliés.',
+    description: 'Tu roules vite ; ta traînée freine les bad vibes et soigne.',
+    roles: ['slow', 'heal'],
     rhythm: 'continuous',
     effect: {
       kind: 'trail',
@@ -105,8 +114,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'ruban-arc-en-ciel',
     name: 'Ruban arc-en-ciel',
-    description:
-      'Sur les contretemps, il marque toute bad vibe qu’il traverse : elle encaisse plus.',
+    description: 'Les bad vibes qu’il traverse encaissent plus de coups.',
+    roles: ['mark'],
     unlockedBySpeakers: 4,
     rhythm: { everyBars: 1, steps: [2, 6, 10, 14] },
     effect: { kind: 'ribbon', length: 220, markedTicks: TICKS_PER_BAR },
@@ -116,7 +125,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'double-baton',
     name: 'Double bâton',
-    description: 'Fusion : deux bâtons de feu frappent tout autour de toi à chaque temps.',
+    description: 'Deux bâtons frappent tout autour de toi à chaque temps.',
+    roles: ['hitAround'],
     evolvedFrom: 'baton-de-feu',
     rhythm: { everyBars: 1, steps: EVERY_BEAT },
     effect: { kind: 'sweep', damage: 16, radius: 110, arcDegrees: 360 },
@@ -126,7 +136,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'anneaux-solaires',
     name: 'Anneaux solaires',
-    description: 'Fusion : trois cerceaux, dont chaque élargissement frappe comme ta spéciale.',
+    description: 'Trois cerceaux, chacun frappe comme ta spéciale.',
+    roles: ['hitAround', 'push'],
     classAffinity: 'mage',
     evolvedFrom: 'cerceaux',
     rhythm: { everyBars: 1, steps: [0, 8] },
@@ -137,8 +148,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'pluie-de-diabolos',
     name: 'Pluie de diabolos',
-    description:
-      'Fusion : un diabolo sur le 1, et sur le drop une pluie qui tombe sur tout l’écran à chaque temps.',
+    description: 'Sur le drop, une pluie de diabolos tombe sur tout l’écran.',
+    roles: ['hitFar'],
     classAffinity: 'mage',
     evolvedFrom: 'diabolo',
     rhythm: { everyBars: 1, steps: EVERY_BEAT },
@@ -156,7 +167,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'frisbees-en-passes',
     name: 'Frisbees en passes',
-    description: 'Fusion : trois frisbees qui se font des passes entre alliés (voir #71).',
+    description: 'Il va plus loin et plus vite, puis revient soigner un allié.',
+    roles: ['hitFar', 'heal'],
     evolvedFrom: 'frisbee',
     rhythm: { everyBars: 1, steps: [4, 12] },
     effect: { kind: 'boomerang', damage: 28, heal: 12, range: 340, speed: 18 },
@@ -166,7 +178,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'totem-sono',
     name: 'Totem sono',
-    description: 'Fusion : le totem envoie une onde sur chaque kick.',
+    description: 'Le totem envoie une onde sur chaque kick.',
+    roles: ['pull', 'push'],
     evolvedFrom: 'totem',
     rhythm: { everyBars: 1, steps: EVERY_BEAT },
     effect: { kind: 'totem', damage: 40, knockback: 50, radius: 150, durationBars: 6 },
@@ -176,7 +189,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'arc-en-ciel-du-drop',
     name: 'Arc-en-ciel du drop',
-    description: 'Fusion : sur le drop, il traverse tout l’écran et marque tout.',
+    description: 'Sur le drop, il traverse tout l’écran et marque tout.',
+    roles: ['mark'],
     evolvedFrom: 'ruban-arc-en-ciel',
     rhythm: { everyBars: 1, steps: [2, 6, 10, 14] },
     effect: {
@@ -191,7 +205,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'monocycle-filant',
     name: 'Monocycle filant',
-    description: 'Fusion : chaque dash laisse ta traînée au sol deux mesures.',
+    description: 'Chaque dash laisse ta traînée au sol deux mesures.',
+    roles: ['slow', 'heal'],
     evolvedFrom: 'monocycle',
     rhythm: 'continuous',
     effect: {
@@ -208,7 +223,8 @@ export const WEAPONS: readonly WeaponDefinition[] = [
   {
     id: 'monocycle-reparateur',
     name: 'Monocycle réparateur',
-    description: 'Fusion : ta traînée répare aussi la scène (voir #71).',
+    description: 'Tu files plus vite ; ta traînée freine plus et soigne mieux.',
+    roles: ['slow', 'heal'],
     evolvedFrom: 'monocycle',
     rhythm: 'continuous',
     effect: {

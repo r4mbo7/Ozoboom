@@ -83,6 +83,8 @@ import { playerLabel } from '../ui/hud-model';
 import { stageCards } from '../ui/lobby-model';
 import { showsStageChoice } from '../ui/teaser';
 import { chooseLocale } from './locale';
+import { createStillness } from './stillness';
+import { createWeaponScenes } from './weapon-scenes';
 
 const DEFAULT_CLASS_ID = 'mage';
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
@@ -111,8 +113,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     muted: false,
     volume: VOLUME_STEPS,
     hitSound: false,
-    autoFire: false,
-    autoAim: false,
+    autoFire: true,
+    autoAim: true,
     classId: DEFAULT_CLASS_ID,
     stageId: defaultSet.id,
     trackId: '',
@@ -134,6 +136,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   stage.className = 'game-stage';
   root.append(stage);
   const renderer = await createRenderer(stage, { calmMode: prefs.calmMode }, content, dev.light);
+  const stillness = createStillness();
+  let stageSize = { width: stage.clientWidth, height: stage.clientHeight };
   const hub = createInputHub(stage);
   const audio = createAudioEngine({
     setOf: (setId) =>
@@ -202,6 +206,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     );
   });
   renderer.setOptions({ focus: match.focus });
+  const weaponScenes = createWeaponScenes(content, renderer);
 
   const ui = createUi(
     root,
@@ -222,6 +227,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       },
       onUpgradeCue(cue, variant) {
         audio.cue(cue, variant);
+      },
+      onShowWeapon(canvas, weaponId, playerId) {
+        const { frame } = match.session;
+        const player = frame.players.find((candidate) => candidate.id === playerId);
+        return player === undefined
+          ? null
+          : weaponScenes.show(canvas, weaponId, frame.setId, player.classId);
       },
       onToggleCalmMode(enabled) {
         prefs.calmMode = enabled;
@@ -972,7 +984,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     }
     const { session } = match;
     const start = performance.now();
-    renderer.render(session.frame, alpha);
+    weaponScenes.frame(start, prefs.calmMode || prefersCalmMode());
+    renderer.render(
+      session.frame,
+      alpha,
+      !stillness.draws(session.frame, stageSize.width, stageSize.height),
+    );
     const rendered = performance.now();
     if (uiSnapshot !== null && feedback === null && remap === null) {
       ui.update(session.frame, uiFrame(uiSnapshot), content);
@@ -1007,7 +1024,8 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   );
 
   window.addEventListener('resize', () => {
-    renderer.resize(stage.clientWidth, stage.clientHeight);
+    stageSize = { width: stage.clientWidth, height: stage.clientHeight };
+    renderer.resize(stageSize.width, stageSize.height);
   });
   // Closing the tab tells the others at once, instead of leaving them to wait for the connection
   // to time out.

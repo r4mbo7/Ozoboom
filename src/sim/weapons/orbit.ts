@@ -17,10 +17,6 @@ const isBodyOf =
     projectile.owner.playerId === player.id &&
     projectile.owner.weaponId === weaponId;
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 export const orbit: WeaponModule = {
   fire({ state, tempo }, player, slot, definition, { power }) {
     const { effect } = definition;
@@ -29,7 +25,8 @@ export const orbit: WeaponModule = {
     }
     const mine = isBodyOf(player, slot.id);
     let bodies = state.projectiles.filter(mine);
-    if (bodies.length !== effect.count) {
+    const fresh = bodies.length !== effect.count;
+    if (fresh) {
       keepWhere(state.projectiles, (projectile) => !mine(projectile));
       bodies = [];
       for (let i = 0; i < effect.count; i++) {
@@ -54,12 +51,16 @@ export const orbit: WeaponModule = {
     }
     slot.phase = (slot.phase + (TWO_PI * effect.turnsPerBar) / tempo.ticksPerBar) % TWO_PI;
     const forgets = ticksIntoBar(state.tick, tempo) % (tempo.ticksPerBar / 2) === 0;
-    const { width, height } = state.arena;
     bodies.forEach((body, i) => {
       const direction = unitFromAngle(slot.phase + (i * TWO_PI) / effect.count);
-      // Kept in the arena: `projectiles` drops what leaves it, which would respawn the bodies.
-      body.x = clamp(player.x + direction.x * effect.orbitRadius, 0, width);
-      body.y = clamp(player.y + direction.y * effect.orbitRadius, 0, height);
+      // A body keeps its circle past the edge of the arena: `projectiles` leaves it there.
+      body.x = player.x + direction.x * effect.orbitRadius;
+      body.y = player.y + direction.y * effect.orbitRadius;
+      // A new body appears on its orbit instead of sliding out from the player.
+      if (fresh) {
+        body.prevX = body.x;
+        body.prevY = body.y;
+      }
       body.damage = effect.damage * power;
       body.ticksLeft = BODY_TICKS;
       if (forgets) {

@@ -1,4 +1,6 @@
 import type { FullAttack, FullSkillEffect, FullSpecialEffect } from './full';
+import type { GustEffect } from './coup-de-vent';
+import type { MoshRingEffect } from './pogo';
 
 export type StatKey =
   | 'maxHpAdd'
@@ -23,7 +25,8 @@ export type StatKey =
   | 'weaponRateMul'
   | 'kiffDamageAdd'
   | 'zoneCountAdd'
-  | 'rootsGrowthMul';
+  | 'rootsGrowthMul'
+  | 'skillCountAdd';
 
 export interface StatModifier {
   stat: StatKey;
@@ -147,6 +150,8 @@ export type SpecialEffect =
   | { kind: 'dazzle'; radius: number }
   | { kind: 'babble'; everyBars: number }
   | { kind: 'frontGuard'; frontDamageMul: number }
+  | GustEffect
+  | MoshRingEffect
   | FullSpecialEffect;
 
 export interface EnemyDefinition {
@@ -170,6 +175,8 @@ export interface EnemyDefinition {
     keepDistance: number;
   };
   special?: SpecialEffect;
+  // A body players run through: its touch hurts the stage only (the Moustiques' swarm).
+  passable?: boolean;
 }
 
 export type TrapCadence = 'beat' | 'bar' | 'drop' | 'continuous';
@@ -288,10 +295,16 @@ export type WeaponEffect =
       dropCrossesArena?: boolean;
     };
 
+// What a circus weapon does, as its card tells it in pictograms.
+export type WeaponRole =
+  'hitFront' | 'hitFar' | 'hitAround' | 'heal' | 'slow' | 'pull' | 'push' | 'mark';
+
 export interface WeaponDefinition {
   id: string;
   name: string;
   description: string;
+  // One or two: what the card of the weapon shows it does.
+  roles?: readonly WeaponRole[];
   classAffinity?: string;
   unlockedBySpeakers?: number;
   evolvedFrom?: string;

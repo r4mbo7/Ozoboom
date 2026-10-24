@@ -108,6 +108,12 @@ export interface UiCallbacks {
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
   // The variant is the turn of a dealt card, 0 for the other cues.
   onUpgradeCue?(cue: UpgradeCue, variant: number): void;
+  // Plays a circus weapon in the canvas of its card, until the returned function is called.
+  onShowWeapon?(
+    canvas: HTMLCanvasElement,
+    weaponId: string,
+    playerId: PlayerId,
+  ): (() => void) | null;
   onToggleCalmMode(enabled: boolean): void;
   onToggleMute(muted: boolean): void;
   // From 1 to `VOLUME_STEPS`.

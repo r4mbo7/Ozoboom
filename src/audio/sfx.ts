@@ -292,9 +292,16 @@ export function sfxOf(
       return effect === 'beam' ? 'trapCrackle' : null;
     }
     default:
-      return callOf(FULL_EVENT_CALLS[event.type], event);
+      return callOf(EVENT_CALLS[event.type], event);
   }
 }
+
+// What a boss sounds on an event of its, by event type: the demo's, then the full game's.
+export type EventCall = SfxName | ((event: SimEvent) => SfxName | null);
+const EVENT_CALLS: Readonly<Partial<Record<SimEvent['type'], EventCall>>> = {
+  gust: 'bossGust',
+  ...FULL_EVENT_CALLS,
+};
 
 function callOf(
   call: SfxName | ((event: SimEvent) => SfxName | null) | undefined,

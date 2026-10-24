@@ -1,4 +1,10 @@
-import type { SkillEffect, TrapEffect, UpgradeFamily, WeaponEffect } from '../data/types';
+import type {
+  SkillEffect,
+  TrapEffect,
+  UpgradeFamily,
+  WeaponEffect,
+  WeaponRole,
+} from '../data/types';
 import { FULL_MARKS, FULL_SKILL_ICONS } from './full';
 
 export const BOLT = '<path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z" fill="currentColor"/>';
@@ -246,6 +252,56 @@ export function weaponIcon(effect: WeaponEffect): string {
       return `<path d="M2.5 15c3-8 6-8 9.5 0s6.5 8 9.5 0" ${STROKE}/>`;
   }
 }
+
+// What a weapon does, drawn as something seen in game: the player is the dot, a bad vibe the burst.
+export function roleIcon(role: WeaponRole): string {
+  switch (role) {
+    case 'hitFront':
+      return (
+        '<circle cx="12" cy="19" r="2.5" fill="currentColor"/>' +
+        `<path d="M4.5 13a10 10 0 0 1 15 0" ${STROKE} stroke-width="2.6"/>` +
+        `<path d="M7.6 8.6 6.2 6.4M12 7.2V4.6M16.4 8.6l1.4-2.2" ${ROUND}/>`
+      );
+    case 'hitFar':
+      return (
+        '<circle cx="4" cy="12" r="2.5" fill="currentColor"/>' +
+        `<path d="M8.5 12h5" ${ROUND} stroke-dasharray="1.5 2.6"/>` +
+        '<path d="m18.5 7.2 1.3 3.5 3.5 1.3-3.5 1.3-1.3 3.5-1.3-3.5-3.5-1.3 3.5-1.3z" fill="currentColor"/>'
+      );
+    case 'hitAround':
+      return (
+        '<circle cx="12" cy="12" r="2.5" fill="currentColor"/>' +
+        `<circle cx="12" cy="12" r="8" ${STROKE} stroke-dasharray="2.2 3"/>` +
+        '<path d="M16.6 2.6a5 5 0 0 1 4.8 4.8l-4.8-.6zM7.4 21.4a5 5 0 0 1-4.8-4.8l4.8.6z" fill="currentColor"/>'
+      );
+    case 'heal':
+      return `<path d="M12 4.5v15M4.5 12h15" ${ROUND} stroke-width="3.4"/>`;
+    case 'slow':
+      return (
+        `<path d="M10.5 16.5a5.5 5.5 0 1 1 8.6-4.5 3.2 3.2 0 0 1-3.2 3.2 2.2 2.2 0 0 1-2.2-2.2 1.3 1.3 0 0 1 1.3-1.3" ${ROUND}/>` +
+        `<path d="M2 18.5h17.5M3.5 18.5c0-3 1.2-4.5 3-4.5M4.2 14.6 3 12M6.6 14l.4-2.8" ${ROUND}/>`
+      );
+    case 'pull':
+      return (
+        `<path d="M6 4.5V12a6 6 0 0 0 12 0V4.5" ${STROKE} stroke-width="2.6"/>` +
+        `<path d="M4.2 4.5h3.6M16.2 4.5h3.6" ${ROUND} stroke-width="3.2"/>`
+      );
+    case 'push':
+      return (
+        '<circle cx="5.5" cy="12" r="2.5" fill="currentColor"/>' +
+        `<path d="M10.5 8a6 6 0 0 1 0 8M14.5 5a10 10 0 0 1 0 14M18.5 2.5a13.5 13.5 0 0 1 0 19" ${ROUND}/>`
+      );
+    case 'mark':
+      return (
+        `<circle cx="12" cy="12" r="8.5" ${STROKE}/>` +
+        `<circle cx="12" cy="12" r="4" ${STROKE}/>` +
+        '<circle cx="12" cy="12" r="1.2" fill="currentColor"/>'
+      );
+  }
+}
+
+export const STAR =
+  '<path d="m12 2.5 2.6 6.4 6.9.5-5.3 4.4 1.7 6.7L12 16.8l-5.9 3.7 1.7-6.7-5.3-4.4 6.9-.5z" fill="currentColor"/>';
 
 // One shape per class, so that the colour never carries the class alone (see the art direction).
 export function classMark(classId: string): string {

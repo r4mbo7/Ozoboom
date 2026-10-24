@@ -1,10 +1,12 @@
-import { Container, type Renderer as PixiRenderer } from 'pixi.js';
+import { Container, type Renderer as PixiRenderer, type RenderTexture } from 'pixi.js';
 import type { SetDefinition } from '../data/types';
 import type { Arena, SimEvent, SimState, Vec2 } from '../sim/state';
+import { SUN_PALETTES } from '../shared/palette';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
   type Bounds,
   type Camera,
+  VIEW_HEIGHT,
   centerInArena,
   easeCamera,
   frameBounds,
@@ -13,42 +15,17 @@ import {
   screenToWorld,
 } from './camera';
 import { ShowClock, isBossLanding } from './boss-moments';
-import { createBatterieAPlat } from './batterie';
-import { createBystanders } from './bystanders';
 import { type Family, type RenderContent, createRenderContext } from './context';
-import { createCore } from './core';
-import { createCouvreFeu } from './couvre-feu';
-import { createClassEffects } from './class-effects';
+import { createFamilies } from './families';
 import { createDropTrails } from './drop-trails';
-import { createEffects } from './effects';
-import { createHits } from './hits';
-import { createEnemies } from './enemies';
+import { type InsetScene, type Insets, createInsets } from './insets';
 import { type Frame, advanceFrame, createFrame } from './frame';
-import { FULL_FAMILIES, FULL_LOOKS } from './full';
-import { createGround } from './ground';
-import { createGroundWaves } from './ground-waves';
 import { type Layers, applyLight, createLayers } from './layers';
 import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { checkDrawings } from './drawings';
-import { createBombs } from './bombs';
-import { createLoots } from './loots';
-import { createPickupBursts } from './pickup-bursts';
-import { createPickups } from './pickups';
-import { createDownedScreen } from './downed-screen';
-import { createMarkers } from './markers';
-import { createStageMarker } from './stage-marker';
-import { createPlayers } from './players';
-import { createProjectiles } from './projectiles';
-import { createRecruits } from './recruits';
-import { createSpecials } from './specials';
-import { createSpeakerCards } from './speaker-card';
-import { createSpeakers } from './speakers';
 import { createTextures, destroyTextures } from './textures';
-import { createTraps } from './traps';
-import type { CameraFocus, RenderOptions, Renderer } from './types';
+import type { CameraFocus, Inset, RenderOptions, Renderer } from './types';
 import { byId, lookup } from './util';
-import { createWeapons } from './weapons';
-import { createWounds } from './wounds';
 
 export type { RenderContent } from './context';
 
@@ -56,13 +33,19 @@ const CALM = { glowAlpha: 0.4, pulse: 0.3 };
 const SHAKE = { pixels: 7, ticks: TICKS_PER_BEAT / 2 };
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const SNAP_TICKS = 4 * TICKS_PER_BEAT;
+// The plain dark ground of the scene on the card of a weapon.
+const INSET_GROUND = SUN_PALETTES.nuit.sol;
 
-export class Scene implements Renderer {
+export class Scene implements Renderer, InsetScene {
   private readonly pixi: PixiRenderer;
   private readonly textures: ReturnType<typeof createTextures>;
+  // A scene painted into an inset borrows the renderer and the textures of the game.
+  private readonly borrowed: boolean;
+  private readonly insets: Insets;
   private readonly sets: ReadonlyMap<string, SetDefinition>;
   private readonly options: RenderOptions;
   private camera: Camera;
+  private viewHeight = VIEW_HEIGHT;
 
   private readonly stage = new Container();
   private readonly layers: Layers;
@@ -91,10 +74,17 @@ export class Scene implements Renderer {
     content: RenderContent,
     width: number,
     height: number,
+    textures?: ReturnType<typeof createTextures>,
   ) {
     this.pixi = pixi;
     this.options = { ...options };
-    this.textures = createTextures();
+    this.borrowed = textures !== undefined;
+    this.textures = textures ?? createTextures();
+    this.insets = createInsets(
+      pixi,
+      (inWidth, inHeight) =>
+        new Scene(pixi, this.options, content, inWidth, inHeight, this.textures),
+    );
     checkDrawings(content.classes, this.textures.players.drawings);
     this.sets = new Map([...content.sets, ...(content.paths ?? [])].map((set) => [set.id, set]));
     this.camera = frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, width, height);
@@ -103,45 +93,25 @@ export class Scene implements Renderer {
     this.dropTrails = createDropTrails(pixi, this.layers);
 
     const ctx = createRenderContext(this.textures, this.layers, this.options, content);
-    const traps = createTraps(ctx);
-    const enemies = createEnemies(ctx);
-    this.families = [
-      createGround(ctx),
-      ...FULL_LOOKS.flatMap((look) => look.families(ctx)),
-      createGroundWaves(ctx),
-      createSpeakers(ctx),
-      createCore(ctx),
-      traps,
-      createPickups(ctx),
-      createPickupBursts(ctx),
-      createLoots(ctx),
-      createBombs(ctx),
-      createBystanders(ctx),
-      enemies,
-      createRecruits(ctx, (x, y, id, frame) => {
-        enemies.burst(x, y, id, frame);
-      }),
-      createWounds(ctx, (id) => enemies.poseOf(id)),
-      createCouvreFeu(ctx, (id) => enemies.poseOf(id)),
-      createBatterieAPlat(ctx, (id) => enemies.poseOf(id)),
-      createSpecials(ctx),
-      createProjectiles(ctx),
-      ...FULL_FAMILIES.map((create) => create(ctx, (id) => enemies.poseOf(id))),
-      createWeapons(ctx),
-      createPlayers(ctx),
-      createDownedScreen(ctx),
-      createSpeakerCards(ctx),
-      createMarkers(ctx),
-      createStageMarker(ctx),
-      createEffects(ctx, (id) => traps.reachOf(id)),
-      createHits(ctx, enemies),
-      createClassEffects(ctx, (id, untilTick) => {
-        enemies.blink(id, untilTick);
-      }),
-    ];
+    this.families = createFamilies(ctx, this.borrowed);
   }
 
-  render(state: SimState, alpha: number): void {
+  render(state: SimState, alpha: number, still = false): void {
+    if (!still) {
+      this.insets.release();
+      this.draw(state, alpha, null);
+    } else if (this.insets.painting) {
+      this.insets.holdStill((target) => {
+        this.draw(state, alpha, target);
+      });
+    }
+  }
+
+  renderInto(state: SimState, alpha: number, target: RenderTexture): void {
+    this.draw(state, alpha, target);
+  }
+
+  private draw(state: SimState, alpha: number, target: RenderTexture | null): void {
     const stage = `${state.setId}@${String(state.set.startTick ?? 0)}`;
     if (state !== this.lastState || stage !== this.lastStage) {
       this.lastState = state;
@@ -167,7 +137,9 @@ export class Scene implements Renderer {
     frame.calm = this.options.calmMode;
     applyLight(layers, frame);
     layers.glow.alpha = frame.calm ? CALM.glowAlpha : 1;
-    this.pixi.background.color = frame.palette.sol;
+    if (target === null) {
+      this.pixi.background.color = frame.palette.sol;
+    }
 
     if (state.tick !== this.lastTick) {
       this.lastTick = state.tick;
@@ -186,14 +158,37 @@ export class Scene implements Renderer {
       family.update(state, alpha, frame);
     }
     this.dropTrails.update(frame, this.camera.screenWidth, this.camera.screenHeight);
+    if (target !== null) {
+      this.pixi.render({
+        container: this.stage,
+        target,
+        clear: true,
+        clearColor: this.borrowed ? INSET_GROUND : frame.palette.sol,
+      });
+      return;
+    }
+    if (this.insets.painting) {
+      this.insets.paint();
+    }
     this.pixi.render(this.stage);
+  }
+
+  setInsets(insets: readonly Inset[]): void {
+    this.insets.set(insets);
+  }
+
+  frameInset(width: number, height: number, viewHeight: number): void {
+    this.viewHeight = viewHeight;
+    this.camera = { ...this.camera, screenWidth: width, screenHeight: height };
   }
 
   setOptions(options: Partial<RenderOptions>): void {
     Object.assign(this.options, options);
+    this.insets.setOptions(options);
   }
 
   resize(width: number, height: number): void {
+    this.insets.release();
     this.pixi.resize(width, height);
     this.camera = { ...this.camera, screenWidth: width, screenHeight: height };
   }
@@ -203,18 +198,22 @@ export class Scene implements Renderer {
   }
 
   destroy(): void {
+    this.insets.destroy();
     for (const family of this.families) {
       family.destroy();
     }
     this.dropTrails.destroy();
     this.stage.destroy({ children: true });
-    destroyTextures(this.textures);
-    this.pixi.destroy({ removeView: true, releaseGlobalResources: true });
+    if (!this.borrowed) {
+      destroyTextures(this.textures);
+      this.pixi.destroy({ removeView: true, releaseGlobalResources: true });
+    }
   }
 
   private frameWorld(state: SimState, alpha: number): void {
     const { now } = this.frame;
-    const focus = this.options.focus ?? SOLO_FOCUS;
+    // An inset shows the one player of its own world, whatever the game follows.
+    const focus = this.borrowed ? SOLO_FOCUS : (this.options.focus ?? SOLO_FOCUS);
     const key = focus.kind === 'everyone' ? 'everyone' : `player ${String(focus.playerId)}`;
     const target = this.targetCamera(state, alpha, focus);
     const elapsed = now - this.cameraNow;
@@ -255,7 +254,7 @@ export class Scene implements Renderer {
     const followed = focus.kind === 'player' ? byId(state.players, focus.playerId) : undefined;
     point.x = followed === undefined ? state.core.x : lerp(followed.prevX, followed.x, alpha);
     point.y = followed === undefined ? state.core.y : lerp(followed.prevY, followed.y, alpha);
-    return frameCamera(point, state.arena, screenWidth, screenHeight);
+    return frameCamera(point, state.arena, screenWidth, screenHeight, this.viewHeight);
   }
 
   private onEvent(event: SimEvent, state: SimState): void {

@@ -1,4 +1,10 @@
-import type { GameContent, Rarity, UpgradeFamily, WeaponDefinition } from '../data/types';
+import type {
+  GameContent,
+  Rarity,
+  UpgradeFamily,
+  WeaponDefinition,
+  WeaponRole,
+} from '../data/types';
 import type { PlayerId, PlayerState, SimEvent, UpgradeOffer } from '../sim/state';
 import { t } from '../shared/i18n';
 import { growsSkillAlone, upgradeForm } from '../sim/stats';
@@ -17,6 +23,17 @@ const rarityLabels = (): Record<Rarity, string | null> => ({
   common: null,
   rare: t('Rare'),
   legendary: t('Légendaire'),
+});
+
+const roleLabels = (): Record<WeaponRole, string> => ({
+  hitFront: t('Frappe devant'),
+  hitFar: t('Frappe loin'),
+  hitAround: t('Frappe autour'),
+  heal: t('Soigne'),
+  slow: t('Ralentit'),
+  pull: t('Attire'),
+  push: t('Repousse'),
+  mark: t('Marque'),
 });
 
 export type CardTint = 'common' | 'rare' | 'legendary' | 'relic' | 'fusion';
@@ -55,6 +72,22 @@ export interface WeaponCard extends CardBase {
   steps: readonly boolean[] | 'continuous';
   // Above one, the weapon fires on one bar out of that many.
   everyBars: number;
+  // What the weapon becomes back to back with an upgrade, once both are at their maximum.
+  fusions: readonly FusionPath[];
+  roles: readonly RoleView[];
+}
+
+export interface RoleView {
+  role: WeaponRole;
+  label: string;
+  // None of the weapons held does it yet.
+  fresh: boolean;
+}
+
+export interface FusionPath {
+  name: string;
+  upgrade: string;
+  weapon: WeaponDefinition;
 }
 
 export interface FusionCard extends CardBase {
@@ -180,9 +213,80 @@ export function cardFor(
     },
     steps: stepsOf(weapon),
     everyBars: weapon.rhythm === 'continuous' ? 1 : weapon.rhythm.everyBars,
+    roles: rolesOf(weapon, player, content),
+    fusions: (content.fusions ?? []).flatMap((fusion) => {
+      const result = content.weapons?.find((entry) => entry.id === fusion.resultId);
+      const upgrade = content.upgrades.find((entry) => entry.id === fusion.upgradeId);
+      return fusion.weaponId !== id || result === undefined || upgrade === undefined
+        ? []
+        : [{ name: t(result.name), upgrade: t(upgrade.name), weapon: result }];
+    }),
     tint: 'common',
     rarityLabel: null,
   };
+}
+
+// One of the places a player has for circus weapons, as the level screen shows them.
+export interface WeaponPlace {
+  // `ghost`: the free place the new weapon of the focused card would take.
+  state: 'held' | 'ghost' | 'free';
+  weapon: WeaponDefinition | null;
+  label: string;
+  // The focused card levels up or fuses the weapon held here.
+  lit: boolean;
+}
+
+export function weaponPlaces(
+  player: PlayerState | undefined,
+  content: GameContent,
+  slots: number,
+  focused: Card | undefined,
+): WeaponPlace[] {
+  const touched =
+    focused?.kind === 'weapon'
+      ? focused.id
+      : focused?.kind === 'fusion'
+        ? focused.weapon.evolvedFrom
+        : null;
+  const held: WeaponPlace[] = (player?.weapons ?? []).flatMap((slot) => {
+    const weapon = content.weapons?.find((entry) => entry.id === slot.id);
+    return weapon === undefined
+      ? []
+      : [{ state: 'held', weapon, label: t(weapon.name), lit: slot.id === touched }];
+  });
+  const adds = focused?.kind === 'weapon' && !held.some((place) => place.weapon?.id === focused.id);
+  const free = Array.from({ length: Math.max(slots - held.length, 0) }, (_, index): WeaponPlace =>
+    adds && index === 0
+      ? {
+          state: 'ghost',
+          weapon: focused.weapon,
+          label: t('Place {place} sur {slots}', {
+            place: formatNumber(held.length + 1),
+            slots: formatNumber(slots),
+          }),
+          lit: false,
+        }
+      : { state: 'free', weapon: null, label: t('Libre'), lit: false },
+  );
+  return [...held, ...free];
+}
+
+function rolesOf(
+  weapon: WeaponDefinition,
+  player: PlayerState | undefined,
+  content: GameContent,
+): RoleView[] {
+  const held = new Set(
+    (player?.weapons ?? []).flatMap(
+      (slot) => content.weapons?.find((entry) => entry.id === slot.id)?.roles ?? [],
+    ),
+  );
+  const labels = roleLabels();
+  return (weapon.roles ?? []).map((role) => ({
+    role,
+    label: labels[role],
+    fresh: !held.has(role),
+  }));
 }
 
 export function cardName(id: string, content: GameContent): string {

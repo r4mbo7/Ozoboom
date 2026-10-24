@@ -5,7 +5,7 @@ import { type RenderContent, Scene } from './scene';
 import type { RenderOptions, Renderer } from './types';
 
 export type { RenderContent } from './scene';
-export type { RenderOptions, Renderer } from './types';
+export type { Inset, RenderOptions, Renderer } from './types';
 export { type Portrait, type PortraitClass, createPortraits } from './portraits';
 
 // `light` draws a quarter of the pixels without antialiasing, for browser tests that render in software.

@@ -1,7 +1,14 @@
 import { Container, type Sprite, type Texture } from 'pixi.js';
 import { ticksToDrop } from '../sim/lineup';
 import type { EnemyState, EntityId, SimEvent, SimState } from '../sim/state';
-import { createBossDecor, createDim, destroyBossDecor, place, placeShadow } from './boss-decor';
+import {
+  createBossDecor,
+  createDim,
+  destroyBossDecor,
+  place,
+  placeShadow,
+  splinter,
+} from './boss-decor';
 import { createBossFarewells } from './boss-farewells';
 import {
   type Drawn,
@@ -21,7 +28,7 @@ import type { Frame } from './frame';
 import { contactOf } from './hit-marks';
 import type { Mask } from './textures-enemies';
 import { type BossLook, createBossLook } from './textures-bosses';
-import { add, byId, hide, setTint } from './util';
+import { add, byId, hide, keepIn, setTint } from './util';
 import { ViewPool } from './views';
 import { mixColor } from './weapon-kit';
 
@@ -31,7 +38,6 @@ const BREATH = 0.85;
 const SQUASH_HEIGHT = 0.7;
 const HIT_GAP_TICKS = 3;
 const SPLINTERS = { normal: 4, calm: 2, crack: 7, calmCrack: 3 };
-const SPLINTER_BEATS = 0.7;
 
 type EnemyHit = Extract<SimEvent, { type: 'enemyHit' }>;
 
@@ -48,6 +54,12 @@ export interface BossStage {
   // Below the masks, and above them.
   readonly under: Container;
   readonly over: Container;
+  // The same over the stage, round the masks that fly, which go in `masks`.
+  readonly flying: {
+    readonly under: Container;
+    readonly masks: Container;
+    readonly over: Container;
+  };
   // Starts a pass over the live bosses, which `update` ends.
   begin(): void;
   // Shadow, step, breath, squash and cracks of a live boss, around the mask the enemies family placed.
@@ -75,6 +87,8 @@ export function createBossStage(ctx: RenderContext): BossStage {
   const spawned = new Map<EntityId, number>();
   const under = new Container();
   const over = new Container();
+  const flying = { under: new Container(), masks: new Container(), over: new Container() };
+  layers.sky.addChild(flying.under, flying.masks, flying.over);
   const splinters = new Particles(over, decor.splinter, 96);
   const waves = new Particles(layers.fx, decor.ring, 8);
   const farewells = createBossFarewells(ctx, decor);
@@ -115,36 +129,6 @@ export function createBossStage(ctx: RenderContext): BossStage {
     },
   );
 
-  // Dark splinters with a pale edge, fanning out from `angle` and falling.
-  function splinter(
-    at: { x: number; y: number },
-    angle: number,
-    spread: number,
-    reach: number,
-    count: number,
-    frame: Frame,
-    seed: number,
-  ): void {
-    for (let index = 0; index < count; index += 1) {
-      const turn = angle + (((seed * 0.618 + index * 0.37) % 1) - 0.5) * spread;
-      const far = reach * (0.5 + ((seed + index * 7) % 5) * 0.25);
-      splinters.spawn({
-        now: frame.now,
-        duration: SPLINTER_BEATS * frame.tempo.ticksPerBeat,
-        x: at.x,
-        y: at.y,
-        dx: Math.cos(turn) * far,
-        dy: Math.sin(turn) * far + reach * 0.5,
-        fromRadius: 5 + (index % 3) * 1.5,
-        toRadius: 3.5,
-        tint: frame.palette.badVibeRim,
-        peak: 1,
-        rotation: turn,
-        spin: (index % 2 === 0 ? 1 : -1) * 5,
-      });
-    }
-  }
-
   // The wave of a landing: two rings from where it fell, one slow ring in calm mode.
   function land(x: number, y: number, size: number, frame: Frame, tick: number): void {
     const wave = { now: tick, x, y, tint: frame.palette.badVibeRim };
@@ -173,12 +157,13 @@ export function createBossStage(ctx: RenderContext): BossStage {
     const angle = contactOf(event, radius)?.angle ?? towardHitter(event, state);
     const at = { x: event.x + Math.cos(angle) * radius, y: event.y + Math.sin(angle) * radius };
     const count = frame.calm ? SPLINTERS.calm : SPLINTERS.normal;
-    splinter(at, angle, 2.2, radius * 0.63, count, frame, state.tick);
+    splinter(splinters, at, angle, 2.2, radius * 0.63, count, frame, state.tick);
   }
 
   return {
     under,
     over,
+    flying,
     begin(): void {
       views.begin();
     },
@@ -201,6 +186,9 @@ export function createBossStage(ctx: RenderContext): BossStage {
       sprite.alpha = arrival.alpha;
       setTint(sprite, mixColor(sprite.tint, WHITE, flare));
       placeShadow(view.shadow, decor, x, ground, radius, arrival.alpha);
+      const flies = mask.face.flies === true;
+      keepIn(flies ? flying.under : under, view.band);
+      keepIn(flies ? flying.over : over, view.crack);
 
       view.band.texture = look.band.texture;
       place(view.band, x, y, sprite.rotation, scaleX, scaleY);
@@ -212,7 +200,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
         if (view.lastHit > Number.NEGATIVE_INFINITY) {
           view.impact.hit(now, tempo);
           const count = calm ? SPLINTERS.calmCrack : SPLINTERS.crack;
-          splinter({ x, y }, 0, TAU, radius * 0.9, count, frame, enemy.id + stage);
+          splinter(splinters, { x, y }, 0, TAU, radius * 0.9, count, frame, enemy.id + stage);
         }
         view.stage = stage;
       }
@@ -285,6 +273,9 @@ export function createBossStage(ctx: RenderContext): BossStage {
       }
       looks.clear();
       destroyBossDecor(decor);
+      for (const container of Object.values(flying)) {
+        container.destroy({ children: true });
+      }
     },
   };
 }

@@ -15,6 +15,8 @@ export interface Layers {
   readonly enemyShots: Container;
   readonly traps: Container;
   readonly core: Container;
+  // What flies over the stage: the masks that fly, and what flies with them.
+  readonly sky: Container;
   readonly pickups: Container;
   readonly zones: Container;
   readonly bystanders: Container;
@@ -53,6 +55,7 @@ export function createLayers(stage: Container): Layers {
     enemyShots: layer(world),
     traps: layer(world),
     core: layer(world),
+    sky: layer(world),
     pickups: layer(world),
     zones: layer(world),
     bystanders: layer(world),

@@ -2,6 +2,7 @@ import type { GameContent } from '../data/types';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import { direction, t, tn } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
+import { weaponSlotCount } from '../sim/draw';
 import { setOf, setTempo } from '../sim/lineup';
 import type { PlayerId, PlayerState, SimState, UpgradeOffer } from '../sim/state';
 import { el, fillHint, icon, setFlag, setText, setVar } from './dom';
@@ -9,9 +10,12 @@ import {
   SIXTEENTHS_PER_BAR,
   type Card,
   type Celebrated,
+  type FusionCard,
   type Pearls,
+  type UpgradeCard,
   type WaitChip,
   type WeaponCard,
+  type WeaponPlace,
   cardFor,
   cardName,
   dealOf,
@@ -19,10 +23,11 @@ import {
   offerKicker,
   pickOf,
   waitingFor,
+  weaponPlaces,
 } from './cards';
 import { formatNumber } from './format';
 import { playerLabel } from './hud-model';
-import { classMark, medallion, upgradeIcon, weaponIcon } from './icons';
+import { STAR, classMark, medallion, roleIcon, upgradeIcon, weaponIcon } from './icons';
 import { type Menu, createMenu } from './menu';
 import { type MenuInput, createMenuInput } from './navigation';
 import { promptsFor } from './prompts';
@@ -46,6 +51,9 @@ export interface UpgradeHost {
   cue(cue: UpgradeCue, variant: number): void;
   // Where the card a player took lands in the HUD, null when the HUD does not show that player.
   landing(playerId: PlayerId, weaponId: string | null): HTMLElement | null;
+  // Plays the weapon of a card in its canvas until the returned function is called; null when
+  // nothing can draw it, and the card keeps its medallion.
+  showWeapon(canvas: HTMLCanvasElement, weaponId: string, playerId: PlayerId): (() => void) | null;
 }
 
 const MENU_GRACE_MS = 500;
@@ -116,6 +124,100 @@ function pearlRow(pearls: Pearls): HTMLElement {
   return row;
 }
 
+// The two names a translated sentence carries stand out in it: the sentence holds their marks.
+const MARKS = ['\uE000', '\uE001'] as const;
+
+function namesIn(className: string, text: string, names: readonly [string, string]): HTMLElement {
+  const node = el('span', className);
+  for (const part of text.split(/(\uE000|\uE001)/u)) {
+    const mark = MARKS.findIndex((candidate) => candidate === part);
+    node.append(mark < 0 ? part : el('b', '', names[mark]));
+  }
+  return node;
+}
+
+function fusionLine(fusions: WeaponCard['fusions']): HTMLElement | null {
+  const [first, second] = fusions;
+  if (first === undefined) {
+    return null;
+  }
+  return second === undefined
+    ? namesIn(
+        'ui-card__fuse',
+        t('avec {upgrade}, devient {fusion}', { upgrade: MARKS[0], fusion: MARKS[1] }),
+        [first.upgrade, first.name],
+      )
+    : namesIn(
+        'ui-card__fuse',
+        t('avec {first} ou {second}, il fusionne', { first: MARKS[0], second: MARKS[1] }),
+        [first.upgrade, second.upgrade],
+      );
+}
+
+// What a weapon does; what none of the weapons held does yet stands out, with a star.
+function roles(model: WeaponCard): HTMLElement {
+  const row = el('span', 'ui-card__roles');
+  for (const view of model.roles) {
+    const chip = el('span', 'ui-role');
+    chip.setAttribute('role', 'img');
+    chip.setAttribute(
+      'aria-label',
+      view.fresh ? t('{role}, que tes agrès ne font pas encore', { role: view.label }) : view.label,
+    );
+    setFlag(chip, 'fresh', view.fresh);
+    chip.append(
+      icon('ui-role__icon', roleIcon(view.role)),
+      el('span', 'ui-role__label', view.label),
+    );
+    if (view.fresh) {
+      chip.append(icon('ui-role__star', STAR));
+    }
+    row.append(chip);
+  }
+  return row;
+}
+
+// The levels of a weapon, the one the card gives lit, then the fusions it leads to.
+function path(model: WeaponCard): HTMLElement {
+  const row = el('span', 'ui-card__path');
+  row.setAttribute('role', 'img');
+  row.setAttribute('aria-label', model.pearls.label);
+  row.dataset.fusions = String(model.fusions.length);
+  for (let level = 1; level <= model.pearls.max; level += 1) {
+    if (level > 1) {
+      row.append(el('span', 'ui-path__bar'));
+    }
+    const node = el('span', 'ui-path__level', formatNumber(level));
+    setFlag(node, 'held', level < model.pearls.rank);
+    setFlag(node, 'gain', level === model.pearls.rank);
+    row.append(node);
+  }
+  if (model.fusions.length > 0) {
+    row.append(el('span', 'ui-path__plus', '+'));
+  }
+  for (const fusion of model.fusions) {
+    row.append(icon('ui-path__fusion', medallion(weaponIcon(fusion.weapon.effect)), '0 0 84 84'));
+  }
+  return row;
+}
+
+function rankOf(model: UpgradeCard | FusionCard): HTMLElement {
+  const rank = el('span', 'ui-card__rank');
+  if (model.kind === 'upgrade' && model.pearls !== null) {
+    rank.setAttribute('role', 'img');
+    rank.setAttribute('aria-label', model.pearls.label);
+    rank.append(pearlRow(model.pearls));
+  }
+  rank.append(
+    el(
+      'span',
+      'ui-card__rank-text',
+      model.kind === 'fusion' ? t('Remplace {weapon}', { weapon: model.replaces }) : model.rank,
+    ),
+  );
+  return rank;
+}
+
 function card(model: Card): HTMLButtonElement {
   const button = el('button', 'ui-card');
   button.type = 'button';
@@ -134,35 +236,48 @@ function card(model: Card): HTMLButtonElement {
   if (model.rarityLabel !== null) {
     familyRow.append(el('span', 'ui-card__rarity', model.rarityLabel));
   }
-  const rank = el('span', 'ui-card__rank');
-  if (model.kind !== 'fusion' && model.pearls !== null) {
-    rank.setAttribute('role', 'img');
-    rank.setAttribute('aria-label', model.pearls.label);
-    rank.append(pearlRow(model.pearls));
-  }
-  rank.append(
-    el(
-      'span',
-      'ui-card__rank-text',
-      model.kind === 'fusion' ? t('Remplace {weapon}', { weapon: model.replaces }) : model.rank,
-    ),
-  );
   const foot = el('span', 'ui-card__foot');
-  foot.append(rank, el('span', 'ui-card__cta', t('Choisir')));
-  button.append(
-    icon('ui-card__medal', medallion(glyph), '0 0 84 84'),
-    familyRow,
-    el('span', 'ui-card__name', model.name),
+  foot.append(
+    model.kind === 'weapon' ? path(model) : rankOf(model),
+    el('span', 'ui-card__cta', t('Choisir')),
   );
+  const head = el('span', 'ui-card__head');
+  if (model.kind !== 'upgrade') {
+    head.append(el('canvas', 'ui-card__scene'));
+  }
+  head.append(icon('ui-card__medal', medallion(glyph), '0 0 84 84'));
+  button.append(head, familyRow, el('span', 'ui-card__name', model.name));
+  if (model.kind === 'weapon' && model.roles.length > 0) {
+    button.append(roles(model));
+  }
   if (model.kind === 'fusion') {
     button.append(el('span', 'ui-card__recipe', t('B2B : {recipe}', { recipe: model.recipe })));
   }
   button.append(el('span', 'ui-card__desc', model.description));
   if (model.kind === 'weapon') {
-    button.append(strip(model));
+    const line = fusionLine(model.fusions);
+    if (line !== null) {
+      button.append(line);
+    }
   }
   button.append(foot);
+  // Last, so that a layout with the head beside the title can set it back above the foot.
+  if (model.kind === 'weapon') {
+    button.append(strip(model));
+  }
   return button;
+}
+
+function place(model: WeaponPlace): HTMLElement {
+  const node = el('span', 'ui-places__place');
+  node.dataset.state = model.state;
+  setFlag(node, 'lit', model.lit);
+  const ring = el('span', 'ui-places__ring');
+  if (model.weapon !== null) {
+    ring.append(icon('ui-places__icon', weaponIcon(model.weapon.effect)));
+  }
+  node.append(ring, el('span', 'ui-places__label', model.label));
+  return node;
 }
 
 function centerOf(node: Element): { x: number; y: number } {
@@ -260,8 +375,11 @@ interface Panel {
     offer: UpgradeOffer | undefined,
     player: PlayerState | undefined,
     content: GameContent,
+    slots: number,
     snapshot: InputSnapshot,
     team: boolean,
+    // The only offer of this screen: its cards are large enough to play their weapons.
+    alone: boolean,
     now: number,
     beatMs: number,
   ): void;
@@ -274,9 +392,13 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   const who = createWho();
   const kicker = el('p', 'ui-kicker');
   const heading = el('h2', 'ui-heading', t('Choisis ton amélioration'));
+  // The places for circus weapons, when the offer has one: what is held, what stays free.
+  const places = el('div', 'ui-places');
+  places.setAttribute('role', 'img');
+  places.hidden = true;
   const cards = el('div', 'ui-cards');
   const hint = el('p', 'ui-hint');
-  element.append(who, kicker, heading, cards, hint);
+  element.append(who, kicker, heading, places, cards, hint);
 
   const input = createMenuInput();
   let current: UpgradeOffer | null = null;
@@ -289,6 +411,9 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   let beatMs = 0;
   let team = false;
   let clock = 0;
+  let shownPlaces = '';
+  let playing = -1;
+  let stops: (() => void)[] = [];
 
   const menu: Menu = createMenu((index) => {
     const upgradeId = current?.options[index];
@@ -374,6 +499,79 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     );
   }
 
+  function stopScenes(): void {
+    for (const stop of stops) {
+      stop();
+    }
+    stops = [];
+  }
+
+  function startScenes(): void {
+    stopScenes();
+    for (const button of buttons) {
+      const canvas = button.querySelector('canvas');
+      const id = button.dataset.id;
+      const stop =
+        canvas === null || id === undefined ? null : host.showWeapon(canvas, id, playerId);
+      if (stop !== null) {
+        stops.push(stop);
+        button.querySelector<HTMLElement>('.ui-card__head')?.setAttribute('data-live', '');
+      }
+    }
+  }
+
+  // The sixteenth note the set plays now walks through the strip of each weapon card; a step the
+  // weapon fires on lights up when the bar is one it plays.
+  function play(): void {
+    const sixteenth = beatMs / 4;
+    const at = host.calm() || sixteenth <= 0 ? -1 : Math.floor(clock / sixteenth);
+    if (at === playing) {
+      return;
+    }
+    playing = at;
+    const step = at < 0 ? -1 : at % SIXTEENTHS_PER_BAR;
+    const bar = Math.floor(at / SIXTEENTHS_PER_BAR);
+    models.forEach((model, index) => {
+      const cells = buttons[index]?.querySelectorAll<HTMLElement>('.ui-card__step');
+      if (model.kind !== 'weapon' || cells === undefined) {
+        return;
+      }
+      const fires = bar % model.everyBars === 0;
+      cells.forEach((cell, position) => {
+        setFlag(cell, 'now', position === step);
+        setFlag(cell, 'hit', position === step && fires && cell.dataset.on === 'true');
+      });
+    });
+  }
+
+  // A touch takes the card it touches: nothing is focused there, so no place waits for it.
+  function fillPlaces(
+    player: PlayerState | undefined,
+    content: GameContent,
+    slots: number,
+    focused: Card | undefined,
+  ): void {
+    const shows = models.some((model) => model.kind !== 'upgrade');
+    places.hidden = !shows;
+    setFlag(element, 'places', shows);
+    if (!shows) {
+      return;
+    }
+    const views = weaponPlaces(player, content, slots, focused);
+    const key = views
+      .map((view) => `${view.state}:${view.weapon?.id ?? ''}:${String(view.lit)}`)
+      .join(',');
+    if (key === shownPlaces) {
+      return;
+    }
+    shownPlaces = key;
+    places.setAttribute(
+      'aria-label',
+      t('Tes agrès : {places}', { places: views.map((view) => view.label).join(', ') }),
+    );
+    places.replaceChildren(...views.map(place));
+  }
+
   function celebrate(button: HTMLElement, rarity: Celebrated): void {
     host.cue(rarity === 'legendary' ? 'cardLegendary' : 'cardRare', 0);
     if (host.calm()) {
@@ -420,6 +618,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   }
 
   function reset(): void {
+    stopScenes();
     current = null;
     chosen = null;
     later = [];
@@ -445,7 +644,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         ? null
         : { button, weaponId: model.kind === 'upgrade' ? null : model.id };
     },
-    update(offer, player, content, snapshot, inTeam, now, beat) {
+    update(offer, player, content, slots, snapshot, inTeam, alone, now, beat) {
       clock = now;
       beatMs = beat;
       team = inTeam;
@@ -461,6 +660,8 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       if (offer !== current) {
         current = offer;
         chosen = null;
+        shownPlaces = '';
+        playing = -1;
         input.open();
         setText(kicker, offerKicker(offer, player));
         models = offer.options.map((id) => cardFor(id, offer, player, content));
@@ -469,6 +670,9 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         cards.dataset.offer = offer.kind ?? 'levelUp';
         setText(heading, offerHeading(offer));
         cards.replaceChildren(...buttons);
+        if (alone) {
+          startScenes();
+        }
         deal();
         mark();
       }
@@ -481,6 +685,9 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       if (chosen === null && now >= opensAt) {
         menu.handle(edges);
       }
+      play();
+      const focusing = snapshot.device !== 'touch' && chosen === null && now >= opensAt;
+      fillPlaces(player, content, slots, focusing ? models[menu.index] : undefined);
     },
     reset,
   };
@@ -648,7 +855,9 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
     effects,
     update(state, frame, content, now) {
       sounded.clear();
-      const beatMs = beatPeriodMs(setTempo(setOf(content, state.setId)).bpm);
+      const set = setOf(content, state.setId);
+      const beatMs = beatPeriodMs(setTempo(set).bpm);
+      const slots = weaponSlotCount(set);
       const beat = `${beatMs.toFixed(1)}ms`;
       setVar(element, '--beat', beat);
       setVar(effects, '--beat', beat);
@@ -679,8 +888,10 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
             offers.find((offer) => offer.playerId === local.playerId),
             state.players.find((player) => player.id === local.playerId),
             content,
+            slots,
             local.snapshot,
             team,
+            locals.length === 1,
             now,
             beatMs,
           );

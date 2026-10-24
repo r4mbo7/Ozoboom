@@ -21,6 +21,7 @@ export const FULL_TEASERS: readonly TeaserDefinition[] = [
   { kind: 'class', name: 'Le Kiffeur', color: '#f5e663' },
   { kind: 'class', name: 'Le Super fan', color: '#c77dff' },
   { kind: 'class', name: 'L’Enraciné', color: '#8fd16a' },
+  { kind: 'class', name: 'Le Veilleur aux lucioles', color: '#4fc6a0' },
   { kind: 'class', name: 'Le Jongleur', color: '#f7c948' },
   { kind: 'stage', name: 'Le Dome', style: 'Downtempo, dub', color: '#d9a441' },
   { kind: 'stage', name: 'Ambyss', style: 'Psychill, ambient', color: '#3fd0c9' },

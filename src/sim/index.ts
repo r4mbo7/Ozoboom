@@ -41,6 +41,7 @@ import { weapons } from './systems/weapons';
 import type { StepContext, System } from './systems/types';
 import { gusts } from './gusts';
 import { puddles } from './puddles';
+import { rings } from './rings';
 import { walls } from './walls';
 import { zones } from './zones';
 
@@ -95,6 +96,7 @@ const RUNNING: readonly System[] = [
   enemyAttacks,
   enemyStatuses,
   bombs,
+  rings,
   deaths,
   gauges,
   pickups,

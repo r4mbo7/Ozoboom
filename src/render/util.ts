@@ -29,6 +29,13 @@ export function add(parent: Container, shape: Shape, anchorX = 0.5): Sprite {
   return sprite;
 }
 
+// Moves a sprite under `parent` if it is not there yet: a pooled sprite follows what it shows.
+export function keepIn(parent: Container, sprite: Sprite): void {
+  if (sprite.parent !== parent) {
+    parent.addChild(sprite);
+  }
+}
+
 export function hide(...sprites: Sprite[]): void {
   for (const sprite of sprites) {
     sprite.visible = false;

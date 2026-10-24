@@ -1,6 +1,10 @@
 import { type Container, Sprite, Texture } from 'pixi.js';
 import { SHADE_DEEP, TAU, WHITE, circle, paint, polygon, type Shape } from './paint';
+import type { Particles } from './effects';
+import type { Frame } from './frame';
 import { setTint } from './util';
+
+const SPLINTER_BEATS = 0.7;
 
 export interface BossDecor {
   // A soft black disc: squashed into the shadow a boss casts.
@@ -132,5 +136,36 @@ export function createDim(
 export function destroyBossDecor(decor: BossDecor): void {
   for (const shape of [decor.shadow, decor.splinter, decor.relic, decor.flower, decor.ring]) {
     shape.texture.destroy(true);
+  }
+}
+
+// Dark splinters with a pale edge, fanning out from `angle` and falling.
+export function splinter(
+  splinters: Particles,
+  at: { x: number; y: number },
+  angle: number,
+  spread: number,
+  reach: number,
+  count: number,
+  frame: Frame,
+  seed: number,
+): void {
+  for (let index = 0; index < count; index += 1) {
+    const turn = angle + (((seed * 0.618 + index * 0.37) % 1) - 0.5) * spread;
+    const far = reach * (0.5 + ((seed + index * 7) % 5) * 0.25);
+    splinters.spawn({
+      now: frame.now,
+      duration: SPLINTER_BEATS * frame.tempo.ticksPerBeat,
+      x: at.x,
+      y: at.y,
+      dx: Math.cos(turn) * far,
+      dy: Math.sin(turn) * far + reach * 0.5,
+      fromRadius: 5 + (index % 3) * 1.5,
+      toRadius: 3.5,
+      tint: frame.palette.badVibeRim,
+      peak: 1,
+      rotation: turn,
+      spin: (index % 2 === 0 ? 1 : -1) * 5,
+    });
   }
 }

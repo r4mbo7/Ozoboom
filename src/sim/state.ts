@@ -127,8 +127,9 @@ export interface PlayerState extends Positioned {
   dashBeats?: number;
   // The move of each tick of a dash under way, and its ticks left; absent outside a dash.
   dash?: { dx: number; dy: number; ticksLeft: number };
-  // A light offering held in a trap hand, alone at a stage with a fire or giants; absent otherwise.
-  offering?: true;
+  // A light offering held in a trap hand, alone at a stage with a fire or giants: the source of the
+  // stage it was taken from; absent otherwise.
+  offering?: number;
   // The end of a heavy offering this player holds; absent otherwise.
   carrying?: { logId: EntityId; end: 0 | 1 };
 }
@@ -202,6 +203,20 @@ export interface EnemyState extends Positioned {
   // Larsen: the hits it takes at `damageMul` while its window is shut; its special opens it on the
   // one and the three of every bar.
   armor?: { damageMul: number; open: boolean };
+  // Pogo: the heading of his ring, a unit vector turned a notch every tick.
+  ring?: { x: number; y: number };
+  // A member of the ring of boss `id`, at place `slot` of it, `orbit` pixels from him.
+  ringOf?: { id: EntityId; slot: number; orbit: number };
+  // Moustiques: the target where a player stood, with the trail flying to it, from its start to
+  // its return; `gorged` once it stung someone. Absent between two.
+  sting?: {
+    x: number;
+    y: number;
+    startTick: number;
+    landTick: number;
+    endTick: number;
+    gorged?: true;
+  };
 }
 
 export type ProjectileOwner =
@@ -457,6 +472,8 @@ export type SimEvent =
   | { type: 'phrase'; phrase: number }
   // The gust of the Coup de vent begins to blow toward (x, y), a unit vector.
   | { type: 'gust'; x: number; y: number }
+  // The trail of the Moustiques stings a player standing in its target.
+  | { type: 'stung'; playerId: PlayerId; x: number; y: number }
   | { type: 'segment'; segment: SetSegment; tier: number }
   | { type: 'enemySpawned'; id: EntityId; kind: string; x: number; y: number }
   | {

@@ -26,13 +26,16 @@ export function projectiles({ state, set, content, enemyGrid }: StepContext): vo
     } else if (projectile.returning !== true && projectile.arc === undefined) {
       spent = hitEnemies(state, enemyGrid, projectile, markedMul);
     }
+    const held = turnsAround(projectile, content);
     const blocked =
       !spent &&
       projectile.arc === undefined &&
       projectile.returning !== true &&
+      !held &&
       touchesObstacle(projectile, obstacles);
     const inArena =
-      projectile.x >= 0 && projectile.x <= width && projectile.y >= 0 && projectile.y <= height;
+      held ||
+      (projectile.x >= 0 && projectile.x <= width && projectile.y >= 0 && projectile.y <= height);
     if (!spent && (blocked || projectile.ticksLeft <= 0 || !inArena)) {
       spent = !endOfFlight(state, enemyGrid, projectile, markedMul);
     }
@@ -42,6 +45,13 @@ export function projectiles({ state, set, content, enemyGrid }: StepContext): vo
     }
   }
   state.projectiles.length = kept;
+}
+
+// A body that turns around its player passes over the obstacles and past the edge of the arena,
+// as it is held, not thrown.
+function turnsAround(projectile: ProjectileState, content: StepContext['content']): boolean {
+  const { owner } = projectile;
+  return owner.kind === 'weapon' && content.weapons.get(owner.weaponId)?.effect.kind === 'orbit';
 }
 
 // A lobbed projectile lands, a frisbee turns back; anything else is done. Returns whether the

@@ -10,7 +10,7 @@ import { frontGlintOf, glintAlpha, glintStart, placeGlint } from './front-glint'
 import { type Frame, createFrame } from './frame';
 import { blinkLit, lerp } from './motion';
 import type { PixiPalette } from './palette';
-import { add, byId, hide, setTint } from './util';
+import { add, byId, hide, keepIn, setTint } from './util';
 import { ViewPool } from './views';
 import { mixColor } from './weapon-kit';
 
@@ -196,6 +196,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         const down = (enemy.downTicks ?? 0) > 0;
         const asleep = !down && enemy.stunTicks > 0;
         const { sprite } = view;
+        keepIn(mask.face.flies === true ? bosses.flying.masks : bodies, sprite);
         const frames = mask.awake.length;
         const stagger = enemy.isBoss ? 0 : enemy.id;
         const loop = mask.face.loopBeats * frame.tempo.ticksPerBeat;

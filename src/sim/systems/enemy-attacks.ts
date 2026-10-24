@@ -24,7 +24,7 @@ export function enemyAttacks({ state, content }: StepContext): void {
     const definition = lookup(content.enemies, enemy.kind, 'enemy');
     const attacked =
       definition.ranged === undefined
-        ? strike(state, enemy)
+        ? strike(state, enemy, definition.passable === true)
         : shoot(state, enemy, definition.ranged);
     if (attacked) {
       enemy.attackCooldown = definition.attackCooldownTicks * strikeCooldownMul(enemy);
@@ -32,7 +32,7 @@ export function enemyAttacks({ state, content }: StepContext): void {
   }
 }
 
-function strike(state: SimState, enemy: EnemyState): boolean {
+function strike(state: SimState, enemy: EnemyState, passable: boolean): boolean {
   if (enemy.target === 'core') {
     if (!inContact(enemy, state.core)) {
       return false;
@@ -41,7 +41,7 @@ function strike(state: SimState, enemy: EnemyState): boolean {
     return true;
   }
   const player = playerById(state, enemy.target);
-  if (player === undefined || player.downed || !inContact(enemy, player)) {
+  if (passable || player === undefined || player.downed || !inContact(enemy, player)) {
     return false;
   }
   damagePlayer(state, player, enemy.damage);

@@ -11,6 +11,7 @@ import {
 } from '../enemy-status';
 import { flowWaypoint } from '../flow-field';
 import { lineBlocked, resolveObstacles } from '../obstacles';
+import { ringTarget } from '../rings';
 import type { Circle } from '../spatial-hash';
 import { STEERING_TARGETS } from '../specials';
 import type { SteeringOverride } from '../specials/types';
@@ -72,7 +73,7 @@ export function enemySteering(ctx: StepContext): void {
       moveX = distance === 0 ? 0 : (dx / distance) * advance;
       moveY = distance === 0 ? 0 : (dy / distance) * advance;
     }
-    if (definition.behaviour === 'horde' || disoriented) {
+    if ((definition.behaviour === 'horde' && enemy.ringOf === undefined) || disoriented) {
       separate(state, enemyGrid, enemy);
       moveX += separation.x * speed * SEPARATION_WEIGHT;
       moveY += separation.y * speed * SEPARATION_WEIGHT;
@@ -94,6 +95,10 @@ function steeringOverride(
   enemy: EnemyState,
   definition: EnemyDefinition,
 ): SteeringOverride | undefined {
+  const ring = ringTarget(ctx.state, enemy);
+  if (ring !== undefined) {
+    return ring;
+  }
   const { special } = definition;
   return special === undefined ? undefined : STEERING_TARGETS[special.kind]?.(ctx, enemy, special);
 }
@@ -106,6 +111,11 @@ export function targetOf(state: SimState, enemy: EnemyState): Circle {
 }
 
 function chooseTarget(state: SimState, enemy: EnemyState, definition: EnemyDefinition): void {
+  // Players pass through it and it strikes none: it keeps on to the stage.
+  if (definition.passable === true) {
+    enemy.target = 'core';
+    return;
+  }
   if (enemy.target !== 'core') {
     const chased = playerById(state, enemy.target);
     const leash = definition.aggroRadius * LEASH_IN_AGGRO_RADII;

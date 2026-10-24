@@ -11,6 +11,8 @@ import {
 import { FULL_FACES } from './full';
 import { bavard, fatigue, filmeur, neutral, zombie } from './faces-2';
 import { batterieAPlat, batterieAPlatGlad, couvreFeu, couvreFeuGlad } from './faces-bosses';
+import { POGO_FACE } from './pogo-face';
+import { COUP_DE_VENT_FACE } from './vent-face';
 
 export { FACE_RADIUS, NEUTRAL, cracks, type Face, type Pose } from './face-kit';
 export { drowsyZ, recruit, smile } from './faces-2';
@@ -54,6 +56,8 @@ export const FACES: Readonly<Record<string, Face>> = {
     loopBeats: 4,
     boss: true,
   },
+  'coup-de-vent': COUP_DE_VENT_FACE,
+  pogo: POGO_FACE,
   ...FULL_FACES,
 };
 

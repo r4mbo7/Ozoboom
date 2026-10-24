@@ -178,7 +178,7 @@ export function trapToTake(
   handSize: number,
 ): string | null {
   const under = trapAt(definitions, state.traps, player);
-  const held = (player.hand?.length ?? 0) + (player.offering === true ? 1 : 0);
+  const held = (player.hand?.length ?? 0) + (player.offering === undefined ? 0 : 1);
   return under === undefined || held >= handSize ? null : under.kind;
 }
 
@@ -195,7 +195,7 @@ export function handTiles(
     state.traps.length < capacity && trapAt(definitions, state.traps, player) === undefined;
   const traps = player.hand?.length ?? 0;
   return Array.from({ length: handSize }, (_, index) => {
-    if (index === traps && player.offering === true) {
+    if (index === traps && player.offering !== undefined) {
       return { trapId: null, available: false, offering: true };
     }
     const trapId = player.hand?.[index] ?? null;

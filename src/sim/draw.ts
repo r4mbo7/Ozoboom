@@ -11,6 +11,8 @@ import type { ResolvedContent } from './content';
 import type { PlayerState, RngState, SimState, UpgradeOffer } from './state';
 
 export const OFFER_SIZE = 3;
+// Circus weapons in one offer, fusions included: the rest of it are upgrades.
+export const MAX_WEAPONS_PER_OFFER = 2;
 export const DEFAULT_WEAPON_SLOTS = 3;
 const AFFINITY_WEIGHT = 2;
 const FUSION_WEIGHT = 3;
@@ -18,6 +20,7 @@ const FUSION_WEIGHT = 3;
 interface Candidate {
   id: string;
   weight: number;
+  weapon?: true;
 }
 
 export function isEligible(upgrade: UpgradeDefinition, player: PlayerState): boolean {
@@ -138,10 +141,10 @@ function candidates(
       continue;
     }
     if (openFusion(weapon, player, state, content) !== undefined) {
-      pool.push({ id: weapon.id, weight: FUSION_WEIGHT });
+      pool.push({ id: weapon.id, weight: FUSION_WEIGHT, weapon: true });
     } else if (isWeaponOffered(weapon, player, state, set)) {
       const weight = hasAffinity(content, weapon, player.classId) ? AFFINITY_WEIGHT : 1;
-      pool.push({ id: weapon.id, weight });
+      pool.push({ id: weapon.id, weight, weapon: true });
     }
   }
   return pool;
@@ -162,6 +165,7 @@ export function drawOffer(
   let total = pool.reduce((sum, candidate) => sum + candidate.weight, 0);
   const options: string[] = [];
   const rarities: Rarity[] = [];
+  let weapons = 0;
   while (options.length < OFFER_SIZE && pool.length > 0) {
     let roll = nextInt(rng, total);
     let index = 0;
@@ -178,6 +182,14 @@ export function drawOffer(
           : drawRarity(rng, weights),
       );
       total -= picked.weight;
+      weapons += picked.weapon === true ? 1 : 0;
+      if (picked.weapon === true && weapons === MAX_WEAPONS_PER_OFFER) {
+        total -= pool.reduce(
+          (sum, candidate) => sum + (candidate.weapon ? candidate.weight : 0),
+          0,
+        );
+        pool.splice(0, pool.length, ...pool.filter((candidate) => candidate.weapon !== true));
+      }
     }
   }
   return { options, rarities };

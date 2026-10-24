@@ -4,6 +4,8 @@ import { babble } from './babble';
 import { cling, clingSteering } from './cling';
 import { dazzle } from './dazzle';
 import { frontGuard } from './front-guard';
+import { gust } from './gust';
+import { moshRing } from './mosh-ring';
 import { revive } from './revive';
 import { shove } from './shove';
 import { bottle } from './bottle';
@@ -23,6 +25,8 @@ export const SPECIALS: Record<SpecialEffect['kind'], SpecialModule> = {
   dazzle,
   babble,
   frontGuard,
+  gust,
+  moshRing,
   ...FULL_SPECIALS,
 };
 

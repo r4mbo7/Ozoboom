@@ -192,6 +192,8 @@ export function createUi(
       callbacks.onUpgradeCue?.(cue, variant);
     },
     landing: (playerId, weaponId) => hud.landing(playerId, weaponId),
+    showWeapon: (canvas, weaponId, playerId) =>
+      callbacks.onShowWeapon?.(canvas, weaponId, playerId) ?? null,
   });
   const end = createEnd(
     () => {

@@ -40,6 +40,8 @@ export interface Face {
   // A boss chased: its silhouette is filled bright, white at heart, in the color of whoever chased
   // it, and wears this smile in ink; `gladFace` without it.
   readonly glad?: (ctx: Ctx) => void;
+  // A mask that flies is drawn over the stage, its shadow still on the ground (`layers.sky`).
+  readonly flies?: boolean;
 }
 
 export function wave(pose: Pose, turns = 1, shift = 0): number {

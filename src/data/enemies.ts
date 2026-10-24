@@ -1,5 +1,7 @@
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
+import { COUP_DE_VENT } from './coup-de-vent';
 import { FULL_ENEMIES } from './full';
+import { POGO } from './pogo';
 import type { EnemyDefinition } from './types';
 
 const GROWING = { hp: 1.1, speed: 1.02 };
@@ -202,5 +204,7 @@ export const ENEMIES: readonly EnemyDefinition[] = [
     vibesDrop: 60,
     scalingPerPhrase: FIXED,
   },
+  COUP_DE_VENT,
+  POGO,
   ...FULL_ENEMIES,
 ];
