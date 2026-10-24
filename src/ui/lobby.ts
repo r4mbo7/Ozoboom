@@ -43,7 +43,6 @@ import type { ClassPortrait, CreatePortrait, LobbyModel, LobbySeat, Night, UiFra
 
 export interface LobbyActions {
   joinSeat(device: DeviceId): void;
-  goOnline?(): void;
   leaveSeat(playerId: PlayerId): void;
   seatClass(playerId: PlayerId, classId: string): void;
   seatName(playerId: PlayerId, name: string): void;
@@ -239,7 +238,6 @@ export function createLobby(
       actions.chooseNight(night);
     }
   });
-  const onlineButton = button(t('Jouer en ligne'));
   const launchButton = button('', 'ui-button ui-button--primary ui-launch');
   const launchText = el('span', 'ui-launch__label');
   const launchMore = el('span', 'ui-launch__detail');
@@ -248,7 +246,7 @@ export function createLobby(
   waiting.setAttribute('role', 'status');
   const leaveButton = button(t('Retour au titre'));
   const footer = el('div', 'ui-lobby__actions');
-  footer.append(launchButton, waiting, onlineButton, leaveButton);
+  footer.append(launchButton, waiting, leaveButton);
   const hint = el('p', 'ui-hint');
 
   const body = el('div', 'ui-lobby__body');
@@ -325,9 +323,6 @@ export function createLobby(
   onPointerClick(joinButton, joinNow);
   onPointerClick(copyButton, copyNow);
   onPointerClick(launchButton, launchNow);
-  onPointerClick(onlineButton, () => {
-    actions.goOnline?.();
-  });
   onPointerClick(leaveButton, () => {
     actions.leave();
   });
@@ -391,8 +386,6 @@ export function createLobby(
         return stageCards.element;
       case 'launch':
         return launchButton;
-      case 'online':
-        return onlineButton;
       case 'leave':
         return leaveButton;
     }
@@ -422,7 +415,6 @@ export function createLobby(
       copyButton,
       stageCards.element,
       launchButton,
-      onlineButton,
       leaveButton,
       ...cards.flatMap((card) => [card.field, card.stepper.element]),
     ];
@@ -510,9 +502,6 @@ export function createLobby(
       case 'launch':
         launchNow();
         break;
-      case 'online':
-        actions.goOnline?.();
-        break;
       case 'leave':
         actions.leave();
         break;
@@ -574,9 +563,7 @@ export function createLobby(
   }
 
   function rowsOfSeat(seat: LobbySeat): readonly Row[] {
-    return seatRows(seat, model).filter(
-      (row) => row !== 'online' || actions.goOnline !== undefined,
-    );
+    return seatRows(seat, model);
   }
 
   function updateLocal(frame: UiFrame, edges: MenuIntents): void {
@@ -778,7 +765,6 @@ export function createLobby(
     setText(launchText, launchLabel(night));
     setText(launchMore, launchDetail(night, stages, model.stageId ?? ''));
     launchButton.hidden = guest || view === 'entry';
-    onlineButton.hidden = view !== 'local' || actions.goOnline === undefined;
     launchButton.setAttribute('aria-disabled', String(!model.canLaunch));
     waiting.hidden = !guest;
     setText(leaveButton, view === 'room' ? t('Quitter le salon') : t('Retour au titre'));

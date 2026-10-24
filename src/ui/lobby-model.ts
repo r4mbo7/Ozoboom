@@ -83,17 +83,7 @@ export function deviceLabel(device: DeviceId | null): string {
 }
 
 export type Row =
-  | 'create'
-  | 'discord'
-  | 'code'
-  | 'join'
-  | 'copy'
-  | 'name'
-  | 'class'
-  | 'stage'
-  | 'launch'
-  | 'online'
-  | 'leave';
+  'create' | 'discord' | 'code' | 'join' | 'copy' | 'name' | 'class' | 'stage' | 'launch' | 'leave';
 
 export function stageCards(sets: readonly SetDefinition[]): StageCard[] {
   return sets.map((set) => ({
@@ -138,9 +128,7 @@ export function seatRows(seat: LobbySeat, model: LobbyModel): readonly Row[] {
   if (!seat.host) {
     return ['name', 'class'];
   }
-  return hasStageChoice(model)
-    ? ['name', 'class', 'stage', 'launch', 'online']
-    : ['name', 'class', 'launch', 'online'];
+  return hasStageChoice(model) ? ['name', 'class', 'stage', 'launch'] : ['name', 'class', 'launch'];
 }
 
 export interface RowStep {

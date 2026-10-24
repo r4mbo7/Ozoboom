@@ -123,7 +123,9 @@ export interface UiCallbacks {
   onToggleAutoAim(enabled: boolean): void;
   // The game reloads in it (ADR 0017).
   onChooseLocale(locale: Locale): void;
+  // The local lobby, then the online one, from the title.
   onPlayTogether(): void;
+  onPlayOnline(): void;
   // Picks a class, in the class picker.
   onChooseClass(classId: string): void;
   // Solo: validates the picked class.
@@ -133,8 +135,6 @@ export interface UiCallbacks {
   onLeaveSeat(playerId: PlayerId): void;
   onSeatClass(playerId: PlayerId, classId: string): void;
   onSeatName(playerId: PlayerId, name: string): void;
-  // Only shows « Jouer en ligne » in the local lobby when set.
-  onGoOnline?(): void;
   onCreateRoom(): void;
   onJoinRoom(code: string): void;
   // Picks a scene, in the picker or in the lobby.

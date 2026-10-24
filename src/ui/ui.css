@@ -656,6 +656,17 @@ svg.ui-title__sun {
   width: min(100%, 440px);
 }
 
+/* Two ways to play together share a row; the gap holds the chevron of the second. */
+.ui-menu__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ui-chevron);
+}
+
+.ui-menu__pair .ui-button {
+  padding-inline: 18px 16px;
+}
+
 .ui-controls {
   width: min(100%, 640px);
 }
@@ -931,6 +942,58 @@ svg.ui-title__sun {
 .ui-classcard__name {
   min-width: 0;
   line-height: 1.15;
+}
+
+/* The chosen card under the pointer says what clicking it again does. */
+.ui-go {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--sol) 94%, transparent);
+  color: var(--texte);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+[aria-checked='true']:hover > .ui-go {
+  display: flex;
+}
+
+.ui-go__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: var(--turquoise);
+  color: var(--sol);
+}
+
+.ui-go__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Over a scene, only its picture: the name and the chips stay readable. */
+.ui-stage .ui-go {
+  inset: 10px 10px auto;
+  aspect-ratio: 16 / 9;
+  border-radius: calc(var(--ui-radius) - 6px);
+  background: color-mix(in srgb, var(--sol) 72%, transparent);
+  font-size: 15px;
 }
 
 /* More classes than one row holds: a grid of small cards under a shorter stage. */
@@ -1529,6 +1592,48 @@ svg.ui-title__sun {
   .ui-lobby__actions .ui-button,
   .ui-lobby__actions .ui-button:not(.ui-button--primary) {
     width: calc(100% - 2 * var(--ui-chevron));
+  }
+}
+
+/* The lobby scrolls under its buttons: « Lancer le set » stays in sight. */
+.ui-lobby {
+  scroll-padding-bottom: 120px;
+}
+
+.ui-lobby .ui-lobby__actions:has(> .ui-launch:not([hidden])) {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  align-self: stretch;
+  margin-inline: calc(-1 * var(--ui-gap));
+  padding: 28px var(--ui-gap) 14px;
+}
+
+.ui-lobby .ui-lobby__actions:has(> .ui-launch:not([hidden]))::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(transparent, var(--sol) 32px);
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .ui-lobby .ui-lobby__actions {
+    flex-wrap: nowrap;
+    gap: calc(2 * var(--ui-chevron));
+    padding: 20px calc(var(--ui-gap) + var(--ui-chevron)) 10px;
+  }
+
+  .ui-lobby .ui-lobby__actions .ui-button,
+  .ui-lobby .ui-lobby__actions .ui-button:not(.ui-button--primary) {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .ui-lobby .ui-lobby__actions .ui-button--primary {
+    flex-grow: 1.6;
   }
 }
 
@@ -3101,6 +3206,11 @@ svg.ui-title__sun {
   white-space: nowrap;
 }
 
+/* Everything under the head, laid out as the card's own children but on a phone held sideways. */
+.ui-card__body {
+  display: contents;
+}
+
 .ui-card__head {
   display: grid;
   flex: none;
@@ -3781,7 +3891,7 @@ svg.ui-title__sun {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  width: 76px;
+  min-width: 76px;
 }
 
 .ui-places__ring {
@@ -3819,9 +3929,10 @@ svg.ui-title__sun {
   animation: ui-place-ghost calc(var(--beat) * 2) ease-in-out infinite;
 }
 
+/* A name stays on one line, its place growing for it: two lines would push the places over the cards. */
 .ui-places__label {
-  max-width: 100%;
   color: var(--ui-muted);
+  white-space: nowrap;
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.15;
@@ -4744,7 +4855,7 @@ svg.ui-title__sun {
     height: 44px;
   }
 
-  .ui-card > :nth-child(n + 4) {
+  :is(.ui-card__body > :nth-child(n + 3), .ui-card__steps) {
     grid-column: 1 / -1;
   }
 
@@ -4772,7 +4883,7 @@ svg.ui-title__sun {
     content: none;
   }
 
-  .ui-card > .ui-card__roles {
+  .ui-card__body > .ui-card__roles {
     grid-column: 2;
   }
 
@@ -4864,8 +4975,7 @@ svg.ui-title__sun {
 
   .ui-offers__panels:not([data-multi])
     .ui-cards:not([data-count='5'], [data-count='6'])
-    .ui-card
-    > :nth-child(n + 4) {
+    :is(.ui-card__body > :nth-child(n + 3), .ui-card__steps) {
     grid-column: 1 / -1;
   }
 
@@ -4898,7 +5008,7 @@ svg.ui-title__sun {
 
   .ui-offers__panels:not([data-multi])
     .ui-cards:not([data-count='5'], [data-count='6'])
-    .ui-card
+    .ui-card__body
     > .ui-card__roles {
     grid-column: 2;
   }
@@ -4938,7 +5048,8 @@ svg.ui-title__sun {
     height: calc(60 * var(--card-unit));
   }
 
-  .ui-cards:is([data-count='5'], [data-count='6']) .ui-card > :nth-child(n + 4) {
+  .ui-cards:is([data-count='5'], [data-count='6'])
+    :is(.ui-card__body > :nth-child(n + 3), .ui-card__steps) {
     grid-column: 1 / -1;
   }
 
@@ -4980,7 +5091,7 @@ svg.ui-title__sun {
   }
 
   .ui-places__place {
-    width: 60px;
+    min-width: 60px;
     gap: 2px;
   }
 
@@ -5048,7 +5159,20 @@ svg.ui-title__sun {
     display: none;
   }
 
-  /* A phone held sideways: the title of an offer goes to the left, the cards get the height. */
+  /* A phone held sideways: the offer of one player takes the whole height, its title at the top
+     left beside the places, its hint at the bottom, and its cards all the height between them. */
+  .ui-upgrade {
+    align-items: stretch;
+  }
+
+  .ui-offers {
+    justify-content: center;
+  }
+
+  .ui-offers__panels:not([data-multi]) {
+    flex: 1;
+  }
+
   .ui-offer > :is(.ui-kicker, .ui-heading) {
     align-self: stretch;
     padding-inline: 12px;
@@ -5081,6 +5205,62 @@ svg.ui-title__sun {
     width: 100%;
     margin: 8px 0;
     justify-content: center;
+  }
+
+  /* The heads of the cards share one row, as tall as their bodies leave. */
+  .ui-offers__panels:not([data-multi]) .ui-cards:not([data-count='5'], [data-count='6']) {
+    flex: 1 1 0;
+    grid-template-rows: minmax(48px, 1fr) auto;
+    min-height: 0;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-cards:not([data-count='5'], [data-count='6']) .ui-card {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .ui-cards:is([data-count='5'], [data-count='6']) {
+    margin-block: auto;
+  }
+
+  .ui-offers__panels:not([data-multi])
+    .ui-cards:not([data-count='5'], [data-count='6'])
+    .ui-card__head {
+    grid-area: 1 / 1;
+    height: auto;
+    container-type: size;
+  }
+
+  .ui-offers__panels:not([data-multi])
+    .ui-cards:not([data-count='5'], [data-count='6'])
+    .ui-card__medal {
+    width: clamp(40px, 46cqh, 116px);
+    height: clamp(40px, 46cqh, 116px);
+  }
+
+  .ui-offers__panels:not([data-multi])
+    .ui-cards:not([data-count='5'], [data-count='6'])
+    .ui-card__body {
+    grid-area: 2 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* The strip lies over the foot of the head, in the same cell. */
+  .ui-offers__panels:not([data-multi])
+    .ui-cards:not([data-count='5'], [data-count='6'])
+    .ui-card__steps {
+    grid-area: 1 / 1;
+    align-self: end;
+    position: relative;
+    z-index: 1;
+    inset: auto;
+    margin: 0 calc(var(--strip-inset) / 2) var(--strip-inset);
   }
 
   .ui-card {

@@ -3,7 +3,7 @@ import { el, fillHint, keycap, setText } from './dom';
 import { formatNumber } from './format';
 import { createActionButton, createControlsButton, createFeedbackButton } from './feedback-button';
 import { openDiscord } from './discord';
-import { DISCORD } from './icons';
+import { DISCORD, GLOBE, PAD } from './icons';
 import { type Menu, createMenu } from './menu';
 import { promptsFor, promptsVersion } from './prompts';
 import { TITLE_AT_REST, type TitleLight, heardFrom, titleLightAt } from './title-light';
@@ -20,6 +20,7 @@ import { locale, t, tn, type Locale } from '../shared/i18n';
 export interface TitleActions {
   start(): void;
   playTogether(): void;
+  playOnline(): void;
   toggleCalmMode(): void;
   toggleMute(): void;
   stepVolume(side: -1 | 1): void;
@@ -141,8 +142,12 @@ export function createTitle(actions: TitleActions): TitleScreen {
 
   const play = el('button', 'ui-button ui-button--primary', t('Jouer'));
   play.type = 'button';
-  const together = el('button', 'ui-button', t('Jouer à plusieurs'));
-  together.type = 'button';
+  const together = createActionButton(t('Même écran'), t('Jusqu’à 4 joueurs'), PAD);
+  const online = createActionButton(t('En ligne'), t('Avec tes amis'), GLOBE);
+  const pair = el('div', 'ui-menu__pair');
+  pair.setAttribute('role', 'group');
+  pair.setAttribute('aria-label', t('Jouer à plusieurs'));
+  pair.append(together, online);
   const calm = createToggle(
     t('Mode calme'),
     t('Sans strobos, secousses ni halos forts'),
@@ -161,6 +166,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
   const items = [
     play,
     together,
+    online,
     calm.button,
     sound.element,
     hitSound.button,
@@ -181,7 +187,7 @@ export function createTitle(actions: TitleActions): TitleScreen {
 
   const nav = el('nav', 'ui-menu');
   nav.setAttribute('aria-label', t('Menu principal'));
-  nav.append(...items);
+  nav.append(play, pair, ...items.slice(items.indexOf(online) + 1));
 
   const controls = el('section', 'ui-panel ui-controls');
   const controlsHead = el('div', 'ui-panel__head');
@@ -213,6 +219,9 @@ export function createTitle(actions: TitleActions): TitleScreen {
     },
     () => {
       actions.playTogether();
+    },
+    () => {
+      actions.playOnline();
     },
     () => {
       actions.toggleCalmMode();

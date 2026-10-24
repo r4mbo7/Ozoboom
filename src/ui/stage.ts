@@ -1,6 +1,7 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
-import { el, fillHint, setText } from './dom';
+import { type GoMark, el, fillHint, goMark, setText } from './dom';
+import { PLAY } from './icons';
 import {
   createNightTabs,
   launchDetail,
@@ -23,6 +24,8 @@ export interface StageCards {
   set(stages: readonly StageCard[], stageId: string, festival?: boolean): void;
   // A guest sees the host's pick and cannot change it.
   setReadonly(readonly: boolean): void;
+  // What clicking the picked card again does, shown over it; null when it does nothing.
+  setGo(label: string | null): void;
 }
 
 // The next scene before or after the picked one, wrapping; null with nothing to choose from.
@@ -38,7 +41,12 @@ export function stepStage(
   );
 }
 
-function card(stage: StageCard, onChoose: (setId: string) => void, readonly: () => boolean) {
+function card(
+  stage: StageCard,
+  onChoose: (setId: string) => void,
+  readonly: () => boolean,
+  go: GoMark | null,
+) {
   const node = el('button', 'ui-stage');
   node.type = 'button';
   node.tabIndex = -1;
@@ -51,6 +59,9 @@ function card(stage: StageCard, onChoose: (setId: string) => void, readonly: () 
   const tag = el('span', 'ui-stage__tag');
   tag.hidden = true;
   node.append(tag, stagePreview(stage.decor), el('span', 'ui-stage__name', t(stage.name)), meta);
+  if (go !== null) {
+    node.append(go.element);
+  }
   node.addEventListener('click', (event) => {
     event.stopPropagation();
     if (!readonly()) {
@@ -68,6 +79,8 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
   let stages: readonly StageCard[] = [];
   let nodes: HTMLButtonElement[] = [];
   let locked = false;
+  let goLabel: string | null = null;
+  let goes: GoMark[] = [];
   const teasers = STAGE_TEASERS.map(stageTeaser);
 
   function same(next: readonly StageCard[]): boolean {
@@ -82,7 +95,18 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
     set(next, stageId, festival = false) {
       if (!same(next)) {
         stages = next;
-        nodes = next.map((stage) => card(stage, onChoose, () => locked));
+        const label = goLabel;
+        goes =
+          label === null
+            ? []
+            : next.map(() => {
+                const go = goMark(PLAY);
+                go.set(label);
+                return go;
+              });
+        nodes = next.map((stage, index) =>
+          card(stage, onChoose, () => locked, goes[index] ?? null),
+        );
         element.replaceChildren(...nodes, ...teasers);
       }
       element.toggleAttribute('data-festival', festival);
@@ -97,6 +121,12 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
           setText(tag, picked ? t('Départ') : t('Ensuite'));
         }
       });
+    },
+    setGo(label) {
+      goLabel = label;
+      for (const go of goes) {
+        go.set(label ?? '');
+      }
     },
     setReadonly(readonly) {
       locked = readonly;
@@ -136,7 +166,11 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
     actions.chooseNight(night);
   });
   const cards = createStageCards(t('Scènes'), (setId) => {
-    actions.choose(setId);
+    if (setId === model.stageId) {
+      actions.confirm();
+    } else {
+      actions.choose(setId);
+    }
   });
   const note = el('p', 'ui-stagepicker__note');
   const launch = el('button', 'ui-button ui-button--primary ui-launch');
@@ -191,6 +225,7 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
       const night = nightOf(next);
       setText(title, stageQuestion(night));
       nights.set(night, nightLength(night, next.stages, next.stageId));
+      cards.setGo(launchLabel(night));
       cards.set(next.stages, next.stageId, night === 'festival');
       setText(note, nightNote(night));
       note.hidden = nightNote(night) === '';

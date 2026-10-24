@@ -57,6 +57,8 @@ export interface UpgradeHost {
 }
 
 const MENU_GRACE_MS = 500;
+// Where ui.css lays a card's head as a tile beside its title, too small to play a weapon.
+const TILE_HEADS = '(max-width: 720px) and (min-height: 521px)';
 // A dealt card sounds when it touches down, not when it leaves.
 const DEAL_NOTE_MS = 70;
 const SLAM_BEATS = 1;
@@ -246,21 +248,23 @@ function card(model: Card): HTMLButtonElement {
     head.append(el('canvas', 'ui-card__scene'));
   }
   head.append(icon('ui-card__medal', medallion(glyph), '0 0 84 84'));
-  button.append(head, familyRow, el('span', 'ui-card__name', model.name));
+  const body = el('span', 'ui-card__body');
+  body.append(familyRow, el('span', 'ui-card__name', model.name));
   if (model.kind === 'weapon' && model.roles.length > 0) {
-    button.append(roles(model));
+    body.append(roles(model));
   }
   if (model.kind === 'fusion') {
-    button.append(el('span', 'ui-card__recipe', t('B2B : {recipe}', { recipe: model.recipe })));
+    body.append(el('span', 'ui-card__recipe', t('B2B : {recipe}', { recipe: model.recipe })));
   }
-  button.append(el('span', 'ui-card__desc', model.description));
+  body.append(el('span', 'ui-card__desc', model.description));
   if (model.kind === 'weapon') {
     const line = fusionLine(model.fusions);
     if (line !== null) {
-      button.append(line);
+      body.append(line);
     }
   }
-  button.append(foot);
+  body.append(foot);
+  button.append(head, body);
   // Last, so that a layout with the head beside the title can set it back above the foot.
   if (model.kind === 'weapon') {
     button.append(strip(model));
@@ -414,6 +418,14 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   let shownPlaces = '';
   let playing = -1;
   let stops: (() => void)[] = [];
+  // The offer plays its weapons wherever the screen leaves them room: a phone turned changes that.
+  let scenes = false;
+  const tiles = window.matchMedia(TILE_HEADS);
+  tiles.addEventListener('change', () => {
+    if (scenes) {
+      startScenes();
+    }
+  });
 
   const menu: Menu = createMenu((index) => {
     const upgradeId = current?.options[index];
@@ -504,10 +516,16 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       stop();
     }
     stops = [];
+    for (const button of buttons) {
+      button.querySelector('.ui-card__head')?.removeAttribute('data-live');
+    }
   }
 
   function startScenes(): void {
     stopScenes();
+    if (tiles.matches) {
+      return;
+    }
     for (const button of buttons) {
       const canvas = button.querySelector('canvas');
       const id = button.dataset.id;
@@ -619,6 +637,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
 
   function reset(): void {
     stopScenes();
+    scenes = false;
     current = null;
     chosen = null;
     later = [];
@@ -670,7 +689,8 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         cards.dataset.offer = offer.kind ?? 'levelUp';
         setText(heading, offerHeading(offer));
         cards.replaceChildren(...buttons);
-        if (alone) {
+        scenes = alone;
+        if (scenes) {
           startScenes();
         }
         deal();

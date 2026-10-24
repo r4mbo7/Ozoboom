@@ -1,6 +1,9 @@
 import type { Arena, Vec2 } from '../sim/state';
 
 export const VIEW_HEIGHT = 720;
+// Screen pixels per world unit at the least: a phone in landscape, 390 pixels high, shows 515 units
+// instead of 720, so that its players are not drawn too small to read.
+export const MIN_SCALE = 390 / 515;
 export const GROUP_MARGIN = 140;
 export const MIN_SCALE_SHARE = 0.6;
 export const EASE_TICKS = 10;
@@ -23,7 +26,7 @@ export interface Bounds {
 }
 
 export function baseScale(screenHeight: number): number {
-  return Math.max(screenHeight, 1) / VIEW_HEIGHT;
+  return Math.max(Math.max(screenHeight, 1) / VIEW_HEIGHT, MIN_SCALE);
 }
 
 function place(
@@ -43,15 +46,16 @@ function place(
   };
 }
 
-// `viewHeight` is the height of world the screen shows, smaller for a close view.
+// `viewHeight` is the height of world an inset shows; the game's own view is the usual one.
 export function frameCamera(
   focus: Vec2,
   arena: Arena,
   screenWidth: number,
   screenHeight: number,
-  viewHeight = VIEW_HEIGHT,
+  viewHeight?: number,
 ): Camera {
-  const scale = Math.max(screenHeight, 1) / viewHeight;
+  const scale =
+    viewHeight === undefined ? baseScale(screenHeight) : Math.max(screenHeight, 1) / viewHeight;
   return place(focus.x, focus.y, scale, arena, screenWidth, screenHeight);
 }
 

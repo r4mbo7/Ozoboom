@@ -34,8 +34,8 @@ The full game, with more stages, will come out on Steam. The name comes from _Oz
 
 ## Playing together
 
-- **Local co-op**: "Play together" opens the lobby. Keyboard and mouse take a seat with Enter, each gamepad with A; everyone picks a name and a class, and the first player starts the set.
-- **Online**: in the lobby, "Play online" then "Create a room" gives a six-character code and a link to copy. Friends open the link or type the code, enter their name and class, and the host starts the set.
+- **Local co-op**: "Same screen" opens the lobby. Keyboard and mouse take a seat with Enter, each gamepad with A; everyone picks a name and a class, and the first player starts the set.
+- **Online**: "Online" then "Create a room" gives a six-character code and a link to copy. Friends open the link or type the code, enter their name and class, and the host starts the set.
 
 ## Playing on a phone
 

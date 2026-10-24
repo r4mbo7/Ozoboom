@@ -253,6 +253,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       onFeedback: openForm,
       onControls: openControls,
       onPlayTogether: openLobby,
+      onPlayOnline: openOnline,
       onChooseClass(classId) {
         if (classIds.includes(classId)) {
           prefs.classId = classId;
@@ -294,7 +295,6 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         seats.setName(playerId, name);
         ui.updateLobby(localLobby());
       },
-      onGoOnline: openOnline,
       onCreateRoom() {
         void audio.start();
         online.createRoom();
@@ -1023,10 +1023,14 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     { step, render },
   );
 
-  window.addEventListener('resize', () => {
+  // The stage, not the window: a phone's address bar can hide without a resize event.
+  new ResizeObserver(() => {
+    if (stage.clientWidth === stageSize.width && stage.clientHeight === stageSize.height) {
+      return;
+    }
     stageSize = { width: stage.clientWidth, height: stage.clientHeight };
     renderer.resize(stageSize.width, stageSize.height);
-  });
+  }).observe(stage);
   // Closing the tab tells the others at once, instead of leaving them to wait for the connection
   // to time out.
   window.addEventListener('pagehide', (event) => {

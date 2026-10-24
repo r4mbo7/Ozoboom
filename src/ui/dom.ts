@@ -18,6 +18,25 @@ export function icon(className: string, svgBody: string, viewBox = '0 0 24 24'):
   return node;
 }
 
+export interface GoMark {
+  readonly element: HTMLElement;
+  set(label: string): void;
+}
+
+// Over a chosen card under the pointer: what clicking it again does.
+export function goMark(svgBody: string): GoMark {
+  const element = el('span', 'ui-go');
+  element.setAttribute('aria-hidden', 'true');
+  const label = el('span', 'ui-go__label');
+  element.append(icon('ui-go__icon', svgBody), label);
+  return {
+    element,
+    set(text) {
+      setText(label, text);
+    },
+  };
+}
+
 const ARROW_TURNS: Readonly<Record<string, number>> = { '↑': 0, '→': 90, '↓': 180, '←': 270 };
 
 // Arrow glyphs sit at a different height in each font: they are drawn, and keep their text for

@@ -3,7 +3,8 @@ import { t } from '../shared/i18n';
 import { attackReach } from '../sim/attacks';
 import { type ClassInfo, ROW_CARDS, classColor, landscapeNotice } from './class-picker';
 import { CLASS_TEASERS, classTeaser } from './teaser';
-import { el, fillHint, setText } from './dom';
+import { el, fillHint, goMark, setText } from './dom';
+import { PLAY } from './icons';
 import { createEndlessRow } from './endless';
 import { formatNumber, formatSeconds, formatTenth } from './format';
 import { stepClass } from './lobby-model';
@@ -144,7 +145,8 @@ export function createClassPicker(
   const endless = createEndlessRow(row, (enabled) => {
     actions.toggleEndless(enabled);
   });
-  const cards = classes.map((entry) => {
+  const goes = classes.map(() => goMark(PLAY));
+  const cards = classes.map((entry, index) => {
     const card = el('button', 'ui-classcard');
     card.type = 'button';
     card.tabIndex = -1;
@@ -155,9 +157,17 @@ export function createClassPicker(
     const frame = el('span', 'ui-classcard__portrait');
     frame.append(thumb.element);
     card.append(frame, el('span', 'ui-classcard__name', t(entry.name)));
+    const go = goes[index];
+    if (go !== undefined) {
+      card.append(go.element);
+    }
     card.addEventListener('click', (event) => {
       event.stopPropagation();
-      actions.choose(entry.id);
+      if (entry.id === model.classId) {
+        actions.confirm();
+      } else {
+        actions.choose(entry.id);
+      }
     });
     return card;
   });
@@ -263,7 +273,11 @@ export function createClassPicker(
     classes.forEach((entry, index) => {
       cards[index]?.setAttribute('aria-checked', String(entry.id === chosen.id));
     });
-    setText(confirm, model.launches ? t('Lancer le set') : t('Choisir la scène'));
+    const next = model.launches ? t('Lancer le set') : t('Choisir la scène');
+    setText(confirm, next);
+    for (const go of goes) {
+      go.set(next);
+    }
     endless.set(model.endless, model.launches);
     paintHint();
   }

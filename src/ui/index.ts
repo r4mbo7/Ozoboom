@@ -129,6 +129,9 @@ export function createUi(
     playTogether() {
       callbacks.onPlayTogether();
     },
+    playOnline() {
+      callbacks.onPlayOnline();
+    },
     toggleCalmMode() {
       calmMode = !calmMode;
       applyOptions();
@@ -228,13 +231,6 @@ export function createUi(
       chooseNight(night) {
         callbacks.onChooseNight(night);
       },
-      ...(callbacks.onGoOnline === undefined
-        ? {}
-        : {
-            goOnline() {
-              callbacks.onGoOnline?.();
-            },
-          }),
       createRoom() {
         callbacks.onCreateRoom();
       },

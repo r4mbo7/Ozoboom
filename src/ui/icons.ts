@@ -54,6 +54,20 @@ export const STAGES =
 export const MOON =
   '<path d="M19.5 14.6A8.2 8.2 0 0 1 9.4 4.5a8.2 8.2 0 1 0 10.1 10.1z" fill="currentColor"/>';
 
+// A chosen card clicked again goes on: the play mark over it.
+export const PLAY =
+  '<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/>';
+
+// The two ways to play together: one screen with pads, or online.
+export const PAD =
+  '<path d="M7 7.5h10a5 5 0 0 1 4.8 6.4l-1 3.3a2.3 2.3 0 0 1-3.9.9L14.6 15.5H9.4l-2.3 2.6a2.3 2.3 0 0 1-3.9-.9l-1-3.3A5 5 0 0 1 7 7.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
+  '<path d="M7.5 10v3.5M5.75 11.75h3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+  '<circle cx="16.5" cy="10.75" r="1.2" fill="currentColor"/><circle cx="18" cy="13" r="1.2" fill="currentColor"/>';
+
+export const GLOBE =
+  '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>' +
+  '<path d="M3 12h18M12 3c3.2 3.4 3.2 14.6 0 18M12 3c-3.2 3.4-3.2 14.6 0 18" fill="none" stroke="currentColor" stroke-width="1.8"/>';
+
 export const SPEECH =
   '<path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
   '<path d="M7.5 8.5h9M7.5 12.5h5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';

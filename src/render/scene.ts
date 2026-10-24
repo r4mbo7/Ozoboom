@@ -6,7 +6,6 @@ import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
   type Bounds,
   type Camera,
-  VIEW_HEIGHT,
   centerInArena,
   easeCamera,
   frameBounds,
@@ -45,7 +44,7 @@ export class Scene implements Renderer, InsetScene {
   private readonly sets: ReadonlyMap<string, SetDefinition>;
   private readonly options: RenderOptions;
   private camera: Camera;
-  private viewHeight = VIEW_HEIGHT;
+  private viewHeight: number | undefined;
 
   private readonly stage = new Container();
   private readonly layers: Layers;
