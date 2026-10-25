@@ -1,4 +1,5 @@
-import type { MusicTrack, SetDefinition } from '../data/types';
+import { MAIN_STAGE } from '../data/main-stage';
+import type { MusicTrack, SetDefinition, SpeakerDefinition } from '../data/types';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import { playedTempo } from '../sim/lineup';
 import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state';
@@ -116,11 +117,12 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     pulsing: false,
     choking: false,
     entries: new Map(),
-    plugging: [],
+    plugging: new Map(),
     onKick: options.onKickScheduled,
   };
   let acoustics: Acoustics | undefined;
   let setId: string | null = null;
+  let speakerDefinitions: readonly SpeakerDefinition[] = [];
   const context = out.context;
   const level = context.createGain();
   const fader = createFader(level.gain, context, 1, () => barSeconds(groove.tempo));
@@ -162,6 +164,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     }
     groove.tempo = next;
     acoustics = set?.acoustics;
+    speakerDefinitions = (set ?? MAIN_STAGE).speakers ?? [];
   }
 
   function followMode(state: SimState, currentTime: number) {
@@ -241,7 +244,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
 
   function followSpeakers(state: SimState) {
     const speakers = state.speakers ?? [];
-    groove.plugging = pluggingSpeakers(speakers);
+    groove.plugging = pluggingSpeakers(speakers, speakerDefinitions, groove.tempo.ticksPerBar);
     groove.entries = speakerEntries(groove.entries, speakers, state.tick, cursor, groove.tempo);
   }
 

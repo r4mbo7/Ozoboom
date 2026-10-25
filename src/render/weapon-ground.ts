@@ -1,23 +1,13 @@
-import type { Sprite } from 'pixi.js';
+import { Container, type Sprite } from 'pixi.js';
 import { lerp } from '../shared/scalar';
-import { TICKS_PER_BEAT, isBarTick } from '../shared/tempo';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { POLE_HEIGHT } from './textures-weapons';
-import { type Piece, SIZES, type WeaponKit } from './weapon-kit';
+import type { WeaponKit } from './weapon-kit';
+import { createPlates } from './weapon-plate';
+import { createTotems } from './weapon-totem';
 import { add, hide, setTint } from './util';
 import { ViewPool } from './views';
-
-const TOTEM_PX = 76;
-const TOTEM_TOP = -(POLE_HEIGHT / 2 + 12);
-const TOTEM_FOOT = POLE_HEIGHT / 2 + 1;
-
-interface PlacedView {
-  readonly piece: Piece;
-  readonly zone: Sprite;
-  readonly shadow: Sprite;
-}
 
 export interface GroundFamily extends Pick<Family, 'update'> {
   readonly marks: number;
@@ -26,13 +16,17 @@ export interface GroundFamily extends Pick<Family, 'update'> {
 export function createGround(ctx: RenderContext, kit: WeaponKit): GroundFamily {
   const { textures: t, layers } = ctx;
   const w = t.weapons;
-  const placed = new ViewPool<PlacedView>(
-    () => ({ piece: kit.piece(), zone: kit.ground(w.zone), shadow: kit.ground(w.shadow) }),
-    (view) => {
-      kit.hidePiece(view.piece);
-      hide(view.zone, view.shadow);
+  // The zones lie on the ground with the speakers, under every bad vibe and boss, and under what
+  // stands in them.
+  const ground = layers.speakers.addChild(new Container());
+  const zones = new ViewPool<Sprite>(
+    () => add(ground, w.zone),
+    (sprite) => {
+      hide(sprite);
     },
   );
+  const plates = createPlates(ctx, kit, ground);
+  const totems = createTotems(ctx, kit);
   const marks = new ViewPool<Sprite>(
     () => add(layers.fx, w.dash),
     (sprite) => {
@@ -40,84 +34,31 @@ export function createGround(ctx: RenderContext, kit: WeaponKit): GroundFamily {
     },
   );
   let marked = 0;
-  let lastTick = -1;
 
   function drawPlaced(state: SimState, alpha: number, frame: Frame): void {
-    placed.begin();
+    zones.begin();
+    plates.begin();
+    totems.begin(frame);
     for (const entry of state.placed ?? []) {
       const look = kit.style(entry.weaponId);
-      const view = placed.acquire(entry.id);
-      const color = frame.palette[look.token];
       const x = lerp(entry.prevX, entry.x, alpha);
       const y = lerp(entry.prevY, entry.y, alpha);
-      const fade = frame.calm ? 1 : Math.min(1, entry.ticksLeft / TICKS_PER_BEAT);
-      const { zone, shadow } = view;
+      if (look.kind !== 'totem') {
+        plates.draw(entry, x, y, look, frame);
+        continue;
+      }
+      // The totems draw it on the ground, shadow included, and dissolve it when it goes.
+      const zone = zones.acquire(entry.id);
       zone.visible = true;
-      setTint(zone, color);
+      setTint(zone, frame.palette[look.token]);
       zone.position.set(x, y);
       zone.rotation = frame.calm ? 0 : frame.now * 0.012;
       zone.scale.set(entry.radius / w.zone.radius);
-      zone.alpha = 0.5 * fade;
-      shadow.visible = true;
-      shadow.position.set(x, y + 2);
-      shadow.alpha = fade;
-      if (look.kind === 'totem') {
-        const scale = (TOTEM_PX * look.scale) / (TOTEM_FOOT - TOTEM_TOP);
-        const shape = w.icons.totem;
-        shadow.scale.set(((TOTEM_PX / 2) * look.scale) / w.shadow.radius / 2);
-        kit.place(
-          view.piece,
-          shape,
-          {
-            x,
-            y: y - TOTEM_FOOT * scale,
-            size: scale * shape.radius * 2,
-            alpha: fade,
-            haloY: (TOTEM_TOP + 9) * scale,
-          },
-          color,
-          frame,
-        );
-      } else {
-        const size = (SIZES[look.kind] ?? 24) * look.scale;
-        shadow.scale.set(size / w.shadow.radius / 2);
-        kit.place(
-          view.piece,
-          w.icons[look.kind],
-          { x, y, size, rotation: frame.calm ? 0 : frame.now * 0.12, alpha: fade },
-          color,
-          frame,
-        );
-      }
+      zone.alpha = 0.25 * totems.draw(entry, x, y, look, frame);
     }
-    placed.end();
-  }
-
-  // The totem pushes back on each bar, with no event of its own: the wave starts from the state.
-  function wave(state: SimState, frame: Frame): void {
-    if (state.tick === lastTick) {
-      return;
-    }
-    lastTick = state.tick;
-    if (!isBarTick(state.tick, frame.tempo)) {
-      return;
-    }
-    for (const entry of state.placed ?? []) {
-      const look = kit.style(entry.weaponId);
-      if (look.kind === 'totem') {
-        kit.transients.spawn({
-          shape: t.ring,
-          now: state.tick,
-          duration: TICKS_PER_BEAT * 0.9,
-          x: entry.x,
-          y: entry.y,
-          fromRadius: entry.radius * 0.2,
-          toRadius: entry.radius,
-          tint: frame.palette[look.token],
-          peak: frame.calm ? 0.5 : 0.9,
-        });
-      }
-    }
+    zones.end();
+    plates.end();
+    totems.end();
   }
 
   function drawMarks(state: SimState, alpha: number, frame: Frame): void {
@@ -144,7 +85,7 @@ export function createGround(ctx: RenderContext, kit: WeaponKit): GroundFamily {
       return marked;
     },
     update(state, alpha, frame) {
-      wave(state, frame);
+      totems.rings(state, frame);
       drawPlaced(state, alpha, frame);
       drawMarks(state, alpha, frame);
     },

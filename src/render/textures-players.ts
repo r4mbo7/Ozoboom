@@ -1,6 +1,7 @@
 import type { TextureSource } from 'pixi.js';
 import type { Drawings } from './drawings';
 import { FULL_DRAWINGS } from './full';
+import { KIFFEUR_DRAWING } from './kiffeur';
 import {
   SHADE,
   SHADE_DEEP,
@@ -246,7 +247,10 @@ export function playerTextures(density = 1): PlayerTextures {
     },
     parasol: { sneaker: t.sneaker, pompom: t.pompom },
     drawings: new Map(
-      FULL_DRAWINGS.map((drawing) => [drawing.classId, paintedLater(() => drawing.paint(density))]),
+      [KIFFEUR_DRAWING, ...FULL_DRAWINGS].map((drawing) => [
+        drawing.classId,
+        paintedLater(() => drawing.paint(density)),
+      ]),
     ),
     source,
   };

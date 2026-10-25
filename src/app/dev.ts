@@ -26,6 +26,8 @@ export interface DevOptions {
   // Drawn at random when null.
   readonly seed: number | null;
   readonly boss: DevBoss | null;
+  // `&record`: each game downloads its recording when it ends.
+  readonly record: boolean;
 }
 
 const FAST_SPEED = 8;
@@ -36,6 +38,10 @@ export const BENCH_ENEMIES = 300;
 const MAX_BENCH_PLAYERS = PLAYER_IDS.length;
 
 export function readDevOptions(search: string, content: GameContent): DevOptions {
+  return { ...modeOptions(search, content), record: new URLSearchParams(search).has('record') };
+}
+
+function modeOptions(search: string, content: GameContent): Omit<DevOptions, 'record'> {
   const params = new URLSearchParams(search);
   const mode = params.get('dev');
   if (mode === 'boss') {
@@ -56,7 +62,7 @@ export function readDevOptions(search: string, content: GameContent): DevOptions
     };
   }
   if (mode !== null && !params.has('stages')) {
-    return readDevOptions(`${search}&stages`, { ...content, sets: content.sets.slice(0, 1) });
+    return modeOptions(`${search}&stages`, { ...content, sets: content.sets.slice(0, 1) });
   }
   if (mode === 'fast') {
     return {
@@ -83,7 +89,7 @@ export function readDevOptions(search: string, content: GameContent): DevOptions
   return { mode: null, speed: 1, players: 1, content, light: false, seed: null, boss: null };
 }
 
-function bossOptions(params: URLSearchParams, content: GameContent): DevOptions {
+function bossOptions(params: URLSearchParams, content: GameContent): Omit<DevOptions, 'record'> {
   const bossIds = content.enemies.filter((e) => e.behaviour === 'boss').map((e) => e.id);
   const id = params.get('boss') ?? '';
   if (!bossIds.includes(id)) {
@@ -118,7 +124,7 @@ function bossOptions(params: URLSearchParams, content: GameContent): DevOptions 
   };
 }
 
-function fireOptions(params: URLSearchParams, content: GameContent): DevOptions {
+function fireOptions(params: URLSearchParams, content: GameContent): Omit<DevOptions, 'record'> {
   const stageIds = (content.summons ?? []).map((summon) => summon.setId);
   const stageId = params.get('stage') ?? stageIds[0] ?? '';
   const set = content.sets.find((candidate) => candidate.id === stageId);

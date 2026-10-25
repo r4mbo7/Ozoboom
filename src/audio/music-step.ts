@@ -30,7 +30,7 @@ export interface Groove {
   pulsing: boolean;
   choking: boolean;
   entries: ReadonlyMap<SpeakerLayerId, number>;
-  plugging: readonly SpeakerLayerId[];
+  plugging: ReadonlyMap<SpeakerLayerId, number>;
   onKick: ((tick: number, time: number) => void) | undefined;
 }
 
@@ -170,7 +170,7 @@ function beatOf(
 ): Beat {
   const { track, tempo, tier, entries, plugging } = groove;
   const phrase = phraseAt(state.set, state.tick, step, tempo);
-  const layers = layersFor(segment, tier, phrase, [...entries.keys(), ...plugging]);
+  const layers = layersFor(segment, tier, phrase, [...entries.keys(), ...plugging.keys()]);
   const bar = barOfTick(step, tempo);
   const light = segment === 'break';
   return {
@@ -288,7 +288,7 @@ function playParts({ track, tempo }: Groove, beat: Beat) {
   }
 }
 
-function playSpeakers({ tempo, entries }: Groove, beat: Beat) {
+function playSpeakers({ tempo, entries, plugging }: Groove, beat: Beat) {
   const { input, at, step, layers, key, bar, sixteenth, chord, light } = beat;
   for (const id of layers.speakers) {
     SPEAKER_VOICES[id]({
@@ -301,7 +301,7 @@ function playSpeakers({ tempo, entries }: Groove, beat: Beat) {
       kick: layers.kick,
       light,
       tempo,
-      ...presenceAt(step, entries.get(id) ?? null, light, tempo),
+      ...presenceAt(step, entries.get(id) ?? null, plugging.get(id) ?? 0, light),
     });
   }
 }

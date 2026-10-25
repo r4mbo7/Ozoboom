@@ -1,9 +1,10 @@
 import type { AttackDefinition } from '../../data/types';
 import { FULL_ATTACKS } from '../full';
+import { aura } from './aura';
 import { straight } from './straight';
 import type { AttackModule, AttackModules, Upgraded } from './types';
 
-export const ATTACKS: AttackModules = { straight, ...FULL_ATTACKS };
+export const ATTACKS: AttackModules = { straight, aura, ...FULL_ATTACKS };
 
 const NO_UPGRADE: Upgraded = { modifiers: {} };
 

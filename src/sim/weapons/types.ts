@@ -11,11 +11,12 @@ export interface WeaponShot {
 }
 
 export interface WeaponModule {
+  // False when nothing left on this beat: the weapon is not announced fired.
   fire(
     ctx: StepContext,
     player: PlayerState,
     slot: WeaponSlot,
     definition: WeaponDefinition,
     shot: WeaponShot,
-  ): void;
+  ): boolean;
 }

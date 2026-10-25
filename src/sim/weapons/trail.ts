@@ -11,7 +11,7 @@ const NONE: readonly number[] = [];
 export const trail: WeaponModule = {
   fire({ state, content, tempo }, player, slot, { effect }, { power }) {
     if (effect.kind !== 'trail') {
-      return;
+      return false;
     }
     if (slot.trail === undefined) {
       slot.trail = new Array<number>(effect.lengthTicks * 2).fill(0);
@@ -40,6 +40,7 @@ export const trail: WeaponModule = {
         }
       }
     }
+    return true;
   },
 };
 

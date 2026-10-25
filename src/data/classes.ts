@@ -1,5 +1,6 @@
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import { FULL_CLASSES } from './full';
+import { KIFFEUR } from './kiffeur';
 import type { ClassDefinition } from './types';
 
 export const CLASSES: readonly ClassDefinition[] = [
@@ -91,5 +92,6 @@ export const CLASSES: readonly ClassDefinition[] = [
       effect: { kind: 'healPulse', amount: 30, radius: 160, coreRepair: 10 },
     },
   },
+  KIFFEUR,
   ...FULL_CLASSES,
 ];

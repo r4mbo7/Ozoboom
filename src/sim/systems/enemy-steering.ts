@@ -25,8 +25,7 @@ const separation = { x: 0, y: 0 };
 const waypoint = { x: 0, y: 0 };
 
 export function enemySteering(ctx: StepContext): void {
-  const { state, content, enemyGrid } = ctx;
-  const obstacles = ctx.set.obstacles ?? [];
+  const { state, content, enemyGrid, enemyObstacles: obstacles } = ctx;
   enemyGrid.rebuild(state.enemies);
   for (const enemy of state.enemies) {
     if (enemy.hp <= 0) {

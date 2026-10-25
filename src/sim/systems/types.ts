@@ -1,4 +1,4 @@
-import type { SetDefinition } from '../../data/types';
+import type { ObstacleDefinition, SetDefinition } from '../../data/types';
 import type { Tempo } from '../../shared/tempo';
 import type { PlayerCommand } from '../commands';
 import type { ResolvedContent } from '../content';
@@ -14,6 +14,8 @@ export interface StepContext {
   tempo: Tempo;
   commands: ReadonlyMap<PlayerId, PlayerCommand>;
   enemyGrid: SpatialHash;
+  // The set's obstacles, and the summon sites that block only bad vibes.
+  enemyObstacles: readonly ObstacleDefinition[];
   // Absent on a set without obstacles or without bad vibes.
   flowFields: FlowFields | undefined;
   // Absent in a game of one set.

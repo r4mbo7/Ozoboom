@@ -32,8 +32,9 @@ export function speakers({ state, content, set, tempo }: StepContext): void {
       continue;
     }
     const needed = definition.plugBars * tempo.ticksPerBar;
+    // Left alone, the charge drains as fast as it rose.
     if (!someoneStands(state, speaker)) {
-      speaker.plugTicks = 0;
+      speaker.plugTicks = Math.max(0, speaker.plugTicks - 1);
       continue;
     }
     speaker.plugTicks += 1;

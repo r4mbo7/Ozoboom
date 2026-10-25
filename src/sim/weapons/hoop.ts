@@ -20,5 +20,6 @@ export const hoop: WeaponModule = {
         knockBack(enemy, player, effect.knockback);
       }
     }
+    return true;
   },
 };

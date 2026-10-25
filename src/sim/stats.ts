@@ -40,6 +40,9 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   skillCountAdd: true,
   echoCountAdd: true,
   echoPowerMul: false,
+  twilightBeatsAdd: true,
+  elementBeatsAdd: true,
+  elementSpreadAdd: true,
 };
 
 export function statValue(

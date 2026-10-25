@@ -122,6 +122,8 @@ export interface PlayerState extends Positioned {
   reviveTicks?: number;
   // Read through `gaugeValue`, written through `setGauge`.
   gauge?: number;
+  // The Circadien's clock since his last Éclipse (src/sim/full/clock.ts); absent before his first.
+  clock?: { night: boolean; fromTick: number };
   // Online, their peer has left: the player stays put, and a festival goes on without them.
   gone?: true;
   // Absent while all dashes are in.
@@ -132,6 +134,8 @@ export interface PlayerState extends Positioned {
   // The source of the light offering held in a trap hand.
   offering?: number;
   carrying?: { logId: EntityId; end: 0 | 1 };
+  // x, y pairs from the newest, as long as the Poussin's band in file behind him.
+  steps?: number[];
 }
 
 // The maximum hp is left out: a bonus that ends never takes hp points away.
@@ -491,6 +495,7 @@ export type SimEvent =
   | { type: 'playerHealed'; playerId: PlayerId; amount: number }
   | { type: 'taunted'; playerId: PlayerId; x: number; y: number; radius: number; count: number }
   | { type: 'skillUsed'; playerId: PlayerId }
+  | { type: 'eclipseBurst'; playerId: PlayerId; x: number; y: number }
   | { type: 'dashed'; playerId: PlayerId; dx: number; dy: number; onBeat?: true }
   | { type: 'dashEmpty'; playerId: PlayerId }
   | { type: 'dashBack'; playerId: PlayerId }
@@ -541,6 +546,8 @@ export type SimEvent =
       dx?: number;
       dy?: number;
     }
+  // A returning weapon (the frisbee) lands in the hand of `playerId`, the ally it flew back to.
+  | { type: 'weaponCaught'; playerId: PlayerId; weaponId: string; x: number; y: number }
   // A continuous weapon (the fans) fires every tick: this is its only meaningful moment.
   | { type: 'weaponHit'; playerId: PlayerId; weaponId: string; id: EntityId; x: number; y: number }
   | { type: 'weaponEvolved'; playerId: PlayerId; weaponId: string; resultId: string }

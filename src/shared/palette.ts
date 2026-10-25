@@ -12,6 +12,7 @@ const BASE_TOKENS = [
   'mage',
   'tank',
   'healer',
+  'kiffeur',
   'badVibe',
   'badVibeRim',
   'texte',
@@ -34,7 +35,13 @@ const FULL_TINT_IDS = keysOf(FULL_TINTS);
 
 export const PALETTE_TOKENS: readonly PaletteToken[] = [...BASE_TOKENS, ...FULL_TINT_IDS];
 
-export const CLASS_TOKENS: readonly PaletteToken[] = ['mage', 'tank', 'healer', ...FULL_TINT_IDS];
+export const CLASS_TOKENS: readonly PaletteToken[] = [
+  'mage',
+  'tank',
+  'healer',
+  'kiffeur',
+  ...FULL_TINT_IDS,
+];
 
 export function isClassToken(id: string): id is PaletteToken {
   return isOneOf(id, CLASS_TOKENS);
@@ -55,6 +62,7 @@ const BASE_PALETTES: Record<SunMoment, Record<BaseToken, string>> = {
     mage: '#ff6fa8',
     tank: '#ff9a3d',
     healer: '#7cf2b0',
+    kiffeur: '#f5e663',
     badVibe: '#5a4c64',
     badVibeRim: '#f2c4a0',
     texte: '#fbeee0',
@@ -69,6 +77,7 @@ const BASE_PALETTES: Record<SunMoment, Record<BaseToken, string>> = {
     mage: '#ff6fa8',
     tank: '#ff9a3d',
     healer: '#7cf2b0',
+    kiffeur: '#f5e663',
     badVibe: '#4b4762',
     badVibeRim: '#b8c4ee',
     texte: '#f6ecd2',
@@ -83,6 +92,7 @@ const BASE_PALETTES: Record<SunMoment, Record<BaseToken, string>> = {
     mage: '#a61d56',
     tank: '#973a0d',
     healer: '#126346',
+    kiffeur: '#625700',
     badVibe: '#6c6276',
     badVibeRim: '#fff0e4',
     texte: '#2c1e18',
@@ -97,6 +107,7 @@ const BASE_PALETTES: Record<SunMoment, Record<BaseToken, string>> = {
     mage: '#b8246a',
     tank: '#a64713',
     healer: '#14724d',
+    kiffeur: '#6b5f00',
     badVibe: '#66606e',
     badVibeRim: '#fffaf0',
     texte: '#2b2010',

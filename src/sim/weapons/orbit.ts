@@ -66,5 +66,6 @@ export const orbit: WeaponModule = {
         delete body.hitIds;
       }
     });
+    return true;
   },
 };

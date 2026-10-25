@@ -8,14 +8,14 @@ export const boomerang: WeaponModule = {
   fire(ctx, player, slot, definition, { power, target }) {
     const { effect } = definition;
     if (effect.kind !== 'boomerang' || target === null) {
-      return;
+      return false;
     }
     const inFlight = ctx.state.projectiles.some(
       ({ owner }) =>
         owner.kind === 'weapon' && owner.playerId === player.id && owner.weaponId === slot.id,
     );
     if (inFlight) {
-      return;
+      return false;
     }
     const direction = directionTo(player, target, player.aim);
     shoot(
@@ -32,5 +32,6 @@ export const boomerang: WeaponModule = {
         heal: effect.heal * power,
       },
     );
+    return true;
   },
 };

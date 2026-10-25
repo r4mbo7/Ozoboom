@@ -1,4 +1,5 @@
 import { isOneOf, isRecord } from '../shared/guards';
+import { flag, integer, list, oneOf, record, text } from '../shared/readers';
 import { clamp } from '../shared/scalar';
 import { EMOTES, type PlayerAction, type PlayerCommand } from '../sim/commands';
 import type { PlayerSlot } from '../sim/initial-state';
@@ -386,7 +387,7 @@ function readSeat(value: unknown): Seat {
   };
 }
 
-function readSlot(value: unknown): PlayerSlot {
+export function readSlot(value: unknown): PlayerSlot {
   const slot = record(value);
   return {
     id: oneOf(slot.id, PLAYER_IDS),
@@ -395,54 +396,12 @@ function readSlot(value: unknown): PlayerSlot {
   };
 }
 
-function record(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) {
-    throw new TypeError(`expected an object, got ${String(value)}`);
-  }
-  return value;
-}
-
-function list<T>(value: unknown, read: (item: unknown) => T): T[] {
-  if (!Array.isArray(value)) {
-    throw new TypeError(`expected a list, got ${String(value)}`);
-  }
-  return value.map(read);
-}
-
-function text(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new TypeError(`expected a string, got ${String(value)}`);
-  }
-  return value;
-}
-
-function flag(value: unknown): boolean {
-  if (typeof value !== 'boolean') {
-    throw new TypeError(`expected a boolean, got ${String(value)}`);
-  }
-  return value;
-}
-
-function integer(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isInteger(value)) {
-    throw new TypeError(`expected an integer, got ${String(value)}`);
-  }
-  return value;
-}
-
 function tick(value: unknown): number {
   const count = integer(value);
   if (count < 0) {
     throw new RangeError(`negative tick ${String(count)}`);
   }
   return count;
-}
-
-function oneOf<T>(value: unknown, options: readonly T[]): T {
-  if (!isOneOf(value, options)) {
-    throw new RangeError(`unexpected ${String(value)}`);
-  }
-  return value;
 }
 
 // Online, every command enters the sim in this form, the host's own included.

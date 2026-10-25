@@ -1,4 +1,5 @@
 import { FULL_UPGRADES } from './full';
+import { KIFFEUR_UPGRADES } from './kiffeur';
 import type { RarityWeights, UpgradeDefinition } from './types';
 
 export const RARITY_WEIGHTS: readonly RarityWeights[] = [
@@ -354,5 +355,6 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
     ],
     maxStacks: 1,
   },
+  ...KIFFEUR_UPGRADES,
   ...FULL_UPGRADES,
 ];

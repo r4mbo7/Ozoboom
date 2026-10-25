@@ -6,6 +6,7 @@ import type {
   WeaponRole,
 } from '../data/types';
 import { FULL_MARKS, FULL_SKILL_ICONS } from './full';
+import { KIFFEUR_MARK, OLA_ICON } from './kiffeur';
 
 export const BOLT = '<path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z" fill="currentColor"/>';
 
@@ -145,6 +146,8 @@ export function skillIcon(effect: SkillEffect): string {
       return '<path d="M4 7h9M2 12h12M4 17h9M14 5l7 7-7 7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>';
     case 'healPulse':
       return '<path d="M9.5 3h5v6.5H21v5h-6.5V21h-5v-6.5H3v-5h6.5z" fill="currentColor"/>';
+    case 'ola':
+      return OLA_ICON;
     default: {
       const icon = FULL_ICONS[kind];
       if (icon === undefined) {
@@ -247,8 +250,10 @@ export function weaponIcon(effect: WeaponEffect): string {
       );
     case 'totem':
       return (
-        `<path d="M8 2.5v19M3 20.5c3 2 7 2 10 0M15.5 15.5c2.5 1 4 2.5 4.5 4.5" ${ROUND}/>` +
-        '<path d="M8 3 19 6.5 8 10z" fill="currentColor" stroke="currentColor" stroke-linejoin="round"/>'
+        `<circle cx="12" cy="9" r="3.8" ${STROKE}/>` +
+        `<path d="M12 12.8v7M12 3.6V2M15.8 5.2 17 4M17.4 9H19M15.8 12.8 17 14M8.2 12.8 7 14M6.6 9H5M8.2 5.2 7 4" ${ROUND}/>` +
+        `<ellipse cx="12" cy="20.5" rx="5.5" ry="2" ${STROKE}/>` +
+        '<circle cx="12" cy="8.2" r="1.1" fill="currentColor"/>'
       );
     case 'orbit':
       return (
@@ -339,6 +344,8 @@ export function classMark(classId: string): string {
         `<circle cx="12" cy="12" r="8.5" ${STROKE}/>` +
         '<path d="M12 3.5v17M4.6 7.8l14.8 8.4M19.4 7.8 4.6 16.2" stroke="currentColor" stroke-width="1.6"/>'
       );
+    case 'kiffeur':
+      return KIFFEUR_MARK;
     default:
       return FULL_MARKS[classId] ?? '<circle cx="12" cy="12" r="7" fill="currentColor"/>';
   }

@@ -7,11 +7,11 @@ export const lob: WeaponModule = {
   fire(ctx, player, slot, definition, { power, target }) {
     const { effect } = definition;
     if (effect.kind !== 'lob' || target === null) {
-      return;
+      return false;
     }
     const raining = effect.dropRain === true && ctx.state.set.segment === 'drop';
     if (effect.dropRain === true && !raining && !isBarTick(ctx.state.tick, ctx.tempo)) {
-      return;
+      return false;
     }
     const range = raining
       ? Math.sqrt(
@@ -20,7 +20,7 @@ export const lob: WeaponModule = {
       : effect.range;
     const aim = densestSpot(ctx, player, range, effect.radius);
     if (aim === null) {
-      return;
+      return false;
     }
     shoot(
       ctx.state,
@@ -35,6 +35,7 @@ export const lob: WeaponModule = {
         arc: { toX: aim.x, toY: aim.y, ticksTotal: effect.flightTicks },
       },
     );
+    return true;
   },
 };
 

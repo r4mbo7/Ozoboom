@@ -92,8 +92,13 @@ export class Transients {
         continue;
       }
       const progress = (now - item.start) / item.duration;
-      if (progress >= 1 || progress < 0) {
+      if (progress >= 1) {
         sprite.visible = false;
+        continue;
+      }
+      // A transient spawned for later, an echo, waits unseen.
+      if (progress < 0) {
+        sprite.alpha = 0;
         continue;
       }
       const eased = easeOutQuad(progress);

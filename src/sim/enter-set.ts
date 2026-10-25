@@ -14,13 +14,21 @@ export function setBindings(
   set: SetDefinition,
   content: ResolvedContent,
   startTick: number,
-): Pick<StepContext, 'set' | 'tempo' | 'enemyGrid' | 'flowFields'> {
+): Pick<StepContext, 'set' | 'tempo' | 'enemyGrid' | 'enemyObstacles' | 'flowFields'> {
+  const enemyObstacles = [
+    ...(set.obstacles ?? []),
+    ...(content.summons.get(set.id)?.sites ?? []).flatMap(({ x, y, badVibeRadius }) =>
+      badVibeRadius === undefined ? [] : [{ x, y, radius: badVibeRadius }],
+    ),
+  ];
   return {
     set,
     tempo: setTempo(set, startTick),
     enemyGrid: new SpatialHash(set.arena.width, set.arena.height, ENEMY_GRID_CELL_SIZE),
+    enemyObstacles,
     flowFields: createFlowFields(
       set,
+      enemyObstacles,
       [...content.enemies.values()].map((enemy) => enemy.radius),
     ),
   };

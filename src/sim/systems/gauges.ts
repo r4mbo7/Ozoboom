@@ -1,8 +1,9 @@
 import { FULL_GAUGES } from '../full';
 import type { GaugeModule } from '../gauges';
+import { kiffGauge } from '../gauges/kiff';
 import type { StepContext } from './types';
 
-export const GAUGES: Record<string, GaugeModule> = { ...FULL_GAUGES };
+export const GAUGES: Record<string, GaugeModule> = { kiff: kiffGauge, ...FULL_GAUGES };
 
 // After `deaths`, so that a module sees every hit and every fall of the tick; downed players too.
 export function gauges(ctx: StepContext): void {

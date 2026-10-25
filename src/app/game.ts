@@ -21,6 +21,7 @@ import { TICK_MS } from '../shared/tempo';
 import { setOf, setTempo } from '../sim/lineup';
 import { parseJoinCode } from '../net/code';
 import { createLocalSource } from '../net/local';
+import type { CommandSource } from '../net/types';
 import { GUEST_BUFFER_TICKS } from '../net/lockstep';
 import type { CameraFocus, Renderer } from '../render/types';
 import type { PlayerSlot } from '../sim/initial-state';
@@ -78,6 +79,14 @@ import { createPrompts } from '../ui/prompts';
 import { chooseLocale } from './locale';
 import { createStillness } from './stillness';
 import { createWeaponScenes } from './weapon-scenes';
+import { downloadJson } from './download';
+import {
+  type RecordedGame,
+  type Recorder,
+  type Recording,
+  createRecorder,
+  createReplaySource,
+} from './recording';
 
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const TOGETHER_FOCUS: CameraFocus = { kind: 'everyone' };
@@ -85,7 +94,19 @@ const TOGETHER_FOCUS: CameraFocus = { kind: 'everyone' };
 const MAX_TICKS_PER_FRAME = 4;
 const CATCH_UP_TICKS_PER_FRAME = 2;
 
-export async function startGame(root: HTMLElement, dev: DevOptions): Promise<void> {
+// A recorded game played back instead of the title; `ended` hears the state after its last step.
+export interface Replay {
+  readonly recording: Recording;
+  readonly ended: (state: SimState) => void;
+}
+
+type MatchStart = Omit<RecordedGame, 'version' | 'query'>;
+
+export async function startGame(
+  root: HTMLElement,
+  dev: DevOptions,
+  replay?: Replay,
+): Promise<void> {
   let screen: Screen = 'title';
   let gameMode: GameMode = 'solo';
   const sendEvent = (event: GameEvent): void => {
@@ -139,6 +160,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   let stageId = prefs.stageId;
   let frozenAlpha = 0;
   let endingLeft = 0;
+  let recorder: Recorder | null = null;
   let match = soloMatch();
   let onlineMatch: OnlineMatch | null = null;
   let onlineLobby = false;
@@ -243,7 +265,11 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     ),
     { online: () => onlineMatch !== null, changed: applySound },
   );
-  showTitle();
+  if (replay === undefined) {
+    showTitle();
+  } else {
+    watch(replay);
+  }
   applySound();
 
   function gameCallbacks() {
@@ -327,18 +353,63 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     locals: ReadonlyMap<PlayerId, DeviceId | null>,
     focus: CameraFocus,
   ): Match {
-    return createMatch({
+    const start: MatchStart = {
       seed: dev.seed ?? crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
       setId: stageId,
       endless: prefs.endless,
       festival: prefs.festival,
+      players: slots,
+    };
+    return createMatch({
+      ...start,
       content,
       slots,
       locals,
-      source: createLocalSource(),
+      source: recorded(createLocalSource(), start),
       focus,
       assist: () => prefs,
     });
+  }
+
+  function recorded(source: CommandSource, start: MatchStart): CommandSource {
+    if (!dev.record) {
+      return source;
+    }
+    recorder = createRecorder(source, {
+      version: APP_VERSION,
+      query: window.location.search,
+      ...start,
+    });
+    return recorder.source;
+  }
+
+  // Once a game, at its end screen or when it is left: a match never played has nothing to keep.
+  function saveRecording(state: SimState): void {
+    if (recorder === null || (screen !== 'game' && screen !== 'ending')) {
+      return;
+    }
+    downloadJson(
+      `ozoboom-${state.setId}-${String(state.seed)}.json`,
+      recorder.save(state, prefs.trackId),
+    );
+    recorder = null;
+  }
+
+  function watch({ recording, ended }: Replay): void {
+    setMatch(
+      createMatch({
+        seed: recording.seed,
+        setId: recording.setId,
+        endless: recording.endless,
+        festival: recording.festival,
+        content,
+        slots: recording.players,
+        locals: new Map(),
+        source: createReplaySource(recording.steps, ended),
+        focus: recording.players.length > 1 ? TOGETHER_FOCUS : SOLO_FOCUS,
+      }),
+    );
+    beginGame(recording.trackId, null);
   }
 
   // Alone, the one player reads the merged view: keyboard, mouse and gamepad as one.
@@ -495,13 +566,14 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     interruption = null;
     lobbySeats = null;
     toast.clear();
-    setMatch(onlineMatchOf(started, content, () => prefs));
+    setMatch(onlineMatchOf(started, content, () => prefs, recorded));
     pause.dismiss();
     beginGame(started.start.trackId, started.role === 'host' ? 'online' : null);
   }
 
   function interrupt(next: Interruption): void {
     stats.end(match.session.state, 'interrupted');
+    saveRecording(match.session.state);
     interruption = next;
     pause.dismiss();
     fade.lift();
@@ -532,6 +604,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
 
   function quit(): void {
     stats.end(match.session.state, 'quit');
+    saveRecording(match.session.state);
     pause.dismiss();
     played = false;
     lobbySeats = null;
@@ -656,6 +729,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function openEnd(): void {
+    saveRecording(match.session.state);
     screen = 'end';
     fade.lift();
     ui.showEnd(match.session.state, onlineMatch === null ? undefined : { role: onlineMatch.role });
@@ -806,7 +880,12 @@ function settingsCallbacks(
   };
 }
 
-function onlineMatchOf(started: OnlineMatch, content: GameContent, assist: () => Assist): Match {
+function onlineMatchOf(
+  started: OnlineMatch,
+  content: GameContent,
+  assist: () => Assist,
+  recorded: (source: CommandSource, start: MatchStart) => CommandSource,
+): Match {
   const { seed, setId, players, endless = false, festival = false } = started.start;
   return createMatch({
     seed,
@@ -816,7 +895,7 @@ function onlineMatchOf(started: OnlineMatch, content: GameContent, assist: () =>
     content,
     slots: players,
     locals: new Map([[started.localPlayer, null]]),
-    source: started.source,
+    source: recorded(started.source, { seed, setId, endless, festival, players }),
     focus: { kind: 'player', playerId: started.localPlayer },
     assist,
   });

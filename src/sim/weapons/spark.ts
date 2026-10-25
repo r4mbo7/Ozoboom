@@ -7,7 +7,7 @@ export const spark: WeaponModule = {
   fire(ctx, player, slot, definition, { power, target }) {
     const { effect } = definition;
     if (effect.kind !== 'spark' || target === null) {
-      return;
+      return false;
     }
     const direction = directionTo(player, target, player.aim);
     shoot(
@@ -22,5 +22,6 @@ export const spark: WeaponModule = {
         pierceLeft: effect.pierce,
       },
     );
+    return true;
   },
 };

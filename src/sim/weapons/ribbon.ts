@@ -6,7 +6,7 @@ const RIBBON_HALF_WIDTH = 14;
 export const ribbon: WeaponModule = {
   fire({ state, set }, player, _slot, { effect }, { direction }) {
     if (effect.kind !== 'ribbon') {
-      return;
+      return false;
     }
     const length =
       effect.dropCrossesArena === true && state.set.segment === 'drop'
@@ -29,5 +29,6 @@ export const ribbon: WeaponModule = {
         markEnemy(state, enemy, effect.markedTicks);
       }
     }
+    return true;
   },
 };

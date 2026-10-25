@@ -12,7 +12,6 @@ export const SIZES: Partial<Record<WeaponKind, number>> = {
   lob: 22,
   boomerang: 24,
   orbit: 26,
-  plate: 36,
 };
 
 export interface Piece {
@@ -41,7 +40,7 @@ export function createKit(ctx: RenderContext): WeaponKit {
   const { textures: t, layers } = ctx;
   const styles = new Map<string, WeaponStyle>();
   return {
-    transients: new Transients(layers.fx, 40, t.weapons.hoopRing),
+    transients: new Transients(layers.fx, 64, t.weapons.hoopRing),
     ribbons: new Ribbons(layers.fx, 6, t.pip),
     style(weaponId) {
       let found = styles.get(weaponId);

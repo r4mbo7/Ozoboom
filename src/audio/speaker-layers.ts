@@ -1,3 +1,4 @@
+import type { SpeakerDefinition } from '../data/types';
 import { isOneOf } from '../shared/guards';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import type { SpeakerState } from '../sim/state';
@@ -9,7 +10,9 @@ export const SPEAKER_LAYER_IDS = ['dome-chill', 'foret', 'sub', 'cercle-acid'] a
 export type SpeakerLayerId = (typeof SPEAKER_LAYER_IDS)[number];
 
 const MUFFLED_HZ = 260;
-const MUFFLED_LEVEL = 0.3;
+// While a speaker charges, its layer comes to the front of the mix, up to four times its level
+// (+12 dB) and fully open, then joins the mix at its own level once plugged.
+const CHARGING_LEVEL = { from: 0.4, to: 4 };
 const BREAK_LEVEL = 0.5;
 const BREAK_OPEN = 0.6;
 
@@ -58,21 +61,32 @@ export function speakerEntries(
   return entries;
 }
 
-export function pluggingSpeakers(speakers: readonly SpeakerState[]): SpeakerLayerId[] {
-  return speakers.flatMap(({ id, plugged, plugTicks }) =>
-    !plugged && plugTicks > 0 && isSpeakerLayerId(id) ? [id] : [],
-  );
+// The share of its charge each speaker being plugged has, from 0 to 1.
+export function pluggingSpeakers(
+  speakers: readonly SpeakerState[],
+  definitions: readonly Pick<SpeakerDefinition, 'id' | 'plugBars'>[],
+  ticksPerBar: number,
+): Map<SpeakerLayerId, number> {
+  const charges = new Map<SpeakerLayerId, number>();
+  for (const { id, plugged, plugTicks } of speakers) {
+    const plugBars = definitions.find((definition) => definition.id === id)?.plugBars;
+    if (!plugged && plugTicks > 0 && plugBars !== undefined && isSpeakerLayerId(id)) {
+      charges.set(id, Math.min(1, plugTicks / (plugBars * ticksPerBar)));
+    }
+  }
+  return charges;
 }
 
 export function presenceAt(
   step: number,
   entry: number | null,
+  charge: number,
   inBreak: boolean,
-  tempo: Tempo = MAIN_TEMPO,
 ): Presence {
   const entered = entry !== null && step >= entry;
-  const open = entered ? Math.min(1, (step - entry) / tempo.ticksPerBar) : 0;
-  const level = entered ? 1 : MUFFLED_LEVEL;
+  const { from, to } = CHARGING_LEVEL;
+  const level = entered ? 1 : from + (to - from) * charge;
+  const open = entered ? 1 : charge;
   return {
     level: inBreak ? level * BREAK_LEVEL : level,
     open: inBreak ? open * BREAK_OPEN : open,
@@ -103,7 +117,7 @@ function domeChill(ctx: VoiceContext) {
           wave: 'triangle',
           hz: keyHz(key, chord + offset, 3),
           detune,
-          gain: 0.045 * level,
+          gain: 0.026 * level,
           attack: barLength * 0.2,
           hold: barLength * 0.3,
           release: barLength * 0.4,
@@ -118,7 +132,7 @@ function domeChill(ctx: VoiceContext) {
     playTone(out, at, {
       wave: 'sine',
       hz: keyHz(key, chord + degree, 3),
-      gain: 0.14 * level,
+      gain: 0.08 * level,
       attack: 0.3,
       hold: 0.7,
       release: 1.1,
@@ -186,7 +200,7 @@ function sub(ctx: VoiceContext) {
   playTone(out, at, {
     wave: 'sine',
     hz,
-    gain: 0.5 * level,
+    gain: 0.42 * level,
     attack: 0.004,
     hold: 0.16,
     release: 0.2,
@@ -194,11 +208,21 @@ function sub(ctx: VoiceContext) {
   playTone(out, at, {
     wave: 'triangle',
     hz: hz * 2,
-    gain: 0.12 * level,
+    gain: 0.1 * level,
     attack: 0.004,
     hold: 0.08,
     release: 0.12,
     filter: { type: 'lowpass', hz: bright(open, 320, 120) },
+  });
+  // The growl two octaves up is what a laptop plays of the Sub.
+  playTone(out, at, {
+    wave: 'sawtooth',
+    hz: hz * 4,
+    gain: 0.175 * level,
+    attack: 0.004,
+    hold: 0.07,
+    release: 0.12,
+    filter: { type: 'lowpass', hz: bright(open, 1400, 200), q: 2 },
   });
 }
 

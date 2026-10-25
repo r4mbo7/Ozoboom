@@ -11,6 +11,7 @@ import { createGround } from './ground';
 import { createGroundWaves } from './ground-waves';
 import { createBombs } from './bombs';
 import { createLoots } from './loots';
+import { createMood } from './mood';
 import { createPickupBursts } from './pickup-bursts';
 import { createPickups } from './pickups';
 import { createDownedScreen } from './downed-screen';
@@ -57,6 +58,7 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
     ...BOSSES.map((create) => create(ctx, poseOf)),
     createSpecials(ctx),
     createProjectiles(ctx),
+    createMood(ctx),
     ...FULL_FAMILIES.map((create) => create(ctx, poseOf)),
     createWeapons(ctx),
     createPlayers(ctx),

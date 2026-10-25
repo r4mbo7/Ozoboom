@@ -7,6 +7,8 @@ import { lookup } from './util';
 export interface WeaponStyle {
   readonly kind: WeaponKind;
   readonly token: PaletteToken;
+  // On the way out; `token` on the way back.
+  readonly outToken: PaletteToken;
   readonly evolved: boolean;
   readonly look: WeaponLook;
   readonly copies: number;
@@ -23,6 +25,7 @@ const DEFAULT_TOKENS: Partial<Record<WeaponKind, PaletteToken>> = {
   plate: 'healer',
   trail: 'healer',
 };
+const OUT_TOKENS: Partial<Record<WeaponKind, PaletteToken>> = { boomerang: 'mage' };
 const EVOLVED_SCALE = 1.3;
 
 export function styleOf(ctx: RenderContext, weaponId: string): WeaponStyle {
@@ -36,6 +39,7 @@ export function styleOf(ctx: RenderContext, weaponId: string): WeaponStyle {
   return {
     kind,
     token,
+    outToken: OUT_TOKENS[kind] ?? token,
     evolved,
     look,
     copies: evolved ? (EVOLVED_COPIES[kind] ?? 1) : 1,

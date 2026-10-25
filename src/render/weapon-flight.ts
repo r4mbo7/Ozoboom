@@ -4,6 +4,7 @@ import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { EntityId, PlayerState, ProjectileState, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
+import { FRISBEE_STREAK_LENGTH } from './textures-weapons';
 import { type Piece, SIZES, type WeaponKit } from './weapon-kit';
 import { type WeaponStyle, arcLook, arcProgress } from './weapon-looks';
 import { add, byId, hide, setTint } from './util';
@@ -12,6 +13,7 @@ import { ViewPool } from './views';
 const GHOSTS = 4;
 const SHADOW_SIZE = 30;
 const LANDING_FROM = 0.6;
+const TWINKLE_EVERY = 3;
 
 interface Body {
   readonly lift: number;
@@ -140,10 +142,12 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
     }
     const look = kit.style(owner.weaponId);
     const view = views.acquire(projectile.id);
-    const color = frame.palette[look.token];
+    const returning = projectile.returning === true;
+    const color = frame.palette[returning ? look.token : look.outToken];
     const shape = look.kind === 'spark' ? w.sparkShot : w.icons[look.kind];
     const x = lerp(projectile.prevX, projectile.x, alpha);
     const y = lerp(projectile.prevY, projectile.y, alpha);
+    const newTick = view.tick !== state.tick;
     follow(view, projectile, state.tick);
     const body = look.kind === 'lob' ? lob(view, projectile, look, alpha, frame) : FLAT;
     const size = (SIZES[look.kind] ?? 20) * look.scale * body.scale;
@@ -155,16 +159,25 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
       x,
       y,
     );
-    const pale = projectile.returning === true ? 0.65 : 1;
-    kit.place(
-      view.piece,
-      shape,
-      { x, y: y - body.lift, size, rotation, alpha: pale },
-      color,
-      frame,
-    );
+    kit.place(view.piece, shape, { x, y: y - body.lift, size, rotation }, color, frame);
 
-    if (look.kind === 'boomerang' || look.kind === 'orbit') {
+    if (look.kind === 'boomerang') {
+      streak(view, x, y, size, color, frame);
+      if (returning && newTick && state.tick % TWINKLE_EVERY === 0) {
+        kit.transients.spawn({
+          shape: t.vibes,
+          now: frame.now,
+          duration: TICKS_PER_BEAT * 0.8,
+          x,
+          y,
+          spin: 1,
+          fromRadius: size * 0.3,
+          toRadius: size * 0.1,
+          tint: color,
+          peak: frame.calm ? 0.5 : 0.9,
+        });
+      }
+    } else if (look.kind === 'orbit') {
       view.ghosts.forEach((ghost, index) => {
         ghost.visible = true;
         ghost.texture = shape.texture;
@@ -175,6 +188,37 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
         ghost.alpha = frame.light.haloAlpha * 0.5 * (1 - index / GHOSTS);
       });
     }
+  }
+
+  // A long exposure of the LED rim: one segment between each pair of past positions, fading.
+  function streak(
+    view: ProjectileView,
+    x: number,
+    y: number,
+    size: number,
+    color: number,
+    frame: Frame,
+  ): void {
+    let fromX = x;
+    let fromY = y;
+    view.ghosts.forEach((segment, index) => {
+      const toX = view.xs[index] ?? x;
+      const toY = view.ys[index] ?? y;
+      const dx = fromX - toX;
+      const dy = fromY - toY;
+      segment.visible = true;
+      segment.texture = w.frisbeeStreak.texture;
+      setTint(segment, color);
+      segment.position.set((fromX + toX) / 2, (fromY + toY) / 2);
+      segment.rotation = Math.atan2(dy, dx);
+      segment.scale.set(
+        Math.sqrt(dx * dx + dy * dy) / FRISBEE_STREAK_LENGTH,
+        size / (w.frisbeeStreak.radius * 2),
+      );
+      segment.alpha = frame.light.haloAlpha * 0.8 * (1 - index / GHOSTS);
+      fromX = toX;
+      fromY = toY;
+    });
   }
 
   // A diabolo that has left the state after its arc has landed: the impact wave stays behind.

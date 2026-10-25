@@ -4,7 +4,7 @@ import type { WeaponModule } from './types';
 export const plate: WeaponModule = {
   fire({ state, tempo }, player, slot, { effect }) {
     if (effect.kind !== 'plate') {
-      return;
+      return false;
     }
     place(
       state,
@@ -15,5 +15,6 @@ export const plate: WeaponModule = {
       effect.durationBars * tempo.ticksPerBar,
       effect.maxPlaced,
     );
+    return true;
   },
 };

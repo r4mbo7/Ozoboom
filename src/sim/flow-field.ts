@@ -1,4 +1,4 @@
-import type { SetDefinition } from '../data/types';
+import type { ObstacleDefinition, SetDefinition } from '../data/types';
 import { clamp } from '../shared/scalar';
 import { touchesObstacle } from './obstacles';
 
@@ -23,9 +23,9 @@ export interface FlowFields {
 // Integers and + - * / only, so every engine builds the same field.
 export function createFlowFields(
   set: SetDefinition,
+  obstacles: readonly ObstacleDefinition[],
   radii: readonly number[],
 ): FlowFields | undefined {
-  const obstacles = set.obstacles ?? [];
   if (obstacles.length === 0 || set.tiers.length === 0) {
     return undefined;
   }
@@ -35,12 +35,20 @@ export function createFlowFields(
   return {
     cols,
     rows,
-    classes: distinct.map((radius) => ({ radius, next: buildClass(set, cols, rows, radius) })),
+    classes: distinct.map((radius) => ({
+      radius,
+      next: buildClass(set, obstacles, cols, rows, radius),
+    })),
   };
 }
 
-function buildClass(set: SetDefinition, cols: number, rows: number, radius: number): Int32Array {
-  const obstacles = set.obstacles ?? [];
+function buildClass(
+  set: SetDefinition,
+  obstacles: readonly ObstacleDefinition[],
+  cols: number,
+  rows: number,
+  radius: number,
+): Int32Array {
   const cells = cols * rows;
   const clear = new Uint8Array(cells);
   for (let row = 0; row < rows; row++) {

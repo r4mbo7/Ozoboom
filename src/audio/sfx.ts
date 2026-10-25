@@ -32,6 +32,7 @@ export type SfxName =
   | 'weaponHoop'
   | 'weaponDiabolo'
   | 'weaponFrisbee'
+  | 'weaponFrisbeeCaught'
   | 'weaponPlate'
   | 'weaponTotem'
   | 'weaponFans'
@@ -60,6 +61,7 @@ export type SfxName =
   | 'volumeUp'
   | 'skillCharge'
   | 'skillHeal'
+  | 'skillGong'
   | 'taunted'
   | 'playerHealed'
   | 'playerDowned'
@@ -102,6 +104,12 @@ const WEAPON_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
     plate: 'weaponPlate',
     totem: 'weaponTotem',
     ribbon: 'weaponRibbon',
+  }),
+);
+
+const WEAPON_CAUGHT_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
+  Object.entries<SfxName>({
+    boomerang: 'weaponFrisbeeCaught',
   }),
 );
 
@@ -179,7 +187,8 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     weaponSpark: { perFrame: 1, concurrent: 3, seconds: 0.07 },
     weaponHoop: { perFrame: 1, concurrent: 2, seconds: 0.22 },
     weaponDiabolo: { perFrame: 1, concurrent: 2, seconds: 0.3 },
-    weaponFrisbee: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    weaponFrisbee: { perFrame: 1, concurrent: 2, seconds: 0.2 },
+    weaponFrisbeeCaught: { perFrame: 1, concurrent: 2, seconds: 0.22 },
     weaponPlate: { perFrame: 1, concurrent: 2, seconds: 0.4 },
     weaponTotem: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     weaponFans: { perFrame: 1, concurrent: 1, seconds: beat / 2 },
@@ -208,6 +217,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.3 },
     skillHeal: { perFrame: 1, concurrent: 2, seconds: 0.7 },
+    skillGong: { perFrame: 1, concurrent: 2, seconds: 0.6 },
     taunted: { perFrame: 1, concurrent: 2, seconds: 0.5 },
     playerHealed: { perFrame: 1, concurrent: 2, seconds: 0.15 },
     playerDowned: { perFrame: 1, concurrent: 2, seconds: 0.6 },
@@ -271,6 +281,10 @@ export function sfxOf(
     case 'weaponHit': {
       const kind = lookups.weaponKindOf?.(event.weaponId);
       return kind === undefined ? null : (WEAPON_HIT_SFX.get(kind) ?? null);
+    }
+    case 'weaponCaught': {
+      const kind = lookups.weaponKindOf?.(event.weaponId);
+      return kind === undefined ? null : (WEAPON_CAUGHT_SFX.get(kind) ?? null);
     }
     case 'enemyYawned':
       return 'enemyYawn';
@@ -675,14 +689,27 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
   weaponFrisbee: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
-      hz: keyHz(key, 0, 5),
-      toHz: keyHz(key, 5, 5),
-      glide: 0.24,
-      gain: 0.13,
-      attack: 0.01,
-      hold: 0.2,
-      release: 0.06,
-      vibrato: { hz: 9, cents: 25, delay: 0.05 },
+      hz: keyHz(key, 0, 2),
+      toHz: keyHz(key, 4, 2),
+      glide: 0.05,
+      gain: 0.17,
+      attack: 0.004,
+      hold: 0.06,
+      release: 0.12,
+      filter: { type: 'lowpass', hz: 1200 },
+    });
+  },
+  weaponFrisbeeCaught: (out, at, _variant, key) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, 4, 2),
+      toHz: keyHz(key, 0, 2),
+      glide: 0.06,
+      gain: 0.19,
+      attack: 0.004,
+      hold: 0.05,
+      release: 0.16,
+      filter: { type: 'lowpass', hz: 900 },
     });
   },
   weaponPlate: (out, at, _variant, key) => {
@@ -1237,6 +1264,56 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
         release: 0.45,
       });
     });
+  },
+  skillGong: (out, at, _variant, key) => {
+    const root = keyHz(key, 0, 2);
+    playNoise(out, at, {
+      gain: 0.11,
+      attack: 0.002,
+      hold: 0,
+      release: 0.06,
+      filter: { type: 'lowpass', hz: 900 },
+    });
+    for (const [ratio, gain, decay, pan, detune] of [
+      [0.5, 0.08, 0.5, 0, 0],
+      [1, 0.085, 0.6, -0.15, -5],
+      [1, 0.085, 0.6, 0.15, 5],
+      [1.5, 0.1, 0.46, -0.25, 0],
+      [2.13, 0.09, 0.38, 0.25, 0],
+      [2.79, 0.07, 0.32, -0.25, 0],
+      [3.61, 0.05, 0.26, 0.25, 0],
+      [4.53, 0.035, 0.2, -0.25, 0],
+      [5.92, 0.022, 0.15, 0.25, 0],
+    ] as const) {
+      playTone(out, at, {
+        wave: 'sine',
+        hz: root * ratio * (ratio > 1 ? 0.99 : 0.985),
+        toHz: root * ratio,
+        glide: 0.2,
+        gain,
+        attack: 0.004,
+        hold: 0,
+        release: decay,
+        pan,
+        detune,
+      });
+    }
+    for (const [ratio, pan] of [
+      [24, -0.4],
+      [24.1, 0.4],
+      [32, 0.3],
+      [32.13, -0.3],
+    ] as const) {
+      playTone(out, at + 0.08, {
+        wave: 'sine',
+        hz: root * ratio,
+        gain: 0.018,
+        attack: 0.2,
+        hold: 0,
+        release: 0.32,
+        pan,
+      });
+    }
   },
   taunted: (out, at, _variant, key) => {
     playTone(out, at, {

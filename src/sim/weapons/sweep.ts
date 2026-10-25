@@ -25,5 +25,6 @@ export const sweep: WeaponModule = {
         hurtEnemy(state, enemy, effect.damage * power, markedMul, player.id, player);
       }
     }
+    return true;
   },
 };

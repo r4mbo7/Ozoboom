@@ -12,12 +12,17 @@ import {
   type Ctx,
   type Shape,
 } from './paint';
+import { type PlateTextures, createPlateTextures } from './textures-plate';
+import { type TotemTextures, createTotemTextures } from './textures-totem';
 
 export type WeaponKind = WeaponEffect['kind'];
 
 export interface WeaponTextures {
   readonly icons: Readonly<Record<WeaponKind, Shape>>;
+  readonly plate: PlateTextures;
+  readonly totem: TotemTextures;
   readonly sparkShot: Shape;
+  readonly frisbeeStreak: Shape;
   readonly swing: Shape;
   readonly swingFull: Shape;
   readonly hoopRing: Shape;
@@ -27,8 +32,8 @@ export interface WeaponTextures {
 }
 
 const ICON_RADIUS = 32;
+export const FRISBEE_STREAK_LENGTH = 64;
 const SWING_RADIUS = 64;
-export const POLE_HEIGHT = 1.8 * ICON_RADIUS;
 const OUTER = 8;
 const GAP = 3;
 
@@ -99,45 +104,18 @@ function icon(kind: WeaponKind): Shape {
       case 'boomerang':
         circle(ctx, 26);
         outlined(ctx);
-        circle(ctx, 11);
-        doubleStroke(ctx, 6, 2.5);
-        break;
-      case 'plate':
-        circle(ctx, 19);
-        outlined(ctx);
-        ctx.lineWidth = 5;
-        for (const [from, to] of [
-          [-1.1, -0.4],
-          [2.04, 2.74],
-        ] as const) {
-          ctx.beginPath();
-          ctx.arc(0, 0, 28, from, to);
-          ctx.stroke();
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = 1.5;
+        circle(ctx, 17);
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = WHITE;
+        for (const angle of [0, TAU / 3, (TAU * 2) / 3]) {
+          circle(ctx, 3.6, Math.cos(angle) * 12, Math.sin(angle) * 12);
+          ctx.fill();
         }
-        ctx.fillStyle = WHITE;
-        circle(ctx, 5);
-        ctx.fill();
-        break;
-      case 'totem':
-        ctx.beginPath();
-        ctx.rect(-5, -POLE_HEIGHT / 2 + 6, 10, POLE_HEIGHT - 12);
-        outlined(ctx, 6, 2.5);
-        polygon(ctx, [
-          [5, -POLE_HEIGHT / 2 + 6],
-          [26, -POLE_HEIGHT / 2 + 14],
-          [5, -POLE_HEIGHT / 2 + 22],
-        ]);
-        outlined(ctx, 5, 2);
-        ctx.fillStyle = WHITE;
-        polygon(ctx, [
-          [0, -POLE_HEIGHT / 2 - 12],
-          [7, -POLE_HEIGHT / 2 - 3],
-          [0, -POLE_HEIGHT / 2 + 6],
-          [-7, -POLE_HEIGHT / 2 - 3],
-        ]);
-        ctx.fill();
-        circle(ctx, 7, 0, POLE_HEIGHT / 2 - 6);
-        ctx.fill();
         break;
       case 'orbit':
         ctx.beginPath();
@@ -179,14 +157,13 @@ function icon(kind: WeaponKind): Shape {
   });
 }
 
-export const WEAPON_KINDS: readonly WeaponKind[] = [
+// The weapons drawn as one icon tinted with their class; the plate and the totem have their own drawing.
+export const ICON_KINDS: readonly Exclude<WeaponKind, 'plate' | 'totem'>[] = [
   'sweep',
   'spark',
   'hoop',
   'lob',
   'boomerang',
-  'plate',
-  'totem',
   'orbit',
   'trail',
   'ribbon',
@@ -218,8 +195,12 @@ function swing(full: boolean): Shape {
 }
 
 export function createWeaponTextures(): WeaponTextures {
+  const plate = createPlateTextures();
+  const totem = createTotemTextures();
   return {
-    icons: recordOf(WEAPON_KINDS, icon),
+    icons: { ...recordOf(ICON_KINDS, icon), plate: plate.dish, totem: totem.body },
+    plate,
+    totem,
     sparkShot: paint(32, 32, 12, (ctx) => {
       glow(ctx, WHITE, 6);
       ctx.fillStyle = SHADE_DEEP;
@@ -232,6 +213,17 @@ export function createWeaponTextures(): WeaponTextures {
         [0, 6],
       ]);
       outlined(ctx, 4.5, 1.6);
+    }),
+    frisbeeStreak: paint(FRISBEE_STREAK_LENGTH, 72, 26, (ctx) => {
+      ctx.fillStyle = 'rgb(255 255 255 / 0.08)';
+      ctx.fillRect(-FRISBEE_STREAK_LENGTH / 2, -23, FRISBEE_STREAK_LENGTH, 46);
+      glow(ctx, WHITE, 6);
+      ctx.strokeStyle = WHITE;
+      ctx.lineWidth = 3;
+      for (const edge of [-23, 23]) {
+        line(ctx, -FRISBEE_STREAK_LENGTH / 2, edge, FRISBEE_STREAK_LENGTH / 2, edge);
+        ctx.stroke();
+      }
     }),
     swing: swing(false),
     swingFull: swing(true),
@@ -268,12 +260,34 @@ export function createWeaponTextures(): WeaponTextures {
 }
 
 export function destroyWeaponTextures(textures: WeaponTextures): void {
-  for (const shape of [...Object.values(textures.icons), ...singles(textures)]) {
+  const { glint, rim, gilt } = textures.plate;
+  const { eye, cone, bass, pull, dissolve } = textures.totem;
+  for (const shape of [
+    ...Object.values(textures.icons),
+    ...singles(textures),
+    glint,
+    rim,
+    gilt,
+    eye,
+    cone,
+    bass,
+    pull,
+    ...dissolve,
+  ]) {
     shape.texture.destroy(true);
   }
 }
 
 function singles(textures: WeaponTextures): Shape[] {
-  const { sparkShot, swing: arc, swingFull, hoopRing, dash, zone, shadow } = textures;
-  return [sparkShot, arc, swingFull, hoopRing, dash, zone, shadow];
+  const {
+    sparkShot,
+    frisbeeStreak,
+    swing: arc,
+    swingFull,
+    hoopRing,
+    dash,
+    zone,
+    shadow,
+  } = textures;
+  return [sparkShot, frisbeeStreak, arc, swingFull, hoopRing, dash, zone, shadow];
 }

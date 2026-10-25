@@ -1,4 +1,5 @@
 import type { FullAttack, FullSkillEffect, FullSpecialEffect } from './full';
+import type { AuraAttack, OlaEffect } from './kiffeur';
 import type { GustEffect } from './coup-de-vent';
 import type { MoshRingEffect } from './pogo';
 
@@ -28,7 +29,10 @@ export type StatKey =
   | 'rootsGrowthMul'
   | 'skillCountAdd'
   | 'echoCountAdd'
-  | 'echoPowerMul';
+  | 'echoPowerMul'
+  | 'twilightBeatsAdd'
+  | 'elementBeatsAdd'
+  | 'elementSpreadAdd';
 
 export interface StatModifier {
   stat: StatKey;
@@ -49,12 +53,13 @@ export interface StraightAttack {
   knockback?: number;
 }
 
-export type AttackDefinition = StraightAttack | FullAttack;
+export type AttackDefinition = StraightAttack | AuraAttack | FullAttack;
 
 export type SkillEffect =
   | { kind: 'nova'; damage: number; radius: number; knockback: number }
   | { kind: 'dash'; distance: number; invulnerableTicks: number; tauntRadius?: number }
   | { kind: 'healPulse'; amount: number; radius: number; coreRepair: number }
+  | OlaEffect
   | FullSkillEffect;
 
 export type ZoneCadence = 'beat' | 'offbeat' | 'continuous';
@@ -491,6 +496,8 @@ export interface SummonSite {
   capacity: number;
   // Where the bosses it calls come in; absent, anywhere on the edge, as a drawn boss.
   gates?: readonly { x: number; y: number }[];
+  // Bad vibes walk around this circle of the same center; players and shots go through.
+  badVibeRadius?: number;
 }
 
 export interface SummonDefinition {

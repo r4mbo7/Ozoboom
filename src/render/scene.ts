@@ -114,7 +114,8 @@ export class Scene implements Renderer, InsetScene {
       this.lastState = state;
       this.lastStage = stage;
       this.lastTick = -1;
-      this.beatTick = this.shakeTick = this.frame.flashTick = Number.NEGATIVE_INFINITY;
+      this.beatTick = this.shakeTick = Number.NEGATIVE_INFINITY;
+      this.frame.flashTick = this.frame.shakeTick = Number.NEGATIVE_INFINITY;
       this.cameraNow = Number.NaN;
       this.showClock.reset();
       for (const family of this.families) {
@@ -257,7 +258,11 @@ export class Scene implements Renderer, InsetScene {
     const { tick } = state;
     if (event.type === 'beat') {
       this.beatTick = tick;
-    } else if (event.type === 'bombExploded' || isBossLanding(event, state)) {
+    } else if (
+      event.type === 'bombExploded' ||
+      event.type === 'eclipseBurst' ||
+      isBossLanding(event, state)
+    ) {
       this.shakeTick = tick;
     } else if (event.type === 'coreHit' && this.flashLimiter.tryStart(tick)) {
       this.frame.flashTick = this.shakeTick = tick;
@@ -272,7 +277,7 @@ export class Scene implements Renderer, InsetScene {
     const { scale, screenWidth, screenHeight } = camera;
     let shakeX = 0;
     let shakeY = 0;
-    const shake = (now - this.shakeTick) / SHAKE.ticks;
+    const shake = (now - Math.max(this.shakeTick, this.frame.shakeTick)) / SHAKE.ticks;
     if (!this.options.calmMode && shake >= 0 && shake < 1) {
       const strength = SHAKE.pixels * (1 - shake) * (1 - shake);
       shakeX = Math.sin(now * 12.9) * strength;

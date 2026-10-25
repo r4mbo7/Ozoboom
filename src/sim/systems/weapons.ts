@@ -142,7 +142,9 @@ export function weapons(ctx: StepContext): void {
         target,
         direction: target === null ? aim : directionTo(player, target, aim),
       };
-      WEAPONS[definition.effect.kind].fire(ctx, player, slot, definition, shot);
+      if (!WEAPONS[definition.effect.kind].fire(ctx, player, slot, definition, shot)) {
+        continue;
+      }
       state.events.push({
         type: 'weaponFired',
         playerId: player.id,

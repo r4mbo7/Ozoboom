@@ -21,6 +21,8 @@ export interface Frame {
   calm: boolean;
   pulse: number;
   flashTick: number;
+  // A family that lands a blow sets the tick it lands on, and the scene shakes from it.
+  shakeTick: number;
   dropFilter: number;
   groundFilter: number;
   camera: Camera;
@@ -44,6 +46,7 @@ export function createFrame(set: SetDefinition = MAIN_STAGE): Frame {
     calm: false,
     pulse: 0,
     flashTick: Number.NEGATIVE_INFINITY,
+    shakeTick: Number.NEGATIVE_INFINITY,
     dropFilter: 0,
     groundFilter: 0,
     camera: frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, 0, 0),

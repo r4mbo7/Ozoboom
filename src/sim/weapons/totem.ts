@@ -7,7 +7,7 @@ const PLANT_GAP = 40;
 export const totem: WeaponModule = {
   fire({ state, set, tempo }, player, slot, { effect }, { direction }) {
     if (effect.kind !== 'totem') {
-      return;
+      return false;
     }
     const reach = player.radius + PLANT_GAP;
     const { width, height } = state.arena;
@@ -24,5 +24,6 @@ export const totem: WeaponModule = {
       1,
       set.obstacles,
     );
+    return true;
   },
 };
