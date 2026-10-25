@@ -1,7 +1,6 @@
 import type { Vec2 } from './vec';
 
-// Trigonometry from + - * / and sqrt only: Math.sin, Math.cos and Math.atan2 are not reproducible
-// from one engine to another (docs/architecture.md).
+// Math.sin, Math.cos and Math.atan2 are not reproducible across engines (docs/architecture.md).
 
 const TWO_PI = 2 * Math.PI;
 const HALF_PI = Math.PI / 2;

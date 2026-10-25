@@ -7,7 +7,6 @@ import { Ribbons, Transients } from './weapon-fx';
 import { type WeaponStyle, styleOf } from './weapon-looks';
 import { add, hide, placeOutline, setTint } from './util';
 
-// Sizes of the silhouettes in flight or on the ground, in pixels across.
 export const SIZES: Partial<Record<WeaponKind, number>> = {
   spark: 16,
   lob: 22,
@@ -36,12 +35,6 @@ export interface WeaponKit {
     color: number,
     frame: Frame,
   ): void;
-}
-
-export function mixColor(from: number, to: number, amount: number): number {
-  const channel = (shift: number) =>
-    Math.round(((from >> shift) & 0xff) * (1 - amount) + ((to >> shift) & 0xff) * amount);
-  return (channel(16) << 16) | (channel(8) << 8) | channel(0);
 }
 
 export function createKit(ctx: RenderContext): WeaponKit {

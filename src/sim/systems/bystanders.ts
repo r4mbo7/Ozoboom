@@ -10,7 +10,6 @@ import { reviveMulOf } from './revive';
 import { edgePosition } from './spawning';
 import type { StepContext } from './types';
 
-// Where it walks to from its spawn point: a random point roughly halfway to the core.
 const WANDER_FRACTION_MIN = 0.3;
 const WANDER_FRACTION_SPAN = 0.4;
 
@@ -128,8 +127,7 @@ function touchedByEnemy(state: SimState, bystander: BystanderState): boolean {
   return false;
 }
 
-// Help ticks this tick brings, 0 without contact. A standing player counts the reviveMul of their
-// class; a zone heal (a trap's mist, a plate, a healPulse cast this tick) counts 1.
+// A standing player counts their class's reviveMul; a zone heal this tick counts 1.
 function aidOf(ctx: StepContext, bystander: BystanderState): number {
   const { state, content } = ctx;
   let aid = 0;

@@ -2,7 +2,6 @@ import { FULL_GAUGES } from '../full';
 import type { GaugeModule } from '../gauges';
 import type { StepContext } from './types';
 
-// One module per gauge kind; those of the full game come from `FULL_GAUGES`.
 export const GAUGES: Record<string, GaugeModule> = { ...FULL_GAUGES };
 
 // After `deaths`, so that a module sees every hit and every fall of the tick; downed players too.

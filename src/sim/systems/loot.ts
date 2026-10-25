@@ -2,11 +2,10 @@ import type { TrapDefinition } from '../../data/types';
 import { type RngState, nextFloat } from '../../shared/prng';
 import { barOfTick, isBarTick } from '../../shared/tempo';
 import { touches } from '../effects';
+import type { PlayerState, SimState } from '../state';
 import { handFree, statValue } from '../stats';
 import type { StepContext } from './types';
 
-// Every `everyBars` bars, fewer with the talkie-walkie of any player, a loot falls due; the first
-// bad vibe to spawn from then on, boss aside, carries it.
 export function lootCarriers({ state, set, tempo }: StepContext): void {
   const rules = set.loot;
   if (rules === undefined) {
@@ -55,6 +54,20 @@ export function dropLoot({ state, content, set, tempo }: StepContext, x: number,
   state.events.push({ type: 'lootDropped', id, trapId, x, y });
 }
 
+// The last trap of the hand, under the player, to free a hand.
+export function layDownTrap(state: SimState, player: PlayerState): boolean {
+  const trapId = player.hand?.pop();
+  if (trapId === undefined) {
+    return false;
+  }
+  const id = state.nextEntityId;
+  state.nextEntityId += 1;
+  const { x, y } = player;
+  (state.loots ??= []).push({ id, trapId, x, y, prevX: x, prevY: y });
+  state.events.push({ type: 'lootDropped', id, trapId, x, y });
+  return true;
+}
+
 export function drawLootTrap(
   rng: RngState,
   traps: readonly Pick<TrapDefinition, 'id' | 'lootWeight'>[],
@@ -74,7 +87,6 @@ export function drawLootTrap(
   return last.id;
 }
 
-// A loot goes to the first player standing on it with a free hand, or fades away.
 export function loots({ state, set }: StepContext): void {
   const rules = set.loot;
   const lying = state.loots;
@@ -95,8 +107,10 @@ export function loots({ state, set }: StepContext): void {
       state.events.push({ type: 'lootCollected', id, playerId: taker.id, trapId, x, y });
       continue;
     }
-    loot.ticksLeft -= 1;
-    if (loot.ticksLeft > 0) {
+    if (loot.ticksLeft !== undefined) {
+      loot.ticksLeft -= 1;
+    }
+    if (loot.ticksLeft === undefined || loot.ticksLeft > 0) {
       lying[kept] = loot;
       kept += 1;
     }

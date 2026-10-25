@@ -1,11 +1,12 @@
 import type { MusicVoiceId } from '../data/types';
+import { clamp } from '../shared/scalar';
 import { type Tempo } from '../shared/tempo';
 import { sixteenthSeconds } from './clock';
 import { playNoise, playTone, type ToneSpec } from './synth';
 
 export interface MusicVoiceContext {
   out: AudioNode;
-  // The same bus, through the echo.
+  // The bus through the echo.
   send: AudioNode;
   // The echo alone, for a voice that sends only part of itself into it.
   echo: AudioNode;
@@ -14,19 +15,16 @@ export interface MusicVoiceContext {
   tempo: Tempo;
   position: number;
   hz: number;
-  // The part's previous note.
   fromHz: number;
   steps: number;
   cutoff: number;
   light: boolean;
-  // Nothing may sound past it: the cut before a drop.
+  // The cut before a drop: nothing may sound past it.
   until: number;
   accent: boolean;
-  // Glides from the previous note.
   slide: boolean;
   // The next note slides from this one.
   legato: boolean;
-  // The part's level.
   gain: number;
 }
 
@@ -60,7 +58,6 @@ const BOWL_PARTIALS: readonly (readonly [
   [2.76, 0.02, 3, -0.35],
   [5.4, 0.008, 1.6, 0.35],
 ];
-// A vowel: [formant hz, q, gain].
 type Vowel = readonly (readonly [hz: number, q: number, gain: number])[];
 const VOWEL_A: Vowel = [
   [780, 5, 1],
@@ -106,7 +103,7 @@ const DRONE_PARTIALS: readonly (readonly [
   ['sine', 3, -2, 0.028, -0.15],
 ];
 const BIRD_HZ = [2600, 3400, 2150, 3900, 2950];
-// One gust on each side, their filters crossing: [from hz, to hz, pan, seconds late].
+// One gust per side, their filters crossing: [from hz, to hz, pan, seconds late].
 const WIND_GUSTS = [
   [700, 1500, -0.8, 0],
   [1900, 900, 0.8, 0.37],
@@ -151,13 +148,10 @@ function echoed(ctx: MusicVoiceContext, level: number): AudioNode {
 }
 
 function held(ctx: MusicVoiceContext, steps: number, release: number, share = 0.85): number {
-  return Math.max(
-    0,
-    Math.min(steps * sixteenthSeconds(ctx.tempo) * share, ctx.until - ctx.at - release),
-  );
+  return clamp(ctx.until - ctx.at - release, 0, steps * sixteenthSeconds(ctx.tempo) * share);
 }
 
-// A slow swell and its fall, shortened so that nothing sounds past the cut.
+// Shortened so that nothing sounds past the cut.
 function swell(
   ctx: MusicVoiceContext,
   at: number,
@@ -165,7 +159,7 @@ function swell(
   attack: number,
   release: number,
 ) {
-  const whole = Math.max(0, Math.min(sustain + release, ctx.until - at));
+  const whole = clamp(ctx.until - at, 0, sustain + release);
   const rise = Math.min(attack, whole / 2);
   const fall = Math.min(release, whole - rise);
   return { attack: rise, hold: Math.max(0, whole - rise - fall), release: fall };
@@ -312,7 +306,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         detune,
         gain: 0.04,
         attack: 0.01,
-        hold: Math.max(0, Math.min(steps * sixteenth * 0.8, until - at - 0.08)),
+        hold: clamp(until - at - 0.08, 0, steps * sixteenth * 0.8),
         release: 0.08,
         filter: { type: 'lowpass', hz: cutoff, toHz: cutoff * 0.4, glide: steps * sixteenth, q: 7 },
       });
@@ -322,7 +316,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
     const sixteenth = sixteenthSeconds(tempo);
     const long = steps >= 4;
     const release = long ? 0.16 : 0.07;
-    const hold = Math.max(0, Math.min(steps * sixteenth * 0.85, until - at - release));
+    const hold = clamp(until - at - release, 0, steps * sixteenth * 0.85);
     const level = light ? 0.45 : 1;
     for (const [detune, octaves, gain] of ORIENTAL_VOICES) {
       playTone(send, at, {
@@ -429,7 +423,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         detune,
         gain: 0.027,
         attack: 0.01,
-        hold: Math.max(0, Math.min(steps * sixteenth * 0.82, until - at - release)),
+        hold: clamp(until - at - release, 0, steps * sixteenth * 0.82),
         release,
         ...(long ? { vibrato: { hz: 5.5, cents: 18, delay: 0.14 } } : {}),
         filter: {
@@ -558,7 +552,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
       detunes: [-9, 0, 9],
       gain: 0.03,
       attack: 0.5,
-      hold: Math.max(0, Math.min(steps * sixteenthSeconds(tempo), until - at - 0.5 - release)),
+      hold: clamp(until - at - 0.5 - release, 0, steps * sixteenthSeconds(tempo)),
       release,
       ...(steps >= 4 ? { vibrato: { hz: 5, cents: 14, delay: 0.3 } } : {}),
     });
@@ -677,7 +671,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
   ney: ({ out, send, at, hz, steps, until, light, tempo }) => {
     const sixteenth = sixteenthSeconds(tempo);
     const level = light ? 0.6 : 1;
-    const hold = Math.max(0, Math.min(steps * sixteenth * 0.85, until - at - 0.22));
+    const hold = clamp(until - at - 0.22, 0, steps * sixteenth * 0.85);
     const vibrato = steps >= 3 ? { hz: 5.4, cents: 24, delay: 0.16 } : undefined;
     playTone(send, at, {
       wave: 'triangle',
@@ -703,7 +697,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
     playNoise(out, at, {
       gain: 0.022 * level,
       attack: 0.04,
-      hold: Math.max(0, Math.min(steps * sixteenth * 0.7, until - at - 0.18)),
+      hold: clamp(until - at - 0.18, 0, steps * sixteenth * 0.7),
       release: 0.18,
       filter: { type: 'bandpass', hz: hz * 2, q: 9 },
     });
@@ -1073,7 +1067,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
     const { at, hz, position, cutoff, light, until, accent, gain } = ctx;
     const bar = 16 * sixteenthSeconds(ctx.tempo);
     const opening = Math.max(0, 1 - (until - at) / (PLUCK_OPENING_BARS * bar));
-    const open = light ? 700 + 5200 * opening ** 2 : Math.min(6500, Math.max(1600, cutoff * 1.6));
+    const open = light ? 700 + 5200 * opening ** 2 : clamp(cutoff * 1.6, 1600, 6500);
     const top = open * (accent ? 1.3 : 1);
     const into = echoed(ctx, 0.3);
     for (const detune of [-5, 6]) {
@@ -1114,7 +1108,7 @@ export const MUSIC_VOICES: Readonly<Record<MusicVoiceId, MusicVoice>> = {
         attack: 0.003,
         hold: 0.025,
         release: 0.075,
-        filter: { type: 'lowpass', hz: Math.min(3200, Math.max(450, cutoff * 1.1)), q: 3 },
+        filter: { type: 'lowpass', hz: clamp(cutoff * 1.1, 450, 3200), q: 3 },
       });
     }
   },

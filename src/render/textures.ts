@@ -87,8 +87,6 @@ function corner(count: number, radius: number, turn: number, index: number): Poi
   return [Math.cos(angle) * radius, Math.sin(angle) * radius];
 }
 
-// A geodesic dome seen from above, in core texture pixels: a decagon rim, a pentagon turned by a
-// tenth of a turn, and a small pentagon at the top, with triangles between them.
 export const DOME_FACETS: readonly Facet[] = [0, 1, 2, 3, 4].flatMap((index): Facet[] => {
   const rim = (at: number) => corner(10, 80, 0, at);
   const middle = (at: number) => corner(5, 50, TAU / 10, at);

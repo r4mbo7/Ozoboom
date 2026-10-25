@@ -5,7 +5,7 @@ import { beatPeriodMs } from '../shared/tempo';
 import { weaponSlotCount } from '../sim/draw';
 import { setOf, setTempo } from '../sim/lineup';
 import type { PlayerId, PlayerState, SimState, UpgradeOffer } from '../sim/state';
-import { el, fillHint, icon, setFlag, setText, setVar } from './dom';
+import { el, fillHint, findAll, icon, setFlag, setText, setVar } from './dom';
 import {
   SIXTEENTHS_PER_BAR,
   type Card,
@@ -30,34 +30,32 @@ import { playerLabel } from './hud-model';
 import { STAR, classMark, medallion, roleIcon, upgradeIcon, weaponIcon } from './icons';
 import { type Menu, createMenu } from './menu';
 import { type MenuInput, createMenuInput } from './navigation';
-import { promptsFor } from './prompts';
+import type { Prompts } from './prompts';
 import type { UiFrame, UpgradeCue } from './types';
 import { createWho, fillWho, whoColor } from './who';
 
 export interface UpgradeOverlay {
   readonly element: HTMLElement;
-  // The sparks of the menu, over everything: they outlive the menu that throws them.
+  // The sparks outlive the menu that throws them.
   readonly effects: HTMLElement;
-  // Shows the offer of each player of this screen side by side, each driven by that player's own
-  // snapshot, and who the others are still waited for. Hides itself when nobody is choosing.
   update(state: SimState, frame: UiFrame, content: GameContent, now: number): void;
   hide(): void;
 }
 
 export interface UpgradeHost {
-  // Nothing moves: no choice is held for a motion nobody sees.
+  // Calm mode: no choice is held for a motion nobody sees.
   calm(): boolean;
   choose(playerId: PlayerId, upgradeId: string): void;
   cue(cue: UpgradeCue, variant: number): void;
-  // Where the card a player took lands in the HUD, null when the HUD does not show that player.
+  // null when the HUD does not show that player.
   landing(playerId: PlayerId, weaponId: string | null): HTMLElement | null;
-  // Plays the weapon of a card in its canvas until the returned function is called; null when
-  // nothing can draw it, and the card keeps its medallion.
+  // null when nothing can draw the weapon: the card keeps its medallion.
   showWeapon(canvas: HTMLCanvasElement, weaponId: string, playerId: PlayerId): (() => void) | null;
+  readonly prompts: Prompts;
 }
 
 const MENU_GRACE_MS = 500;
-// Where ui.css lays a card's head as a tile beside its title, too small to play a weapon.
+// Mirrors where ui.css lays a card's head as a tile, too small to play a weapon.
 const TILE_HEADS = '(max-width: 720px) and (min-height: 521px)';
 // A dealt card sounds when it touches down, not when it leaves.
 const DEAL_NOTE_MS = 70;
@@ -156,7 +154,6 @@ function fusionLine(fusions: WeaponCard['fusions']): HTMLElement | null {
       );
 }
 
-// What a weapon does; what none of the weapons held does yet stands out, with a star.
 function roles(model: WeaponCard): HTMLElement {
   const row = el('span', 'ui-card__roles');
   for (const view of model.roles) {
@@ -179,8 +176,7 @@ function roles(model: WeaponCard): HTMLElement {
   return row;
 }
 
-// The levels of a weapon, the one the card gives lit, then the fusions it leads to.
-function path(model: WeaponCard): HTMLElement {
+function levelsAndFusions(model: WeaponCard): HTMLElement {
   const row = el('span', 'ui-card__path');
   row.setAttribute('role', 'img');
   row.setAttribute('aria-label', model.pearls.label);
@@ -240,7 +236,7 @@ function card(model: Card): HTMLButtonElement {
   }
   const foot = el('span', 'ui-card__foot');
   foot.append(
-    model.kind === 'weapon' ? path(model) : rankOf(model),
+    model.kind === 'weapon' ? levelsAndFusions(model) : rankOf(model),
     el('span', 'ui-card__cta', t('Choisir')),
   );
   const head = el('span', 'ui-card__head');
@@ -289,8 +285,7 @@ function centerOf(node: Element): { x: number; y: number } {
   return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
 }
 
-// Where a card sits once nothing moves it.
-function restOf(button: HTMLElement): { x: number; y: number } {
+function restingCenterOf(button: HTMLElement): { x: number; y: number } {
   const at = centerOf(button);
   const shift = new DOMMatrix(getComputedStyle(button).transform);
   return { x: at.x - shift.e, y: at.y - shift.f };
@@ -300,7 +295,6 @@ function between(low: number, high: number): number {
   return low + Math.random() * (high - low);
 }
 
-// A handful of sparks around a point: each leaves when its animation ends, the group with the last.
 function sparksAt(layer: HTMLElement, at: { x: number; y: number }): HTMLElement {
   const group = el('span', 'ui-sparks__group');
   group.style.left = `${at.x.toFixed(1)}px`;
@@ -317,7 +311,6 @@ function sparksAt(layer: HTMLElement, at: { x: number; y: number }): HTMLElement
   return group;
 }
 
-// The chosen card throws a ring and shards of its colour.
 function burst(layer: HTMLElement, button: HTMLElement): void {
   const group = sparksAt(layer, centerOf(button));
   const style = getComputedStyle(button);
@@ -342,7 +335,6 @@ function burst(layer: HTMLElement, button: HTMLElement): void {
   }
 }
 
-// A legendary card lets stars go as it lands.
 function stars(layer: HTMLElement, button: HTMLElement): void {
   const box = button.getBoundingClientRect();
   const group = sparksAt(layer, centerOf(button));
@@ -359,15 +351,12 @@ function stars(layer: HTMLElement, button: HTMLElement): void {
   }
 }
 
-// The card a player took, until the menu closes on it.
 interface Taken {
   button: HTMLButtonElement;
-  // Set when the card is a circus weapon, which has its slot in the HUD.
+  // null unless a circus weapon, which has its slot in the HUD.
   weaponId: string | null;
 }
 
-// The offer of one player of this screen. It keeps its place once the choice is made, until the
-// others have chosen too.
 interface Panel {
   readonly element: HTMLElement;
   readonly input: MenuInput;
@@ -396,7 +385,6 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   const who = createWho();
   const kicker = el('p', 'ui-kicker');
   const heading = el('h2', 'ui-heading', t('Choisis ton amélioration'));
-  // The places for circus weapons, when the offer has one: what is held, what stays free.
   const places = el('div', 'ui-places');
   places.setAttribute('role', 'img');
   places.hidden = true;
@@ -474,9 +462,8 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     );
   }
 
-  // While the others choose, the chosen card waits alone in the middle of its panel.
   function wait(picked: HTMLElement): void {
-    const from = restOf(picked);
+    const from = restingCenterOf(picked);
     const to = centerOf(cards);
     setVar(picked, '--wait-x', `${(to.x - from.x).toFixed(1)}px`);
     setVar(picked, '--wait-y', `${(to.y - from.y).toFixed(1)}px`);
@@ -499,15 +486,15 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       return;
     }
     device = next;
-    const prompts = promptsFor(next);
+    const shown = host.prompts.for(next);
     fillHint(
       hint,
       [
-        { keys: prompts.navigateRow, label: t('choisir'), screen: 'wide' },
-        { keys: prompts.navigate, label: t('choisir'), screen: 'narrow' },
-        { keys: [prompts.confirm], label: t('valider') },
+        { keys: shown.navigateRow, label: t('choisir'), screen: 'wide' },
+        { keys: shown.navigate, label: t('choisir'), screen: 'narrow' },
+        { keys: [shown.confirm], label: t('valider') },
       ],
-      prompts.style,
+      shown.style,
     );
   }
 
@@ -533,14 +520,12 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         canvas === null || id === undefined ? null : host.showWeapon(canvas, id, playerId);
       if (stop !== null) {
         stops.push(stop);
-        button.querySelector<HTMLElement>('.ui-card__head')?.setAttribute('data-live', '');
+        button.querySelector('.ui-card__head')?.setAttribute('data-live', '');
       }
     }
   }
 
-  // The sixteenth note the set plays now walks through the strip of each weapon card; a step the
-  // weapon fires on lights up when the bar is one it plays.
-  function play(): void {
+  function walkStrips(): void {
     const sixteenth = beatMs / 4;
     const at = host.calm() || sixteenth <= 0 ? -1 : Math.floor(clock / sixteenth);
     if (at === playing) {
@@ -550,12 +535,12 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     const step = at < 0 ? -1 : at % SIXTEENTHS_PER_BAR;
     const bar = Math.floor(at / SIXTEENTHS_PER_BAR);
     models.forEach((model, index) => {
-      const cells = buttons[index]?.querySelectorAll<HTMLElement>('.ui-card__step');
-      if (model.kind !== 'weapon' || cells === undefined) {
+      const card = buttons[index];
+      if (model.kind !== 'weapon' || card === undefined) {
         return;
       }
       const fires = bar % model.everyBars === 0;
-      cells.forEach((cell, position) => {
+      findAll(card, '.ui-card__step', HTMLElement).forEach((cell, position) => {
         setFlag(cell, 'now', position === step);
         setFlag(cell, 'hit', position === step && fires && cell.dataset.on === 'true');
       });
@@ -705,7 +690,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       if (chosen === null && now >= opensAt) {
         menu.handle(edges);
       }
-      play();
+      walkStrips();
       const focusing = snapshot.device !== 'touch' && chosen === null && now >= opensAt;
       fillPlaces(player, content, slots, focusing ? models[menu.index] : undefined);
     },
@@ -724,9 +709,8 @@ function chip(model: WaitChip): HTMLElement {
   return node;
 }
 
-// The relics a boss drops wait for its farewell, drawn by the renderer over the frozen game: it
-// smiles, bursts into colors and lets its relics float before the cards come.
-export const RELIC_HOLD_BEATS = 5;
+// The boss's farewell, drawn by the renderer over the frozen game, plays before its relic cards come.
+const RELIC_HOLD_BEATS = 5;
 
 export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
   const element = el('section', 'ui-screen ui-overlay ui-upgrade');
@@ -755,7 +739,6 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
       }
     },
   };
-  // The card each player of another screen took since the menu opened.
   const picked = new Map<PlayerId, string>();
   let later: Later[] = [];
   let lit: HTMLElement[] = [];
@@ -808,7 +791,6 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
     });
   }
 
-  // The menu closes over the game that resumes: every chosen card flies to its place in the HUD.
   function close(now: number, beatMs: number): void {
     const flights = [...panels].flatMap(([playerId, panel]) => {
       const { taken } = panel;
@@ -832,7 +814,7 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
     element.dataset.leaving = '';
     element.inert = true;
     flights.forEach(({ button, spot }, turn) => {
-      const from = restOf(button);
+      const from = restingCenterOf(button);
       const to = centerOf(spot);
       const delay = turn * FLIGHT_STAGGER_BEATS * beatMs;
       setVar(button, '--fly-x', `${(to.x - from.x).toFixed(1)}px`);

@@ -17,7 +17,6 @@ import {
 
 const SEAM_Y = -33;
 const BADGE = { x: 0, y: -47, radius: 10 } as const;
-// The whistle hangs from the right of the mouth, its ball held out past the shield.
 const WHISTLE = { x: 29, y: 23, radius: 8.5 } as const;
 export const COUVRE_FEU_WHISTLE: readonly [number, number] = [WHISTLE.x + 1, WHISTLE.y];
 
@@ -44,7 +43,6 @@ function shield(ctx: Ctx): void {
   ctx.closePath();
 }
 
-// A dome on a wide visor.
 function cap(ctx: Ctx): void {
   ctx.moveTo(-38, -30);
   ctx.bezierCurveTo(-40, -62, 40, -62, 38, -30);
@@ -59,7 +57,6 @@ function seam(ctx: Ctx): void {
   ctx.globalAlpha = 1;
 }
 
-// The cap alone, as it flies off a chased Couvre-feu.
 export function couvreFeuCap(ctx: Ctx): void {
   bodyRimOutside(ctx, () => {
     ctx.beginPath();
@@ -68,8 +65,6 @@ export function couvreFeuCap(ctx: Ctx): void {
   seam(ctx);
 }
 
-// He blows his whistle on the one of every bar, cheeks puffed; the badge on his cap is a clock
-// whose hand ticks a quarter turn on every beat.
 export function couvreFeu(ctx: Ctx, pose: Pose): void {
   const beats = pose.t * 4;
   const blow = Math.floor(beats) === 0 ? beats % 1 : 0;
@@ -123,7 +118,6 @@ export function couvreFeu(ctx: Ctx, pose: Pose): void {
   dot(ctx, BADGE.x, BADGE.y, 1.8, INK);
 }
 
-// Chased, he lets his whistle go to smile; his cap keeps its seam and its badge.
 export function couvreFeuGlad(ctx: Ctx): void {
   gladFace(ctx, { eyeY: -2, mouthY: 12, part: 'smile' });
   stroke(ctx, INK, 4, [-40, SEAM_Y], [40, SEAM_Y]);
@@ -133,9 +127,6 @@ export function couvreFeuGlad(ctx: Ctx): void {
   ctx.stroke();
 }
 
-// ---- La Batterie à plat
-
-// Her body is a battery, its flanks bulging by `bulge` when she heats up.
 function battery(ctx: Ctx, bulge: number): void {
   ctx.beginPath();
   ctx.moveTo(-21, -30);
@@ -151,7 +142,6 @@ function battery(ctx: Ctx, bulge: number): void {
 }
 
 const TERMINAL = [-11, -42, 22, 10, 3] as const;
-// The slot of her gauge, whose cells `batterie.ts` lights.
 const SLOT = [-25, -23, 50, 16, 5] as const;
 const SLOT_DARK = '#0e0f16';
 
@@ -171,7 +161,6 @@ function fittings(ctx: Ctx, fill: string, slot: string, rim: string): void {
   ctx.stroke();
 }
 
-// A drop of sweat slides down her flank every bar.
 export function batterieAPlat(ctx: Ctx, pose: Pose): void {
   body(ctx, () => {
     battery(ctx, 0);
@@ -199,8 +188,6 @@ export function batterieAPlat(ctx: Ctx, pose: Pose): void {
   ctx.restore();
 }
 
-// Her flanks alone, swollen as she heats up under a third of her life. Laid over her mask, they
-// cover its straight sides: the middle is cut out.
 export function batterieAPlatFlanks(ctx: Ctx): void {
   body(ctx, () => {
     battery(ctx, 9);
@@ -214,8 +201,6 @@ export function batterieAPlatFlanks(ctx: Ctx): void {
   ctx.globalCompositeOperation = 'source-over';
 }
 
-// Chased, she keeps her terminal and her slot in ink; `batterie.ts` fades her cells through the
-// team's colors.
 export function batterieAPlatGlad(ctx: Ctx): void {
   gladFace(ctx, { eyeY: 8, mouthY: 22, mouthWidth: 13, part: 'smile' });
   ctx.beginPath();

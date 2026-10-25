@@ -40,8 +40,7 @@ export const TRAP_SLOT_CONTROLS = [
 
 export type Bindings<K extends string | number> = Readonly<Partial<Record<K, readonly Control[]>>>;
 
-// The keys that stay whatever the player chooses: the menus, the pause and the trap slots. Keys are
-// KeyboardEvent.code, the physical position on a US layout: KeyW is the Z of an AZERTY keyboard.
+// KeyboardEvent.code is the physical position on a US layout: KeyW is the Z of an AZERTY keyboard.
 export const FIXED_KEY_BINDINGS: Bindings<string> = {
   ArrowUp: ['menuUp'],
   ArrowLeft: ['menuLeft'],
@@ -71,7 +70,6 @@ export interface Stick {
   readonly y: number;
 }
 
-// What every input does, built from the player's key profile (`src/input/profile.ts`).
 export interface InputBindings {
   readonly keys: Bindings<string>;
   readonly mouseButtons: Bindings<number>;
@@ -101,7 +99,6 @@ export const StandardButton = {
   Guide: 16,
 } as const;
 
-// The buttons that stay whatever the player chooses: A and B validate and go back in the menus.
 export const FIXED_GAMEPAD_BUTTON_BINDINGS: Bindings<number> = {
   [StandardButton.A]: ['confirm'],
   [StandardButton.B]: ['back'],
@@ -118,7 +115,6 @@ export const FIXED_GAMEPAD_BUTTON_BINDINGS: Bindings<number> = {
 export const LEFT_STICK: Stick = { x: 0, y: 1 };
 export const RIGHT_STICK: Stick = { x: 2, y: 3 };
 
-// In a game, each arrow of the directional pad makes the player's gesture of that side.
 export const EMOTE_CONTROLS: Readonly<Record<Emote, Control>> = {
   sunrise: 'emoteUp',
   fireworks: 'emoteDown',
@@ -137,14 +133,12 @@ export const MENU_DIRECTION_CONTROLS: Readonly<Record<MenuDirection, Control>> =
   right: 'menuRight',
 };
 
-// The moving stick walks the menus like the directional pad: a push past MENU_STICK_PRESS on its
-// dominant axis is one press, held until the stick comes back under MENU_STICK_RELEASE.
+// A push past MENU_STICK_PRESS on the dominant axis is one press, held until it falls under MENU_STICK_RELEASE.
 export const MENU_STICK_PRESS = 0.6;
 export const MENU_STICK_RELEASE = 0.3;
 export const MENU_REPEAT_DELAY_MS = 400;
 export const MENU_REPEAT_INTERVAL_MS = 120;
 
-// The virtual stick is born under the thumb and follows it past its rim, in CSS pixels. A trap
-// tile dragged further than TOUCH_DRAG_THRESHOLD is dropped where the finger leaves it.
+// In CSS pixels.
 export const TOUCH_STICK_RADIUS = 56;
 export const TOUCH_DRAG_THRESHOLD = 16;

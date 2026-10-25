@@ -1,8 +1,7 @@
 import type { Tempo } from '../shared/tempo';
 
-export const VIBE_GLOW = { perVibe: 0.55, cap: 1.6, decayBeats: 0.39, bounce: 0.1 } as const;
+const VIBE_GLOW = { perVibe: 0.55, cap: 1.6, decayBeats: 0.39, bounce: 0.1 } as const;
 
-// The level it had at a tick: what it is at any later moment follows, with nothing to step.
 export interface VibeGlow {
   level: number;
   tick: number;

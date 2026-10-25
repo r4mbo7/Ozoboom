@@ -5,7 +5,7 @@ import { t } from '../shared/i18n';
 import { el, keycap, setFlag, setText, setVar } from './dom';
 import { formatNumber, ratio } from './format';
 import { playerLabel, skillCharge } from './hud-model';
-import { promptsFor, promptsVersion } from './prompts';
+import type { Prompts } from './prompts';
 import { createWho, fillWho, whoColor } from './who';
 
 export interface SkillView {
@@ -38,8 +38,7 @@ export interface Bracelet {
 
 const CRITICAL_RATIO = 0.25;
 
-// A player at a glance, the bracelet of the festival: class, name, life, level and skill.
-export function createBracelet(): Bracelet {
+export function createBracelet(prompts: Prompts): Bracelet {
   const element = el('section', 'ui-panel ui-bracelet');
   const who = createWho();
   const level = el('span', 'ui-bracelet__level');
@@ -81,12 +80,12 @@ export function createBracelet(): Bracelet {
       setText(level, t('Niv. {level}', { level: player.level }));
       setText(status, player.downed ? t('À terre') : '');
       element.setAttribute('aria-label', playerLabel(player));
-      if (device !== builtDevice || builtKeys !== promptsVersion()) {
+      if (device !== builtDevice || builtKeys !== prompts.version()) {
         builtDevice = device;
-        builtKeys = promptsVersion();
-        const prompts = device === null ? null : promptsFor(device);
-        key.replaceChildren(...(prompts === null ? [] : [keycap(prompts.skill, prompts.style)]));
-        key.hidden = prompts === null;
+        builtKeys = prompts.version();
+        const shown = device === null ? null : prompts.for(device);
+        key.replaceChildren(...(shown === null ? [] : [keycap(shown.skill, shown.style)]));
+        key.hidden = shown === null;
       }
       const ready = definition !== null && player.skillCooldown <= 0;
       setVar(

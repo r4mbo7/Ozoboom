@@ -31,7 +31,6 @@ const LINES = [
 
 type CardDefinition = Pick<SpeakerDefinition, 'name' | 'description' | 'plugBars'>;
 
-// PLUGGED once plugged, IDLE while nobody stands in it, else the beats still needed.
 export function plugStep(
   speaker: Pick<SpeakerState, 'plugTicks' | 'plugged'>,
   plugBars: number,
@@ -103,7 +102,6 @@ export function opensBelow(speakerY: number, arenaHeight: number): boolean {
   return speakerY < arenaHeight / 2;
 }
 
-// Top left corner of a card centered above or below its anchor, kept whole on the screen.
 export function cardOrigin(
   anchorX: number,
   anchorY: number,
@@ -131,7 +129,6 @@ interface CardView {
   height: number;
 }
 
-// Screen space: next to a speaker a player comes near, what it is, gives and asks for.
 export function createSpeakerCards(ctx: RenderContext): Family {
   const root = ctx.layers.screen.addChild(new Container());
   const texts = createLineTextures();

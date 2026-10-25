@@ -3,7 +3,6 @@ import type { SetDefinition } from '../data/types';
 export type Acoustics = NonNullable<SetDefinition['acoustics']>;
 
 export interface Reverb {
-  // Feed it with what the room should ring with.
   input: AudioNode;
   disconnect(): void;
 }
@@ -55,7 +54,6 @@ function impulseOf(context: BaseAudioContext, seconds: number): AudioBuffer {
   return buffer;
 }
 
-// A room that rings `acoustics.reverbSeconds`, mixed back into `out` at `acoustics.wet`.
 export function createReverb(out: AudioNode, acoustics: Acoustics): Reverb {
   const context = out.context;
   const input = context.createGain();

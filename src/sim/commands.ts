@@ -4,26 +4,23 @@ export interface PlayerInput {
   move: Vec2;
   aim: Vec2;
   fire: boolean;
-  // With `fire`: the ticks it has been held, this one included, as the player's device counted
-  // them. A charged attack reads it; absent, the attack counts the ticks itself.
+  // Ticks held, this one included, as the device counted them; absent, a charged attack counts.
   fireTicks?: number;
   skill: boolean;
 }
 
-// The gestures of the directional pad, a bar long, that a player makes to the others: up, down,
-// left, right.
+// A bar long each, on the directional pad's up, down, left, right.
 export const EMOTES = ['sunrise', 'fireworks', 'heart', 'arrow'] as const;
 export type Emote = (typeof EMOTES)[number];
 
 export type PlayerAction =
-  // The trap faces (dx, dy), normalized by the sim; a zero vector faces the aim of the player.
+  // (dx, dy) is normalized by the sim; a zero vector faces the player's aim.
   | { type: 'placeTrap'; trapId: string; x: number; y: number; dx: number; dy: number }
-  // Takes back the trap placed at (x, y), as a placement there does when it finds one.
   | { type: 'takeTrap'; x: number; y: number }
   | { type: 'chooseUpgrade'; upgradeId: string }
   | { type: 'dash' }
   | { type: 'emote'; emote: Emote }
-  // Online, the host's word that this player's peer has left: on every frame from then on.
+  // Online, the host's word that this player's peer has left, on every frame from then on.
   | { type: 'leave' };
 
 export interface PlayerCommand {

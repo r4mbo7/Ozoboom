@@ -1,4 +1,5 @@
 import type { ZoneCadence, ZoneDefinition } from '../data/types';
+import { clamp } from '../shared/scalar';
 import { isBeatTick, isOffbeatTick, type Tempo } from '../shared/tempo';
 import { normalize, type Vec2 } from '../shared/vec';
 import {
@@ -17,9 +18,9 @@ import type { StepContext } from './systems/types';
 export interface ZonePlacement {
   x: number;
   y: number;
-  // The way a line zone lies. Absent, the aim of the player who lays it.
+  // Absent, the aim of the player who lays it.
   direction?: Vec2;
-  // Multiplies its damage and its heal. Absent means 1.
+  // Multiplies its damage and its heal.
   power?: number;
   // Absent, the radius of its definition.
   radius?: number;
@@ -57,8 +58,7 @@ export function layZone(
   return zone;
 }
 
-// After `traps`, which resets the slow of the bad vibes: this slow rules their next step. The pull
-// replaces the step they just took, as a lure does.
+// After `traps`, which resets the slow of the bad vibes: this slow rules their next step.
 export function zones({ state, content, tempo }: StepContext): void {
   const laid = state.zones;
   if (laid === undefined) {
@@ -141,7 +141,6 @@ function goOut(state: SimState, zone: ZoneState): false {
   return false;
 }
 
-// The centre of a disc; on a line, the point of its axis closest to `body`.
 function nearestOnAxis(zone: ZoneState, body: Vec2): Vec2 {
   const halfLength = (zone.definition.length ?? 0) / 2;
   if (halfLength === 0) {
@@ -149,6 +148,6 @@ function nearestOnAxis(zone: ZoneState, body: Vec2): Vec2 {
   }
   const { direction } = zone;
   const along = (body.x - zone.x) * direction.x + (body.y - zone.y) * direction.y;
-  const clamped = Math.min(halfLength, Math.max(-halfLength, along));
+  const clamped = clamp(along, -halfLength, halfLength);
   return { x: zone.x + direction.x * clamped, y: zone.y + direction.y * clamped };
 }

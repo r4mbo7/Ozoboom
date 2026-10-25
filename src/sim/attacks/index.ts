@@ -3,7 +3,6 @@ import { FULL_ATTACKS } from '../full';
 import { straight } from './straight';
 import type { AttackModule, AttackModules, Upgraded } from './types';
 
-// One module per attack kind, one file each; those of the full game come from `FULL_ATTACKS`.
 export const ATTACKS: AttackModules = { straight, ...FULL_ATTACKS };
 
 const NO_UPGRADE: Upgraded = { modifiers: {} };
@@ -12,7 +11,6 @@ export function attackModule(attack: AttackDefinition): AttackModule<AttackDefin
   return ATTACKS[attack.kind];
 }
 
-// 0 for an attack that does not charge.
 export function attackChargeTicks(attack: AttackDefinition): number {
   return attackModule(attack).chargeTicks?.(attack) ?? 0;
 }

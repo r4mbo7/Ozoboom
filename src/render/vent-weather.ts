@@ -1,10 +1,10 @@
 import { Graphics } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import { BURST_AT } from './boss-moments';
 import type { Camera } from './camera';
 import type { RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { drawRibbon, partyColors, windTints } from './vent-mane';
 import {
   CHEVRONS,
@@ -21,7 +21,6 @@ import {
   windRibbon,
 } from './vent-moments';
 
-// Where he was chased, and when: his flyers fall there as confetti.
 export interface Exit {
   readonly start: number;
   readonly x: number;
@@ -59,14 +58,10 @@ function visible(camera: Camera): Rect {
   return { minX: camera.centerX - width / 2, minY: camera.centerY - height / 2, width, height };
 }
 
-// What the Coup de vent does to the floor and the screen: the chevrons of his warning at the edge
-// the wind comes from, the wind ribbons and flyers of his gust, the trails of the players drifting,
-// and the confetti of his exit.
 export function createWeather(ctx: RenderContext): Weather {
   const screen = ctx.layers.screen.addChild(new Graphics());
   const floor = ctx.layers.fx.addChild(new Graphics());
 
-  // A rectangle turned by `turn` and flattened by `flip`, as a paper tumbling.
   function quad(
     cx: number,
     cy: number,
@@ -133,7 +128,6 @@ export function createWeather(ctx: RenderContext): Weather {
     }
   }
 
-  // Where a thing `along` the wind and `across` it stands, in the visible floor.
   function place(phase: GustPhase, rect: Rect, along: number, across: number): [number, number] {
     if (phase.y !== 0) {
       return [
@@ -146,7 +140,7 @@ export function createWeather(ctx: RenderContext): Weather {
 
   function gust(phase: GustPhase, state: SimState, alpha: number, frame: Frame): void {
     const { palette, calm } = frame;
-    const fade = gustFade(phase.p);
+    const fade = gustFade(phase.progress);
     const rect = visible(frame.camera);
     const vertical = phase.y !== 0;
     const alongExtent = (vertical ? rect.height : rect.width) + 2 * WIND.margin;
@@ -156,7 +150,7 @@ export function createWeather(ctx: RenderContext): Weather {
     const party = partyColors(palette);
     const ribbons = calm ? WIND.calmRibbons : WIND.ribbons;
     for (let index = 0; index < ribbons; index += 1) {
-      const ribbon = windRibbon(index, phase.p);
+      const ribbon = windRibbon(index, phase.progress);
       const [x, y] = place(
         phase,
         rect,
@@ -184,7 +178,7 @@ export function createWeather(ctx: RenderContext): Weather {
     }
     const flyers = calm ? WIND.calmFlyers : WIND.flyers;
     for (let index = 0; index < flyers; index += 1) {
-      const paper = flyer(index, phase.p);
+      const paper = flyer(index, phase.progress);
       const [x, y] = place(
         phase,
         rect,

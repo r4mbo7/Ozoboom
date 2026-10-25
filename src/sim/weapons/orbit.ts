@@ -7,7 +7,7 @@ import type { WeaponModule } from './types';
 const TWO_PI = 2 * Math.PI;
 // Bodies outlive their last repositioning by one tick, so they vanish once the weapon stops firing.
 const BODY_TICKS = 2;
-// A body hits every enemy it meets; it forgets them each half bar.
+// It forgets the enemies it hit each half bar.
 const ENDLESS_PIERCE = 1e9;
 
 const isBodyOf =
@@ -53,10 +53,9 @@ export const orbit: WeaponModule = {
     const forgets = ticksIntoBar(state.tick, tempo) % (tempo.ticksPerBar / 2) === 0;
     bodies.forEach((body, i) => {
       const direction = unitFromAngle(slot.phase + (i * TWO_PI) / effect.count);
-      // A body keeps its circle past the edge of the arena: `projectiles` leaves it there.
+      // Past the edge of the arena too: `projectiles` leaves it there.
       body.x = player.x + direction.x * effect.orbitRadius;
       body.y = player.y + direction.y * effect.orbitRadius;
-      // A new body appears on its orbit instead of sliding out from the player.
       if (fresh) {
         body.prevX = body.x;
         body.prevY = body.y;

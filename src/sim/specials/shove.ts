@@ -1,3 +1,4 @@
+import { clamp } from '../../shared/scalar';
 import { playerById } from '../damage';
 import { pushAway, touches } from '../effects';
 import type { SpecialModule } from './types';
@@ -24,7 +25,3 @@ export const shove: SpecialModule = (ctx, enemy, effect) => {
     y: enemy.y,
   });
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}

@@ -1,4 +1,5 @@
 import type { Container, Sprite } from 'pixi.js';
+import { clamp01 } from '../shared/scalar';
 import type { PlayerId, PlayerState, SimEvent } from '../sim/state';
 import { defaultName } from '../shared/i18n';
 import { TICKS_PER_BEAT } from '../shared/tempo';
@@ -18,7 +19,6 @@ interface Revive {
   revivedTick: number;
 }
 
-// What the sim reported about each relève: its progress, and the tick it ended.
 export class ReviveLog {
   private readonly items = new Map<PlayerId, Revive>();
 
@@ -35,21 +35,17 @@ export class ReviveLog {
     }
   }
 
-  // The share of the relève done, while it keeps being reported, and only for a player lying down.
   share(id: PlayerId, downed: boolean, now: number): number {
     const revive = this.items.get(id);
     if (revive === undefined || !downed || now - revive.tick > REVIVE_GRACE) {
       return 0;
     }
-    return Math.min(1, Math.max(0, revive.progress));
+    return clamp01(revive.progress);
   }
 
-  // 0 when the halo of the revival opens, 1 once it is gone.
   burst(id: PlayerId, now: number): number {
     const revive = this.items.get(id);
-    return revive === undefined
-      ? 1
-      : Math.min(1, Math.max(0, (now - revive.revivedTick) / REVIVED_TICKS));
+    return revive === undefined ? 1 : clamp01((now - revive.revivedTick) / REVIVED_TICKS);
   }
 
   clear(): void {
@@ -70,7 +66,6 @@ export class ReviveLog {
   }
 }
 
-// What a player carries besides the body: the name above, the halo of a revival.
 export class PlayerTag {
   private readonly nameEdge: Sprite;
   private readonly name: Sprite;
@@ -90,8 +85,6 @@ export class PlayerTag {
     this.burst.visible = this.name.visible = this.nameEdge.visible = false;
   }
 
-  // `reach` is how far the body extends, in world units, above its center. Gives the top of what it
-  // draws above the player.
   place(
     player: PlayerState,
     x: number,

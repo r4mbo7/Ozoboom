@@ -63,7 +63,6 @@ function onTrail(
   return false;
 }
 
-// Keeps where the dashes of the player went for `ticks`, its points fading oldest first.
 function dashTrail(
   slot: WeaponSlot,
   player: PlayerState,

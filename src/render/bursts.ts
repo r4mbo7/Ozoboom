@@ -1,7 +1,8 @@
 import { type Container, Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import type { Frame } from './frame';
-import { lerp } from './motion';
+import { easeOutQuad } from './motion';
 import type { Shape } from './paint';
 import { byId, setTint } from './util';
 
@@ -17,18 +18,16 @@ export interface BurstSpec {
   readonly toRadius: number;
   readonly tint: number;
   readonly peak: number;
-  // Ticks to wait before showing up.
-  readonly delay?: number;
+  readonly delayTicks?: number;
   readonly angle?: number;
   readonly spin?: number;
-  // Height over width of the sprite, for the trails.
   readonly squash?: number;
-  // The burst follows this entity: x, y are then offsets from it.
+  // x, y are then offsets from the anchor.
   readonly anchor?: Anchor;
   readonly anchorId?: number;
   readonly dx?: number;
   readonly dy?: number;
-  // A dark copy underneath by day, for what is thin enough to vanish on the grass.
+  // By day, for what is thin enough to vanish on the grass.
   readonly outline?: boolean;
 }
 
@@ -54,8 +53,7 @@ interface Burst {
   outlined: boolean;
 }
 
-// Rings, trails and sparks that live for a few beats, in a fixed ring buffer of sprites: a new one
-// takes the place of the oldest, and nothing is created after the first frames.
+// A fixed ring buffer: a new burst takes the oldest one's sprite, nothing is created after start.
 export class Bursts {
   private readonly items: Burst[];
   private next = 0;
@@ -106,7 +104,7 @@ export class Bursts {
     item.active = true;
     item.sprite.texture = item.outline.texture = spec.shape.texture;
     item.radius = spec.shape.radius;
-    item.start = spec.now + (spec.delay ?? 0);
+    item.start = spec.now + (spec.delayTicks ?? 0);
     item.duration = spec.duration;
     item.x = spec.x;
     item.y = spec.y;
@@ -152,7 +150,7 @@ export class Bursts {
         x += state.core.x;
         y += state.core.y;
       }
-      const eased = 1 - (1 - progress) * (1 - progress);
+      const eased = easeOutQuad(progress);
       const scale = (item.from + (item.to - item.from) * eased) / item.radius;
       sprite.visible = true;
       sprite.position.set(x + item.dx * eased, y + item.dy * eased);

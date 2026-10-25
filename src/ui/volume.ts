@@ -1,4 +1,5 @@
 import { t } from '../shared/i18n';
+import { clamp } from '../shared/scalar';
 import { stepperArrow } from './class-picker';
 import { el, setText } from './dom';
 
@@ -18,7 +19,7 @@ export function stepSound({ volume, muted }: SoundLevel, side: -1 | 1): SoundLev
   if (side < 0 && volume <= 1) {
     return { volume, muted: true };
   }
-  return { volume: Math.min(Math.max(volume + side, 1), VOLUME_STEPS), muted: false };
+  return { volume: clamp(volume + side, 1, VOLUME_STEPS), muted: false };
 }
 
 export interface SoundControl {
@@ -35,8 +36,6 @@ function arrow(label: string, flipped: boolean, onClick: () => void): HTMLButton
   return button;
 }
 
-// The same setting on the title and in the pause: a click on it cuts or brings back the sound,
-// left and right or its arrows move the level.
 export function createSoundControl(onStep: (side: -1 | 1) => void): SoundControl {
   const element = el('div', 'ui-button ui-toggle ui-volume');
   element.setAttribute('role', 'slider');

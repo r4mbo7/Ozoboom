@@ -10,8 +10,7 @@ export interface SteeringOverride {
   readonly speedMul?: number;
 }
 
-// Lets a special replace the point and speed enemy-steering moves an enemy toward, instead of the
-// system special-casing a sort by kind. Returning undefined falls back to the default targeting.
+// Returning undefined falls back to the default targeting.
 export type SteeringTarget = (
   ctx: StepContext,
   enemy: EnemyState,

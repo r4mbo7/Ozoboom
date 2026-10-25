@@ -1,23 +1,23 @@
 import { Container, type Sprite } from 'pixi.js';
+import { clamp, lerp } from '../shared/scalar';
 import type { PlayerState, SimEvent, SimState } from '../sim/state';
 import { MAIN_TEMPO, type Tempo, ticksIntoBeat } from '../shared/tempo';
 import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
 import { DashArc } from './dash-arc';
 import { PlayerEmote } from './emotes';
+import { shadowAt } from './ground-sun';
 import { LifeArc } from './life-arc';
 import { MomentLog } from './player-moments';
 import { createDashBursts } from './dash-bursts';
 import { createDrawn } from './drawings';
 import type { Frame } from './frame';
-import { shadowAt } from './ground-sun';
-import { lerp } from './motion';
 import { TAU } from './paint';
 import { Downed } from './player-downed';
 import { PlayerGlow } from './player-glow';
-import { type Look, type Spawn, createLookInput } from './player-look';
+import { type Look, type LookInput, type Spawn, createLookInput } from './player-look';
 import { PlayerTag, ReviveLog } from './player-tags';
-import { CONTOUR_RING, REFERENCE } from './textures-players';
+import { CONTOUR_RING, REFERENCE_RADIUS } from './textures-players';
 import { DOWNED_REACH } from './textures-players-downed';
 import { add, hide, lookup, setTint } from './util';
 import { ViewPool } from './views';
@@ -28,7 +28,7 @@ const MAX_STEP_TICKS = 3;
 const NEVER = Number.NEGATIVE_INFINITY;
 const PLAYER_BURSTS = 48;
 
-// The contour breathes on the beat, smoothly: never a flash.
+// Smoothly: never a flash.
 export function contourAlpha(now: number, tempo: Tempo = MAIN_TEMPO): number {
   const phase = ticksIntoBeat(now, tempo) / tempo.ticksPerBeat;
   return 0.3 + 0.35 * (1 + Math.sin(phase * TAU));
@@ -90,7 +90,6 @@ export function createPlayers(ctx: RenderContext): Family {
       lifeArc: new LifeArc(ctx, ground, lifeLabels),
       emote: new PlayerEmote(ctx, gestures),
     }),
-    // A released view forgets its player, so that the next one starts from rest.
     (view) => {
       view.lastNow = NEVER;
       view.moving = 0;
@@ -108,12 +107,12 @@ export function createPlayers(ctx: RenderContext): Family {
     },
   );
 
-  const input = createLookInput();
+  let input: LookInput | null = null;
 
   const dashBursts = createDashBursts(
     ctx,
     spawn,
-    (player) => drawnOf(player.classId).textures.extent * (player.radius / REFERENCE),
+    (player) => drawnOf(player.classId).textures.extent * (player.radius / REFERENCE_RADIUS),
   );
 
   return {
@@ -172,7 +171,7 @@ export function createPlayers(ctx: RenderContext): Family {
         const color = palette[lookup(ctx.classTokens, player.classId, 'class')];
         const x = lerp(player.prevX, player.x, alpha);
         const y = lerp(player.prevY, player.y, alpha);
-        const scale = player.radius / REFERENCE;
+        const scale = player.radius / REFERENCE_RADIUS;
         const angle = Math.atan2(player.aim.y, player.aim.x);
         let look = view.looks.get(player.classId);
         if (look === undefined) {
@@ -210,8 +209,7 @@ export function createPlayers(ctx: RenderContext): Family {
         );
         const downed = player.downed;
         const bounce = view.glow.place(player, x, y, lookTextures.extent * scale, frame);
-        const dt =
-          view.lastNow === NEVER ? 0 : Math.min(MAX_STEP_TICKS, Math.max(0, now - view.lastNow));
+        const dt = view.lastNow === NEVER ? 0 : clamp(now - view.lastNow, 0, MAX_STEP_TICKS);
         view.lastNow = now;
         const moved = Math.hypot(player.x - player.prevX, player.y - player.prevY);
         const speed = player.speed > 0 ? moved / player.speed : 0;
@@ -229,6 +227,7 @@ export function createPlayers(ctx: RenderContext): Family {
         } else {
           view.emote.place(x, y, angle, scale, top, color, teintOf(player), frame);
           const moment = moments.of(player.id);
+          input ??= createLookInput(state, player, frame);
           input.state = state;
           input.player = player;
           input.x = x;
@@ -254,7 +253,6 @@ export function createPlayers(ctx: RenderContext): Family {
         view.dashArc.place(player, x, y, color, ctx.dash, frame);
         view.lifeArc.place(player, x, y, color, now - moments.of(player.id).hit, frame);
 
-        // Lying flat, an outline of light casts no shadow.
         shadow.visible = !downed;
         if (downed) {
           continue;

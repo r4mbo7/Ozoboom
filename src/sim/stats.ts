@@ -38,6 +38,8 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   zoneCountAdd: true,
   rootsGrowthMul: false,
   skillCountAdd: true,
+  echoCountAdd: true,
+  echoPowerMul: false,
 };
 
 export function statValue(
@@ -71,7 +73,6 @@ export function skillCooldownTicks(
   return wholeTicks(statValue(player, 'skillCooldownMul', skill.cooldownTicks));
 }
 
-// How many dashes a player chains, and in how many beats a spent one comes back.
 type Carded = Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts'>;
 
 export function dashCharges(
@@ -89,7 +90,6 @@ export function dashRechargeBeats(
   return Math.max(dash.minRechargeBeats, beats);
 }
 
-// A trap hand is free unless traps or an offering fill it.
 export function handFree(player: PlayerState, set: Pick<SetDefinition, 'handSize'>): boolean {
   return (player.hand?.length ?? 0) + (player.offering === undefined ? 0 : 1) < set.handSize;
 }
@@ -126,8 +126,7 @@ export function applyModifiers(
   }
 }
 
-// Recomputes maxHp and speed, leaving hp untouched: for a temporary effect (suppress) that must
-// not cost or grant hp points while it holds the derived stats down to their base value.
+// Leaves hp untouched: a temporary effect (suppress) must not cost or grant hp.
 export function applyDerivedStats(
   player: Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts' | 'maxHp' | 'speed'>,
   definition: Pick<ClassDefinition, 'maxHp' | 'speed'>,
@@ -145,13 +144,11 @@ export function refreshDerivedStats(
   player.hp += player.maxHp - previousMaxHp;
 }
 
-// Whether card `id` grows nothing but the dash, for a player who never dashes.
 export function onlyGrowsDash(content: Pick<GameContent, 'upgrades'>, id: string): boolean {
   const upgrade = content.upgrades.find((candidate) => candidate.id === id);
   return upgrade?.modifiers.every((modifier) => modifier.stat.startsWith('dash')) === true;
 }
 
-// Whether a form of an upgrade grows nothing but the skill: its card then names the Spéciale.
 export function growsSkillAlone(form: Pick<RarityForm, 'modifiers'>): boolean {
   return (
     form.modifiers.length > 0 &&

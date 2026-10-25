@@ -42,8 +42,9 @@ export function nextInt(rng: RngState, maxExclusive: number): number {
 }
 
 export function pick<T>(rng: RngState, items: readonly T[]): T {
-  if (items.length === 0) {
+  const item = items[nextInt(rng, items.length)];
+  if (item === undefined) {
     throw new RangeError('cannot pick from an empty list');
   }
-  return items[nextInt(rng, items.length)] as T;
+  return item;
 }

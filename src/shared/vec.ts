@@ -18,6 +18,10 @@ export function distanceSquared(a: Vec2, b: Vec2): number {
   return dx * dx + dy * dy;
 }
 
+export function distance(a: Vec2, b: Vec2): number {
+  return Math.sqrt(distanceSquared(a, b));
+}
+
 export function dot(a: Vec2, b: Vec2): number {
   return a.x * b.x + a.y * b.y;
 }

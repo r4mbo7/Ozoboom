@@ -37,4 +37,10 @@ export function specials(ctx: StepContext): void {
       SPECIALS[special.kind](ctx, enemy, special);
     }
   }
+  for (const player of state.players) {
+    const { slowMul } = lookup(content.classes, player.classId, 'class');
+    if (slowMul !== undefined && player.slowFactor !== undefined) {
+      player.slowFactor = 1 - (1 - player.slowFactor) * slowMul;
+    }
+  }
 }

@@ -2,7 +2,6 @@ import { Container, type Renderer as PixiRenderer, RenderTexture, Sprite } from 
 import type { SimState } from '../sim/state';
 import type { Inset, RenderOptions } from './types';
 
-// A scene of the game that paints one inset with the renderer and the textures of the game.
 export interface InsetScene {
   frameInset(width: number, height: number, viewHeight: number): void;
   renderInto(state: SimState, alpha: number, target: RenderTexture): void;
@@ -14,15 +13,10 @@ export interface Insets {
   readonly painting: boolean;
   set(insets: readonly Inset[]): void;
   setOptions(options: Partial<RenderOptions>): void;
-  // Draws each inset whose world moved on a step into a texture of its own, lays them side by side
-  // at the top left of the canvas of the game and copies them out at once, before the game is drawn
-  // over them. An inset is drawn on its step, never between two: a still world is drawn once.
-  // Answers whether it drew anything.
+  // Drawn at the top left of the game canvas and copied out before the game is drawn over it.
   paint(): boolean;
-  // While the game stands still: `drawGame` draws it once into an image kept for the purpose, which
-  // covers the top left of the canvas again after each paint of the insets.
+  // The still game is kept in an image that covers the corner again after each paint of the insets.
   holdStill(drawGame: (target: RenderTexture) => void): void;
-  // The game moves again, or the canvas changed size: the kept image is out of date.
   release(): void;
   destroy(): void;
 }
@@ -31,7 +25,6 @@ interface Painted {
   scene: InsetScene;
   texture: RenderTexture;
   sprite: Sprite;
-  // The step and the size it was last drawn at.
   shown: string;
 }
 

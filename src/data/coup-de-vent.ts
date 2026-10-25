@@ -1,9 +1,6 @@
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { EdgeSide, EnemyDefinition } from './types';
 
-// Every `everyBars` bars, a gust of one bar, announced the bar before: it drifts the players and
-// the vibes on the floor by `push` a tick at full blow, never the bad vibes. It blows from one
-// side of the floor to the other, the next gust from the next side of `from`.
 export interface GustEffect {
   readonly kind: 'gust';
   readonly everyBars: number;

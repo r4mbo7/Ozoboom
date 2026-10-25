@@ -7,15 +7,12 @@ import type { Look, Spawn } from './player-look';
 import type { Textures } from './textures';
 import { type LookTextures, PLAYER_LOOKS, type PlayerLook } from './textures-players';
 
-// The drawing of a character of the full game. A game or a portrait paints it the first time one
-// of its players is drawn, and it is also its portrait.
 export interface ClassDrawing {
   readonly classId: string;
-  paint(): PaintedDrawing;
+  paint(density: number): PaintedDrawing;
 }
 
 export interface PaintedDrawing extends LookTextures {
-  // The one source under every texture of the drawing, destroyed with the textures of the players.
   readonly source: TextureSource;
   create(bodies: Container, glow: Container, textures: Textures, spawn: Spawn): Look;
 }
@@ -40,7 +37,6 @@ export function checkDrawings(
   }
 }
 
-// How to draw the players of each class, found the first time one of them is drawn.
 export function createDrawn(
   textures: Textures,
   bodies: Container,

@@ -1,15 +1,14 @@
+import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import { type EdgeMarker, edgeMarker } from './camera';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
 const INSET = 34;
 const SIZE = 1.25;
 const HALO = 40;
-// Behind the arrow of a downed ally, three fireflies in its colour, in screen pixels along the arrow.
 const FIREFLIES = [
   { along: -26, across: -7, phase: 0 },
   { along: -34, across: 4, phase: 2.1 },
@@ -19,12 +18,10 @@ const FIREFLY_SIZE = 1.5;
 const FIREFLY_HALO = 11;
 const TAU = Math.PI * 2;
 
-// A firefly blinks softly over two beats, out of step with the others; steady in calm mode.
 export function arrowFireflyAlpha(beats: number, phase: number, calm: boolean): number {
   return calm ? 0.85 : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin((beats / 2) * TAU + phase));
 }
 
-// Screen space, in the class color: an arrow on the border toward each player out of view.
 export function createMarkers(ctx: RenderContext): Family {
   const { textures, layers } = ctx;
   const root = layers.screen;

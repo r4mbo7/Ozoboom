@@ -9,6 +9,7 @@ import {
   type InputBindings,
   type Wheel,
 } from './bindings';
+import { isRecord } from '../shared/guards';
 
 export const KEYBOARD_ACTIONS = [
   'moveUp',
@@ -38,11 +39,9 @@ export type GamepadAction = (typeof GAMEPAD_ACTIONS)[number];
 
 export type Slot = 0 | 1;
 
-// Two inputs per action, either of which may be empty.
 export type Slots<T> = readonly [T | null, T | null];
 
-// A key is its KeyboardEvent.code, a mouse button `Mouse` and its number, the wheel `WheelUp` and
-// `WheelDown`; a gamepad button is its index in the standard mapping.
+// A key is its KeyboardEvent.code, `Mouse<n>` or `WheelUp`/`WheelDown`; a button is its standard-mapping index.
 export interface KeyProfile {
   readonly keyboard: Readonly<Record<KeyboardAction, Slots<string>>>;
   readonly gamepad: Readonly<Record<GamepadAction, Slots<number>>>;
@@ -74,7 +73,6 @@ export const DEFAULT_KEY_PROFILE: KeyProfile = {
   swapSticks: false,
 };
 
-// The keys that move also walk the menus, beside the arrows.
 const MENU_OF_MOVE: Partial<Record<KeyboardAction, Control>> = {
   moveUp: 'menuUp',
   moveDown: 'menuDown',
@@ -89,12 +87,11 @@ export function mouseButtonOf(input: string): number | null {
   return match === null ? null : Number(match[1]);
 }
 
-export function wheelOf(input: string): Wheel | null {
+function wheelOf(input: string): Wheel | null {
   return WHEELS[input] ?? null;
 }
 
-// Escape pauses, the digits pick a trap, Backspace and Delete empty a slot while it listens; the
-// system keys and the function keys belong to the browser.
+// Escape, the digits, Backspace and Delete are the game's; the system and function keys belong to the browser.
 const RESERVED_KEYS: ReadonlySet<string> = new Set([
   'Escape',
   'Digit1',
@@ -156,7 +153,7 @@ export function compileBindings(profile: KeyProfile): InputBindings {
       }
     }
   }
-  addAll(keys, FIXED_KEY_BINDINGS);
+  addAll(keys, FIXED_KEY_BINDINGS, String);
   const gamepadButtons: Partial<Record<number, Control[]>> = {};
   for (const action of GAMEPAD_ACTIONS) {
     for (const button of profile.gamepad[action]) {
@@ -165,7 +162,7 @@ export function compileBindings(profile: KeyProfile): InputBindings {
       }
     }
   }
-  addAll(gamepadButtons, FIXED_GAMEPAD_BUTTON_BINDINGS);
+  addAll(gamepadButtons, FIXED_GAMEPAD_BUTTON_BINDINGS, Number);
   return {
     keys,
     mouseButtons,
@@ -214,7 +211,7 @@ function rebind<A extends string, T>(
 ): { table: Record<A, Slots<T>>; moved: { action: A; slot: Slot } | null } {
   const replaced = table[action][slot];
   let moved: { action: A; slot: Slot } | null = null;
-  const next = {} as Record<A, Slots<T>>;
+  const next: Record<A, Slots<T>> = { ...table };
   for (const other of actions) {
     const [first, second] = table[other];
     const slotValue = (own: Slot, value: T | null): T | null => {
@@ -232,8 +229,7 @@ function rebind<A extends string, T>(
   return { table: next, moved };
 }
 
-// A stored profile from an older version keeps what it can: an action it does not know, or does
-// not hold right, takes its default.
+// A profile stored by an older version keeps what it can; the rest takes its default.
 export function parseKeyProfile(text: string | null): KeyProfile | null {
   if (text === null) {
     return null;
@@ -273,7 +269,7 @@ function readSlots<A extends string, T>(
   defaults: Readonly<Record<A, Slots<T>>>,
   valid: (input: unknown) => input is T,
 ): Record<A, Slots<T>> {
-  const table = {} as Record<A, Slots<T>>;
+  const table: Record<A, Slots<T>> = { ...defaults };
   for (const action of actions) {
     const slots = isRecord(value) ? value[action] : undefined;
     const read = (input: unknown): T | null | undefined =>
@@ -286,16 +282,13 @@ function readSlots<A extends string, T>(
   return table;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function addAll<K extends string | number>(
   table: Partial<Record<K, Control[]>>,
-  bindings: Bindings<K>,
+  bindings: Bindings<string>,
+  keyOf: (name: string) => K,
 ): void {
-  for (const [key, controls] of Object.entries(bindings) as [K, readonly Control[]][]) {
-    add(table, key, controls);
+  for (const [name, controls] of Object.entries(bindings)) {
+    add(table, keyOf(name), controls ?? []);
   }
 }
 
@@ -311,26 +304,27 @@ function merged(current: readonly Control[], controls: readonly Control[]): Cont
   return [...current, ...controls.filter((control) => !current.includes(control))];
 }
 
-// The profile the devices play with: the game sets it from the player's preferences, and every
-// change bumps the version, for the screens that show its keys.
-let current = DEFAULT_KEY_PROFILE;
-let bindings = DEFAULT_INPUT_BINDINGS;
-let version = 0;
-
-export function keyProfile(): KeyProfile {
-  return current;
+export interface PlayerKeys {
+  profile(): KeyProfile;
+  bindings(): InputBindings;
+  // Every change bumps the version, for the screens that show the keys.
+  version(): number;
+  choose(profile: KeyProfile): void;
 }
 
-export function inputBindings(): InputBindings {
-  return bindings;
-}
+export function createPlayerKeys(profile: KeyProfile): PlayerKeys {
+  let current = profile;
+  let bindings = compileBindings(profile);
+  let version = 0;
 
-export function keyProfileVersion(): number {
-  return version;
-}
-
-export function setKeyProfile(profile: KeyProfile): void {
-  current = profile;
-  bindings = compileBindings(profile);
-  version += 1;
+  return {
+    profile: () => current,
+    bindings: () => bindings,
+    version: () => version,
+    choose(next) {
+      current = next;
+      bindings = compileBindings(next);
+      version += 1;
+    },
+  };
 }

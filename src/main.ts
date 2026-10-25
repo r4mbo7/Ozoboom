@@ -6,13 +6,12 @@ import { startLocale } from './app/locale';
 import { CONTENT } from './data/content';
 import { DEFAULT_BPM, beatPeriodMs } from './shared/tempo';
 
-const root = document.querySelector<HTMLElement>('#app');
-if (root === null) {
+const root = document.querySelector('#app');
+if (!(root instanceof HTMLElement)) {
   throw new Error('Missing #app root element');
 }
 
-// A font loads when its first glyph is drawn: the heading weight of the menus would flash in a
-// fallback face the first time one opens.
+// A font loads at its first glyph: the menus' heading weight would flash in a fallback face the first time.
 for (const face of [
   '900 1em "Cinzel Decorative"',
   '700 1em "Cinzel Decorative"',

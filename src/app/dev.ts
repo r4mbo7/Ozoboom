@@ -1,52 +1,29 @@
 import type { GameContent } from '../data/types';
 import { layoutGround, shoreAt } from '../render/ground-layout';
+import { clamp } from '../shared/scalar';
 import { hashState } from '../sim/replay';
 import { setTempo } from '../sim/lineup';
 import { spawnEnemy } from '../sim/systems/spawning';
 import type { PlayerSlot } from '../sim/initial-state';
-import type { PlayerId, SimState } from '../sim/state';
+import { PLAYER_IDS, type SimState } from '../sim/state';
 
-// Development modes, only behind the `dev` URL parameter, never by default:
-// - `?dev=fast`: a short set (one phrase per tier, one-bar break, weaker bad vibes, sturdier
-//   scene) played eight times faster and drawn light, to reach the end of a game in a browser test;
-//   `&crisp` draws it at full quality instead, for the captures of `scripts/captures.ts`;
-// - `?dev=bench`: the real set with 300 bad vibes on the lake shore that neither die nor kill, three
-//   weapons and a plugged speaker, to measure a frame. `&players=4` seats four players on one
-//   screen instead (one of each class, then the first again), three weapons each, camera on everyone.
-// - `?dev=boss&boss=<id>`: the real set at normal speed, started at the break of the first drop,
-//   with that boss and no other. `&tier=2` gives it the force of the second drop, `&stage=<id>` picks
-//   its only stage, the first by default. An unknown boss, tier or stage shows an error on the page.
-// - `?dev=feu&stage=<id>`: that stage only, at normal speed, started a phrase before its first break, the
-//   players beside its pile of logs or its spores: to bring offerings to its fire or giants and meet the
-//   bosses they call. The Main stage by default; a stage without a fire or giants shows an error.
-// - `?dev=sunrise`: every stage at normal speed, the game started at the sunrise of the stage picked: in a Full
-//   festival its exits open at once, to walk a path.
-// `fast` and `bench` play on the first stage only, so that « Jouer » starts at once; `&stages` keeps
-// every stage.
-// All draw the seed of every game at random, unless `&seed=` fixes it to replay the same game.
-// All expose `window.ozoboom` (live state, the seats of the match and frame timings) and log the timings every second.
-// A browser test's player set in `window.ozoboom.onStep` plays after every step of the game, and the
-// next step reads what it did on the devices, however few frames a loaded machine draws.
 export type DevMode = 'fast' | 'bench' | 'boss' | 'sunrise' | 'feu';
 
-// The boss of `?dev=boss`, and the index of the tier whose break the game starts at.
 export interface DevBoss {
   readonly id: string;
   readonly tier: number;
 }
 
-// A dev URL that names what the content does not have: the page shows it.
 export class DevUrlError extends Error {}
 
 export interface DevOptions {
   readonly mode: DevMode | null;
   readonly speed: number;
-  // Players of the bench, 1 unless `&players=` says up to 4.
   readonly players: number;
   readonly content: GameContent;
-  // Half resolution without antialiasing (`createRenderer`).
+  // Half resolution without antialiasing.
   readonly light: boolean;
-  // The seed of every game, drawn at random when null.
+  // Drawn at random when null.
   readonly seed: number | null;
   readonly boss: DevBoss | null;
 }
@@ -56,8 +33,7 @@ const MAX_SEED = 0xffffffff;
 const FAST_HP = { boss: 0.05, wave: 0.5, core: 8 };
 export const BENCH_ENEMIES = 300;
 
-const BENCH_PLAYER_IDS: readonly PlayerId[] = [0, 1, 2, 3];
-const MAX_BENCH_PLAYERS = BENCH_PLAYER_IDS.length;
+const MAX_BENCH_PLAYERS = PLAYER_IDS.length;
 
 export function readDevOptions(search: string, content: GameContent): DevOptions {
   const params = new URLSearchParams(search);
@@ -94,9 +70,15 @@ export function readDevOptions(search: string, content: GameContent): DevOptions
     };
   }
   if (mode === 'bench') {
-    const asked = Number(params.get('players') ?? 1);
-    const players = Number.isInteger(asked) ? Math.min(Math.max(asked, 1), MAX_BENCH_PLAYERS) : 1;
-    return { mode, speed: 1, players, content, light: false, seed: readSeed(params), boss: null };
+    return {
+      mode,
+      speed: 1,
+      players: readPlayers(params),
+      content,
+      light: false,
+      seed: readSeed(params),
+      boss: null,
+    };
   }
   return { mode: null, speed: 1, players: 1, content, light: false, seed: null, boss: null };
 }
@@ -124,7 +106,7 @@ function bossOptions(params: URLSearchParams, content: GameContent): DevOptions 
   return {
     mode: 'boss',
     speed: 1,
-    players: 1,
+    players: readPlayers(params),
     content: {
       ...content,
       enemies: content.enemies.filter((enemy) => enemy.behaviour !== 'boss' || enemy.id === id),
@@ -156,7 +138,6 @@ function fireOptions(params: URLSearchParams, content: GameContent): DevOptions 
   };
 }
 
-// The game starts a phrase before the first break, its players beside the first source of offerings.
 export function fireScene(state: SimState, content: GameContent): void {
   const set = content.sets.find((candidate) => candidate.id === state.setId);
   const source = content.summons?.find((summon) => summon.setId === state.setId)?.sources[0];
@@ -181,7 +162,6 @@ export function bossScene(state: SimState, boss: DevBoss): void {
   state.events.push({ type: 'segment', segment: 'break', tier: boss.tier });
 }
 
-// The game starts as its stage's last drop ends.
 export function sunriseScene(state: SimState, content: GameContent): void {
   const set = content.sets.find((candidate) => candidate.id === state.setId);
   if (set === undefined) {
@@ -189,6 +169,24 @@ export function sunriseScene(state: SimState, content: GameContent): void {
   }
   state.set.tier = set.tiers.length;
   state.set.segment = 'drop';
+}
+
+export function devScene(
+  state: SimState,
+  dev: Pick<DevOptions, 'mode' | 'boss' | 'content'>,
+): void {
+  if (dev.mode === 'bench') {
+    benchScene(state, dev.content, state.seed, BENCH_ENEMIES);
+  }
+  if (dev.boss !== null) {
+    bossScene(state, dev.boss);
+  }
+  if (dev.mode === 'feu') {
+    fireScene(state, dev.content);
+  }
+  if (dev.mode === 'sunrise') {
+    sunriseScene(state, dev.content);
+  }
 }
 
 function readSeed(params: URLSearchParams): number | null {
@@ -200,10 +198,14 @@ function readSeed(params: URLSearchParams): number | null {
   return seed <= MAX_SEED ? seed : null;
 }
 
-// One of each class in the order of the content, then the first again: four players on one screen.
+function readPlayers(params: URLSearchParams): number {
+  const asked = Number(params.get('players') ?? 1);
+  return Number.isInteger(asked) ? clamp(asked, 1, MAX_BENCH_PLAYERS) : 1;
+}
+
 export function benchSlots(content: GameContent, players: number): PlayerSlot[] {
   const classes = content.classes;
-  return BENCH_PLAYER_IDS.slice(0, players).map((id) => {
+  return PLAYER_IDS.slice(0, players).map((id) => {
     const definition = classes[id % classes.length];
     if (definition === undefined) {
       throw new Error('The bench needs at least one class');
@@ -235,8 +237,6 @@ const SHORE_BAND = { from: 40, width: 360 } as const;
 const SHORE_MARGIN = 60;
 const PLAYER_GAP = 50;
 
-// The load of a crowded night: 300 bad vibes on the lake shore that neither die nor kill, the three
-// weapon slots full and one speaker plugged, so that every system and every layer draws.
 export function benchScene(
   state: SimState,
   content: GameContent,
@@ -251,8 +251,9 @@ export function benchScene(
     if (kind === undefined) {
       throw new Error('The bench needs at least one enemy that is not a boss');
     }
-    const y = Math.min(
-      Math.max(SHORE_MARGIN + ((index * 61) % (height - 2 * SHORE_MARGIN)), kind.radius),
+    const y = clamp(
+      SHORE_MARGIN + ((index * 61) % (height - 2 * SHORE_MARGIN)),
+      kind.radius,
       height - kind.radius,
     );
     const x = Math.min(
@@ -284,22 +285,29 @@ export interface FrameCost {
   ui: number;
 }
 
-// What `window.ozoboom.online` shows of an online game, read live.
 export interface OnlineProbe {
   readonly role: 'host' | 'guest';
   readonly pending: number;
   readonly roundTripMs: number | null;
-  // How long the transport took to open, in milliseconds.
   readonly connectMs: number | null;
 }
 
 export interface DevProbe {
   readonly cost: FrameCost;
-  // A game version the page pretends to have, set from `window.ozoboom.forceVersion`.
   readonly forcedVersion: string | null;
   // True when a test's player has played and may have changed the devices.
   afterStep(): boolean;
   endFrame(time: number): void;
+}
+
+interface ExposedProbe {
+  forceVersion: string | null;
+  onStep: (() => void) | null;
+  readonly state: SimState;
+  readonly report: { fps: number; enemies: number; perFrameMs: FrameCost };
+  readonly seats: readonly unknown[];
+  readonly hash: string;
+  readonly online: OnlineProbe | null;
 }
 
 export function createDevProbe(
@@ -316,9 +324,9 @@ export function createDevProbe(
     enemies: 0,
     perFrameMs: { sim: 0, render: 0, ui: 0 },
   };
-  const exposed = {
-    forceVersion: null as string | null,
-    onStep: null as (() => void) | null,
+  const exposed: ExposedProbe = {
+    forceVersion: null,
+    onStep: null,
     get state() {
       return state();
     },

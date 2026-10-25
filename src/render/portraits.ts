@@ -12,10 +12,9 @@ import { emptyState, portraitEvents, portraitPixels, standing } from './portrait
 import { beatEnvelope } from './motion';
 import { classTokens, writePixiPalette } from './palette';
 import { createPlayers } from './players';
-import { paintedFiner } from './paint';
 import { type Textures, createTextures } from './textures';
 import { createClassFxTextures } from './textures-class';
-import { REFERENCE, playerTextures } from './textures-players';
+import { REFERENCE_RADIUS, playerTextures } from './textures-players';
 
 export type PortraitClass = Pick<ClassDefinition, 'id' | 'radius'> & {
   readonly skill: Pick<SkillDefinition, 'effect'>;
@@ -27,11 +26,9 @@ export interface Portrait {
   destroy(): void;
 }
 
-// Units of the world across the shorter side of a portrait: a look fills about half of it.
 const VIEW_UNITS = 80;
 const THUMBNAIL_UNITS = 52;
 const THUMBNAIL_PIXELS = 120;
-// The looks are painted for a game; a portrait shows them several times larger.
 const FINER = 4;
 const MAX_PIXELS = 512;
 const NIGHT = (NIGHT_START + NIGHT_END) / 2;
@@ -49,9 +46,7 @@ interface View {
   visible: boolean;
 }
 
-// Classes drawn alive outside a game, as in it: one hidden WebGL renderer draws every portrait in
-// turn and each copies its picture into its own canvas. Only the portraits on screen are drawn, and
-// nothing runs while none is.
+// One hidden WebGL renderer draws every portrait in turn; nothing runs while none is on screen.
 export function createPortraits(
   classes: readonly PortraitClass[],
   calm: () => boolean,
@@ -163,8 +158,9 @@ export function createPortraits(
     const middle =
       player === undefined
         ? 0
-        : ((textures?.players.drawings.get(player.classId)?.get().middle ?? 0) * player.radius) /
-          REFERENCE;
+        : ((textures?.players.drawings.get(player.classId)?.get().centerAhead ?? 0) *
+            player.radius) /
+          REFERENCE_RADIUS;
     layers.world.scale.set(scale);
     layers.world.position.set(
       width / 2 - (player?.aim.x ?? 0) * middle * scale,
@@ -200,8 +196,8 @@ export function createPortraits(
     if (textures === null) {
       textures = {
         ...createTextures(),
-        players: paintedFiner(FINER, playerTextures),
-        classFx: paintedFiner(FINER, createClassFxTextures),
+        players: playerTextures(FINER),
+        classFx: createClassFxTextures(FINER),
       };
       checkDrawings(classes, textures.players.drawings);
     }

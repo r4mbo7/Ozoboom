@@ -1,19 +1,23 @@
 import './ui.css';
-import type { InputDevice } from '../input/intents';
+import type { InputDevice, MenuIntents } from '../input/intents';
 import { CLASSES } from '../data/classes';
 import { setFraction, setOf } from '../sim/lineup';
 import { type ClassInfo, swatchPortrait } from './class-picker';
-import { createClassPicker } from './class-screen';
+import { type ClassPickerScreen, createClassPicker } from './class-screen';
 import { el, setFlag } from './dom';
-import { createEnd } from './end';
-import { createHud } from './hud';
-import { createLobby } from './lobby';
+import { type EndScreen, createEnd } from './end';
+import { type Hud, createHud } from './hud';
+import { type LobbyScreen, createLobby } from './lobby';
+import { type MenuGrace, createMenuGrace } from './menu-grace';
 import { createMenuInput } from './navigation';
-import { createNotice } from './notice';
-import { promptsVersion } from './prompts';
-import { createStagePicker } from './stage';
+import { type NoticeScreen, createNotice } from './notice';
+import type { Prompts } from './prompts';
+import { classActions, lobbyActions, stageActions, titleActions } from './screen-actions';
+import { type Screen, createShownScreen } from './shown-screen';
+import { type StagePickerScreen, createStagePicker } from './stage';
 import { createSunFollower } from './sun';
-import { createTitle } from './title';
+import { type TitleOptions, type TitleScreen, createTitle } from './title';
+import { createTitleOptions } from './title-options';
 import { t } from '../shared/i18n';
 import type { GameContent } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
@@ -24,15 +28,13 @@ import type {
   StagePickerModel,
   Ui,
   UiCallbacks,
+  UiFrame,
 } from './types';
-import { createUpgradeOverlay } from './upgrade';
-import { VOLUME_STEPS, type SoundLevel, stepSound } from './volume';
+import { type UpgradeOverlay, createUpgradeOverlay } from './upgrade';
 
 export type {
   ClassPickerModel,
-  ClassPortrait,
   CreatePortrait,
-  EndSession,
   LobbyModel,
   LobbySeat,
   LocalPlayer,
@@ -48,9 +50,7 @@ export { type RemapScreen, openRemap } from './remap';
 export { createAutoAimToggle, createAutoFireToggle, createHitSoundToggle } from './toggle';
 export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './volume';
 export { heldSlot, selectTrap } from './navigation';
-export { SEAT_IDS, defaultName } from './lobby-model';
-
-type Screen = 'title' | 'class' | 'stage' | 'lobby' | 'game' | 'end' | 'notice';
+export { defaultName } from './lobby-model';
 
 const notices = (): Readonly<Record<Notice, { title: string; text: string; glyph: string }>> => ({
   desync: {
@@ -72,44 +72,94 @@ const notices = (): Readonly<Record<Notice, { title: string; text: string; glyph
   },
 });
 
-const MENU_GRACE_MS = 500;
-
 export function prefersCalmMode(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-// The classes offered are the data ones: only a harness shows others. Without a portrait maker
-// (the game draws them), each class shows as a disc of its colour.
+interface Screens {
+  readonly title: TitleScreen;
+  readonly classPicker: ClassPickerScreen;
+  readonly stagePicker: StagePickerScreen;
+  readonly lobby: LobbyScreen;
+  readonly notice: NoticeScreen;
+  readonly hud: Hud;
+  readonly end: EndScreen;
+  readonly upgrade: UpgradeOverlay;
+}
+
+type ScreenMenu = (edges: MenuIntents, frame: UiFrame) => void;
+
+function reveal(screens: Screens, next: Screen): void {
+  screens.title.element.hidden = next !== 'title';
+  screens.classPicker.element.hidden = next !== 'class';
+  screens.stagePicker.element.hidden = next !== 'stage';
+  screens.lobby.element.hidden = next !== 'lobby';
+  screens.notice.element.hidden = next !== 'notice';
+  screens.hud.element.hidden = next !== 'game' && next !== 'notice';
+  screens.end.element.hidden = next !== 'end';
+  screens.upgrade.hide();
+}
+
+function showDevice(screens: Screens, device: InputDevice): void {
+  screens.title.setDevice(device);
+  screens.end.setDevice(device);
+  screens.classPicker.setDevice(device);
+  screens.stagePicker.setDevice(device);
+  screens.lobby.setDevice(device);
+  screens.notice.setDevice(device);
+}
+
+function screenMenus(
+  screens: Screens,
+  grace: MenuGrace,
+  calm: () => boolean,
+): Readonly<Record<Exclude<Screen, 'game'>, ScreenMenu>> {
+  return {
+    title(edges, frame) {
+      screens.title.handle(edges);
+      screens.title.follow(calm() ? null : (frame.menuPosition ?? null));
+    },
+    class(edges) {
+      screens.classPicker.update(edges);
+    },
+    stage(edges) {
+      screens.stagePicker.update(edges);
+    },
+    lobby(edges, frame) {
+      screens.lobby.update(frame, edges);
+    },
+    notice(edges) {
+      if (grace.over()) {
+        screens.notice.menu.handle(edges);
+      }
+    },
+    end(edges) {
+      if (grace.over()) {
+        screens.end.menu.handle(edges);
+      }
+    },
+  };
+}
+
+// Only a harness offers other classes than the data ones; without a portrait maker, each class shows as a disc of its colour.
 export function createUi(
   root: HTMLElement,
   callbacks: UiCallbacks,
+  prompts: Prompts,
   classes: readonly ClassInfo[] = CLASSES,
   portrait: CreatePortrait = () => swatchPortrait(classes),
 ): Ui {
   const container = el('div', 'ui');
   root.append(container);
   const sun = createSunFollower(root);
-
-  let screen: Screen = 'title';
-  let calmMode = false;
-  let muted = false;
-  let volume = VOLUME_STEPS;
-  let hitSound = false;
-  let autoFire = false;
-  let autoAim = false;
-  let device: InputDevice = 'none';
-  let keysShown = promptsVersion();
-  let acted = false;
-  let lastContent: GameContent | null = null;
+  const shown = createShownScreen('title');
   const menuInput = createMenuInput();
-  let menuOpensAt = 0;
-
-  function once(action: () => void): void {
-    if (!acted) {
-      acted = true;
-      action();
-    }
-  }
+  const grace = createMenuGrace(() => performance.now());
+  const options = createTitleOptions(callbacks, applyOptions);
+  const isCalm = () => options.calmMode() || prefersCalmMode();
+  let device: InputDevice = 'none';
+  let keysShown = prompts.version();
+  let lastContent: GameContent | null = null;
 
   const feedback =
     callbacks.onFeedback === undefined
@@ -118,166 +168,9 @@ export function createUi(
           menuInput.open();
           callbacks.onFeedback?.(details);
         };
-
-  const title = createTitle({
-    ...(feedback === undefined ? {} : { feedback }),
-    start() {
-      once(() => {
-        callbacks.onStart();
-      });
-    },
-    playTogether() {
-      callbacks.onPlayTogether();
-    },
-    playOnline() {
-      callbacks.onPlayOnline();
-    },
-    toggleCalmMode() {
-      calmMode = !calmMode;
-      applyOptions();
-      callbacks.onToggleCalmMode(calmMode);
-    },
-    toggleMute() {
-      setSound({ volume, muted: !muted });
-    },
-    stepVolume(side) {
-      setSound(stepSound({ volume, muted }, side));
-    },
-    toggleHitSound() {
-      hitSound = !hitSound;
-      applyOptions();
-      callbacks.onToggleHitSound(hitSound);
-    },
-    toggleAutoFire() {
-      autoFire = !autoFire;
-      applyOptions();
-      callbacks.onToggleAutoFire(autoFire);
-    },
-    toggleAutoAim() {
-      autoAim = !autoAim;
-      applyOptions();
-      callbacks.onToggleAutoAim(autoAim);
-    },
-    controls() {
-      menuInput.open();
-      callbacks.onControls();
-    },
-    chooseLocale(next) {
-      callbacks.onChooseLocale(next);
-    },
-  });
-  const classPicker = createClassPicker(classes, portrait, {
-    choose(classId) {
-      callbacks.onChooseClass(classId);
-    },
-    toggleEndless(enabled) {
-      callbacks.onToggleEndless(enabled);
-    },
-    confirm() {
-      once(() => {
-        callbacks.onConfirmClass();
-      });
-    },
-    leave() {
-      once(() => {
-        callbacks.onLeaveClassPicker();
-      });
-    },
-  });
-  const hud = createHud();
-  const isCalm = () => calmMode || prefersCalmMode();
-  const upgrade = createUpgradeOverlay({
-    calm: isCalm,
-    choose(playerId, upgradeId) {
-      callbacks.onChooseUpgrade(playerId, upgradeId);
-    },
-    cue(cue, variant) {
-      callbacks.onUpgradeCue?.(cue, variant);
-    },
-    landing: (playerId, weaponId) => hud.landing(playerId, weaponId),
-    showWeapon: (canvas, weaponId, playerId) =>
-      callbacks.onShowWeapon?.(canvas, weaponId, playerId) ?? null,
-  });
-  const end = createEnd(
-    () => {
-      once(() => {
-        callbacks.onRestart();
-      });
-    },
-    () => {
-      once(() => {
-        callbacks.onQuit();
-      });
-    },
-    feedback,
-  );
-  const lobby = createLobby(
-    {
-      joinSeat(device) {
-        callbacks.onJoinSeat(device);
-      },
-      leaveSeat(playerId) {
-        callbacks.onLeaveSeat(playerId);
-      },
-      seatClass(playerId, classId) {
-        callbacks.onSeatClass(playerId, classId);
-      },
-      seatName(playerId, name) {
-        callbacks.onSeatName(playerId, name);
-      },
-      chooseStage(setId) {
-        callbacks.onChooseStage(setId);
-      },
-      chooseNight(night) {
-        callbacks.onChooseNight(night);
-      },
-      createRoom() {
-        callbacks.onCreateRoom();
-      },
-      joinRoom(code) {
-        callbacks.onJoinRoom(code);
-      },
-      launch() {
-        once(() => {
-          callbacks.onLaunch();
-        });
-      },
-      leave() {
-        once(() => {
-          callbacks.onLeaveLobby();
-        });
-      },
-    },
-    classes,
-    portrait,
-  );
-  const stagePicker = createStagePicker({
-    choose(setId) {
-      callbacks.onChooseStage(setId);
-    },
-    chooseNight(night) {
-      callbacks.onChooseNight(night);
-    },
-    confirm() {
-      once(() => {
-        callbacks.onConfirmStage();
-      });
-    },
-    leave() {
-      once(() => {
-        callbacks.onLeaveStagePicker();
-      });
-    },
-  });
-  const notice = createNotice(
-    t('Interruption'),
-    () => {
-      once(() => {
-        callbacks.onLeaveNotice();
-      });
-    },
-    feedback,
-  );
+  const screens = createScreens();
+  const { title, classPicker, stagePicker, lobby, notice, hud, end, upgrade } = screens;
+  const menus = screenMenus(screens, grace, isCalm);
   container.append(
     hud.element,
     upgrade.element,
@@ -290,92 +183,108 @@ export function createUi(
     notice.element,
   );
 
-  function applyOptions(): void {
-    root.classList.toggle('calm', calmMode);
-    title.setOptions({ calmMode, muted, volume, hitSound, autoFire, autoAim });
+  function createScreens(): Screens {
+    const title = createTitle(
+      prompts,
+      titleActions(callbacks, shown, options.actions, menuInput, feedback),
+    );
+    const classPicker = createClassPicker(
+      prompts,
+      classes,
+      portrait,
+      classActions(callbacks, shown),
+    );
+    const hud = createHud(prompts);
+    const upgrade = createUpgradeOverlay({
+      prompts,
+      calm: isCalm,
+      choose(playerId, upgradeId) {
+        callbacks.onChooseUpgrade(playerId, upgradeId);
+      },
+      cue(cue, variant) {
+        callbacks.onUpgradeCue?.(cue, variant);
+      },
+      landing: (playerId, weaponId) => hud.landing(playerId, weaponId),
+      showWeapon: (canvas, weaponId, playerId) =>
+        callbacks.onShowWeapon?.(canvas, weaponId, playerId) ?? null,
+    });
+    const end = createEnd(
+      prompts,
+      shown.once(() => {
+        callbacks.onRestart();
+      }),
+      shown.once(() => {
+        callbacks.onQuit();
+      }),
+      feedback,
+    );
+    const lobby = createLobby(prompts, lobbyActions(callbacks, shown), classes, portrait);
+    const stagePicker = createStagePicker(prompts, stageActions(callbacks, shown));
+    const notice = createNotice(
+      prompts,
+      t('Interruption'),
+      shown.once(() => {
+        callbacks.onLeaveNotice();
+      }),
+      feedback,
+    );
+    return { title, classPicker, stagePicker, lobby, notice, hud, end, upgrade };
   }
 
-  function setSound(next: SoundLevel): void {
-    const before = { volume, muted };
-    ({ volume, muted } = next);
-    applyOptions();
-    if (next.muted !== before.muted) {
-      callbacks.onToggleMute(muted);
-    }
-    if (next.volume !== before.volume) {
-      callbacks.onSetVolume(volume);
-    }
+  function applyOptions(current: TitleOptions): void {
+    root.classList.toggle('calm', current.calmMode);
+    title.setOptions(current);
   }
 
   function applyDevice(next: InputDevice): void {
     device = next;
-    keysShown = promptsVersion();
+    keysShown = prompts.version();
     setFlag(root, 'touch', next === 'touch');
-    title.setDevice(next);
-    end.setDevice(next);
-    classPicker.setDevice(next);
-    stagePicker.setDevice(next);
-    lobby.setDevice(next);
-    notice.setDevice(next);
+    showDevice(screens, next);
   }
 
   function show(next: Screen): void {
-    screen = next;
-    acted = false;
+    shown.show(next);
     if (next === 'title') {
       sun.fix('nuit');
     }
-    title.element.hidden = next !== 'title';
-    classPicker.element.hidden = next !== 'class';
-    stagePicker.element.hidden = next !== 'stage';
-    lobby.element.hidden = next !== 'lobby';
-    notice.element.hidden = next !== 'notice';
-    hud.element.hidden = next !== 'game' && next !== 'notice';
-    end.element.hidden = next !== 'end';
-    upgrade.hide();
+    reveal(screens, next);
+  }
+
+  function openMenu(next: 'class' | 'stage', menu: ClassPickerScreen | StagePickerScreen): void {
+    if (shown.current() !== next) {
+      menu.open();
+      sun.fix('nuit');
+      show(next);
+      menuInput.open();
+    }
   }
 
   function updateLobby(model: LobbyModel): void {
     lobby.setModel(model);
   }
 
-  applyOptions();
+  options.apply();
   applyDevice(device);
   show('title');
 
   return {
-    showTitle(options) {
-      calmMode = options.calmMode;
-      muted = options.muted;
-      volume = options.volume;
-      hitSound = options.hitSound;
-      autoFire = options.autoFire;
-      autoAim = options.autoAim;
-      applyOptions();
-      applyDevice(options.device);
+    showTitle({ device: shownDevice, ...shownOptions }) {
+      options.apply(shownOptions);
+      applyDevice(shownDevice);
       show('title');
-      title.menu.select(0);
+      title.open('main');
     },
     showVisits(count) {
       title.setVisits(count);
     },
     showClassPicker(model) {
       classPicker.setModel(model);
-      if (screen !== 'class') {
-        classPicker.open();
-        sun.fix('nuit');
-        show('class');
-        menuInput.open();
-      }
+      openMenu('class', classPicker);
     },
     showStagePicker(model: StagePickerModel) {
       stagePicker.setModel(model);
-      if (screen !== 'stage') {
-        stagePicker.open();
-        sun.fix('nuit');
-        show('stage');
-        menuInput.open();
-      }
+      openMenu('stage', stagePicker);
     },
     showLobby(model) {
       sun.fix('nuit');
@@ -392,7 +301,7 @@ export function createUi(
         detail: details,
       });
       show('notice');
-      menuOpensAt = performance.now() + MENU_GRACE_MS;
+      grace.start();
       menuInput.open();
     },
     showGame() {
@@ -404,47 +313,21 @@ export function createUi(
       end.show(state, lastContent, session);
       sun.fix(state.status === 'won' ? 'jour' : 'nuit');
       show('end');
-      menuOpensAt = performance.now() + MENU_GRACE_MS;
+      grace.start();
       menuInput.open();
     },
     update(state, frame, content) {
       lastContent = content;
       const snapshot = frame.snapshot;
-      if (snapshot.device !== device || keysShown !== promptsVersion()) {
+      if (snapshot.device !== device || keysShown !== prompts.version()) {
         applyDevice(snapshot.device);
       }
       const edges = menuInput.edges(snapshot.menu, snapshot.gameplay.move);
-
-      if (screen === 'title') {
-        title.handle(edges);
-        title.follow(isCalm() ? null : (frame.menuPosition ?? null));
+      const screen = shown.current();
+      if (screen !== 'game') {
+        menus[screen](edges, frame);
         return;
       }
-      if (screen === 'class') {
-        classPicker.update(edges);
-        return;
-      }
-      if (screen === 'stage') {
-        stagePicker.update(edges);
-        return;
-      }
-      if (screen === 'lobby') {
-        lobby.update(frame, edges);
-        return;
-      }
-      if (screen === 'notice') {
-        if (performance.now() >= menuOpensAt) {
-          notice.menu.handle(edges);
-        }
-        return;
-      }
-      if (screen === 'end') {
-        if (performance.now() >= menuOpensAt) {
-          end.menu.handle(edges);
-        }
-        return;
-      }
-
       hud.update(state, frame, content);
       sun.follow(setFraction(setOf(content, state.setId), state));
       upgrade.update(state, frame, content, performance.now());

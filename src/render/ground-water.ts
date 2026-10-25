@@ -1,11 +1,11 @@
 import { Graphics, type Container, type Sprite } from 'pixi.js';
 import { nextFloat, seedRng } from '../shared/prng';
+import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import type { RenderContext } from './context';
 import type { Frame } from './frame';
 import { LAKE_SKY_MIX, type Layout, OVERFLOW, shoreAt } from './ground-layout';
-import { mixColor } from './ground-sun';
-import { lerp } from './motion';
+import { mixColor } from './palette';
 import { add, lookup, setTint } from './util';
 import { litShare, stageColor } from './vu-meter';
 
@@ -13,8 +13,6 @@ const WHITE = 0xffffff;
 const REFLECT_REACH = 240;
 const REFLECTED_PLAYERS = 4;
 
-// The lake takes the left edge of the arena: turquoise mixed with the sky of the hour, with the light of
-// the core and of the players near the shore laid on it, flipped and faint. Calm mode keeps them still.
 export function createWater(ctx: RenderContext, parent: Container) {
   const { textures: t } = ctx;
   const lake = new Graphics();

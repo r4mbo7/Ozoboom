@@ -7,14 +7,10 @@ import { setTint } from './util';
 const SPLINTER_BEATS = 0.7;
 
 export interface BossDecor {
-  // A soft black disc: squashed into the shadow a boss casts.
   readonly shadow: Shape;
-  // A dark splinter with a pale edge, flying off a hit boss.
   readonly splinter: Shape;
   readonly relic: Shape;
-  // The flower of life a relic floats in.
   readonly flower: Shape;
-  // A thin ring, for the wave of a landing and the burst of a farewell.
   readonly ring: Shape;
 }
 
@@ -76,7 +72,6 @@ export function createBossDecor(): BossDecor {
   };
 }
 
-// In boss radii: the shadow a boss casts on the ground, below and a little aside.
 const SHADOW = { x: 0.1, y: 1.1, width: 1, height: 0.28, alpha: 0.4 };
 
 export function place(
@@ -93,7 +88,6 @@ export function place(
   sprite.scale.set(scaleX, scaleY);
 }
 
-// `x` and `y` stand on the ground, under the mask however high it hops.
 export function placeShadow(
   sprite: Sprite,
   decor: BossDecor,
@@ -116,7 +110,6 @@ export function placeShadow(
 
 const DIM_MARGIN = 4000;
 
-// The black veil the floor darkens under before a boss lands, over the arena and well beyond it.
 export function createDim(
   parent: Container,
 ): (shade: number, arena: { readonly width: number; readonly height: number }) => void {
@@ -139,7 +132,6 @@ export function destroyBossDecor(decor: BossDecor): void {
   }
 }
 
-// Dark splinters with a pale edge, fanning out from `angle` and falling.
 export function splinter(
   splinters: Particles,
   at: { x: number; y: number },

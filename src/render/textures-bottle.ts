@@ -2,8 +2,6 @@ import { type Shape, WHITE, paint } from './paint';
 
 const BLACK = '#000000';
 
-// The Méprisant's plastic bottle, neck first, in black and pure white whatever the hour, at twice
-// the world size: 27 × 9 px once scaled to its projectile.
 export function paintBottle(): Shape {
   return paint(72, 32, 10, (ctx) => {
     const body = () => {

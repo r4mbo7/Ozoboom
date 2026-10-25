@@ -26,8 +26,7 @@ export const bottle: SpecialModule = (ctx, enemy, effect) => {
   }
 };
 
-// Predicts this tick's move, the same way `projectiles` resolves hits right after `specials`:
-// a projectile still in flight is never touching anyone yet at its current (last tick's) position.
+// As `projectiles` will right after `specials`: at last tick's position it touches no one yet.
 function aboutToBeTouched(state: SimState, projectile: ProjectileState): PlayerState | undefined {
   const nextX = projectile.x + projectile.vx;
   const nextY = projectile.y + projectile.vy;

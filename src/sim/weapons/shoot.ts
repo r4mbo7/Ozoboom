@@ -5,7 +5,6 @@ type ShotSpec = Pick<
   'radius' | 'damage' | 'ticksLeft' | 'pierceLeft' | 'arc' | 'returnTo' | 'heal'
 >;
 
-// A unit vector from `from` towards `to`; the player's aim when they coincide.
 export function directionTo(from: Vec2, to: Vec2, fallback: Vec2): Vec2 {
   const dx = to.x - from.x;
   const dy = to.y - from.y;

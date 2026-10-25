@@ -1,3 +1,4 @@
+import { clamp } from '../../shared/scalar';
 import { lookup, type ResolvedContent } from '../content';
 import { gustDrift } from '../gusts';
 import type { PickupState, PlayerState, SimState } from '../state';
@@ -20,8 +21,8 @@ export function pickups({ state, content, set }: StepContext): void {
     }
     pickup.ticksLeft -= 1;
     if (drift !== undefined) {
-      pickup.x = Math.min(Math.max(pickup.x + drift.x, 0), state.arena.width);
-      pickup.y = Math.min(Math.max(pickup.y + drift.y, 0), state.arena.height);
+      pickup.x = clamp(pickup.x + drift.x, 0, state.arena.width);
+      pickup.y = clamp(pickup.y + drift.y, 0, state.arena.height);
     }
     const collector = nearestCollector(state, content, pickup);
     if (collector !== undefined && attract(pickup, collector, set.pickups.speed)) {
@@ -63,7 +64,6 @@ function nearestCollector(
   return nearest;
 }
 
-// Moves the pickup toward the player and returns whether it reaches them this tick.
 function attract(pickup: PickupState, player: PlayerState, speed: number): boolean {
   const dx = player.x - pickup.x;
   const dy = player.y - pickup.y;

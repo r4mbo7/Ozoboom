@@ -1,16 +1,12 @@
 import { t } from '../shared/i18n';
 import { mouseButtonOf } from './profile';
 
-// Bindings hold the physical key: its name is the letter the player's own layout prints on it.
-// The browser tells it where it can (the layout map, the key each code typed); elsewhere a French
-// player is taken for an AZERTY keyboard until a key tells otherwise.
-const learned = new Map<string, string>();
-let azerty = false;
-let version = 0;
-
-// Bumped when a name changes, for the screens that show them.
-export function keyNamesVersion(): number {
-  return version;
+export interface KeyNames {
+  of(input: string): string;
+  learn(code: string, key: string): void;
+  guessLayout(languages: readonly string[]): void;
+  // Bumped when a name changes, for the screens that show them.
+  version(): number;
 }
 
 const AZERTY_LETTERS: Readonly<Record<string, string>> = {
@@ -68,40 +64,26 @@ const MOUSE_NAMES: readonly (() => string)[] = [
   () => t('Clic droit'),
 ];
 
-export function learnKeyName(code: string, key: string): void {
-  if (!(code.startsWith('Key') || code in PUNCTUATION) || key.length !== 1) {
-    return;
-  }
-  const name = key.toUpperCase();
-  if (learned.get(code) !== name) {
-    learned.set(code, name);
-    version += 1;
-  }
-}
-
-export function guessKeyboardLayout(languages: readonly string[]): void {
-  const first = languages[0]?.toLowerCase() ?? '';
-  const guessed = first === 'fr' || first === 'fr-fr' || first === 'fr-be' || first === 'fr-lu';
-  if (guessed !== azerty) {
-    azerty = guessed;
-    version += 1;
-  }
-}
-
 interface LayoutKeyboard {
   getLayoutMap(): Promise<ReadonlyMap<string, string>>;
 }
 
-export async function learnKeyboardLayout(): Promise<void> {
-  guessKeyboardLayout(navigator.languages);
-  const keyboard = (navigator as { keyboard?: Partial<LayoutKeyboard> }).keyboard;
+declare global {
+  interface Navigator {
+    readonly keyboard?: Partial<LayoutKeyboard>;
+  }
+}
+
+export async function learnKeyboardLayout(names: KeyNames): Promise<void> {
+  names.guessLayout(navigator.languages);
+  const { keyboard } = navigator;
   if (keyboard?.getLayoutMap === undefined) {
     return;
   }
   try {
     const layout = await keyboard.getLayoutMap();
     for (const [code, key] of layout) {
-      learnKeyName(code, key);
+      names.learn(code, key);
     }
   } catch (error) {
     // A frame of another origin is not allowed to read it.
@@ -111,7 +93,39 @@ export async function learnKeyboardLayout(): Promise<void> {
   }
 }
 
-export function inputName(input: string): string {
+// A key is named by the letter the player's layout prints; a French player is taken for AZERTY until told otherwise.
+export function createKeyNames(): KeyNames {
+  const learned = new Map<string, string>();
+  let azerty = false;
+  let version = 0;
+
+  return {
+    of(input) {
+      return inputName(input, learned.get(input) ?? (azerty ? AZERTY_LETTERS[input] : undefined));
+    },
+    learn(code, key) {
+      if (!(code.startsWith('Key') || code in PUNCTUATION) || key.length !== 1) {
+        return;
+      }
+      const name = key.toUpperCase();
+      if (learned.get(code) !== name) {
+        learned.set(code, name);
+        version += 1;
+      }
+    },
+    guessLayout(languages) {
+      const first = languages[0]?.toLowerCase() ?? '';
+      const guessed = first === 'fr' || first === 'fr-fr' || first === 'fr-be' || first === 'fr-lu';
+      if (guessed !== azerty) {
+        azerty = guessed;
+        version += 1;
+      }
+    },
+    version: () => version,
+  };
+}
+
+function inputName(input: string, printed: string | undefined): string {
   const button = mouseButtonOf(input);
   if (button !== null) {
     return MOUSE_NAMES[button]?.() ?? t('Bouton {number}', { number: button + 1 });
@@ -120,17 +134,12 @@ export function inputName(input: string): string {
   if (named !== undefined) {
     return named();
   }
-  const known = learned.get(input);
-  if (known !== undefined) {
-    return known;
+  if (printed !== undefined) {
+    return printed;
   }
-  const guessed = azerty ? AZERTY_LETTERS[input] : undefined;
-  if (guessed !== undefined) {
-    return guessed;
-  }
-  const letter = /^(?:Key|Digit)(.)$/.exec(input);
-  if (letter?.[1] !== undefined) {
-    return letter[1];
+  const written = /^(?:Key|Digit)(.)$/.exec(input);
+  if (written?.[1] !== undefined) {
+    return written[1];
   }
   const pad = /^Numpad(\d)$/.exec(input);
   if (pad?.[1] !== undefined) {

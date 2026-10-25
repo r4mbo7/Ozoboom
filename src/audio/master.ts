@@ -1,4 +1,6 @@
-export const CLIP_KNEE = 0.7;
+import { clamp01 } from '../shared/scalar';
+
+const CLIP_KNEE = 0.7;
 export const CLIP_CEILING = 0.98;
 const MUTE_SECONDS = 0.003;
 
@@ -11,7 +13,7 @@ export interface MasterChain {
 
 // The ear hears loudness on a log scale: a squared level spreads its steps evenly.
 export function loudness(volume: number): number {
-  return Math.min(Math.max(volume, 0), 1) ** 2;
+  return clamp01(volume) ** 2;
 }
 
 export function softClipCurve(size = 4097): Float32Array<ArrayBuffer> {

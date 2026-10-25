@@ -3,11 +3,9 @@ import { RING_SIZE, turnRing } from '../rings';
 import type { SpecialModule } from './types';
 import type { EnemyState, SimState } from '../state';
 
-// Members farther than this many reaches from the boss have lost the ring.
 const LOST_REACHES = 1;
 
-// A taunt this tick sets the target of the bad vibes it reaches: a member now after the one who
-// taunted has been torn away.
+// A member now after the player who taunted this tick has been torn away.
 function free(state: SimState, enemy: EnemyState, reach: number, boss: EnemyState): boolean {
   if (enemy.hp <= 0 || !touches(enemy, boss, reach * LOST_REACHES)) {
     return true;
@@ -15,9 +13,7 @@ function free(state: SimState, enemy: EnemyState, reach: number, boss: EnemyStat
   return state.events.some((event) => event.type === 'taunted' && event.playerId === enemy.target);
 }
 
-// The ring turns every tick (`src/sim/rings.ts` walks its members to their places). Members dead,
-// lost far away or torn away by a taunt leave it; on the one of every bar, the nearest bad vibes
-// within reach fill the empty places.
+// `src/sim/rings.ts` walks the members to their places.
 export const moshRing: SpecialModule = ({ state }, boss, effect) => {
   if (effect.kind !== 'moshRing') {
     return;

@@ -1,5 +1,6 @@
 import { t } from '../shared/i18n';
 import type { MenuIntents } from '../input/intents';
+import { wrap } from '../shared/scalar';
 import { el, icon, keycap, setText } from './dom';
 import { formatNumber } from './format';
 import { INFINITY, STAGES, SUNRISE } from './icons';
@@ -9,7 +10,6 @@ import type { Night, StageCard } from './types';
 // A festival walks about twenty seconds from one stage to the next.
 const PATH_MINUTES = 1 / 3;
 
-// The nights a player can choose from: one stage, endless, and in the full game the whole festival.
 export function nightsOffered(): readonly Night[] {
   return FULL_NIGHTS.festival === true ? ['stage', 'endless', 'festival'] : ['stage', 'endless'];
 }
@@ -21,11 +21,9 @@ export function nightOf(model: { endless?: boolean; festival?: boolean }): Night
   return model.endless === true ? 'endless' : 'stage';
 }
 
-// The night after `night`, `direction` steps along the choices, wrapping.
 export function stepNight(nights: readonly Night[], night: Night, direction: number): Night {
   const index = nights.indexOf(night);
-  const count = nights.length;
-  return nights[(((index + direction) % count) + count) % count] ?? night;
+  return nights[wrap(index + direction, nights.length)] ?? night;
 }
 
 function nameOf(night: Night): string {
@@ -58,7 +56,6 @@ const ICONS: Readonly<Record<Night, string>> = {
 
 const minutes = (count: number) => t('≈ {minutes} min', { minutes: formatNumber(count) });
 
-// How long a night lasts: the stage picked, the whole festival with its walks, or as long as the team holds.
 export function nightLength(night: Night, stages: readonly StageCard[], stageId: string): string {
   switch (night) {
     case 'stage':
@@ -75,12 +72,10 @@ export function nightLength(night: Night, stages: readonly StageCard[], stageId:
   }
 }
 
-// The title of the stage choice: in a festival, the stage picked is only the first.
 export function stageQuestion(night: Night): string {
   return night === 'festival' ? t('Par où commence la nuit ?') : t('Choisis la scène');
 }
 
-// What follows the stage picked, under the cards.
 export function nightNote(night: Night): string {
   switch (night) {
     case 'stage':
@@ -94,7 +89,6 @@ export function nightNote(night: Night): string {
   }
 }
 
-// What the launch button says for that night.
 export function launchLabel(night: Night): string {
   switch (night) {
     case 'stage':
@@ -106,7 +100,6 @@ export function launchLabel(night: Night): string {
   }
 }
 
-// What the launch button launches, under its label.
 export function launchDetail(night: Night, stages: readonly StageCard[], stageId: string): string {
   const stage = stages.find((card) => card.setId === stageId);
   const name = stage === undefined ? '' : t(stage.name);
@@ -126,9 +119,8 @@ export function launchDetail(night: Night, stages: readonly StageCard[], stageId
 
 export interface NightTabs {
   readonly element: HTMLElement;
-  // The night chosen, and the line under the tabs that says what it is and how long it lasts.
   set(night: Night, length: string): void;
-  // The keys that step through the tabs, shown on either side; none on a touch screen.
+  // None on a touch screen.
   setKeys(keys: readonly string[], style: 'key' | 'button'): void;
   // A guest sees the host's night and cannot change it.
   setReadonly(readonly: boolean): void;
@@ -136,8 +128,6 @@ export interface NightTabs {
   handle(edges: MenuIntents): boolean;
 }
 
-// The nights as tabs over the stage choice, always in sight: the previous and next tab keys step through them
-// from anywhere on the screen, a click or a touch picks one.
 export function createNightTabs(onChoose: (night: Night) => void): NightTabs {
   const nights = nightsOffered();
   let night: Night = 'stage';

@@ -29,7 +29,6 @@ export function add(parent: Container, shape: Shape, anchorX = 0.5): Sprite {
   return sprite;
 }
 
-// Moves a sprite under `parent` if it is not there yet: a pooled sprite follows what it shows.
 export function keepIn(parent: Container, sprite: Sprite): void {
   if (sprite.parent !== parent) {
     parent.addChild(sprite);
@@ -49,7 +48,6 @@ export function setTint(target: { tint: number }, color: number): void {
   }
 }
 
-// By day, what is ours wears a dark outline one logical pixel wide: a copy of the body, grown by it.
 export function placeOutline(
   outline: Sprite,
   body: Sprite,
@@ -71,7 +69,6 @@ export function placeOutline(
   outline.scale.set(body.scale.x + grow, body.scale.y + grow);
 }
 
-// Frees what the shapes under `root` hold, for a decor left behind: drawn again when it comes back.
 export function releaseDrawing(root: Container): void {
   for (const child of root.children) {
     if (child.isCachedAsTexture) {

@@ -1,66 +1,53 @@
-import { locale, t } from '../shared/i18n';
-import { createAudioEngine } from '../audio';
+import { locale } from '../shared/i18n';
 import { EIGHTH_SECONDS } from '../audio/ambience';
 import {
   APP_VERSION,
-  type FeedbackDialog,
   buildFeedbackReport,
   feedbackMeta,
   githubFormLink,
   openFeedback,
 } from '../feedback';
+import type { OnlineMeta } from '../feedback/report';
 import { TRACKS } from '../data/tracks';
-import type { SetDefinition } from '../data/types';
-import { createInputHub } from '../input';
+import type { GameContent, SetDefinition } from '../data/types';
+import { createInputHub } from '../input/hub';
 import { navigatorGamepads } from '../input/gamepad';
 import type { DeviceId, InputSnapshot } from '../input/intents';
-import { learnKeyboardLayout } from '../input/key-names';
-import { DEFAULT_KEY_PROFILE, setKeyProfile } from '../input/profile';
+import { createKeyNames, learnKeyboardLayout } from '../input/key-names';
+import { createPlayerKeys } from '../input/profile';
 import { createPortraits, createRenderer } from '../render';
-import { SUN_PALETTES } from '../shared/palette';
-import type { GameMode } from '../shared/stats';
+import type { GameEvent, GameMode } from '../shared/stats';
 import { TICK_MS } from '../shared/tempo';
 import { setOf, setTempo } from '../sim/lineup';
 import { parseJoinCode } from '../net/code';
 import { createLocalSource } from '../net/local';
 import { GUEST_BUFFER_TICKS } from '../net/lockstep';
-import type { CameraFocus } from '../render/types';
+import type { CameraFocus, Renderer } from '../render/types';
 import type { PlayerSlot } from '../sim/initial-state';
-import type { PlayerId } from '../sim/state';
+import type { PlayerId, SimState } from '../sim/state';
 import {
   type ClassPickerModel,
   type LobbyModel,
   type StagePickerModel,
   type LocalPlayer,
-  type SoundLevel,
   type StageCard,
   type UiFrame,
-  type RemapScreen,
   VOLUME_STEPS,
-  createControlsButton,
-  createFeedbackButton,
-  createAutoAimToggle,
-  createAutoFireToggle,
-  createHitSoundToggle,
-  createSoundControl,
   createUi,
   openRemap,
   prefersCalmMode,
-  stepSound,
 } from '../ui';
-import {
-  BENCH_ENEMIES,
-  type DevOptions,
-  benchScene,
-  benchSlots,
-  bossScene,
-  fireScene,
-  sunriseScene,
-  createDevProbe,
-} from './dev';
+import { type DevOptions, benchSlots, createDevProbe, devScene } from './dev';
+import { createBackgroundPlay } from './background-play';
+import { createDefeatFade } from './defeat-fade';
+import { createDialogs } from './dialogs';
 import { createFpsMeter } from './fps';
-import { createFixedStepLoop, dueTicks } from './loop';
-import { type Interruption, type OnlineMatch, createOnline } from './online';
+import { createGameAudio } from './game-audio';
+import { createFixedStepLoop } from './loop';
+import { choiceCallbacks } from './choices';
+import type { Assist } from './controls';
+import { type Interruption, type Online, type OnlineMatch, createOnline } from './online';
+import { guestLeftText } from './online-text';
 import {
   IDLE_SNAPSHOT,
   createMatch,
@@ -71,34 +58,57 @@ import {
 } from './match';
 import { endingMs, endingTicks } from './ending';
 import { openAudioOnGesture } from './gesture';
+import { enterLandscapeFullscreen, fullscreenOnFirstTouch } from './fullscreen';
 import { createPauseScreen } from './pause';
-import { loadPrefs, savePref } from './prefs';
+import { loadPlayerPrefs } from './prefs';
 import { createSeats, type LaunchedSeats } from './seats';
+import { type Settings, createSettings } from './settings';
 import { soundOf, type Screen } from './sound';
+import { createCrashReport } from './crash';
 import { createGameStats, outcomeOf, sendGameEvent } from './stats';
+import { browserStorage } from './storage';
+import { createTeamPause, pauseItems } from './team-pause';
 import { createToast } from './toast';
-import { drawTrack, seededRandom, stageTracks, trackOf } from './track';
+import { drawTrack, stageTracks, trackOf } from './track';
 import { countVisit } from './visits';
-import { playerLabel } from '../ui/hud-model';
 import { stageCards } from '../ui/lobby-model';
+import type { UiCallbacks, UpgradeCue } from '../ui/types';
 import { showsStageChoice } from '../ui/teaser';
+import { createPrompts } from '../ui/prompts';
 import { chooseLocale } from './locale';
 import { createStillness } from './stillness';
 import { createWeaponScenes } from './weapon-scenes';
 
-const DEFAULT_CLASS_ID = 'mage';
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const TOGETHER_FOCUS: CameraFocus = { kind: 'everyone' };
-const DEFAULT_BREAK_BARS = 4;
-// 29 ticks per second: a 60 Hz screen runs 0 or 1 tick per frame, a struggling one at 10 frames
-// per second 3. Past 4 ticks (138 ms, under 7.25 frames per second), the game slows down instead
-// of jumping ahead, so a hitch never lands a burst of hits the player could not react to.
+// Past 4 ticks a frame (under 7.25 fps) the game slows down, so a hitch never lands a burst of hits.
 const MAX_TICKS_PER_FRAME = 4;
-// An online guest with frames to spare plays up to this many extra steps a frame to get back to
-// the host's pace.
 const CATCH_UP_TICKS_PER_FRAME = 2;
 
 export async function startGame(root: HTMLElement, dev: DevOptions): Promise<void> {
+  let screen: Screen = 'title';
+  let gameMode: GameMode = 'solo';
+  const sendEvent = (event: GameEvent): void => {
+    sendGameEvent(event, import.meta.env.VITE_STATS_URL, window.location.search, (url, data) =>
+      navigator.sendBeacon(url, data),
+    );
+  };
+  // Listening before the stage is built counts a renderer that fails to start, too.
+  const reportCrash = createCrashReport({
+    version: __APP_RELEASE__,
+    origin: window.location.origin,
+    scene: () =>
+      screen === 'game' || screen === 'ending'
+        ? { stage: match.session.state.setId, mode: gameMode }
+        : null,
+    send: sendEvent,
+  });
+  window.addEventListener('error', (event) => {
+    reportCrash(event.error, 'event');
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    reportCrash(event.reason, 'promise');
+  });
   const { content } = dev;
   const first = content.sets[0];
   if (first === undefined) {
@@ -106,31 +116,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
   const defaultSet: SetDefinition = first;
   const stages: readonly StageCard[] = stageCards(content.sets);
-  const storage = () => window.localStorage;
   const classIds = content.classes.map((definition) => definition.id);
-  const prefs = loadPrefs(storage, {
-    calmMode: prefersCalmMode(),
-    muted: false,
-    volume: VOLUME_STEPS,
-    hitSound: false,
-    autoFire: true,
-    autoAim: true,
-    classId: DEFAULT_CLASS_ID,
-    stageId: defaultSet.id,
-    trackId: '',
-    endless: false,
-    festival: false,
-    keys: DEFAULT_KEY_PROFILE,
-  });
-  setKeyProfile(prefs.keys);
-  void learnKeyboardLayout();
-  if (!classIds.includes(prefs.classId)) {
-    prefs.classId = classIds.includes(DEFAULT_CLASS_ID) ? DEFAULT_CLASS_ID : (classIds[0] ?? '');
-  }
-
-  if (!content.sets.some((definition) => definition.id === prefs.stageId)) {
-    prefs.stageId = defaultSet.id;
-  }
+  const prefs = loadPlayerPrefs(browserStorage, content, prefersCalmMode());
+  const keys = createPlayerKeys(prefs.keys);
+  const names = createKeyNames();
+  void learnKeyboardLayout(names);
+  const prompts = createPrompts(keys, names);
 
   const stage = document.createElement('div');
   stage.className = 'game-stage';
@@ -138,32 +129,14 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   const renderer = await createRenderer(stage, { calmMode: prefs.calmMode }, content, dev.light);
   const stillness = createStillness();
   let stageSize = { width: stage.clientWidth, height: stage.clientHeight };
-  const hub = createInputHub(stage);
-  const audio = createAudioEngine({
-    setOf: (setId) =>
-      [...content.sets, ...(content.paths ?? [])].find((candidate) => candidate.id === setId),
-    // Every peer of a festival walks into the same track of the stage ahead.
-    trackFor: (set) =>
-      drawTrack(
-        stageTracks(TRACKS, set.trackIds),
-        prefs.trackId,
-        seededRandom(match.session.state.seed, set.id),
-      ),
-    breakBars: (tier) =>
-      setNamed(match.session.state.setId).tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,
-    trapEffectOf: (id) => content.traps.find((trap) => trap.id === id)?.effect.kind ?? id,
-    sfxLookups: {
-      weaponKindOf: (id) => content.weapons?.find((weapon) => weapon.id === id)?.effect.kind,
-      skillKindOf: (classId) =>
-        content.classes.find((candidate) => candidate.id === classId)?.skill.effect.kind,
-      specialKindOf: (id) => content.enemies.find((enemy) => enemy.id === id)?.special?.kind,
-    },
+  const hub = createInputHub(stage, keys, names);
+  const audio = createGameAudio(content, {
+    state: () => match.session.state,
+    lastTrackId: () => prefs.trackId,
+    setNamed,
   });
 
-  let screen: Screen = 'title';
-  // The scene of the next set, solo or from the lobby: the last one played at first.
   let stageId = prefs.stageId;
-  let paused = false;
   let frozenAlpha = 0;
   let endingLeft = 0;
   let match = soloMatch();
@@ -171,17 +144,12 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   let onlineLobby = false;
   let interruption: Interruption | null = null;
   let catchUp = 0;
-  let backgroundTimer: ReturnType<typeof setTimeout> | undefined;
-  let backgroundSince = 0;
   const seats = createSeats(classIds, prefs.classId);
-  // Who plays again on « Rejouer » after a game of the lobby: the same seats.
-  let launched: LaunchedSeats | null = null;
+  let lobbySeats: LaunchedSeats | null = null;
   let view: InputView = { devices: new Map(), merged: IDLE_SNAPSHOT };
   let uiSnapshot: InputSnapshot | null = null;
   let uiPlayers: readonly LocalPlayer[] = [];
   let played = false;
-  let feedback: FeedbackDialog | null = null;
-  let remap: RemapScreen | null = null;
   const fps = createFpsMeter();
   const probe =
     dev.mode === null
@@ -200,167 +168,42 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
                 },
         );
   const toast = createToast(root);
-  const stats = createGameStats((event) => {
-    sendGameEvent(event, import.meta.env.VITE_STATS_URL, window.location.search, (url, data) =>
-      navigator.sendBeacon(url, data),
-    );
-  });
+  const stats = createGameStats(sendEvent);
   renderer.setOptions({ focus: match.focus });
   const weaponScenes = createWeaponScenes(content, renderer);
+  const settings = createSettings(browserStorage, prefs, applySound);
+  const dialogs = createDialogs(navigatorGamepads);
 
   const ui = createUi(
     root,
     {
-      onStart: openClassPicker,
-      onRestart() {
-        if (onlineMatch !== null) {
-          online.relaunch();
-        } else if (launched === null) {
-          play();
-        } else {
-          launch(launched);
-        }
-      },
-      onQuit: quit,
-      onChooseUpgrade(playerId, upgradeId) {
-        match.chooseUpgrade(playerId, upgradeId);
-      },
-      onUpgradeCue(cue, variant) {
-        audio.cue(cue, variant);
-      },
-      onShowWeapon(canvas, weaponId, playerId) {
-        const { frame } = match.session;
-        const player = frame.players.find((candidate) => candidate.id === playerId);
-        return player === undefined
-          ? null
-          : weaponScenes.show(canvas, weaponId, frame.setId, player.classId);
-      },
-      onToggleCalmMode(enabled) {
-        prefs.calmMode = enabled;
-        renderer.setOptions({ calmMode: enabled });
-        savePref(storage, 'calmMode', enabled);
-      },
-      onToggleMute(muted) {
-        setSound({ volume: prefs.volume, muted });
-      },
-      onSetVolume(volume) {
-        setSound({ volume, muted: prefs.muted });
-      },
-      onToggleHitSound: setHitSound,
-      onToggleAutoFire: setAutoFire,
-      onToggleAutoAim: setAutoAim,
-      onChooseLocale: chooseLocale,
-      onFeedback: openForm,
-      onControls: openControls,
-      onPlayTogether: openLobby,
-      onPlayOnline: openOnline,
-      onChooseClass(classId) {
-        if (classIds.includes(classId)) {
-          prefs.classId = classId;
-          savePref(storage, 'classId', classId);
-          setMatch(soloMatch());
-          if (screen === 'class') {
-            ui.showClassPicker(classPicker());
-          }
-        }
-      },
-      onConfirmClass: openStagePicker,
-      onLeaveClassPicker: toTitle,
-      onJoinSeat(device) {
-        if (seats.join(device)) {
-          audio.cue('seatTaken');
+      ...gameCallbacks(),
+      ...settingsCallbacks(settings, renderer, { openForm, openControls }),
+      ...menuCallbacks(),
+      ...choiceCallbacks({
+        seats,
+        audio,
+        settings,
+        setIds: content.sets.map((definition) => definition.id),
+        room: () => online,
+        inRoom: () => onlineLobby,
+        screen: () => screen,
+        pickStage(setId) {
+          stageId = setId;
+        },
+        showLobby() {
           ui.updateLobby(localLobby());
-        }
-      },
-      onLeaveSeat(playerId) {
-        if (seats.leave(playerId)) {
-          audio.cue('seatFreed');
-          ui.updateLobby(localLobby());
-        }
-      },
-      onSeatClass(playerId, classId) {
-        if (onlineLobby) {
-          void audio.start();
-          online.setSeatClass(classId);
-          return;
-        }
-        seats.setClass(playerId, classId);
-        ui.updateLobby(localLobby());
-      },
-      onSeatName(playerId, name) {
-        if (onlineLobby) {
-          online.setSeatName(name);
-          return;
-        }
-        seats.setName(playerId, name);
-        ui.updateLobby(localLobby());
-      },
-      onCreateRoom() {
-        void audio.start();
-        online.createRoom();
-      },
-      onJoinRoom(code) {
-        void audio.start();
-        online.joinRoom(code);
-      },
-      onLaunch() {
-        if (onlineLobby) {
-          void audio.start();
-          online.launch();
-        } else if (seats.count > 0) {
-          launch(seats.launch());
-        }
-      },
-      onChooseStage(setId) {
-        if (!content.sets.some((definition) => definition.id === setId)) {
-          return;
-        }
-        stageId = setId;
-        if (screen === 'stage') {
+        },
+        showStagePicker() {
           ui.showStagePicker(stagePicker());
-        } else if (onlineLobby) {
-          online.setStage(setId);
-        } else {
-          ui.updateLobby(localLobby());
-        }
-      },
-      onToggleEndless(enabled) {
-        if (onlineLobby && online.role !== 'host') {
-          return;
-        }
-        prefs.endless = enabled;
-        savePref(storage, 'endless', enabled);
-        if (screen === 'stage') {
-          ui.showStagePicker(stagePicker());
-        } else if (screen === 'class') {
+        },
+        showClassPicker() {
           ui.showClassPicker(classPicker());
-        } else if (onlineLobby) {
-          online.setNight(enabled, false);
-        } else {
-          ui.updateLobby(localLobby());
-        }
-      },
-      onChooseNight(night) {
-        if (onlineLobby && online.role !== 'host') {
-          return;
-        }
-        prefs.endless = night === 'endless';
-        prefs.festival = night === 'festival';
-        savePref(storage, 'endless', prefs.endless);
-        savePref(storage, 'festival', prefs.festival);
-        if (screen === 'stage') {
-          ui.showStagePicker(stagePicker());
-        } else if (onlineLobby) {
-          online.setNight(prefs.endless, prefs.festival);
-        } else {
-          ui.updateLobby(localLobby());
-        }
-      },
-      onConfirmStage: play,
-      onLeaveStagePicker: openClassPicker,
-      onLeaveLobby: toTitle,
-      onLeaveNotice: quit,
+        },
+        launch,
+      }),
     },
+    prompts,
     content.classes,
     createPortraits(content.classes, () => prefs.calmMode),
   );
@@ -380,77 +223,79 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     onMatch: startOnline,
     onInterruption: interrupt,
     onGuestLeft(playerId) {
-      const player = match.session.state.players.find((candidate) => candidate.id === playerId);
-      toast.show(
-        t('{name} a quitté le set', {
-          name: player === undefined ? t('Un joueur') : playerLabel(player),
-        }),
-      );
+      toast.show(guestLeftText(match.session.state.players, playerId));
     },
   });
-  const soundControl = createSoundControl(stepVolume);
-  soundControl.set(prefs);
-  const hitSoundToggle = createHitSoundToggle();
-  hitSoundToggle.set(prefs.hitSound);
-  const autoFireToggle = createAutoFireToggle();
-  autoFireToggle.set(prefs.autoFire);
-  const autoAimToggle = createAutoAimToggle();
-  autoAimToggle.set(prefs.autoAim);
-  // An opacity transition on one layer: the compositor runs the fade, the frame loop does nothing.
-  // It darkens to the end screen's night, whatever the time of the set.
-  const fade = document.createElement('div');
-  fade.className = 'defeat-fade';
-  fade.style.setProperty('--sol', SUN_PALETTES.nuit.sol);
-  fade.style.setProperty('--bad-vibe', SUN_PALETTES.nuit.badVibe);
-  root.append(fade);
-  const pause = createPauseScreen(root, [
-    {
-      label: t('Reprendre'),
-      activate() {
-        setPaused(false);
-      },
-    },
-    {
-      label: t('Son'),
-      element: soundControl.element,
-      activate() {
-        setSound({ volume: prefs.volume, muted: !prefs.muted });
-      },
-      adjust: stepVolume,
-    },
-    {
-      label: t('Son des coups'),
-      element: hitSoundToggle.button,
-      activate() {
-        setHitSound(!prefs.hitSound);
-      },
-    },
-    {
-      label: t('Tir automatique'),
-      element: autoFireToggle.button,
-      activate() {
-        setAutoFire(!prefs.autoFire);
-      },
-    },
-    {
-      label: t('Visée automatique'),
-      element: autoAimToggle.button,
-      activate() {
-        setAutoAim(!prefs.autoAim);
-      },
-    },
-    { label: t('Contrôles'), element: createControlsButton(), activate: openControls },
-    { label: t('Ton avis'), element: createFeedbackButton(), activate: openForm },
-    {
-      label: t('Quitter la partie'),
-      get confirm() {
-        return onlineMatch === null ? quitConfirm() : quitOnlineConfirm();
-      },
-      activate: quit,
-    },
-  ]);
+  const fade = createDefeatFade(root);
+  const pause = createTeamPause(
+    createPauseScreen(
+      root,
+      prompts,
+      pauseItems(settings, {
+        resume: () => {
+          pause.resume();
+        },
+        openControls,
+        openForm,
+        quit,
+        online: () => onlineMatch !== null,
+      }),
+    ),
+    { online: () => onlineMatch !== null, changed: applySound },
+  );
   showTitle();
   applySound();
+
+  function gameCallbacks() {
+    return {
+      onRestart() {
+        if (onlineMatch !== null) {
+          online.relaunch();
+        } else if (lobbySeats === null) {
+          play();
+        } else {
+          launch(lobbySeats);
+        }
+      },
+      onQuit: quit,
+      onChooseUpgrade(playerId: PlayerId, upgradeId: string) {
+        match.chooseUpgrade(playerId, upgradeId);
+      },
+      onUpgradeCue(cue: UpgradeCue, variant: number) {
+        audio.cue(cue, variant);
+      },
+      onShowWeapon(canvas: HTMLCanvasElement, weaponId: string, playerId: PlayerId) {
+        const { frame } = match.session;
+        const player = frame.players.find((candidate) => candidate.id === playerId);
+        return player === undefined
+          ? null
+          : weaponScenes.show(canvas, weaponId, frame.setId, player.classId);
+      },
+      onLeaveNotice: quit,
+    };
+  }
+
+  function menuCallbacks() {
+    return {
+      onStart: openClassPicker,
+      onChooseClass(classId: string) {
+        if (classIds.includes(classId)) {
+          settings.remember('classId', classId);
+          setMatch(soloMatch());
+          if (screen === 'class') {
+            ui.showClassPicker(classPicker());
+          }
+        }
+      },
+      onConfirmClass: openStagePicker,
+      onLeaveClassPicker: toTitle,
+      onConfirmStage: play,
+      onLeaveStagePicker: openClassPicker,
+      onPlayTogether: openLobby,
+      onPlayOnline: openOnline,
+      onLeaveLobby: toTitle,
+    };
+  }
 
   function showTitle(): void {
     ui.showTitle({
@@ -467,8 +312,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   function applySound(): void {
     const sound = soundOf({
       screen,
-      // Online, the pause menu stops nothing: the set goes on, and so does its music.
-      paused: paused && onlineMatch === null,
+      paused: pause.stopsTheSet,
       muted: prefs.muted,
       hidden: document.hidden,
     });
@@ -499,7 +343,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
 
   // Alone, the one player reads the merged view: keyboard, mouse and gamepad as one.
   function soloMatch(): Match {
-    if (dev.mode === 'bench' && dev.players > 1) {
+    if (dev.players > 1) {
       const slots = benchSlots(content, dev.players);
       return newMatch(slots, new Map(slots.map((slot) => [slot.id, null])), TOGETHER_FOCUS);
     }
@@ -512,90 +356,36 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     renderer.setOptions({ focus: next.focus });
   }
 
-  // Opened from the title, the pause or the end, where the sim does not step: the form takes every
-  // input until it closes, then the screen below takes them back.
   function openForm(): void {
-    if (feedback !== null) {
-      return;
-    }
-    const device = uiSnapshot?.device ?? 'none';
-    const report = buildFeedbackReport(
-      played ? match.session.state : null,
-      feedbackMeta({
-        device,
-        calmMode: prefs.calmMode,
-        averageFps: fps.average(),
-        ...(onlineMatch === null
-          ? {}
-          : {
-              online: {
-                role: onlineMatch.role,
-                players: onlineMatch.start.players.length,
-                roundTripMs: online.roundTripMs,
-                ...(interruption?.desyncTick === undefined
-                  ? {}
-                  : { desyncTick: interruption.desyncTick }),
-              },
-            }),
+    dialogs.openFeedback((onClose) => {
+      const device = uiSnapshot?.device ?? 'none';
+      const report = buildFeedbackReport(
+        played ? match.session.state : null,
+        feedbackMeta({
+          device,
+          calmMode: prefs.calmMode,
+          averageFps: fps.average(),
+          ...onlineMeta(onlineMatch, online, interruption),
+        }),
+      );
+      return openFeedback(root, report, githubFormLink(), { device, prompts, onClose });
+    });
+  }
+
+  function openControls(): void {
+    dialogs.openControls((onClose) =>
+      openRemap(root, {
+        device: uiSnapshot?.device ?? 'none',
+        profile: prefs.keys,
+        prompts,
+        names,
+        onChange(profile) {
+          settings.remember('keys', profile);
+          keys.choose(profile);
+        },
+        onClose,
       }),
     );
-    feedback = openFeedback(root, report, githubFormLink(), {
-      device,
-      onClose() {
-        feedback = null;
-      },
-    });
-  }
-
-  // Like the form, from the title or the pause: it takes every input until it closes.
-  function openControls(): void {
-    if (remap !== null || feedback !== null) {
-      return;
-    }
-    remap = openRemap(root, {
-      device: uiSnapshot?.device ?? 'none',
-      profile: prefs.keys,
-      onChange(profile) {
-        prefs.keys = profile;
-        savePref(storage, 'keys', profile);
-        setKeyProfile(profile);
-      },
-      onClose() {
-        remap = null;
-      },
-    });
-  }
-
-  function setSound({ volume, muted }: SoundLevel): void {
-    prefs.volume = volume;
-    prefs.muted = muted;
-    applySound();
-    savePref(storage, 'volume', volume);
-    savePref(storage, 'muted', muted);
-    soundControl.set(prefs);
-  }
-
-  function stepVolume(side: -1 | 1): void {
-    setSound(stepSound(prefs, side));
-  }
-
-  function setHitSound(enabled: boolean): void {
-    prefs.hitSound = enabled;
-    applySound();
-    savePref(storage, 'hitSound', enabled);
-    hitSoundToggle.set(enabled);
-  }
-
-  function setAutoFire(enabled: boolean): void {
-    prefs.autoFire = enabled;
-    savePref(storage, 'autoFire', enabled);
-    autoFireToggle.set(enabled);
-  }
-
-  function setAutoAim(enabled: boolean): void {
-    prefs.autoAim = enabled;
-    savePref(storage, 'autoAim', enabled);
-    autoAimToggle.set(enabled);
   }
 
   function setNamed(id: string): SetDefinition {
@@ -649,24 +439,13 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   function beginGame(trackId: string, mode: GameMode | null): void {
     void audio.start();
     audio.setTrack(trackOf(TRACKS, trackId));
-    prefs.trackId = trackId;
-    savePref(storage, 'trackId', trackId);
+    settings.remember('trackId', trackId);
     played = true;
-    if (dev.mode === 'bench') {
-      benchScene(match.session.state, content, match.session.state.seed, BENCH_ENEMIES);
-    }
-    if (dev.boss !== null) {
-      bossScene(match.session.state, dev.boss);
-    }
-    if (dev.mode === 'feu') {
-      fireScene(match.session.state, content);
-    }
-    if (dev.mode === 'sunrise') {
-      sunriseScene(match.session.state, content);
-    }
+    devScene(match.session.state, dev);
     screen = 'game';
+    gameMode = mode ?? 'online';
     // An online guest may still be fading out when the host plays again.
-    fade.classList.remove('defeat-fade--on');
+    fade.lift();
     ui.showGame();
     applySound();
     if (mode !== null) {
@@ -680,20 +459,19 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 
   function rememberStage(): void {
-    prefs.stageId = stageId;
-    savePref(storage, 'stageId', stageId);
+    settings.remember('stageId', stageId);
   }
 
   function play(): void {
     rememberStage();
-    launched = null;
+    lobbySeats = null;
     setMatch(soloMatch());
     beginGame(nextTrackId(), 'solo');
   }
 
   function launch(seated: LaunchedSeats): void {
     rememberStage();
-    launched = seated;
+    lobbySeats = seated;
     setMatch(newMatch(seated.slots, seated.locals, TOGETHER_FOCUS));
     beginGame(nextTrackId(), 'local');
     audio.cue('launch');
@@ -715,35 +493,18 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       rememberStage();
     }
     interruption = null;
-    launched = null;
+    lobbySeats = null;
     toast.clear();
-    const { seed, setId, players, endless = false, festival = false } = started.start;
-    setMatch(
-      createMatch({
-        seed,
-        setId,
-        endless,
-        festival,
-        content,
-        slots: players,
-        locals: new Map([[started.localPlayer, null]]),
-        source: started.source,
-        focus: { kind: 'player', playerId: started.localPlayer },
-        assist: () => prefs,
-      }),
-    );
-    paused = false;
-    pause.hide();
+    setMatch(onlineMatchOf(started, content, () => prefs));
+    pause.dismiss();
     beginGame(started.start.trackId, started.role === 'host' ? 'online' : null);
   }
 
-  // A game that cannot go on: nothing steps any more, and the notice offers the way out.
   function interrupt(next: Interruption): void {
     stats.end(match.session.state, 'interrupted');
     interruption = next;
-    paused = false;
-    pause.hide();
-    fade.classList.remove('defeat-fade--on');
+    pause.dismiss();
+    fade.lift();
     screen = 'end';
     ui.showNotice(next.notice, next.details);
     applySound();
@@ -769,86 +530,49 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     showTitle();
   }
 
-  // Back to the title as on a fresh load: no end screen, a new idle game behind the title.
   function quit(): void {
     stats.end(match.session.state, 'quit');
-    paused = false;
-    pause.hide();
+    pause.dismiss();
     played = false;
-    launched = null;
+    lobbySeats = null;
     setMatch(soloMatch());
     toTitle();
   }
 
-  function setPaused(next: boolean, device = uiSnapshot?.device ?? 'none'): void {
-    if (paused === next) {
-      return;
-    }
-    paused = next;
-    applySound();
-    if (next) {
-      pause.show(device, onlineMatch === null ? undefined : onlinePauseText());
-    } else {
-      pause.hide();
-    }
-  }
-
-  // The pause is the team's: any device pauses, navigates and resumes, through the merged view.
   function beginFrame(): void {
     view = { devices: hub.poll(), merged: hub.merged() };
     audioGate.pad(padPressed);
     const { merged } = view;
-    if (feedback !== null) {
-      feedback.update(merged);
-      return;
-    }
-    if (remap !== null) {
-      remap.update(merged, navigatorGamepads());
+    if (dialogs.takesPresses(merged)) {
       return;
     }
     uiSnapshot = merged;
     uiPlayers = [{ playerId: 0, snapshot: merged }];
     if (screen === 'lobby') {
-      uiPlayers = seats.model().seats.map(({ playerId, device }) => ({
-        playerId,
-        snapshot: (device === null ? undefined : view.devices.get(device)) ?? IDLE_SNAPSHOT,
-      }));
+      uiPlayers = seatedPlayers(seats.model().seats, view.devices);
     } else if (screen === 'game') {
-      const { gameplay, menu } = merged;
-      const wasPaused = paused;
-      if (!paused) {
-        const pauser = [...view.devices.values()].find((snapshot) => snapshot.gameplay.pause);
-        setPaused(gameplay.pause, pauser?.device ?? merged.device);
-      } else if ((gameplay.pause || menu.back) && pause.confirming) {
-        pause.cancel();
-      } else if (gameplay.pause || menu.back) {
-        setPaused(false);
-      } else {
-        pause.handle(menu, gameplay.move);
-      }
-      const quiet = wasPaused || paused;
-      if (quiet) {
-        view = withoutPressesView(view);
-        uiSnapshot = withoutPresses(merged);
-      }
-      if (!paused) {
-        match.frame(view);
-      } else if (onlineMatch !== null) {
-        // The set goes on under the pause menu: the character stands still.
-        match.frame(stillView(view));
-      }
-      uiPlayers = quiet
-        ? match.players.map(({ playerId, snapshot }) => ({
-            playerId,
-            snapshot: withoutPresses(snapshot),
-          }))
-        : match.players;
+      playFrame(merged);
     }
   }
 
-  // Until a gesture opens the audio, or while the sound is off, the title keeps the ambience's time.
-  function silentMenuPosition(): number {
-    return performance.now() / 1000 / EIGHTH_SECONDS;
+  function playFrame(merged: InputSnapshot): void {
+    const quiet = pause.takesPresses(view);
+    if (quiet) {
+      view = withoutPressesView(view);
+      uiSnapshot = withoutPresses(merged);
+    }
+    if (!pause.paused) {
+      match.frame(view);
+    } else if (onlineMatch !== null) {
+      // The set goes on under the pause menu: the character stands still.
+      match.frame(stillView(view));
+    }
+    uiPlayers = quiet
+      ? match.players.map(({ playerId, snapshot }) => ({
+          playerId,
+          snapshot: withoutPresses(snapshot),
+        }))
+      : match.players;
   }
 
   function uiFrame(snapshot: InputSnapshot): UiFrame {
@@ -873,7 +597,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         screen === 'class' ||
         screen === 'stage' ||
         screen === 'lobby' ||
-        paused
+        pause.paused
       ) {
         return;
       }
@@ -886,8 +610,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     if (screen !== 'game') {
       return;
     }
-    // Online, a test's player plays after every step too: each peer changes its state the same way at
-    // the same tick, and its keys reach the others as commands.
+    // Online, a test's player plays after every step too: each peer changes its state at the same tick.
     if (!stepOnce()) {
       return false;
     }
@@ -901,17 +624,10 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     }
   }
 
-  function padPressed(): boolean {
-    return Array.from(navigator.getGamepads()).some(
-      (pad) => pad?.buttons.some((button) => button.pressed) === true,
-    );
-  }
-
   function playing(): boolean {
     return screen === 'game';
   }
 
-  // False when the source has no commands yet: an online guest waits for the host's frame.
   function stepOnce(): boolean {
     const start = performance.now();
     if (!match.step((point) => renderer.screenToWorld(point))) {
@@ -921,14 +637,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     audio.update(session.state);
     const { status } = session.state;
     if (screen === 'game' && (status === 'won' || status === 'lost')) {
-      online.matchEnded();
-      stats.end(session.state, outcomeOf(session.state));
-      const tempo = setTempo(setOf(content, session.state.setId));
-      endingLeft = endingTicks(status, tempo);
-      fade.style.transitionDuration = `${String(endingMs('lost', tempo, dev.speed))}ms`;
-      screen = 'ending';
-      fade.classList.toggle('defeat-fade--on', status === 'lost');
-      applySound();
+      beginEnding(session.state, status);
     }
     if (probe !== null) {
       probe.cost.sim += performance.now() - start;
@@ -936,48 +645,25 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     return true;
   }
 
+  function beginEnding(state: SimState, status: 'won' | 'lost'): void {
+    online.matchEnded();
+    stats.end(state, outcomeOf(state));
+    const tempo = setTempo(setOf(content, state.setId));
+    endingLeft = endingTicks(status, tempo);
+    fade.fall(status === 'lost', endingMs('lost', tempo, dev.speed));
+    screen = 'ending';
+    applySound();
+  }
+
   function openEnd(): void {
     screen = 'end';
-    fade.classList.remove('defeat-fade--on');
+    fade.lift();
     ui.showEnd(match.session.state, onlineMatch === null ? undefined : { role: onlineMatch.role });
-  }
-
-  // A hidden tab gets no animation frames: an online game keeps its place in the set by timer,
-  // without drawing. Browsers slow timers down in the background, so this is best effort.
-  function runInBackground(): void {
-    backgroundTimer = undefined;
-    if (!document.hidden || onlineMatch === null) {
-      return;
-    }
-    const tickMs = TICK_MS / dev.speed;
-    const now = performance.now();
-    const { ticks, spentMs } = dueTicks(
-      now - backgroundSince,
-      tickMs,
-      MAX_TICKS_PER_FRAME * dev.speed,
-    );
-    backgroundSince = ticks === 0 ? backgroundSince : Math.min(now, backgroundSince + spentMs);
-    catchUp = CATCH_UP_TICKS_PER_FRAME;
-    for (let index = 0; index < ticks; index++) {
-      if (step() === false) {
-        break;
-      }
-    }
-    match.session.endFrame();
-    backgroundTimer = setTimeout(runInBackground, tickMs);
-  }
-
-  function startBackground(): void {
-    if (backgroundTimer === undefined && onlineMatch !== null) {
-      match.frame(stillView(view));
-      backgroundSince = performance.now();
-      backgroundTimer = setTimeout(runInBackground, TICK_MS / dev.speed);
-    }
   }
 
   function render(alpha: number): void {
     // Online, the sim stops at the end: a moving alpha would swing the last two ticks back and forth.
-    if ((paused && onlineMatch === null) || screen === 'ending') {
+    if (pause.stopsTheSet || screen === 'ending') {
       alpha = frozenAlpha;
     } else {
       frozenAlpha = alpha;
@@ -991,7 +677,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       !stillness.draws(session.frame, stageSize.width, stageSize.height),
     );
     const rendered = performance.now();
-    if (uiSnapshot !== null && feedback === null && remap === null) {
+    if (uiSnapshot !== null && !dialogs.open) {
       ui.update(session.frame, uiFrame(uiSnapshot), content);
     }
     session.endFrame();
@@ -1008,7 +694,6 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
       tickMs: TICK_MS / dev.speed,
       maxTicksPerFrame: MAX_TICKS_PER_FRAME * dev.speed,
       now: () => performance.now(),
-      // Input is polled once per frame, before the steps of that frame.
       requestFrame: (callback) =>
         requestAnimationFrame((time) => {
           fps.frame(time);
@@ -1020,8 +705,32 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
         cancelAnimationFrame(handle);
       },
     },
-    { step, render },
+    {
+      step,
+      render,
+      crashed: (error) => {
+        reportCrash(error, 'loop');
+      },
+    },
   );
+  const background = createBackgroundPlay({
+    tickMs: TICK_MS / dev.speed,
+    maxTicks: MAX_TICKS_PER_FRAME * dev.speed,
+    now: () => performance.now(),
+    hiddenOnline: () => document.hidden && onlineMatch !== null,
+    standStill: () => {
+      match.frame(stillView(view));
+    },
+    play(ticks) {
+      catchUp = CATCH_UP_TICKS_PER_FRAME;
+      for (let index = 0; index < ticks; index++) {
+        if (step() === false) {
+          break;
+        }
+      }
+      match.session.endFrame();
+    },
+  });
 
   // The stage, not the window: a phone's address bar can hide without a resize event.
   new ResizeObserver(() => {
@@ -1031,8 +740,7 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
     stageSize = { width: stage.clientWidth, height: stage.clientHeight };
     renderer.resize(stageSize.width, stageSize.height);
   }).observe(stage);
-  // Closing the tab tells the others at once, instead of leaving them to wait for the connection
-  // to time out.
+  // Closing the tab tells the others at once, instead of leaving them to wait for a timeout.
   window.addEventListener('pagehide', (event) => {
     if (!event.persisted) {
       online.leave();
@@ -1040,21 +748,20 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === 'game' && onlineMatch === null) {
-      setPaused(true);
+      pause.pause(uiSnapshot?.device ?? 'none');
     }
     if (document.hidden) {
-      startBackground();
+      background.start();
     } else {
-      clearTimeout(backgroundTimer);
-      backgroundTimer = undefined;
+      background.stop();
     }
     applySound();
   });
   // The title's ambience starts as soon as the browser allows it, instead of waiting for the set.
   const audioGate = openAudioOnGesture(window, () => audio.start());
+  fullscreenOnFirstTouch(window, enterLandscapeFullscreen);
   loop.start();
 
-  // A link to a room opens the lobby on the guest's side.
   const linked = parseJoinCode(window.location.hash);
   if (linked !== null) {
     openOnline();
@@ -1062,7 +769,98 @@ export async function startGame(root: HTMLElement, dev: DevOptions): Promise<voi
   }
 }
 
-// The view of a player who lets go: no press, no movement.
+function settingsCallbacks(
+  settings: Settings,
+  renderer: Pick<Renderer, 'setOptions'>,
+  open: { readonly openForm: () => void; readonly openControls: () => void },
+): Pick<
+  UiCallbacks,
+  | 'onToggleCalmMode'
+  | 'onToggleMute'
+  | 'onSetVolume'
+  | 'onToggleHitSound'
+  | 'onToggleAutoFire'
+  | 'onToggleAutoAim'
+  | 'onChooseLocale'
+  | 'onFeedback'
+  | 'onControls'
+> {
+  const { prefs } = settings;
+  return {
+    onToggleCalmMode(enabled) {
+      settings.remember('calmMode', enabled);
+      renderer.setOptions({ calmMode: enabled });
+    },
+    onToggleMute(muted) {
+      settings.setSound({ volume: prefs.volume, muted });
+    },
+    onSetVolume(volume) {
+      settings.setSound({ volume, muted: prefs.muted });
+    },
+    onToggleHitSound: settings.setHitSound,
+    onToggleAutoFire: settings.setAutoFire,
+    onToggleAutoAim: settings.setAutoAim,
+    onChooseLocale: chooseLocale,
+    onFeedback: open.openForm,
+    onControls: open.openControls,
+  };
+}
+
+function onlineMatchOf(started: OnlineMatch, content: GameContent, assist: () => Assist): Match {
+  const { seed, setId, players, endless = false, festival = false } = started.start;
+  return createMatch({
+    seed,
+    setId,
+    endless,
+    festival,
+    content,
+    slots: players,
+    locals: new Map([[started.localPlayer, null]]),
+    source: started.source,
+    focus: { kind: 'player', playerId: started.localPlayer },
+    assist,
+  });
+}
+
+function onlineMeta(
+  started: OnlineMatch | null,
+  online: Pick<Online, 'roundTripMs'>,
+  interruption: Interruption | null,
+): { online?: OnlineMeta } {
+  return started === null
+    ? {}
+    : {
+        online: {
+          role: started.role,
+          players: started.start.players.length,
+          roundTripMs: online.roundTripMs,
+          ...(interruption?.desyncTick === undefined
+            ? {}
+            : { desyncTick: interruption.desyncTick }),
+        },
+      };
+}
+
+function seatedPlayers(
+  seated: readonly { readonly playerId: PlayerId; readonly device: DeviceId | null }[],
+  devices: ReadonlyMap<DeviceId, InputSnapshot>,
+): LocalPlayer[] {
+  return seated.map(({ playerId, device }) => ({
+    playerId,
+    snapshot: (device === null ? undefined : devices.get(device)) ?? IDLE_SNAPSHOT,
+  }));
+}
+
+function padPressed(): boolean {
+  return Array.from(navigator.getGamepads()).some(
+    (pad) => pad?.buttons.some((button) => button.pressed) === true,
+  );
+}
+
+function silentMenuPosition(): number {
+  return performance.now() / 1000 / EIGHTH_SECONDS;
+}
+
 function stillView(view: InputView): InputView {
   const still = (snapshot: InputSnapshot): InputSnapshot => {
     const quiet = withoutPresses(snapshot);
@@ -1073,29 +871,3 @@ function stillView(view: InputView): InputView {
     devices: new Map([...view.devices].map(([device, snapshot]) => [device, still(snapshot)])),
   };
 }
-
-const quitConfirm = () =>
-  ({
-    question: t('Quitter le set\u202f?'),
-    text: t('Tu rentres avant le sunrise\u202f: la partie s’arrête ici, sans score.'),
-    stay: t('Rester'),
-    leave: t('Quitter'),
-  }) as const;
-
-const quitOnlineConfirm = () =>
-  ({
-    question: t('Quitter le set\u202f?'),
-    text: t(
-      'Tu laisses les autres joueurs\u202f: ton personnage reste immobile et le set continue sans toi.',
-    ),
-    stay: t('Rester'),
-    leave: t('Quitter'),
-  }) as const;
-
-const onlinePauseText = () =>
-  ({
-    heading: t('Le set continue'),
-    text: t(
-      'En ligne, la pause n’arrête pas le set : ton personnage reste immobile pendant que les autres jouent.',
-    ),
-  }) as const;

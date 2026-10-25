@@ -22,7 +22,7 @@ const FAN = 2.2;
 const FALLBACK_RADIUS = 10;
 const WHITE = 0xffffff;
 
-// What a hit on a bad vibe leaves on screen. `enemies` knows a bad vibe until the frame after it left the state.
+// `enemies` knows a bad vibe until the frame after it left the state.
 export function createHits(
   ctx: RenderContext,
   enemies: Pick<EnemiesFamily, 'hold' | 'poseOf'>,

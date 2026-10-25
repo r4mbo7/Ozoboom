@@ -1,3 +1,4 @@
+import { clamp } from '../../shared/scalar';
 import { damageCore, damagePlayer, playerById } from '../damage';
 import { healPlayer, hurtEnemy, markedDamageMul, knockBack } from '../effects';
 import { touchesObstacle } from '../obstacles';
@@ -14,7 +15,7 @@ export function projectiles({ state, set, content, enemyGrid }: StepContext): vo
   const obstacles = set.obstacles ?? [];
   let kept = 0;
   for (const projectile of state.projectiles) {
-    if (projectile.returning === true && flyHome(state, projectile)) {
+    if (projectile.returning === true && flewHome(state, projectile)) {
       continue;
     }
     projectile.x += projectile.vx;
@@ -37,7 +38,7 @@ export function projectiles({ state, set, content, enemyGrid }: StepContext): vo
       held ||
       (projectile.x >= 0 && projectile.x <= width && projectile.y >= 0 && projectile.y <= height);
     if (!spent && (blocked || projectile.ticksLeft <= 0 || !inArena)) {
-      spent = !endOfFlight(state, enemyGrid, projectile, markedMul);
+      spent = !fliesOn(state, enemyGrid, projectile, markedMul);
     }
     if (!spent) {
       state.projectiles[kept] = projectile;
@@ -54,9 +55,7 @@ function turnsAround(projectile: ProjectileState, content: StepContext['content'
   return owner.kind === 'weapon' && content.weapons.get(owner.weaponId)?.effect.kind === 'orbit';
 }
 
-// A lobbed projectile lands, a frisbee turns back; anything else is done. Returns whether the
-// projectile flies on.
-function endOfFlight(
+function fliesOn(
   state: SimState,
   grid: StepContext['enemyGrid'],
   projectile: ProjectileState,
@@ -76,8 +75,8 @@ function endOfFlight(
   projectile.returnTo = ally.id;
   projectile.returning = true;
   projectile.ticksLeft = RETURN_TICKS;
-  projectile.x = Math.min(state.arena.width, Math.max(0, projectile.x));
-  projectile.y = Math.min(state.arena.height, Math.max(0, projectile.y));
+  projectile.x = clamp(projectile.x, 0, state.arena.width);
+  projectile.y = clamp(projectile.y, 0, state.arena.height);
   return true;
 }
 
@@ -112,9 +111,7 @@ function mostInjured(state: SimState): PlayerState | undefined {
   return worst;
 }
 
-// Aims the frisbee at its ally at constant speed. Returns whether it is spent: it reached the
-// ally and healed them, or there is no one left to reach.
-function flyHome(state: SimState, projectile: ProjectileState): boolean {
+function flewHome(state: SimState, projectile: ProjectileState): boolean {
   const ally =
     projectile.returnTo === undefined ? undefined : playerById(state, projectile.returnTo);
   if (ally === undefined || ally.downed) {
@@ -133,7 +130,6 @@ function flyHome(state: SimState, projectile: ProjectileState): boolean {
   return false;
 }
 
-// Returns whether the projectile is spent.
 function hitEnemies(
   state: SimState,
   grid: StepContext['enemyGrid'],

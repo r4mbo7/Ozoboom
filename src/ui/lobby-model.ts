@@ -1,13 +1,14 @@
 import type { SetDefinition } from '../data/types';
 import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
+import { wrap } from '../shared/scalar';
 import { setTempo, stageMinutes } from '../sim/lineup';
-import type { PlayerId } from '../sim/state';
+import { PLAYER_IDS, type PlayerId } from '../sim/state';
+import type { HintPart } from './dom';
 import { formatNumber } from './format';
+import type { DevicePrompts, KeyStyle } from './prompts';
 import type { LobbyModel, LobbySeat, StageCard } from './types';
 
-export const SEAT_IDS: readonly PlayerId[] = [0, 1, 2, 3];
-export const SEAT_COUNT = SEAT_IDS.length;
 export const NAME_LENGTH = 12;
 const ROOM_LINK = /rejoindre=([^&\s]+)/i;
 
@@ -52,7 +53,6 @@ export function lobbyView(model: LobbyModel): LobbyView {
   return model.code === null ? 'entry' : 'room';
 }
 
-// The seat this screen edits online: the only one that is not played from afar.
 export function ownSeat(model: LobbyModel): LobbySeat | null {
   return model.seats.find((seat) => !seat.remote) ?? null;
 }
@@ -82,6 +82,62 @@ export function deviceLabel(device: DeviceId | null): string {
   });
 }
 
+export function seatTag(seat: LobbySeat, mode: LobbyModel['mode']): string {
+  if (mode === 'local') {
+    return deviceLabel(seat.device);
+  }
+  if (seat.remote) {
+    return seat.host ? t('Hôte') : t('Invité');
+  }
+  return seat.host ? t('Toi · hôte') : t('Toi');
+}
+
+export function canTakeSeat(model: LobbyModel, device: DeviceId): boolean {
+  return (
+    model.seats.length < PLAYER_IDS.length && !model.seats.some((seat) => seat.device === device)
+  );
+}
+
+export interface LobbyHint {
+  parts: readonly HintPart[];
+  style: KeyStyle;
+}
+
+export function lobbyHint(model: LobbyModel, prompts: DevicePrompts): LobbyHint {
+  const view = lobbyView(model);
+  const tabs =
+    model.role === 'host' && prompts.tabs.length > 0 && view !== 'entry'
+      ? [{ keys: prompts.tabs, label: t('mode') }]
+      : [];
+  const choice = {
+    keys: prompts.navigateRow,
+    label: hasStageChoice(model) ? t('classe, scène') : t('classe'),
+  };
+  const confirm = { keys: [prompts.confirm], label: t('valider') };
+  if (model.mode === 'local') {
+    return {
+      parts: [
+        { keys: [t('Entrée'), 'A'], label: t('rejoindre') },
+        ...tabs,
+        choice,
+        confirm,
+        { keys: [t('Échap'), 'B'], label: t('quitter sa place') },
+      ],
+      style: 'key',
+    };
+  }
+  return {
+    parts: [
+      { keys: prompts.navigate, label: t('naviguer') },
+      ...tabs,
+      ...(view === 'entry' ? [] : [choice]),
+      confirm,
+      { keys: [prompts.back], label: t('quitter') },
+    ],
+    style: prompts.style,
+  };
+}
+
 export type Row =
   'create' | 'discord' | 'code' | 'join' | 'copy' | 'name' | 'class' | 'stage' | 'launch' | 'leave';
 
@@ -96,8 +152,7 @@ export function stageCards(sets: readonly SetDefinition[]): StageCard[] {
   }));
 }
 
-// Only the host picks the scene, and only when there is a choice.
-export function hasStageChoice(model: LobbyModel): boolean {
+function hasStageChoice(model: LobbyModel): boolean {
   return (model.stages?.length ?? 0) > 1;
 }
 
@@ -141,7 +196,7 @@ export interface RowStep {
 export function stepRow(count: number, index: number, edges: MenuIntents): RowStep {
   const side = (edges.right ? 1 : 0) - (edges.left ? 1 : 0);
   const delta = (edges.down ? 1 : 0) - (edges.up ? 1 : 0);
-  const next = count <= 0 ? 0 : (((index + delta) % count) + count) % count;
+  const next = count <= 0 ? 0 : wrap(index + delta, count);
   return {
     index: next,
     confirmed: edges.confirm,

@@ -3,6 +3,7 @@ import type { SimState } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
+import { easeOutQuad } from './motion';
 import { DOME_FACETS, type Facet } from './textures';
 import { add, placeOutline, setTint } from './util';
 import {
@@ -28,7 +29,7 @@ const PERCENT_SIZE = 1.3;
 const BLINK_TICKS = 2 * TICKS_PER_BEAT;
 const BLINK_PERIOD = TICKS_PER_BEAT / 2;
 const RAYS = 8;
-export const LIT_FACETS = 3;
+const LIT_FACETS = 3;
 
 function scramble(value: number): number {
   let bits = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
@@ -101,7 +102,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
       return;
     }
     flash.position.set(x, y);
-    const reach = frame.calm ? 1.15 : 1.05 + 0.75 * (1 - (1 - progress) * (1 - progress));
+    const reach = frame.calm ? 1.15 : 1.05 + 0.75 * easeOutQuad(progress);
     flash.scale.set((radius * reach) / t.ring.radius);
     flash.alpha = frame.calm ? 0.6 * Math.sin(progress * Math.PI) : (1 - progress) * (1 - progress);
   }
@@ -112,7 +113,6 @@ export function createCore(ctx: RenderContext): CoreFamily {
     },
     update(state: SimState, _alpha: number, frame: Frame): void {
       const { core } = state;
-      // A path between two stages has no core to defend.
       layers.core.visible = core.radius > 0;
       if (!layers.core.visible) {
         flash.visible = false;

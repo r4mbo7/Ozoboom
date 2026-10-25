@@ -22,10 +22,9 @@ export interface StepContext {
 
 export type System = (ctx: StepContext) => void;
 
-// The systems of the full game at fixed places of a running step (src/sim/full.ts), and whether one of
-// them took a player's pose key this step, which `traps` then leaves alone.
 export interface FullSteps {
   readonly afterMovement?: readonly System[];
   readonly afterSpawning?: readonly System[];
-  readonly posed?: (ctx: StepContext, playerId: PlayerId) => boolean;
+  // `traps` leaves alone the pose key one of them took.
+  readonly tookPoseKey?: (ctx: StepContext, playerId: PlayerId) => boolean;
 }

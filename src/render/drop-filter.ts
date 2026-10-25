@@ -8,7 +8,7 @@ export type DropClock = Pick<SimState, 'status'> & {
 const FIRST_DROP_PEAK = 0.75;
 const ECHO_ALPHA = { night: 0.9, day: 0.45 };
 
-// 0 outside a drop; rises over a bar, holds a phrase, falls over four bars, even if a boss keeps the drop going.
+// Falls after its phrase even if a boss keeps the drop going.
 export function dropFilterIntensity(
   state: DropClock,
   now: number,
@@ -35,7 +35,7 @@ export function dropFilterIntensity(
   return falling >= fallTicks ? 0 : peak * (1 - falling / fallTicks);
 }
 
-// Fresh echoes follow the envelope too, so the first drop's are fainter and none pops in or out.
+// So that the first drop's echoes are fainter and none pops in or out.
 export function echoAlpha(intensity: number, night: boolean): number {
   return (night ? ECHO_ALPHA.night : ECHO_ALPHA.day) * intensity;
 }

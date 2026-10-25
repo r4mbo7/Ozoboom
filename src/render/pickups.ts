@@ -1,8 +1,8 @@
 import type { Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { cometPop, cometStretch, isAttracted, trailSteps } from './pickup-comet';
 import { flightPose } from './pickup-flight';
 import { COMET_LENGTH } from './textures-pickups';
@@ -12,7 +12,6 @@ import { ViewPool } from './views';
 const PICKUP_RADIUS = 7;
 const TRAIL_ALPHA = 0.75;
 const RESTING = -1;
-// The circle that tightens on the landing spot of a vibe in flight.
 const MARK_RADIUS = 22;
 const MARK_ALPHA = 0.25;
 const MARK_ALPHA_GAIN = 0.45;

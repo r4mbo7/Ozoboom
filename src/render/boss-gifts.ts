@@ -1,14 +1,14 @@
 import type { Container, Sprite } from 'pixi.js';
+import { clamp01 } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import { type BossDecor, place } from './boss-decor';
 import type { Frame } from './frame';
+import { easeOutCubic } from './motion';
 import type { Shape, Textures } from './textures';
 import { add, hide, setTint } from './util';
 
 const TAU = Math.PI * 2;
-// In beats from the burst: the vibes leave one after the other and fly for RAIN.beats.
 const RAIN = { normal: 14, calm: 6, from: 0.3, stagger: 0.08, beats: 1.6, trail: 4 };
-// The relics rise over the dropped loot, float, and fade under the relic offer.
 const RELIC = { count: 3, from: 1.2, rise: 1.5, out: 3, fade: 1, spacing: 1.15 };
 export const GIFTS_BEATS = RELIC.out + RELIC.fade;
 
@@ -17,12 +17,9 @@ export interface Giver {
   readonly x: number;
   readonly y: number;
   readonly radius: number;
-  // Whether it dropped relics: they float above it before the offer.
   readonly relics: boolean;
 }
 
-// What a chased boss leaves its team: a rain of vibes that flies to every player standing, and the
-// relics it drops, floating in their flowers of life.
 export class Gifts {
   private readonly rain: Sprite[];
   private readonly trail: Sprite[];
@@ -48,7 +45,6 @@ export class Gifts {
     this.flowerRadius = decor.flower.radius;
   }
 
-  // `beats` since the burst.
   show(giver: Giver, beats: number, state: SimState, frame: Frame): void {
     this.showRain(giver, beats, state, frame);
     this.showRelics(giver, beats, frame);
@@ -84,7 +80,7 @@ export class Gifts {
         const mid = axis === 'x' ? midX : midY;
         return (1 - q) * (1 - q) * from + 2 * (1 - q) * q * mid + q * q * target[axis];
       };
-      const q = (1 - (1 - p) ** 3) * 0.4 + p * 0.6;
+      const q = easeOutCubic(p) * 0.4 + p * 0.6;
       place(head, along(q, 'x'), along(q, 'y'), q * TAU, 0.75);
       setTint(head, palette.or);
       for (let step = 0; step < RAIN.trail && !calm; step += 1) {
@@ -102,8 +98,8 @@ export class Gifts {
 
   private showRelics(giver: Giver, beats: number, frame: Frame): void {
     const { calm, palette, show, tempo } = frame;
-    const rise = Math.min(1, Math.max(0, (beats - RELIC.from) / RELIC.rise));
-    const fade = Math.min(1, Math.max(0, 1 - (beats - RELIC.out) / RELIC.fade));
+    const rise = clamp01((beats - RELIC.from) / RELIC.rise);
+    const fade = clamp01(1 - (beats - RELIC.out) / RELIC.fade);
     const alpha = giver.relics ? rise * fade : 0;
     this.relics.forEach((relic, index) => {
       const flower = this.flowers[index];
@@ -117,7 +113,7 @@ export class Gifts {
       const turns = show / tempo.ticksPerBeat;
       const bob = calm ? 0 : Math.sin(turns * 0.7 + index) * 0.08;
       const x = giver.x + (index - 1) * RELIC.spacing * giver.radius;
-      const y = giver.y - (0.75 + 0.35 * (1 - (1 - rise) ** 3) - bob) * giver.radius;
+      const y = giver.y - (0.75 + 0.35 * easeOutCubic(rise) - bob) * giver.radius;
       place(relic, x, y, 0, (0.24 * giver.radius) / this.relicRadius);
       setTint(relic, palette.noyau);
       relic.alpha = alpha;

@@ -6,7 +6,6 @@ export interface Ending {
   text: string;
 }
 
-// What a mode of the full game says at the end of its games: its own words, and what it lists.
 export interface EndPart {
   ending: Ending;
   details: HTMLElement;

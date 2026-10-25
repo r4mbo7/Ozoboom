@@ -93,7 +93,7 @@ export interface SfxLookups {
 
 // The trail (monocycle) is deliberately absent: it stays silent.
 const WEAPON_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
-  Object.entries({
+  Object.entries<SfxName>({
     sweep: 'weaponSweep',
     spark: 'weaponSpark',
     hoop: 'weaponHoop',
@@ -102,22 +102,22 @@ const WEAPON_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
     plate: 'weaponPlate',
     totem: 'weaponTotem',
     ribbon: 'weaponRibbon',
-  }) as [string, SfxName][],
+  }),
 );
 
 // A continuous weapon would sound every tick on `weaponFired`: it sounds when it touches a bad vibe.
 const WEAPON_HIT_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
-  Object.entries({
+  Object.entries<SfxName>({
     orbit: 'weaponFans',
-  }) as [string, SfxName][],
+  }),
 );
 
 const SKILL_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
-  Object.entries({
+  Object.entries<SfxName>({
     nova: 'skillUsed',
     dash: 'skillCharge',
     healPulse: 'skillHeal',
-  }) as [string, SfxName][],
+  }),
 );
 
 export interface SfxPlayer {
@@ -145,13 +145,11 @@ export interface SfxEnemy extends SfxCore {
   readonly kind?: string;
 }
 
-// What a boss sounds on the one of every bar while it stands.
-const BAR_CALLS: ReadonlyMap<string, SfxName> = new Map<string, SfxName>([
+const BOSS_BAR_CALLS: ReadonlyMap<string, SfxName> = new Map<string, SfxName>([
   ['couvre-feu', 'bossWhistle'],
   ...Object.entries(FULL_BAR_CALLS),
 ]);
 
-// The hit climbs the scale as the bad vibe loses its life, up to the octave once it is gone.
 export function enemyHitDegree(enemy: SfxCore | undefined): number {
   return enemy === undefined ? 7 : Math.round((1 - Math.max(enemy.hp, 0) / enemy.maxHp) * 7);
 }
@@ -224,7 +222,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
   };
 }
 
-export const SFX_LIMITS = sfxLimitsFor(MAIN_TEMPO);
+const SFX_LIMITS = sfxLimitsFor(MAIN_TEMPO);
 
 export function sfxOf(
   event: SimEvent,
@@ -292,13 +290,12 @@ export function sfxOf(
       return effect === 'beam' ? 'trapCrackle' : null;
     }
     default:
-      return callOf(EVENT_CALLS[event.type], event);
+      return callOf(BOSS_EVENT_CALLS[event.type], event);
   }
 }
 
-// What a boss sounds on an event of its, by event type: the demo's, then the full game's.
 export type EventCall = SfxName | ((event: SimEvent) => SfxName | null);
-const EVENT_CALLS: Readonly<Partial<Record<SimEvent['type'], EventCall>>> = {
+const BOSS_EVENT_CALLS: Readonly<Partial<Record<SimEvent['type'], EventCall>>> = {
   gust: 'bossGust',
   ...FULL_EVENT_CALLS,
 };
@@ -342,7 +339,7 @@ type Voice = (
   key: MusicKey,
   vibes?: number,
   progress?: number,
-  // The beat of the set, in seconds, for a sound that lasts as long as a motion counted in beats.
+  // Seconds per beat, for a sound as long as a motion counted in beats.
   beat?: number,
 ) => void;
 
@@ -435,7 +432,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.24,
     });
   },
-  // The laser crackles only while it burns a bad vibe: each spark lands a little late and aside.
   trapCrackle: (out, at) => {
     const scatter = Math.abs(Math.sin(at * 78.233) * 43_758.545) % 1;
     playNoise(out, at + scatter * 0.03, {
@@ -447,7 +443,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'highpass', hz: 5500, q: 0.7 },
     });
   },
-  // A card lands: one note of the scale per card, over the rustle of its fall.
   cardDealt: (out, at, turn, key) => {
     playTone(out, at, {
       wave: 'triangle',
@@ -465,7 +460,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 1800, q: 1 },
     });
   },
-  // The highlight arrives: the octave closes the phrase the cards began.
   cardsReady: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'triangle',
@@ -507,7 +501,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'highpass', hz: 7000, q: 1 },
     });
   },
-  // The choice slams: a kick, then the full chord of the key.
   upgradeChosen: (out, at, _variant, key) => {
     for (const degree of [0, 2, 4, 7]) {
       for (const [wave, gain] of [
@@ -755,7 +748,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       vibrato: { hz: 8, cents: 30, delay: 0.04 },
     });
   },
-  // A flight case lands: a soft wooden knock, then a short shimmer from the trap inside.
   lootDropped: (out, at, _variant, key) => {
     playNoise(out, at, {
       gain: 0.22,
@@ -773,7 +765,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.22,
     });
   },
-  // A trap in hand: two quick rising notes, brighter than the vibes.
   lootCollected: (out, at, _variant, key) => {
     [0, 4].forEach((degree, index) => {
       playTone(out, at + index * 0.06, {
@@ -787,8 +778,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  // Vibes in hand, on a sixteenth of the track: soft and short, louder with the vibes it merges,
-  // opening as the level fills, a fifth on top once it is near.
   vibesCollected: (out, at, degree, key, vibes = 1, progress = 0) => {
     const gain = 0.07 + 0.008 * vibes;
     const hz = keyHz(key, degree, 4);
@@ -821,7 +810,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     }
   },
-  // A bomb lands: a heavy thud and a low root that swells, a warning more than a reward.
+  // A warning more than a reward.
   bombDropped: (out, at, _variant, key) => {
     playNoise(out, at, {
       gain: 0.25,
@@ -841,7 +830,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.25,
     });
   },
-  // The floor clears: a sub drop on the root under a closing roar, then the tonic chord rings out.
   bombExploded: (out, at, _variant, key) => {
     playNoise(out, at, {
       gain: 0.36,
@@ -978,7 +966,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       vibrato: { hz: 28, cents: 90, delay: 0 },
     });
   },
-  // The Couvre-feu's whistle: a short trilled blast on the root, over a breath, kept low in the mix.
   bossWhistle: (out, at, _variant, key) => {
     const hz = keyHz(key, 0, 6);
     playTone(out, at, {
@@ -1000,8 +987,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz, q: 4 },
     });
   },
-  // The Larsen's feedback: a soft whine on the fifth that swells and bends up a hair, over a breath
-  // of air through a narrow band, kept mid and low in the mix: never shrill, never loud.
   bossFeedback: (out, at, _variant, key) => {
     const hz = keyHz(key, 4, 3);
     playTone(out, at, {
@@ -1023,7 +1008,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: hz * 2, q: 8 },
     });
   },
-  // Wood falls in the fire on the one: a breath of flame that sweeps up, then the wood crackles.
   fireBurnt: (out, at) => {
     playNoise(out, at, {
       gain: 0.09,
@@ -1044,8 +1028,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     }
   },
-  // A giant of the Dome wakes on the one: a singing bowl rings under a soft chord of voices, in the
-  // key of the track.
   giantWoken: (out, at, _variant, key) => {
     const hz = keyHz(key, 0, 3);
     for (const [ratio, gain, release, pan] of [
@@ -1081,8 +1063,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     }
   },
-  // The Coup de vent's gust: a breath of air that swells and sweeps up through the mids, then
-  // falls away, kept soft in the mix.
   bossGust: (out, at) => {
     playNoise(out, at, {
       gain: 0.06,
@@ -1099,8 +1079,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'lowpass', hz: 300, toHz: 180, glide: 0.8, q: 0.8 },
     });
   },
-  // The Orage's thunder: a low rumble of noise that swells and rolls away, under a deep root that
-  // sinks, kept low in the mix. Heard, never seen.
   bossThunder: (out, at, _variant, key) => {
     const hz = keyHz(key, 0, 1);
     playNoise(out, at, {
@@ -1135,7 +1113,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
-  // A dash: a short breath of air that rises.
   dashed: (out, at) => {
     playNoise(out, at, {
       gain: 0.12,
@@ -1145,7 +1122,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: 1800, q: 1.2 },
     });
   },
-  // No dash in hand: a dull knock, low and short.
   dashEmpty: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sine',
@@ -1156,7 +1132,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.06,
     });
   },
-  // A dash back in hand, on the beat: the fifth of the chord of the bar, a light bell.
   dashBack: (out, at, degree, key) => {
     playTone(out, at, {
       wave: 'triangle',
@@ -1399,7 +1374,7 @@ export interface Sfx {
   setHitSound(enabled: boolean): void;
   setKey(key: SfxKey): void;
   setTempo(tempo: Tempo): void;
-  // The clock the set is scheduled on, null when none plays: the vibes fall on its sixteenths.
+  // null when no set plays; the vibes fall on its sixteenths.
   setClock(anchor: Anchor | null): void;
 }
 
@@ -1453,7 +1428,7 @@ export function createSfx(
           VOICES[name](out, now, variant, key);
         } else if (event.type === 'bar') {
           for (const enemy of enemies) {
-            const call = enemy.kind === undefined ? undefined : BAR_CALLS.get(enemy.kind);
+            const call = enemy.kind === undefined ? undefined : BOSS_BAR_CALLS.get(enemy.kind);
             if (call !== undefined && limiter.tryAcquire(call, now)) {
               VOICES[call](out, now, 0, key);
             }

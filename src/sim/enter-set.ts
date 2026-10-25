@@ -10,7 +10,6 @@ import type { StepContext } from './systems/types';
 
 const ENEMY_GRID_CELL_SIZE = 64;
 
-// What the step reads from the set played: built at the game's creation, then again at each set entered.
 export function setBindings(
   set: SetDefinition,
   content: ResolvedContent,
@@ -27,10 +26,7 @@ export function setBindings(
   };
 }
 
-// The game goes on in another set (ADR 0018): a new arena, core, speakers and Volume, its first tier from this
-// tick, its grid counted from here, nothing on the ground. The players keep all they own and stand at `spots`,
-// in their order; what they carry comes along. The random generator, the tick, the stats and the bosses drawn
-// stay.
+// ADR 0018: the players keep all they own; the generator, the tick, the stats and the bosses drawn stay.
 export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly Vec2[]): void {
   const { state } = ctx;
   state.setId = set.id;
@@ -104,7 +100,6 @@ function carry(state: SimState, player: PlayerState, spot: Vec2): void {
   }
 }
 
-// Moves the x, y pairs of a flat list of `stride` numbers per point.
 function shift(points: number[] | undefined, stride: number, dx: number, dy: number): void {
   for (let i = 0; points !== undefined && i + 1 < points.length; i += stride) {
     points[i] = (points[i] ?? 0) + dx;

@@ -1,11 +1,11 @@
 import type { Sprite } from 'pixi.js';
+import { clamp, lerp } from '../shared/scalar';
 import type { EnemyState, SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import { BubbleLog, bubbleAlpha } from './bubbles';
 import { Particles } from './effects';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { add, byId, hide, setTint } from './util';
 import { ViewPool } from './views';
 import { zoneAlpha } from './zones';
@@ -105,10 +105,7 @@ export function createSpecials(ctx: RenderContext): Family {
     link.visible = true;
     link.position.set(x, y);
     link.rotation = Math.atan2(dy, dx);
-    link.scale.set(
-      distance / LINK_LENGTH,
-      Math.min(1.4, Math.max(0.35, (rest / distance) * 1.2)) * wobble,
-    );
+    link.scale.set(distance / LINK_LENGTH, clamp((rest / distance) * 1.2, 0.35, 1.4) * wobble);
     setTint(link, frame.palette.texte);
     link.alpha = 0.85;
   }
@@ -122,7 +119,7 @@ export function createSpecials(ctx: RenderContext): Family {
     state: SimState,
     frame: Frame,
   ) {
-    // By day, texte is dark: it reads on the pale ground, and the veil is a little stronger so its rim shows.
+    // By day, texte is dark: it reads on the pale ground, and a stronger veil shows its rim.
     const boost = frame.light.additive ? 1 : DAY_VEIL_BOOST;
     disc(view.veil, x, y, radius, frame.palette.texte, zoneAlpha('dazzleVeil', frame.calm) * boost);
     const target = targetOf(state, enemy);

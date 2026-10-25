@@ -7,8 +7,7 @@ export const TICKS_PER_PHRASE = TICKS_PER_BAR * BARS_PER_PHRASE;
 export const TICK_RATE_HZ = (DEFAULT_BPM * TICKS_PER_BEAT) / 60;
 export const TICK_MS = 1000 / TICK_RATE_HZ;
 
-// A stage's tempo: the tick stays at TICK_RATE_HZ, only the beat length in ticks changes (ADR 0012). Its beats,
-// bars and phrases count from `originTick`, the tick its set started at (ADR 0018).
+// The tick rate never changes, only the beat length (ADR 0012); beats count from the set's start (ADR 0018).
 export interface Tempo {
   readonly ticksPerBeat: number;
   readonly ticksPerBar: number;
@@ -55,7 +54,6 @@ export function phraseOfTick(tick: number, tempo: Tempo = MAIN_TEMPO): number {
   return Math.floor((tick - tempo.originTick) / tempo.ticksPerPhrase);
 }
 
-// Ticks since the last beat, in [0, ticksPerBeat), for a tick or a time between two ticks.
 export function ticksIntoBeat(tick: number, tempo: Tempo = MAIN_TEMPO): number {
   return within(tick - tempo.originTick, tempo.ticksPerBeat);
 }
@@ -64,7 +62,7 @@ export function ticksIntoBar(tick: number, tempo: Tempo = MAIN_TEMPO): number {
   return within(tick - tempo.originTick, tempo.ticksPerBar);
 }
 
-export function ticksIntoPhrase(tick: number, tempo: Tempo = MAIN_TEMPO): number {
+function ticksIntoPhrase(tick: number, tempo: Tempo = MAIN_TEMPO): number {
   return within(tick - tempo.originTick, tempo.ticksPerPhrase);
 }
 
@@ -72,7 +70,6 @@ export function isBeatTick(tick: number, tempo: Tempo = MAIN_TEMPO): boolean {
   return ticksIntoBeat(tick, tempo) === 0;
 }
 
-// Halfway through the beat, rounded down when a beat has an odd number of ticks.
 export function isOffbeatTick(tick: number, tempo: Tempo = MAIN_TEMPO): boolean {
   return ticksIntoBeat(tick, tempo) === Math.floor(tempo.ticksPerBeat / 2);
 }

@@ -11,7 +11,6 @@ import { createVibeGlow, glowAt, glowBounce, glowLit, lightUp } from './vibe-glo
 const RIM_GAP = 1;
 const SHOWN = 0.01;
 
-// The gold a player wears for the vibes it picks up: a halo under it and a rim around its look.
 export class PlayerGlow {
   private readonly glow = createVibeGlow();
   private readonly haloShape: Shape;
@@ -20,7 +19,7 @@ export class PlayerGlow {
 
   constructor({ textures, layers }: RenderContext, marks: Container) {
     this.haloShape = textures.halo;
-    // In fx, not in glow: calm mode already dims the whole glow layer, and would dim this one twice.
+    // In fx, not in glow: calm mode already dims the whole glow layer, and would dim it twice.
     this.halo = add(layers.fx, textures.halo);
     this.rim = add(marks, textures.players.contour);
     this.reset();
@@ -30,7 +29,6 @@ export class PlayerGlow {
     lightUp(this.glow, tick, tempo);
   }
 
-  // Returns how much the body of the player grows, 1 at rest.
   place(player: PlayerState, x: number, y: number, extent: number, frame: Frame): number {
     const level = player.downed ? 0 : glowAt(this.glow, frame.now, frame.tempo);
     const lit = glowLit(level, frame.calm);

@@ -11,9 +11,9 @@ export interface LocalPlayer {
 export interface UiFrame {
   snapshot: InputSnapshot;
   players: readonly LocalPlayer[];
-  // Every active device with its id: the lobby lets each one without a seat take one.
+  // The lobby lets each device without a seat take one.
   devices?: readonly { device: DeviceId; snapshot: InputSnapshot }[];
-  // The menu ambience as heard, in eighths since its first note; absent or null while it is silent.
+  // In eighths since the first note of the menu ambience; absent or null while it is silent.
   menuPosition?: number | null;
 }
 
@@ -33,17 +33,17 @@ export type Night = 'stage' | 'endless' | 'festival';
 export interface StagePickerModel {
   stages: readonly StageCard[];
   stageId: string;
-  // Whether the set goes on past its last boss.
+  // The set goes on past its last boss.
   endless: boolean;
-  // Whether the game plays the whole festival from the stage picked.
+  // The whole festival, from the stage picked.
   festival?: boolean;
 }
 
-// Solo: the class picked, and whether confirming launches the set or leads to the scene.
+// Solo: confirming launches the set, or leads to the scene picker.
 export interface ClassPickerModel {
   classId: string;
   launches: boolean;
-  // Whether the set goes on past its last boss: only asked where confirming launches.
+  // Only asked where confirming launches.
   endless: boolean;
 }
 
@@ -74,12 +74,10 @@ export interface LobbyModel {
   seats: readonly LobbySeat[];
   canLaunch: boolean;
   error: string | null;
-  // The scenes to pick from and the one picked; only the host can change it.
+  // Only the host can change the stage, the endless set and the festival.
   stages?: readonly StageCard[];
   stageId?: string;
-  // Whether the set goes on past its last boss; only the host can change it.
   endless?: boolean;
-  // Whether the game plays the whole festival; only the host can change it.
   festival?: boolean;
 }
 
@@ -90,7 +88,7 @@ export interface EndSession {
   role: 'host' | 'guest';
 }
 
-// A sound of the upgrade menu, played when the menu shows what it tells.
+// Played when the menu shows what the sound tells.
 export type UpgradeCue =
   | 'cardDealt'
   | 'cardsReady'
@@ -123,12 +121,10 @@ export interface UiCallbacks {
   onToggleAutoAim(enabled: boolean): void;
   // The game reloads in it (ADR 0017).
   onChooseLocale(locale: Locale): void;
-  // The local lobby, then the online one, from the title.
   onPlayTogether(): void;
   onPlayOnline(): void;
-  // Picks a class, in the class picker.
   onChooseClass(classId: string): void;
-  // Solo: validates the picked class.
+  // Solo only.
   onConfirmClass(): void;
   onLeaveClassPicker(): void;
   onJoinSeat(device: DeviceId): void;
@@ -137,23 +133,19 @@ export interface UiCallbacks {
   onSeatName(playerId: PlayerId, name: string): void;
   onCreateRoom(): void;
   onJoinRoom(code: string): void;
-  // Picks a scene, in the picker or in the lobby.
   onChooseStage(setId: string): void;
-  // Whether the next set goes on past its last boss, wherever a set is launched from.
   onToggleEndless(enabled: boolean): void;
-  // Which night the next game plays, from the stage picker or the lobby.
   onChooseNight(night: Night): void;
-  // Solo: validates the picked scene.
+  // Solo only.
   onConfirmStage(): void;
   // Solo: back to the class picker.
   onLeaveStagePicker(): void;
   onLaunch(): void;
   onLeaveLobby(): void;
   onLeaveNotice(): void;
-  // Only shows the « Ton avis » button when set. Route menu intents to the form until it closes.
-  // `details` is what an interruption reports (the tick of a divergence): it prefills the form.
+  // Set, it shows « Ton avis » and takes the menu intents until the form closes; `details` prefills it.
   onFeedback?(details?: string): void;
-  // Opens the screen that changes the keys: menu intents go to it until it closes.
+  // Menu intents go to the keys screen until it closes.
   onControls(): void;
 }
 

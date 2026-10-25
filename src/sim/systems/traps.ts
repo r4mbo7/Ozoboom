@@ -1,6 +1,7 @@
 import type { TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
 import { isBeatTick, type Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
+import { blackedOut } from '../blackout';
 import { inBreeze } from '../breeze';
 import type { PlayerAction } from '../commands';
 import { lookup, type ResolvedContent } from '../content';
@@ -38,7 +39,6 @@ export interface Firing {
   tempo: Tempo;
   at: Emitter;
   effect: TrapEffect;
-  // Half-width of the emitter body: the lure stops its prey there.
   contact: number;
   by: PlayerId | null;
   power: number;
@@ -52,19 +52,21 @@ export function traps(ctx: StepContext): void {
   for (const player of state.players) {
     for (const action of commands.get(player.id)?.actions ?? []) {
       const trapKey = action.type === 'placeTrap' || action.type === 'takeTrap';
-      if (trapKey && FULL_STEPS.posed?.(ctx, player.id) !== true) {
+      if (trapKey && FULL_STEPS.tookPoseKey?.(ctx, player.id) !== true) {
         useTrapSpot(ctx, player, action);
       }
     }
   }
 
   const firing = cadencesFiring(state);
+  const silent = blackedOut(state);
   const markedMul = markedDamageMul(content);
   const fireAll = (lures: boolean) => {
     for (const trap of state.traps) {
       const definition = trapDefinition(content, trap);
       const shorted = (trap.shortedTicks ?? 0) > 0;
-      if (firing[definition.cadence] && (definition.effect.kind === 'lure') === lures && !shorted) {
+      const lure = definition.effect.kind === 'lure';
+      if (firing[definition.cadence] && lure === lures && !shorted && !silent) {
         const owner = ownerOf(state, trap);
         const reached = fire({
           state,
@@ -102,7 +104,6 @@ export function traps(ctx: StepContext): void {
   }
 }
 
-// A trap on the spot is taken back when a hand is free; free ground takes the trap placed.
 function useTrapSpot(ctx: StepContext, player: PlayerState, action: PlaceTrap | TakeTrap): void {
   if (player.downed) {
     return;
@@ -202,7 +203,6 @@ function cadencesFiring(state: SimState): Readonly<Record<TrapCadence, boolean>>
   return { beat, bar, drop, continuous: true };
 }
 
-// Says whether the effect reached a bad vibe.
 export function fire(firing: Firing): boolean {
   const { state, tempo, at, effect, contact, by, power, damageMul, radiusMul, markedMul } = firing;
   let reached = false;

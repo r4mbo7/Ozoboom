@@ -1,8 +1,8 @@
 import type { ClassDefinition, GaugeDefinition } from '../data/types';
+import { clamp } from '../shared/scalar';
 import type { PlayerState } from './state';
 import type { StepContext } from './systems/types';
 
-// Fills and drains the gauge of a player, each tick; registered by kind in `GAUGES` (systems/gauges.ts).
 export type GaugeModule = (
   ctx: StepContext,
   player: PlayerState,
@@ -22,5 +22,5 @@ export function setGauge(
   if (player.gauge === undefined) {
     throw new Error(`player ${String(player.id)} has no gauge`);
   }
-  player.gauge = Math.min(gauge.max, Math.max(0, value));
+  player.gauge = clamp(value, 0, gauge.max);
 }

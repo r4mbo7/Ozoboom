@@ -1,8 +1,8 @@
 import { t } from '../shared/i18n';
-import type { FeedbackDraft, FeedbackTransport, FeedbackType } from './types';
+import type { DraftInProgress, FeedbackDraft, FeedbackTransport, FeedbackType } from './types';
 
-export const FEEDBACK_TEMPLATE = 'feedback-in-game.yml';
-export const MAX_URL_LENGTH = 8000;
+const FEEDBACK_TEMPLATE = 'feedback-in-game.yml';
+const MAX_URL_LENGTH = 8000;
 
 const NEW_ISSUE = 'https://github.com/r4mbo7/Ozoboom/issues/new';
 const TITLE_PREFIX = '[Avis] ';
@@ -77,9 +77,7 @@ export function githubFormLink(
   };
 }
 
-export function clipboardText(
-  draft: Omit<FeedbackDraft, 'type'> & { type: FeedbackType | null },
-): string {
+export function clipboardText(draft: DraftInProgress): string {
   return [draft.type === null ? null : formOption(draft.type), draft.message, draft.context]
     .filter((part) => part !== null && part !== '')
     .join('\n\n');

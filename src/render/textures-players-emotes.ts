@@ -1,13 +1,12 @@
 import { TAU, WHITE, circle, type Ctx, type Piece } from './paint';
-import { REFERENCE } from './textures-looks';
+import { REFERENCE_RADIUS } from './textures-looks';
 
 const RIM = '#000000';
-export const EMOTE_SUN = 10.7;
+const EMOTE_SUN = 10.7;
 export const EMOTE_STROKE = 20;
 export const EMOTE_PLATE = 25;
 export const EMOTE_BURST = 10;
 
-// The heart of "Merci", centred, its point down, about 23 reference pixels wide.
 function heart(ctx: Ctx, size: number): void {
   const k = size / 9;
   ctx.beginPath();
@@ -21,12 +20,11 @@ function heart(ctx: Ctx, size: number): void {
 
 const HEART = 11.6;
 
-// White to take the colours of the hour and of who makes the gesture; black where it needs a rim.
 export const EMOTE_PIECES = {
   emoteSun: [
     32,
     32,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.beginPath();
       ctx.arc(0, 0, EMOTE_SUN, Math.PI, TAU);
@@ -41,7 +39,7 @@ export const EMOTE_PIECES = {
   emoteStroke: [
     32,
     8,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.lineCap = 'round';
       ctx.lineWidth = 2.6;
@@ -55,7 +53,7 @@ export const EMOTE_PIECES = {
   emotePlate: [
     64,
     64,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       circle(ctx, EMOTE_PLATE);
       ctx.fillStyle = WHITE;
@@ -65,7 +63,7 @@ export const EMOTE_PIECES = {
   emoteHeartFill: [
     40,
     40,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       heart(ctx, HEART);
       ctx.fillStyle = WHITE;
@@ -75,7 +73,7 @@ export const EMOTE_PIECES = {
   emoteHeartLine: [
     40,
     40,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       heart(ctx, HEART);
       ctx.lineJoin = 'round';
@@ -90,7 +88,7 @@ export const EMOTE_PIECES = {
   emoteHeartInner: [
     40,
     40,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.translate(0, -1.9);
       heart(ctx, HEART * 0.66);
@@ -103,7 +101,7 @@ export const EMOTE_PIECES = {
   emoteStar: [
     16,
     16,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       const inner = 1.4;
       ctx.beginPath();
@@ -120,11 +118,10 @@ export const EMOTE_PIECES = {
       ctx.stroke();
     },
   ],
-  // Four rays of a burst of fireworks: two of them, a quarter turn apart, make the star of eight.
   emoteBurst: [
     32,
     32,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.lineCap = 'round';
       ctx.lineWidth = 2;

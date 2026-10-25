@@ -1,3 +1,4 @@
+import { clamp } from '../shared/scalar';
 import { isBarTick, type Tempo } from '../shared/tempo';
 import type { ResolvedContent } from './content';
 import { hasStatus, isRooted, walkingSpeed } from './enemy-status';
@@ -53,8 +54,6 @@ export function markedDamageMul(content: ResolvedContent): number {
   return mul;
 }
 
-// `by` is the player credited with the hit: the shooter, the owner of the trap or the caster.
-// `from` is where the hit comes from, null when it has no position.
 export function hurtEnemy(
   state: SimState,
   enemy: EnemyState,
@@ -155,7 +154,6 @@ export function healPlayer(state: SimState, player: PlayerState, amount: number)
   state.events.push({ type: 'playerHealed', playerId: player.id, amount: healed });
 }
 
-// Heals once per bar, on the bar tick.
 export function healPlayersOnBar(
   state: SimState,
   tempo: Tempo,
@@ -193,8 +191,7 @@ export function shockwave(
   return reached;
 }
 
-// The lure replaces the step the steering just gave the enemy: same speed, slows and statuses, new goal.
-// A bubbled bad vibe floats out of its reach.
+// Replaces the step the steering just gave: same speed, slows and statuses, new goal.
 export function drawTo(enemy: EnemyState, at: Point, contact: number): void {
   if (enemy.isBoss || hasStatus(enemy, 'bubbled')) {
     return;
@@ -203,7 +200,7 @@ export function drawTo(enemy: EnemyState, at: Point, contact: number): void {
   const dx = at.x - enemy.prevX;
   const dy = at.y - enemy.prevY;
   const distance = Math.sqrt(dx * dx + dy * dy);
-  const travel = Math.max(0, Math.min(step, distance - contact));
+  const travel = clamp(distance - contact, 0, step);
   enemy.x = distance === 0 ? enemy.prevX : enemy.prevX + (dx / distance) * travel;
   enemy.y = distance === 0 ? enemy.prevY : enemy.prevY + (dy / distance) * travel;
 }

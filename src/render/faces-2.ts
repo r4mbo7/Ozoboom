@@ -195,7 +195,6 @@ export function smile(ctx: Ctx): void {
   }
 }
 
-// A recruit keeps the smile it was chased with, both hands up: it is on our side now.
 export function recruit(ctx: Ctx): void {
   for (const x of [-39, 39]) {
     circle(ctx, 12, x, -33);

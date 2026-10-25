@@ -1,9 +1,9 @@
 import type { Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import { TICKS_PER_BEAT, isBarTick } from '../shared/tempo';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { POLE_HEIGHT } from './textures-weapons';
 import { type Piece, SIZES, type WeaponKit } from './weapon-kit';
 import { add, hide, setTint } from './util';
@@ -20,11 +20,9 @@ interface PlacedView {
 }
 
 export interface GroundFamily extends Pick<Family, 'update'> {
-  // Rings drawn on bad vibes that carry a mark.
   readonly marks: number;
 }
 
-// What stays on the ground: plates and totems the sim keeps in `placed`, and the ring of a mark.
 export function createGround(ctx: RenderContext, kit: WeaponKit): GroundFamily {
   const { textures: t, layers } = ctx;
   const w = t.weapons;

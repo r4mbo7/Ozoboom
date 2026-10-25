@@ -18,7 +18,6 @@ export interface GroundWave {
   blend: number;
 }
 
-// The waves, the saturation and the share of shifted hue follow the filter; the hue cycles, except in the calm mode where it holds still.
 export function groundWave(intensity: number, calm: boolean, now: number): GroundWave {
   return {
     amplitude: AMPLITUDE_PX * intensity,
@@ -45,7 +44,7 @@ void main(void) {
 }
 `;
 
-// Sine offsets across the picture, then a rotation of the chroma plane, one turn per screen width along diagonal bands, that leaves the lightness as it is.
+// Rotates the chroma plane only: the lightness, and so the contrast, stays.
 const fragment = `
 in vec2 vTextureCoord;
 out vec4 finalColor;
@@ -71,7 +70,6 @@ void main(void) {
 }
 `;
 
-// From the second drop, the ground layer alone waves and cycles its hues. Off the drop, the filter is removed.
 export function createGroundWaves(ctx: RenderContext): Family {
   const { ground, world } = ctx.layers;
   const area = new Rectangle();

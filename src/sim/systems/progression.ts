@@ -19,8 +19,7 @@ export function progression(ctx: StepContext): void {
   }
 }
 
-// Draws the player's next offer only once the current one is answered, with the eligibility of
-// that moment: queued offers would ignore the upgrades chosen in between.
+// Drawn only once the current offer is answered: queued offers would ignore the upgrades chosen.
 export function presentNextOffer(ctx: StepContext, player: PlayerState): void {
   const { state, content, set } = ctx;
   if (

@@ -2,7 +2,6 @@ import { clearOfObstacles } from '../obstacles';
 import type { PlayerState, SimState } from '../state';
 import type { ObstacleDefinition } from '../../data/types';
 
-// The oldest of the player's placed weapons of this kind makes room when `limit` is reached.
 export function place(
   state: SimState,
   player: PlayerState,

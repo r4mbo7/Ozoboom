@@ -1,7 +1,8 @@
 import { Container, type Renderer as PixiRenderer, type RenderTexture } from 'pixi.js';
 import type { SetDefinition } from '../data/types';
-import type { Arena, SimEvent, SimState, Vec2 } from '../sim/state';
 import { SUN_PALETTES } from '../shared/palette';
+import { lerp } from '../shared/scalar';
+import type { Arena, SimEvent, SimState, Vec2 } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
   type Bounds,
@@ -20,8 +21,8 @@ import { createDropTrails } from './drop-trails';
 import { type InsetScene, type Insets, createInsets } from './insets';
 import { type Frame, advanceFrame, createFrame } from './frame';
 import { type Layers, applyLight, createLayers } from './layers';
-import { FlashLimiter, beatEnvelope, lerp } from './motion';
 import { checkDrawings } from './drawings';
+import { FlashLimiter, beatEnvelope } from './motion';
 import { createTextures, destroyTextures } from './textures';
 import type { CameraFocus, Inset, RenderOptions, Renderer } from './types';
 import { byId, lookup } from './util';
@@ -32,13 +33,11 @@ const CALM = { glowAlpha: 0.4, pulse: 0.3 };
 const SHAKE = { pixels: 7, ticks: TICKS_PER_BEAT / 2 };
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const SNAP_TICKS = 4 * TICKS_PER_BEAT;
-// The plain dark ground of the scene on the card of a weapon.
 const INSET_GROUND = SUN_PALETTES.nuit.sol;
 
 export class Scene implements Renderer, InsetScene {
   private readonly pixi: PixiRenderer;
   private readonly textures: ReturnType<typeof createTextures>;
-  // A scene painted into an inset borrows the renderer and the textures of the game.
   private readonly borrowed: boolean;
   private readonly insets: Insets;
   private readonly sets: ReadonlyMap<string, SetDefinition>;
@@ -53,7 +52,6 @@ export class Scene implements Renderer, InsetScene {
   private readonly dropTrails: ReturnType<typeof createDropTrails>;
 
   private lastState: SimState | null = null;
-  // The set the game played at the last image, and the tick it started at: a festival enters another.
   private lastStage = '';
   private lastTick = -1;
   private readonly flashLimiter = new FlashLimiter();
@@ -211,7 +209,6 @@ export class Scene implements Renderer, InsetScene {
 
   private frameWorld(state: SimState, alpha: number): void {
     const { now } = this.frame;
-    // An inset shows the one player of its own world, whatever the game follows.
     const focus = this.borrowed ? SOLO_FOCUS : (this.options.focus ?? SOLO_FOCUS);
     const key = focus.kind === 'everyone' ? 'everyone' : `player ${String(focus.playerId)}`;
     const target = this.targetCamera(state, alpha, focus);

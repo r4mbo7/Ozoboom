@@ -2,22 +2,20 @@ import '../ui/ui.css';
 import './feedback.css';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import { t } from '../shared/i18n';
-import { el, fillHint, icon, setText } from '../ui/dom';
-import { formatNumber } from '../ui/format';
+import { copyText, onPointerClick, setText } from '../ui/dom';
 import { openDiscord } from '../ui/discord';
-import { EYE, SENT } from '../ui/icons';
 import { createMenuInput } from '../ui/navigation';
-import { onMouseMove } from '../ui/pointer';
-import { promptsFor } from '../ui/prompts';
-import { createToggle } from '../ui/toggle';
-import { FEEDBACK_TYPES, clipboardText } from './github';
-import { type FormItem, navigateForm, shiftType } from './navigation';
-import type { FeedbackTransport, FeedbackType } from './types';
-
-export const MAX_MESSAGE_LENGTH = 2000;
+import type { Prompts } from '../ui/prompts';
+import { checkDraft } from './draft';
+import { createFormCursor } from './form-cursor';
+import { type FeedbackView, type Page, createFeedbackView, paintHint, say } from './form-view';
+import { clipboardText } from './github';
+import { type FormItem, navigateForm, shiftType, stepWhileTyping } from './navigation';
+import type { DraftInProgress, FeedbackTransport, FeedbackType } from './types';
 
 export interface FeedbackOptions {
   device: InputDevice;
+  prompts: Prompts;
   onClose(): void;
 }
 
@@ -26,30 +24,7 @@ export interface FeedbackDialog {
   close(): void;
 }
 
-type Tone = 'ok' | 'warn';
-
-interface View {
-  element: HTMLElement;
-  items: readonly FormItem[];
-  nodes: ReadonlyMap<FormItem, HTMLElement>;
-  status: HTMLElement;
-  hint: HTMLElement;
-}
-
 let dialogs = 0;
-
-function button(className: string, text: string): HTMLButtonElement {
-  const node = el('button', className, text);
-  node.type = 'button';
-  node.tabIndex = -1;
-  return node;
-}
-
-function statusLine(): HTMLElement {
-  const node = el('p', 'ui-feedback__status');
-  node.setAttribute('role', 'status');
-  return node;
-}
 
 export function openFeedback(
   root: HTMLElement,
@@ -58,247 +33,66 @@ export function openFeedback(
   options: FeedbackOptions,
 ): FeedbackDialog {
   dialogs += 1;
-  const titleId = `ui-feedback-title-${String(dialogs)}`;
-  const messageId = `ui-feedback-message-${String(dialogs)}`;
-
-  const layer = el('div', 'ui ui-feedback-layer');
-  const element = el('section', 'ui-screen ui-overlay ui-feedback');
-  element.setAttribute('role', 'dialog');
-  element.setAttribute('aria-modal', 'true');
-  element.setAttribute('aria-labelledby', titleId);
-  layer.append(element);
-
-  const typeField = el('div', 'ui-field ui-field--type');
-  const typeLabel = el('span', 'ui-field__label', t('C’est plutôt'));
-  typeLabel.id = `${titleId}-type`;
-  const chips = el('div', 'ui-chips');
-  chips.setAttribute('role', 'radiogroup');
-  chips.setAttribute('aria-labelledby', typeLabel.id);
-  const chipButtons = FEEDBACK_TYPES.map((option) => {
-    const chip = button('ui-chip', option.label);
-    chip.setAttribute('role', 'radio');
-    chip.addEventListener('click', (event) => {
-      if (event.detail !== 0) {
-        setType(option.id);
-        select(form, form.items.indexOf('type'));
-      }
-    });
-    return chip;
-  });
-  chips.append(...chipButtons);
-  typeField.append(typeLabel, chips);
-
-  const messageField = el('div', 'ui-field ui-field--message');
-  const messageHead = el('div', 'ui-field__head');
-  const messageLabel = el('label', 'ui-field__label', t('Ton avis'));
-  messageLabel.htmlFor = messageId;
-  const counter = el('span', 'ui-field__count');
-  messageHead.append(messageLabel, counter);
-  const textarea = el('textarea', 'ui-field__input');
-  textarea.id = messageId;
-  textarea.maxLength = MAX_MESSAGE_LENGTH;
-  textarea.rows = 6;
-  textarea.placeholder = t('Ce que tu as vécu, ce que tu attendais, ce que tu changerais.');
-  messageField.append(messageHead, textarea);
-
-  const notice = el('p', 'ui-feedback__public');
-  notice.append(
-    icon('ui-feedback__public-icon', EYE),
-    el('span', '', t('Ton avis sera public sur GitHub. N’y mets rien de personnel.')),
+  const view = createFeedbackView(
+    report,
+    `ui-feedback-title-${String(dialogs)}`,
+    `ui-feedback-message-${String(dialogs)}`,
   );
-
-  const discord = button('ui-feedback__discord', '');
-  discord.append(
-    el('span', '', t('Pas sur GitHub ?')),
-    el('span', 'ui-feedback__discord-link', t('Pose ton mot sur Discord')),
-  );
-
-  const attach = createToggle(
-    t('Joindre le contexte'),
-    t('Pour rejouer ta partie à l’identique'),
-    t('Oui'),
-    t('Non'),
-  );
-  attach.button.tabIndex = -1;
-  const context = el('pre', 'ui-feedback__context', report);
-  context.setAttribute('aria-label', t('Contexte de la partie'));
-  // The report is read by developers, in English, whatever the language of the game.
-  context.dir = 'ltr';
-
-  const main = el('div', 'ui-feedback__column');
-  main.append(typeField, messageField, notice, discord);
-  const side = el('div', 'ui-feedback__column');
-  side.append(attach.button, context);
-  const grid = el('div', 'ui-feedback__grid');
-  grid.append(main, side);
-
-  const send = button('ui-button ui-button--primary', t('Envoyer sur GitHub'));
-  const copy = button('ui-button ui-feedback__secondary', t('Copier'));
-  const cancel = button('ui-button ui-feedback__secondary', t('Fermer'));
-  const formActions = el('div', 'ui-feedback__actions');
-  formActions.append(send, copy, cancel);
-
-  const title = el('h2', 'ui-heading', t('Raconte-nous ta soirée'));
-  title.id = titleId;
-  const formHeader = el('header', 'ui-feedback__header');
-  formHeader.append(el('p', 'ui-kicker', t('Ton avis')), title);
-
-  const form: View = {
-    element: el('div', 'ui-feedback__view'),
-    items: ['type', 'message', 'discord', 'context', 'send', 'copy', 'close'],
-    nodes: new Map<FormItem, HTMLElement>([
-      ['type', typeField],
-      ['message', messageField],
-      ['discord', discord],
-      ['context', attach.button],
-      ['send', send],
-      ['copy', copy],
-      ['close', cancel],
-    ]),
-    status: statusLine(),
-    hint: el('p', 'ui-hint'),
-  };
-  form.element.append(formHeader, grid, form.status, formActions, form.hint);
-
-  const sentClose = button('ui-button ui-button--primary', t('Fermer'));
-  const sentCopy = button('ui-button ui-feedback__secondary', t('Copier'));
-  const sentActions = el('div', 'ui-feedback__actions');
-  sentActions.append(sentClose, sentCopy);
-  const truncatedNote = el(
-    'p',
-    'ui-feedback__text ui-feedback__text--warn',
-    t(
-      'Ton message était trop long pour le lien, sa fin a été coupée. Copie-le en entier pour le coller sur GitHub.',
-    ),
-  );
-  const sent: View = {
-    element: el('div', 'ui-feedback__view ui-feedback__sent'),
-    items: ['close', 'copy'],
-    nodes: new Map<FormItem, HTMLElement>([
-      ['close', sentClose],
-      ['copy', sentCopy],
-    ]),
-    status: statusLine(),
-    hint: el('p', 'ui-hint'),
-  };
-  sent.element.append(
-    icon('ui-feedback__emblem', SENT),
-    el('h2', 'ui-heading', t('Le formulaire GitHub est ouvert')),
-    el(
-      'p',
-      'ui-feedback__text',
-      t('Relis ton avis dans le nouvel onglet, puis publie-le. Il te faut un compte GitHub.'),
-    ),
-    truncatedNote,
-    el(
-      'p',
-      'ui-feedback__text',
-      t('Pas de compte GitHub ? Copie ton avis pour l’envoyer autrement.'),
-    ),
-    sent.status,
-    sentActions,
-    sent.hint,
-  );
-  sent.element.hidden = true;
-
-  const body = el('div', 'ui-feedback__body');
-  body.append(form.element, sent.element);
-  element.append(body);
-
-  let view = form;
-  let index = 0;
+  const { form, sent, textarea } = view;
   let type: FeedbackType | null = null;
   let attached = true;
   let busy = false;
   let closed = false;
-  let device: InputDevice | null = null;
+  let device = options.device;
   const menuInput = createMenuInput();
   menuInput.open();
 
+  const typing = (): boolean => document.activeElement === textarea;
+  const cursor = createFormCursor([form, sent], { busy: () => busy, typing, activate });
+  const selectOnForm = (item: FormItem, reveal: boolean): void => {
+    cursor.select(form, form.items.indexOf(item), reveal);
+  };
+  for (const chip of view.chips) {
+    onPointerClick(chip.node, () => {
+      setType(chip.type);
+      selectOnForm('type', false);
+    });
+  }
+  wireMessage(view, selectOnForm);
+
   function setType(next: FeedbackType | null): void {
     type = next;
-    FEEDBACK_TYPES.forEach((option, position) => {
-      chipButtons[position]?.setAttribute('aria-checked', String(option.id === next));
-    });
+    view.paintType(next);
   }
 
   function setAttached(next: boolean): void {
     attached = next;
-    attach.set(next);
-    context.toggleAttribute('data-detached', !next);
+    view.paintAttached(next);
   }
 
-  function countCharacters(): void {
-    setText(
-      counter,
-      `${formatNumber(textarea.value.length)} / ${formatNumber(MAX_MESSAGE_LENGTH)}`,
-    );
-  }
-
-  function say(target: View, text: string, tone: Tone): void {
-    target.status.dataset.tone = tone;
-    setText(target.status, text);
-  }
-
-  function select(target: View, next: number, reveal = false): void {
-    index = next;
-    target.items.forEach((item, position) => {
-      const node = target.nodes.get(item);
-      if (position === next) {
-        node?.setAttribute('aria-current', 'true');
-        if (reveal) {
-          node?.scrollIntoView({ block: 'nearest' });
-        }
-      } else {
-        node?.removeAttribute('aria-current');
-      }
-    });
-  }
-
-  function showHint(target: View): void {
-    if (device === null) {
-      return;
-    }
-    const prompts = promptsFor(device);
-    fillHint(
-      target.hint,
-      [
-        { keys: prompts.navigate, label: t('naviguer') },
-        { keys: [prompts.confirm], label: t('valider') },
-        { keys: [prompts.back], label: t('fermer') },
-      ],
-      prompts.style,
-    );
-  }
-
-  function draft() {
+  function draft(): DraftInProgress {
     return { type, message: textarea.value, context: attached ? report : null };
   }
 
   async function submit(): Promise<void> {
-    const current = draft();
-    if (current.type === null) {
-      say(form, t('Choisis d’abord le type de ton avis.'), 'warn');
-      select(form, form.items.indexOf('type'), true);
-      return;
-    }
-    if (current.message.trim() === '') {
-      say(form, t('Écris ton avis avant de l’envoyer.'), 'warn');
-      select(form, form.items.indexOf('message'), true);
+    const check = checkDraft(draft());
+    if (!check.ready) {
+      say(form, missingText(check.missing), 'warn');
+      selectOnForm(check.missing, true);
       return;
     }
     busy = true;
-    send.disabled = true;
+    view.send.disabled = true;
     try {
-      const outcome = await transport.send({ ...current, type: current.type });
+      const outcome = await transport.send(check.draft);
       if (closed) {
         return;
       }
       if (outcome.status === 'opened') {
-        truncatedNote.hidden = !outcome.truncated;
+        view.truncatedNote.hidden = !outcome.truncated;
         show(sent);
       } else {
-        setText(send, t('Réessayer'));
+        setText(view.send, t('Réessayer'));
         say(
           form,
           t(
@@ -309,28 +103,18 @@ export function openFeedback(
       }
     } finally {
       busy = false;
-      send.disabled = false;
+      view.send.disabled = false;
     }
   }
 
-  async function copyDraft(target: View): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(clipboardText(draft()));
+  async function copyDraft(target: Page): Promise<void> {
+    if (await copyText(navigator.clipboard, clipboardText(draft()))) {
       say(target, t('Copié dans le presse-papiers.'), 'ok');
-    } catch (error) {
-      if (!(error instanceof DOMException || error instanceof TypeError)) {
-        throw error;
-      }
-      if (target === form) {
-        textarea.select();
-        say(
-          form,
-          t('Copie impossible ici. Ton texte est sélectionné : copie-le à la main.'),
-          'warn',
-        );
-      } else {
-        say(sent, t('Copie impossible ici. Ton avis reste dans l’onglet GitHub.'), 'warn');
-      }
+    } else if (target === form) {
+      textarea.select();
+      say(form, t('Copie impossible ici. Ton texte est sélectionné : copie-le à la main.'), 'warn');
+    } else {
+      say(sent, t('Copie impossible ici. Ton avis reste dans l’onglet GitHub.'), 'warn');
     }
   }
 
@@ -352,7 +136,7 @@ export function openFeedback(
         void submit();
         break;
       case 'copy':
-        void copyDraft(view);
+        void copyDraft(cursor.page);
         break;
       case 'close':
         close();
@@ -362,13 +146,9 @@ export function openFeedback(
     }
   }
 
-  function show(next: View): void {
-    select(view, -1);
-    view.element.hidden = true;
-    view = next;
-    view.element.hidden = false;
-    showHint(view);
-    select(view, 0);
+  function show(next: Page): void {
+    cursor.show(next);
+    paintHint(next, options.prompts.for(device));
   }
 
   function close(): void {
@@ -376,58 +156,16 @@ export function openFeedback(
       return;
     }
     closed = true;
-    layer.remove();
+    view.layer.remove();
     options.onClose();
   }
 
-  for (const target of [form, sent]) {
-    target.items.forEach((item, position) => {
-      const node = target.nodes.get(item);
-      if (node === undefined) {
-        return;
-      }
-      onMouseMove(node, () => {
-        if (index !== position && document.activeElement !== textarea) {
-          select(target, position);
-        }
-      });
-      if (node instanceof HTMLButtonElement) {
-        node.addEventListener('click', (event) => {
-          if (event.detail === 0 || busy) {
-            return;
-          }
-          select(target, position);
-          activate(item);
-        });
-      }
-    });
-  }
-
-  messageField.addEventListener('click', () => {
-    textarea.focus();
-  });
-  textarea.addEventListener('focus', () => {
-    select(form, form.items.indexOf('message'));
-  });
-  textarea.addEventListener('input', countCharacters);
-  textarea.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      textarea.blur();
-    } else if (event.key === 'Tab') {
-      event.preventDefault();
-      textarea.blur();
-      select(form, form.items.indexOf(event.shiftKey ? 'type' : 'context'), true);
-    }
-  });
-
   setType(null);
   setAttached(true);
-  countCharacters();
-  device = options.device;
-  showHint(form);
-  select(form, 0);
-  root.append(layer);
+  view.paintCount();
+  paintHint(form, options.prompts.for(device));
+  cursor.select(form, 0);
+  root.append(view.layer);
 
   return {
     update(input) {
@@ -436,21 +174,22 @@ export function openFeedback(
       }
       if (input.device !== device) {
         device = input.device;
-        showHint(view);
+        paintHint(cursor.page, options.prompts.for(device));
       }
       const edges = menuInput.edges(input.menu, input.gameplay.move);
       if (busy) {
         return;
       }
-      if (document.activeElement === textarea) {
-        if (edges.back || edges.up || edges.down) {
+      if (typing()) {
+        const step = stepWhileTyping(edges);
+        if (step.leave) {
           textarea.blur();
         }
-        if (!(edges.up || edges.down)) {
+        if (!step.navigate) {
           return;
         }
       }
-      const step = navigateForm(view.items, index, edges);
+      const step = navigateForm(cursor.page.items, cursor.index, edges);
       if (step.back) {
         close();
         return;
@@ -458,13 +197,44 @@ export function openFeedback(
       if (step.typeShift !== 0) {
         setType(shiftType(type, step.typeShift));
       }
-      if (step.index !== index) {
-        select(view, step.index, true);
+      if (step.index !== cursor.index) {
+        cursor.select(cursor.page, step.index, true);
       }
       if (step.confirmed) {
-        activate(view.items[index]);
+        activate(cursor.page.items[cursor.index]);
       }
     },
     close,
   };
+}
+
+function missingText(missing: 'type' | 'message'): string {
+  return missing === 'type'
+    ? t('Choisis d’abord le type de ton avis.')
+    : t('Écris ton avis avant de l’envoyer.');
+}
+
+function wireMessage(
+  view: FeedbackView,
+  selectOnForm: (item: FormItem, reveal: boolean) => void,
+): void {
+  view.messageField.addEventListener('click', () => {
+    view.textarea.focus();
+  });
+  view.textarea.addEventListener('focus', () => {
+    selectOnForm('message', false);
+  });
+  view.textarea.addEventListener('input', () => {
+    view.paintCount();
+  });
+  view.textarea.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      view.textarea.blur();
+    } else if (event.key === 'Tab') {
+      event.preventDefault();
+      view.textarea.blur();
+      selectOnForm(event.shiftKey ? 'type' : 'context', true);
+    }
+  });
 }

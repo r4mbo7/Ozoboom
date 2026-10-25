@@ -21,7 +21,7 @@ const MAIN = { boss: false, loopBeats: 1 };
 
 export const NEUTRAL_FACE: Face = { ...MAIN, draw: neutral, frames: 1 };
 
-// One face per id of src/data/enemies.ts, the full game's in `FULL_FACES`: a test holds the two lists together.
+// A test holds this list to the ids of src/data/enemies.ts; the full game's are in `FULL_FACES`.
 export const FACES: Readonly<Record<string, Face>> = {
   random: { ...MAIN, draw: random, frames: 4, loopBeats: 4 },
   desagreable: { ...MAIN, draw: desagreable, frames: 1 },
@@ -61,15 +61,13 @@ export const FACES: Readonly<Record<string, Face>> = {
   ...FULL_FACES,
 };
 
-// What `picker` warns with in development: an unknown sort is a drawing that lags behind the content.
 export const warnUnknown = (message: string): void => {
   if (import.meta.env.DEV) {
     console.warn(message);
   }
 };
 
-// Looks a mask up by sort. A sort the renderer does not know gets the fallback and a warning,
-// once, never an error: the content may be ahead of the drawings.
+// Never an error: the content may be ahead of the drawings.
 export function picker<T>(
   items: ReadonlyMap<string, T>,
   fallback: T,

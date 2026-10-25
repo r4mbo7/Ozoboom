@@ -1,7 +1,6 @@
 type PointerMove = Pick<PointerEvent, 'pointerType' | 'movementX' | 'movementY'>;
 
-// A menu that opens under a resting cursor gets a hover from the browser without any move: only a
-// real move of the mouse may take the selection from the keyboard or the gamepad.
+// A menu opening under a resting cursor gets a hover without any move: only a real mouse move takes the selection.
 export function isMouseMove(event: PointerMove): boolean {
   return event.pointerType === 'mouse' && (event.movementX !== 0 || event.movementY !== 0);
 }

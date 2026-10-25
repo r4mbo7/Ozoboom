@@ -8,7 +8,7 @@ export type { RenderContent } from './scene';
 export type { Inset, RenderOptions, Renderer } from './types';
 export { type Portrait, type PortraitClass, createPortraits } from './portraits';
 
-// `light` draws a quarter of the pixels without antialiasing, for browser tests that render in software.
+// `light` draws a quarter of the pixels without antialiasing, for tests that render in software.
 export async function createRenderer(
   container: HTMLElement,
   options: RenderOptions,

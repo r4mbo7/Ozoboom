@@ -19,7 +19,6 @@ export interface SpeakerShapes {
 
 const SWEEP_LENGTH = 128;
 const SWEEP_HALF_ANGLE = 0.13;
-// Drawn for a speaker of radius 40, seen from above, its front toward +y; painted twice as fine.
 const DRAWN_RADIUS = 40;
 const FINE = 2;
 const SIZE = 144;

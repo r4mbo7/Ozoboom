@@ -14,15 +14,14 @@ import {
   type Shape,
 } from './paint';
 
-// Every player texture is drawn at the scale of REFERENCE: that many pixels are one player radius.
-export const REFERENCE = 32;
+export const REFERENCE_RADIUS = 32;
 export const POI_ORBIT = 46;
 export const POI_BALL = 9;
 export const STRAND_LENGTH = 18;
 
 function arm(ctx: Ctx): void {
   ctx.lineCap = 'round';
-  // The trail lags behind the ball: the poi turn clockwise, so behind is toward negative angles.
+  // The poi turn clockwise: the trail lags toward negative angles.
   const steps = 10;
   for (let step = 0; step < steps; step += 1) {
     const fade = 1 - step / steps;
@@ -57,15 +56,12 @@ function strand(from: number, to: number): (ctx: Ctx) => void {
   };
 }
 
-// The parts la Luxiole moves on her own, drawn once in white and grays and tinted at draw time:
-// one poi seen from its handle (the string along +x and the light trail behind the ball), the
-// ball, and a hair ribbon in two segments along +x from the origin with its bead.
 export const POI_PIECES = {
-  arm: [128, 128, REFERENCE, arm],
+  arm: [128, 128, REFERENCE_RADIUS, arm],
   ball: [
     32,
     32,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       circle(ctx, POI_BALL);
       ctx.fillStyle = WHITE;
@@ -73,12 +69,12 @@ export const POI_PIECES = {
       rim(ctx, 2.5);
     },
   ],
-  strandRoot: [48, 12, REFERENCE, strand(6, 3.8)],
-  strandTip: [48, 12, REFERENCE, strand(3.8, 1.8)],
+  strandRoot: [48, 12, REFERENCE_RADIUS, strand(6, 3.8)],
+  strandTip: [48, 12, REFERENCE_RADIUS, strand(3.8, 1.8)],
   bead: [
     24,
     24,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       glow(ctx, WHITE, 5);
       ctx.fillStyle = WHITE;
@@ -90,18 +86,15 @@ export const POI_PIECES = {
 
 export type PoiParts = Readonly<Record<keyof typeof POI_PIECES, Shape>>;
 
-// Le Nounours seen from above, facing +x: the bag sits behind him, its center BAG_BACK behind his.
 export const BAG_BACK = 24;
 export const MAT_BACK = 40;
 export const MUG_HOOK = { back: 20, side: 24 } as const;
 
-// Le Nounours: torso and straps, the hands on the straps and the bucket hat tinted apart, the bag,
-// its rolled mat, and the mug hanging along +x from its hook.
 export const BAG_PIECES = {
   torso: [
     64,
     64,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.beginPath();
       ctx.ellipse(-1, 0, 14, 27.5, 0, 0, TAU);
@@ -124,7 +117,7 @@ export const BAG_PIECES = {
   hands: [
     32,
     48,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       for (const side of [-1, 1]) {
         circle(ctx, 4.6, 6, side * 15);
@@ -139,7 +132,7 @@ export const BAG_PIECES = {
   hat: [
     40,
     40,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       circle(ctx, 15);
       ctx.fillStyle = WHITE;
@@ -156,7 +149,7 @@ export const BAG_PIECES = {
   pack: [
     48,
     64,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.beginPath();
       ctx.ellipse(0, 0, 17, 25, 0, 0, TAU);
@@ -173,7 +166,7 @@ export const BAG_PIECES = {
   mat: [
     16,
     52,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.beginPath();
       ctx.roundRect(-5, -22, 10, 44, 5);
@@ -192,7 +185,7 @@ export const BAG_PIECES = {
   mug: [
     48,
     16,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.lineWidth = 1;
       ctx.strokeStyle = SHADE;
@@ -213,13 +206,12 @@ export const BAG_PIECES = {
 
 export type BagParts = Readonly<Record<keyof typeof BAG_PIECES, Shape>>;
 
-// L'Hygie: a sneaker along +x, its toe forward, and a pompom with its string back along -x.
 export const POMPOM_STRING = 6;
 export const PARASOL_PIECES = {
   sneaker: [
     24,
     16,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.beginPath();
       ctx.ellipse(0, 0, 6.2, 3.8, 0, 0, TAU);
@@ -235,7 +227,7 @@ export const PARASOL_PIECES = {
   pompom: [
     32,
     16,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       ctx.lineWidth = 1.2;
       ctx.strokeStyle = SHADE;
@@ -253,34 +245,39 @@ export const PARASOL_PIECES = {
 
 export type ParasolParts = Readonly<Record<keyof typeof PARASOL_PIECES, Shape>>;
 
-export const MANDALA_RADIUS = 116;
+const MANDALA_RADIUS = 116;
 
-// The flower of life the nova opens: its radius is the ring of dots, where the wave stops.
-export function mandala(): Shape {
-  return paint(256, 256, MANDALA_RADIUS, (ctx) => {
-    const petal = 50;
-    glow(ctx, WHITE, 6);
-    ctx.strokeStyle = WHITE;
-    ctx.lineWidth = 3;
-    circle(ctx, petal * 2);
-    ctx.stroke();
-    circle(ctx, petal);
-    ctx.stroke();
-    for (let index = 0; index < 6; index += 1) {
-      const angle = (index / 6) * TAU;
-      circle(ctx, petal, Math.cos(angle) * petal, Math.sin(angle) * petal);
+export function mandala(density: number): Shape {
+  return paint(
+    256,
+    256,
+    MANDALA_RADIUS,
+    (ctx) => {
+      const petal = 50;
+      glow(ctx, WHITE, 6);
+      ctx.strokeStyle = WHITE;
+      ctx.lineWidth = 3;
+      circle(ctx, petal * 2);
       ctx.stroke();
-    }
-    ctx.fillStyle = WHITE;
-    for (let index = 0; index < 24; index += 1) {
-      const angle = (index / 24) * TAU;
-      circle(
-        ctx,
-        index % 6 === 0 ? 4.5 : 2.6,
-        Math.cos(angle) * MANDALA_RADIUS,
-        Math.sin(angle) * MANDALA_RADIUS,
-      );
-      ctx.fill();
-    }
-  });
+      circle(ctx, petal);
+      ctx.stroke();
+      for (let index = 0; index < 6; index += 1) {
+        const angle = (index / 6) * TAU;
+        circle(ctx, petal, Math.cos(angle) * petal, Math.sin(angle) * petal);
+        ctx.stroke();
+      }
+      ctx.fillStyle = WHITE;
+      for (let index = 0; index < 24; index += 1) {
+        const angle = (index / 24) * TAU;
+        circle(
+          ctx,
+          index % 6 === 0 ? 4.5 : 2.6,
+          Math.cos(angle) * MANDALA_RADIUS,
+          Math.sin(angle) * MANDALA_RADIUS,
+        );
+        ctx.fill();
+      }
+    },
+    density,
+  );
 }

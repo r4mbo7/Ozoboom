@@ -2,13 +2,13 @@ import type { DataConnection, Peer, PeerOptions } from 'peerjs';
 import { hostPeerId } from './code';
 import { resolveIceServers } from './ice';
 import { decodeMessage, encodeMessage } from './wire';
-import { roundTripFromStats, type StatEntry } from './stats';
+import { roundTripFromStats } from './stats';
 import type { NetMessage, PeerId, Transport } from './types';
 
 export type PeerTransportOptions = (
   { role: 'host'; code: string } | { role: 'guest'; code: string }
 ) & {
-  // Failures after the transport is returned (broker lost, channel error, malformed message).
+  // Failures after the transport is returned: broker lost, channel error, malformed message.
   onError: (error: Error) => void;
   // Server given as `host:port[/path]`; defaults to VITE_PEER_SERVER, then to the public broker.
   server?: string;
@@ -17,7 +17,7 @@ export type PeerTransportOptions = (
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 15_000;
 
-export function parsePeerServer(server: string | undefined): PeerOptions {
+function parsePeerServer(server: string | undefined): PeerOptions {
   if (server === undefined || server === '') {
     return {};
   }
@@ -39,15 +39,14 @@ export function parsePeerServer(server: string | undefined): PeerOptions {
 
 function describeError(context: string, error: unknown): Error {
   if (error instanceof Error) {
-    const type = 'type' in error ? ` (${String((error as { type: unknown }).type)})` : '';
+    const type = 'type' in error ? ` (${String(error.type)})` : '';
     return new Error(`${context}${type}: ${error.message}`, { cause: error });
   }
   return new Error(`${context}: ${String(error)}`, { cause: error });
 }
 
 export interface PeerTransport extends Transport {
-  // Smallest recent round trip to a connected peer, from RTCPeerConnection.getStats; null when
-  // there is no peer or the browser reports none.
+  // Smallest recent round trip from getStats; null when there is no peer or the browser reports none.
   roundTripMs(): Promise<number | null>;
 }
 
@@ -238,9 +237,9 @@ export async function createPeerTransport(options: PeerTransportOptions): Promis
     async roundTripMs() {
       const measures: number[] = [];
       for (const connection of connections.values()) {
-        const rtc = connection.peerConnection as RTCPeerConnection | undefined;
-        const report = await rtc?.getStats();
-        const rtt = roundTripFromStats((report?.values() ?? []) as Iterable<StatEntry>);
+        const rtc = connection.peerConnection;
+        const report = rtc instanceof RTCPeerConnection ? await rtc.getStats() : null;
+        const rtt = roundTripFromStats(report?.values() ?? []);
         if (rtt !== null) {
           measures.push(rtt);
         }

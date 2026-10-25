@@ -1,8 +1,9 @@
+import { frac, lerp } from '../shared/scalar';
 import type { PlayerState, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { worldToScreen } from './camera';
-import { lerp } from './motion';
+import { easeOutCubic } from './motion';
 import { TAU } from './paint';
 import type { CameraFocus } from './types';
 import { add, hide, lookup, setTint } from './util';
@@ -10,7 +11,6 @@ import { add, hide, lookup, setTint } from './util';
 const SWARM = 14;
 const SWARM_BEATS = 4;
 const VEIL_ALPHA = 0.85;
-// The veil reaches full strength at this share of the half-diagonal of the screen.
 const VEIL_REACH = 0.85;
 const FADE_BEATS = 1;
 const FLY_SIZE = 1.6;
@@ -23,14 +23,10 @@ export interface SwarmFly {
   alpha: number;
 }
 
-const ease = (t: number) => 1 - (1 - t) ** 3;
-
-// Firefly `index` of the swarm that rises from the edges of the screen towards the player in its
-// middle, as a share of the half-diagonal of the screen, one trip every few beats.
 export function swarmFlyAt(index: number, beats: number, out: SwarmFly): SwarmFly {
   const angle = (index / SWARM) * TAU + (index % 3) * 0.4;
-  const trip = (((beats / SWARM_BEATS + index / SWARM) % 1) + 1) % 1;
-  const reach = 1 - 0.7 * ease(trip);
+  const trip = frac(beats / SWARM_BEATS + index / SWARM);
+  const reach = 1 - 0.7 * easeOutCubic(trip);
   out.x = Math.cos(angle) * reach;
   out.y = Math.sin(angle) * reach;
   out.alpha = Math.sin(trip * Math.PI);
@@ -43,8 +39,6 @@ function watchedBy(state: SimState, focus: CameraFocus): PlayerState | undefined
     : undefined;
 }
 
-// The screen of a player lying down: the world loses its colours round them, and the fireflies
-// of the lake come to them from the edges. In calm mode, the veil alone.
 export function createDownedScreen(ctx: RenderContext): Family {
   const { textures, layers } = ctx;
   const veil = add(layers.veil, textures.players.downed.veil);

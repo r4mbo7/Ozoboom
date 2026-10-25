@@ -1,7 +1,9 @@
 import { type Container, Sprite } from 'pixi.js';
+import { clamp01 } from '../shared/scalar';
 import { TICKS_PER_BEAT } from '../shared/tempo';
-import type { PixiPalette } from './palette';
+import { easeOutQuad } from './motion';
 import type { Shape } from './paint';
+import { type PixiPalette, mixColor } from './palette';
 import { setTint } from './util';
 
 interface Transient {
@@ -32,8 +34,6 @@ export interface TransientSpec {
   readonly peak: number;
 }
 
-// Arcs, rings and waves that live for a fraction of a beat. Unlike Particles, they are oriented and
-// each one wears the texture it is spawned with.
 export class Transients {
   private readonly items: Transient[];
   private next = 0;
@@ -96,7 +96,7 @@ export class Transients {
         sprite.visible = false;
         continue;
       }
-      const eased = 1 - (1 - progress) * (1 - progress);
+      const eased = easeOutQuad(progress);
       sprite.position.set(item.x, item.y);
       sprite.scale.set((item.from + (item.to - item.from) * eased) / item.radius);
       sprite.rotation = item.angle + item.spin * eased;
@@ -111,13 +111,13 @@ export class Transients {
   }
 }
 
-export const RIBBON_TOKENS = ['mage', 'tank', 'healer', 'turquoise'] as const;
+const RIBBON_TOKENS = ['mage', 'tank', 'healer', 'turquoise'] as const;
 const SEGMENTS = 44;
 const WAVES = 2.2;
 const WAVE_SPEED = 0.55;
 const AMPLITUDE = 15;
 const THICKNESS = 3.2;
-export const RIBBON_TICKS = Math.round(TICKS_PER_BEAT * 0.7);
+const RIBBON_TICKS = Math.round(TICKS_PER_BEAT * 0.7);
 
 interface Ribbon {
   readonly segments: readonly Sprite[];
@@ -129,24 +129,17 @@ interface Ribbon {
   live: boolean;
 }
 
-function mix(from: number, to: number, amount: number): number {
-  const channel = (shift: number) =>
-    Math.round(((from >> shift) & 0xff) * (1 - amount) + ((to >> shift) & 0xff) * amount);
-  return (channel(16) << 16) | (channel(8) << 8) | channel(0);
-}
-
-export function ribbonColor(palette: PixiPalette, along: number): number {
-  const position = Math.min(Math.max(along, 0), 1) * (RIBBON_TOKENS.length - 1);
+function ribbonColor(palette: PixiPalette, along: number): number {
+  const position = clamp01(along) * (RIBBON_TOKENS.length - 1);
   const index = Math.min(Math.floor(position), RIBBON_TOKENS.length - 2);
   const from = RIBBON_TOKENS[index];
   const to = RIBBON_TOKENS[index + 1];
   if (from === undefined || to === undefined) {
     return palette.or;
   }
-  return mix(palette[from], palette[to], position - index);
+  return mixColor(palette[from], palette[to], position - index);
 }
 
-// A long curve that undulates and fades, in a gradient of the four colors of the game.
 export class Ribbons {
   private readonly items: Ribbon[];
   private readonly segmentShape: Shape;

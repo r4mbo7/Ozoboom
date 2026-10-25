@@ -25,7 +25,6 @@ const CREST: readonly (readonly [number, number])[] = [
 ];
 const EYE = { x: 11, y: -4, radius: 7, pupil: 3, roll: 2 };
 
-// His head and his crest, traced together.
 function silhouette(ctx: Ctx): void {
   ctx.beginPath();
   ctx.moveTo(HEAD.radius, HEAD.y);
@@ -40,8 +39,7 @@ function silhouette(ctx: Ctx): void {
   ctx.closePath();
 }
 
-// A punk's crest, round eyes that roll twice a loop, and a wide grin full of teeth.
-export function pogo(ctx: Ctx, pose: Pose): void {
+function pogo(ctx: Ctx, pose: Pose): void {
   bodyRimOutside(ctx, () => {
     silhouette(ctx);
   });
@@ -73,7 +71,7 @@ export function pogo(ctx: Ctx, pose: Pose): void {
   line(ctx, 2.6, [-13, 12], [13, 12]);
 }
 
-export function pogoGlad(ctx: Ctx): void {
+function pogoGlad(ctx: Ctx): void {
   gladFace(ctx, { eyeY: -4, mouthY: 10, mouthWidth: 14, part: 'smile' });
 }
 

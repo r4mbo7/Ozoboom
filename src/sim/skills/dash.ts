@@ -1,3 +1,4 @@
+import { clamp } from '../../shared/scalar';
 import { normalize } from '../../shared/vec';
 import { touches } from '../effects';
 import { freeShare } from '../obstacles';
@@ -39,8 +40,4 @@ function taunt(state: SimState, player: PlayerState, radius: number): void {
     radius,
     count,
   });
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }

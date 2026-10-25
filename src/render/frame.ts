@@ -8,13 +8,11 @@ import { dropFilterIntensity } from './drop-filter';
 import { type Camera, frameCamera } from './camera';
 import { type PixiPalette, createPixiPalette, writePixiPalette } from './palette';
 
-// Shared by every family for one image: the hour is computed once, here.
 export interface Frame {
   now: number;
-  // `now`, going on in real time while the sim waits for a choice or has ended (`ShowClock`).
+  // Goes on in real time while the sim waits for a choice or has ended (`ShowClock`).
   show: number;
   set: SetDefinition;
-  // The stage a festival walks toward, on its path: its decor is drawn ahead, unseen.
   upcoming: SetDefinition | undefined;
   tempo: Tempo;
   fraction: number;
@@ -28,10 +26,8 @@ export interface Frame {
   camera: Camera;
   // Canvas pixels per CSS pixel.
   resolution: number;
-  // The share of each player's and trap's halo a boss drains, by id. The drainer rewrites it every
-  // frame; whoever draws a halo reads it.
+  // Rewritten every frame by the boss that drains halos; whoever draws a halo reads it.
   drained: { readonly players: Map<PlayerId, number>; readonly traps: Map<EntityId, number> };
-  // A character shown alone before a game, as in "Choisis ton perso".
   portrait: boolean;
 }
 
@@ -78,8 +74,6 @@ export function advanceFrame(
   }
 }
 
-// The set whose `decor` a decor family draws: the one played, or the one a festival walks toward, drawn ahead
-// so that nothing is drawn on arrival.
 export function decorSet(
   frame: Pick<Frame, 'set' | 'upcoming'>,
   decor: string,

@@ -1,13 +1,7 @@
 import { t } from '../shared/i18n';
 import type { InputDevice } from '../input/intents';
-import { buttonName, inputName, keyNamesVersion } from '../input/key-names';
-import {
-  type GamepadAction,
-  type KeyProfile,
-  type KeyboardAction,
-  keyProfile,
-  keyProfileVersion,
-} from '../input/profile';
+import { type KeyNames, buttonName } from '../input/key-names';
+import type { GamepadAction, KeyProfile, KeyboardAction, PlayerKeys } from '../input/profile';
 
 export type KeyStyle = 'key' | 'button';
 
@@ -19,10 +13,9 @@ export interface Control {
 export interface DevicePrompts {
   name: string;
   style: KeyStyle;
-  // Through a list from top to bottom, and through items side by side.
+  // `navigate` walks a list from top to bottom, `navigateRow` items side by side.
   navigate: readonly string[];
   navigateRow: readonly string[];
-  // The tab before and the tab after, on a screen with tabs.
   tabs: readonly string[];
   confirm: string;
   back: string;
@@ -30,7 +23,15 @@ export interface DevicePrompts {
   controls: readonly Control[];
 }
 
-const keyboard = (): DevicePrompts => ({
+export interface Prompts {
+  for(device: InputDevice): DevicePrompts;
+  // Changes when the keys the prompts show do: the player chose others, or the keyboard told its names.
+  version(): number;
+}
+
+type Name = (input: string) => string;
+
+const keyboard = (profile: KeyProfile, name: Name): DevicePrompts => ({
   name: t('Clavier et souris'),
   style: 'key',
   navigate: ['↑', '↓'],
@@ -38,42 +39,39 @@ const keyboard = (): DevicePrompts => ({
   tabs: [t('Maj+Tab'), 'Tab'],
   confirm: t('Entrée'),
   back: t('Échap'),
-  skill: keyNames(keyProfile(), 'skill')[0] ?? '',
+  skill: keyNames(profile, 'skill', name)[0] ?? '',
   controls: [
-    { action: t('Se déplacer'), keys: moveKeys(keyProfile()) },
+    { action: t('Se déplacer'), keys: moveKeys(profile, name) },
     { action: t('Viser'), keys: [t('Souris')] },
-    { action: t('Tirer'), keys: keyNames(keyProfile(), 'fire') },
-    { action: t('Choisir un piège'), keys: [...trapKeys(keyProfile()), t('1 à 5')] },
-    { action: t('Poser le piège'), keys: keyNames(keyProfile(), 'placeTrap') },
-    { action: t('Spéciale'), keys: keyNames(keyProfile(), 'skill') },
-    { action: t('Dash'), keys: keyNames(keyProfile(), 'dash') },
+    { action: t('Tirer'), keys: keyNames(profile, 'fire', name) },
+    { action: t('Choisir un piège'), keys: [...trapKeys(profile, name), t('1 à 5')] },
+    { action: t('Poser le piège'), keys: keyNames(profile, 'placeTrap', name) },
+    { action: t('Spéciale'), keys: keyNames(profile, 'skill', name) },
+    { action: t('Dash'), keys: keyNames(profile, 'dash', name) },
     { action: t('Pause'), keys: [t('Échap')] },
   ],
 });
 
-const gamepad = (): DevicePrompts => ({
+const gamepad = (profile: KeyProfile): DevicePrompts => ({
   name: t('Manette'),
   style: 'button',
-  navigate: [sticks(keyProfile()).move, t('Croix')],
-  navigateRow: [sticks(keyProfile()).move, t('Croix')],
+  navigate: [sticks(profile).move, t('Croix')],
+  navigateRow: [sticks(profile).move, t('Croix')],
   tabs: ['LB', 'RB'],
   confirm: 'A',
   back: 'B',
-  skill: buttonNames(keyProfile(), 'skill')[0] ?? '',
+  skill: buttonNames(profile, 'skill')[0] ?? '',
   controls: [
-    { action: t('Se déplacer'), keys: [sticks(keyProfile()).move] },
-    { action: t('Viser'), keys: [sticks(keyProfile()).aim] },
-    { action: t('Tirer'), keys: buttonNames(keyProfile(), 'fire') },
+    { action: t('Se déplacer'), keys: [sticks(profile).move] },
+    { action: t('Viser'), keys: [sticks(profile).aim] },
+    { action: t('Tirer'), keys: buttonNames(profile, 'fire') },
     {
       action: t('Choisir un piège'),
-      keys: [
-        ...buttonNames(keyProfile(), 'previousTrap'),
-        ...buttonNames(keyProfile(), 'nextTrap'),
-      ],
+      keys: [...buttonNames(profile, 'previousTrap'), ...buttonNames(profile, 'nextTrap')],
     },
-    { action: t('Poser le piège'), keys: buttonNames(keyProfile(), 'placeTrap') },
-    { action: t('Spéciale'), keys: buttonNames(keyProfile(), 'skill') },
-    { action: t('Dash'), keys: buttonNames(keyProfile(), 'dash') },
+    { action: t('Poser le piège'), keys: buttonNames(profile, 'placeTrap') },
+    { action: t('Spéciale'), keys: buttonNames(profile, 'skill') },
+    { action: t('Dash'), keys: buttonNames(profile, 'dash') },
     { action: t('Pause'), keys: ['Start'] },
   ],
 });
@@ -99,8 +97,8 @@ const touch = (): DevicePrompts => ({
   ],
 });
 
-function keyNames(profile: KeyProfile, action: KeyboardAction): string[] {
-  return profile.keyboard[action].flatMap((input) => (input === null ? [] : [inputName(input)]));
+function keyNames(profile: KeyProfile, action: KeyboardAction, name: Name): string[] {
+  return profile.keyboard[action].flatMap((input) => (input === null ? [] : [name(input)]));
 }
 
 function buttonNames(profile: KeyProfile, action: GamepadAction): string[] {
@@ -109,19 +107,17 @@ function buttonNames(profile: KeyProfile, action: GamepadAction): string[] {
 
 const ARROWS = '↑←↓→';
 
-// Each slot of the four directions as one word, ZQSD on an AZERTY keyboard; a slot that does not
-// move all four ways shows its keys one by one. The arrows, which also walk the menus, only show
-// when no other word does.
-function moveKeys(profile: KeyProfile): string[] {
+// ZQSD on an AZERTY keyboard; the arrows, which also walk the menus, only show when no other word does.
+function moveKeys(profile: KeyProfile, name: Name): string[] {
   const directions = ['moveUp', 'moveLeft', 'moveDown', 'moveRight'] as const;
   const slots = ([0, 1] as const).map((slot) =>
     directions.flatMap((action) => {
       const input = profile.keyboard[action][slot];
-      return input === null ? [] : [inputName(input)];
+      return input === null ? [] : [name(input)];
     }),
   );
   const words = slots.flatMap((names) => {
-    return names.length === directions.length && names.every((name) => name.length === 1)
+    return names.length === directions.length && names.every((one) => one.length === 1)
       ? [names.join('')]
       : names;
   });
@@ -130,13 +126,13 @@ function moveKeys(profile: KeyProfile): string[] {
 }
 
 // The wheel turns both ways: one name for the two, else the first key of each way.
-function trapKeys(profile: KeyProfile): string[] {
+function trapKeys(profile: KeyProfile, name: Name): string[] {
   const [next] = profile.keyboard.nextTrap.filter((input) => input !== null);
   const [previous] = profile.keyboard.previousTrap.filter((input) => input !== null);
   if (next === 'WheelDown' && previous === 'WheelUp') {
     return [t('Molette')];
   }
-  return [next, previous].flatMap((input) => (input === undefined ? [] : [inputName(input)]));
+  return [next, previous].flatMap((input) => (input === undefined ? [] : [name(input)]));
 }
 
 function sticks(profile: KeyProfile): { move: string; aim: string } {
@@ -145,24 +141,26 @@ function sticks(profile: KeyProfile): { move: string; aim: string } {
   return profile.swapSticks ? { move: right, aim: left } : { move: left, aim: right };
 }
 
-// Changes when the keys the prompts show do: the player chose others, or the keyboard told its names.
-export function promptsVersion(): number {
-  return keyProfileVersion() + keyNamesVersion();
+export function createPrompts(
+  keys: Pick<PlayerKeys, 'profile' | 'version'>,
+  names: Pick<KeyNames, 'of' | 'version'>,
+): Prompts {
+  return {
+    for(device) {
+      switch (device) {
+        case 'gamepad':
+          return gamepad(keys.profile());
+        case 'touch':
+          return touch();
+        default:
+          return keyboard(keys.profile(), (input) => names.of(input));
+      }
+    },
+    version: () => keys.version() + names.version(),
+  };
 }
 
-export function promptsFor(device: InputDevice): DevicePrompts {
-  switch (device) {
-    case 'gamepad':
-      return gamepad();
-    case 'touch':
-      return touch();
-    default:
-      return keyboard();
-  }
-}
-
-// The keys that reach the endless switch under the cards of a picker: none to show when they are
-// the keys that choose a card, or on a touch screen.
+// None when they are the keys that choose a card, or on a touch screen.
 export function endlessHint(
   prompts: DevicePrompts,
   night = false,

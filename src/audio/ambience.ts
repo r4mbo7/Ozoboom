@@ -19,12 +19,12 @@ export interface AmbienceNote {
 }
 
 export interface Ambience {
-  // Fades in from now, its first note on `origin` when it was silent, on the beat of `tempo`.
+  // Its first note on `origin` when it was silent, on the beat of `tempo`.
   enter(origin: number, tempo?: Tempo): void;
   leave(): void;
-  // Schedules what comes next; false once it is silent and has nothing left to play.
+  // false once silent with nothing left to play.
   pump(): boolean;
-  // How far it is at `now`, in eighths since its first note; null before that note and once silent.
+  // In eighths since its first note; null before that note and once silent.
   position(now: number): number | null;
 }
 

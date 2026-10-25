@@ -1,6 +1,5 @@
-// Alphas of the soft zones of the special bad vibes. They are constants: a zone never pulses or
-// blinks, so a Filmeur cannot add to the flashes per second counted by FlashLimiter.
-export const ZONE_ALPHA = {
+// Constant: a zone never pulses, so a Filmeur adds nothing to the flashes FlashLimiter counts.
+const ZONE_ALPHA = {
   suppress: { normal: 0.4, calm: 0.26 },
   yawn: { normal: 0.14, calm: 0.08 },
   dazzleVeil: { normal: 0.12, calm: 0.07 },

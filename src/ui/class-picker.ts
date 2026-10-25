@@ -11,8 +11,7 @@ export type ClassInfo = Pick<
   'id' | 'name' | 'role' | 'color' | 'maxHp' | 'speed' | 'attack' | 'skill'
 >;
 
-// Up to this many classes sit on one row of wide cards; more make a grid of small ones, and long
-// names among them.
+// More classes than this make a grid of small cards, with long names among them.
 export const ROW_CARDS = 3;
 
 // A class with a tint follows the palette of the hour: its data colour only stands in for the others.
@@ -61,7 +60,6 @@ export function stepperArrow(label: string, flipped: boolean): HTMLButtonElement
   return button;
 }
 
-// One class at a time, with an arrow on each side, for a seat of the lobby.
 export function createClassStepper(
   classes: readonly ClassInfo[],
   onStep: (side: -1 | 1) => void,

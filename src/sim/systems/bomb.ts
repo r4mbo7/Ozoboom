@@ -3,8 +3,6 @@ import { lookup } from '../content';
 import { hurtEnemy, touches } from '../effects';
 import type { StepContext } from './types';
 
-// Every `everyBars` bars a bomb falls due; the first bad vibe to spawn from then on, boss and loot
-// carrier aside, carries it.
 export function bombCarriers({ state, set, tempo }: StepContext): void {
   const rules = set.bomb;
   if (rules === undefined) {
@@ -41,9 +39,7 @@ export function dropBomb({ state, set, tempo }: StepContext, x: number, y: numbe
   state.events.push({ type: 'bombDropped', id, x, y });
 }
 
-// The first player standing on a bomb sets it off: every bad vibe but the bosses takes a fatal hit
-// credited to that player, and `deaths` then drops their vibes and loots as for any kill. A zombie,
-// standing or down, loses its revives: it dies for good.
+// A zombie, standing or down, loses its revives: it dies for good.
 export function bombs({ state, content, set }: StepContext): void {
   const rules = set.bomb;
   const lying = state.bombs;

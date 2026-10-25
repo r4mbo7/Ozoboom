@@ -3,7 +3,7 @@ import type { InputDevice } from '../input/intents';
 import { el, fillHint, icon, setText } from './dom';
 import { createFeedbackButton } from './feedback-button';
 import { type Menu, createMenu } from './menu';
-import { promptsFor } from './prompts';
+import type { Prompts } from './prompts';
 
 export interface NoticeScreen {
   readonly element: HTMLElement;
@@ -20,6 +20,7 @@ export interface NoticeScreen {
 
 // `onFeedback` adds the « Ton avis » button, which gets the detail the screen shows.
 export function createNotice(
+  prompts: Prompts,
   label: string,
   onBack: () => void,
   onFeedback?: (detail: string) => void,
@@ -74,14 +75,14 @@ export function createNotice(
         return;
       }
       device = next;
-      const prompts = promptsFor(next);
+      const shown = prompts.for(next);
       fillHint(
         hint,
         [
-          ...(items.length > 1 ? [{ keys: prompts.navigate, label: t('naviguer') }] : []),
-          { keys: [prompts.confirm], label: t('valider') },
+          ...(items.length > 1 ? [{ keys: shown.navigate, label: t('naviguer') }] : []),
+          { keys: [shown.confirm], label: t('valider') },
         ],
-        prompts.style,
+        shown.style,
       );
     },
   };

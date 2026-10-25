@@ -30,8 +30,7 @@ export const SPECIALS: Record<SpecialEffect['kind'], SpecialModule> = {
   ...FULL_SPECIALS,
 };
 
-// Extension point for enemy-steering: a special supplies its own steering target and speed
-// instead of the system special-casing a sort by kind.
+// So that enemy-steering never special-cases a sort by kind.
 export const STEERING_TARGETS: Partial<Record<SpecialEffect['kind'], SteeringTarget>> = {
   steal: stealSteering,
   cling: clingSteering,

@@ -4,8 +4,7 @@ export const CROSSFADE_SECONDS = barSeconds();
 
 const CURVE_POINTS_PER_SECOND = 200;
 
-// A layer's presence moves linearly from 0 to 1; its gain follows a quarter sine, so a layer
-// fading out and another fading in over the same time keep the total power constant.
+// The gain follows a quarter sine of the presence: two layers crossing keep the total power constant.
 export interface Fade {
   readonly from: number;
   readonly to: number;
@@ -14,7 +13,7 @@ export interface Fade {
 }
 
 export interface Fader {
-  // Fades from wherever the layer is now, and returns when the fade ends.
+  // From wherever the layer is now; returns when the fade ends.
   to(presence: number): number;
 }
 

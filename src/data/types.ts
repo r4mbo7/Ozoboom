@@ -26,7 +26,9 @@ export type StatKey =
   | 'kiffDamageAdd'
   | 'zoneCountAdd'
   | 'rootsGrowthMul'
-  | 'skillCountAdd';
+  | 'skillCountAdd'
+  | 'echoCountAdd'
+  | 'echoPowerMul';
 
 export interface StatModifier {
   stat: StatKey;
@@ -47,10 +49,8 @@ export interface StraightAttack {
   knockback?: number;
 }
 
-// One member per kind of attack, each with its module in `ATTACKS` (src/sim/attacks).
 export type AttackDefinition = StraightAttack | FullAttack;
 
-// One member per kind of skill, each with its module in `SKILLS` (src/sim/skills).
 export type SkillEffect =
   | { kind: 'nova'; damage: number; radius: number; knockback: number }
   | { kind: 'dash'; distance: number; invulnerableTicks: number; tauntRadius?: number }
@@ -59,26 +59,25 @@ export type SkillEffect =
 
 export type ZoneCadence = 'beat' | 'offbeat' | 'continuous';
 
-// A zone a skill or an attack lays on the floor (src/sim/zones.ts). On its cadence it hurts, pushes
-// back and heals what stands on it; it slows and pulls on every tick.
+// Hurts, pushes back and heals on its cadence; slows and pulls on every tick.
 export interface ZoneDefinition {
-  // A player's zones of one id count towards `maxPerPlayer`: the oldest goes out to make room.
+  // A player's zones of one id count towards `maxPerPlayer`; the oldest makes room.
   id: string;
   radius: number;
-  // A line this long along the direction it is laid in, `radius` on each side. Absent, a disc.
+  // A line this long along the direction it is laid in, `radius` on each side; absent, a disc.
   length?: number;
   durationBars: number;
   maxPerPlayer: number;
   cadence: ZoneCadence;
   damage?: number;
   knockback?: number;
-  // Speed of the bad vibes on it, bosses included.
+  // Multiplies the speed of the bad vibes on it, bosses included.
   slowFactor?: number;
-  // The bad vibes on it walk to its centre instead of their target; never a boss.
+  // The bad vibes on it walk to its centre; never a boss.
   pull?: boolean;
   // To each standing player on it.
   heal?: number;
-  // Dealt to the bad vibes on it when its time runs out.
+  // Dealt to the bad vibes on it when it ends.
   closeDamage?: number;
 }
 
@@ -90,24 +89,21 @@ export interface SkillDefinition {
   effect: SkillEffect;
 }
 
-// A class gauge (Élan, Kiff, Racines...): the module of its kind in `GAUGES` (src/sim/systems/gauges.ts)
-// fills and drains it, the HUD shows it as a ring under its name.
 export interface GaugeDefinition {
   kind: string;
   name: string;
   // Its full value: 1 for a gauge that fills smoothly, its count of notches for one read by steps.
   max: number;
-  // Where it starts; absent, empty.
+  // Absent, empty.
   start?: number;
 }
 
-// A bad vibe of the horde a player of this class chases joins their side for `bars` bars
-// (src/sim/recruits.ts): it rushes the closest bad vibe and shoves it on each beat.
+// A bad vibe a player of this class chases joins their side for `bars` bars.
 export interface RecruitDefinition {
   bars: number;
-  // Recruits a player keeps at once: the oldest leaves for a new one.
+  // At once; the oldest leaves for a new one.
   max: number;
-  // Dealt on each beat to the bad vibe it touches.
+  // On each beat, to the bad vibe it shoves.
   damage: number;
   speed: number;
   knockback: number;
@@ -122,10 +118,12 @@ export interface ClassDefinition {
   speed: number;
   radius: number;
   pickupRadius: number;
-  // Shades the players within, from the sun of the Canicule: the parasol of the Hygie.
+  // Shades the players within from the Canicule's sun: the Hygie's parasol.
   shadeRadius?: number;
-  // The share of a gust's push that drifts this class; absent, all of it. The Enraciné holds fast.
+  // The share of a gust's push that drifts this class; absent, all of it.
   gustMul?: number;
+  // The share of a slow that holds this class; absent, all of it.
+  slowMul?: number;
   reviveMul?: number;
   attack: AttackDefinition;
   skill: SkillDefinition;
@@ -133,7 +131,6 @@ export interface ClassDefinition {
   recruits?: RecruitDefinition;
   // Weapons drawn as often for this class as for the one of their `classAffinity`.
   affinityWeaponIds?: readonly string[];
-  // Weapons never drawn for this class.
   excludedWeaponIds?: readonly string[];
 }
 
@@ -175,7 +172,7 @@ export interface EnemyDefinition {
     keepDistance: number;
   };
   special?: SpecialEffect;
-  // A body players run through: its touch hurts the stage only (the Moustiques' swarm).
+  // Players run through it; its touch hurts the stage only.
   passable?: boolean;
 }
 
@@ -188,7 +185,7 @@ export type TrapEffect =
       damagePerTick: number;
       length: number;
       width: number;
-      // The arc swept around the placed direction, two beats out and two back; absent, it stays put.
+      // Swept around the placed direction, two beats out and two back; absent, it stays put.
       sweepDegrees?: number;
     }
   | { kind: 'mist'; slowFactor: number; healPerBar: number; radius: number }
@@ -198,8 +195,7 @@ export type TrapEffect =
       kind: 'breeze';
       slowFactor: number;
       healPerBeat: number;
-      // The cone of mist blown from the trap: its length, its opening, and the arc it sweeps
-      // around the placed direction, one bar out and one bar back.
+      // The mist cone; it sweeps around the placed direction one bar out and one bar back.
       length: number;
       coneDegrees: number;
       sweepDegrees: number;
@@ -212,7 +208,7 @@ export interface TrapDefinition {
   radius: number;
   cadence: TrapCadence;
   effect: TrapEffect;
-  // Shades the players within, from the sun of the Canicule.
+  // Shades the players within from the Canicule's sun.
   shade?: number;
   // Odds of this trap in a loot against the other traps, the same for every class.
   lootWeight: number;
@@ -234,14 +230,14 @@ export interface UpgradeDefinition {
   description: string;
   family: UpgradeFamily;
   classId?: string;
-  // Absent, the upgrade is always drawn common.
+  // Absent, always drawn common.
   rarities?: { rare: RarityForm; legendary: RarityForm };
   modifiers: readonly StatModifier[];
   // Counts stacks of every rarity.
   maxStacks: number;
 }
 
-// Draw weights of each rarity, indexed by Volume; the last entry holds beyond.
+// Indexed by Volume; the last entry holds beyond.
 export type RarityWeights = Record<Rarity, number>;
 
 // `steps`: sixteenth notes, 0 to 15, within the bar.
@@ -284,7 +280,7 @@ export type WeaponEffect =
       slowFactor: number;
       healPerBar: number;
       lengthTicks: number;
-      // How long the way of each dash stays on the ground, slowing and healing as the trail does.
+      // How long each dash's way stays on the ground, slowing and healing as the trail does.
       dashTrailTicks?: number;
     }
   | {
@@ -295,7 +291,7 @@ export type WeaponEffect =
       dropCrossesArena?: boolean;
     };
 
-// What a circus weapon does, as its card tells it in pictograms.
+// Shown in pictograms on the weapon's card.
 export type WeaponRole =
   'hitFront' | 'hitFar' | 'hitAround' | 'heal' | 'slow' | 'pull' | 'push' | 'mark';
 
@@ -303,7 +299,7 @@ export interface WeaponDefinition {
   id: string;
   name: string;
   description: string;
-  // One or two: what the card of the weapon shows it does.
+  // One or two.
   roles?: readonly WeaponRole[];
   classAffinity?: string;
   unlockedBySpeakers?: number;
@@ -312,7 +308,7 @@ export interface WeaponDefinition {
   effect: WeaponEffect;
   maxLevel: number;
   levelMul: number;
-  // Its zones shade the players within, from the sun of the Canicule.
+  // Its zones shade the players within from the Canicule's sun.
   shade?: number;
 }
 
@@ -334,8 +330,7 @@ export interface SpeakerDefinition {
   unlocksWeaponId?: string;
 }
 
-// Plugging a speaker starts a shower of `bars` bars: every plugged speaker lobs `dropsPerBar` vibes
-// a bar, each worth `amount`, landing within `radius` of the core after `flightBeats` beats.
+// Plugging a speaker starts the shower; each plugged speaker lobs vibes that land near the core.
 export interface VibeRainRules {
   bars: number;
   dropsPerBar: number;
@@ -374,8 +369,7 @@ export interface BystanderSpawnRule {
   toPhrase?: number;
 }
 
-// The force of the boss of a tier's drop, whichever the drop draws: the boss brings its shape, size,
-// speed and effect, and its own maxHp, damage and vibesDrop serve nowhere else.
+// Whichever boss the drop draws: its own maxHp, damage and vibesDrop serve nowhere else.
 export interface BossStrength {
   maxHp: number;
   damage: number;
@@ -392,28 +386,26 @@ export interface TierDefinition {
   bystanderSpawns?: readonly BystanderSpawnRule[];
 }
 
-// Every `everyBars` bars, the next bad vibe to spawn carries a loot; killed, it drops it.
+// Every `everyBars` bars, the next bad vibe to spawn carries a loot it drops when killed.
 export interface LootRules {
   everyBars: number;
   lifetimeBars: number;
   radius: number;
-  // The trap of the first loot of the game.
+  // The trap of the game's first loot.
   first: string;
 }
 
-// Every `everyBars` bars, the next bad vibe to spawn carries a bomb; killed, it drops it, and a
-// player stepping on it clears the floor of every bad vibe but the bosses.
+// As a loot; a player stepping on the bomb clears every bad vibe but the bosses.
 export interface BombRules {
   everyBars: number;
   lifetimeBars: number;
   radius: number;
 }
 
-// How a stage is drawn.
-// The look of a stage: its ground, its decor and its card. `lake` is the main stage's.
+// A stage's ground, decor and card; `lake` is the main stage's.
 export type DecorId = string;
 
-// A round obstacle of the stage: it blocks players, bad vibes and shots.
+// Blocks players, bad vibes and shots.
 export interface ObstacleDefinition {
   x: number;
   y: number;
@@ -423,32 +415,27 @@ export interface ObstacleDefinition {
 export interface SetDefinition {
   id: string;
   name: string;
-  // The music style shown on the stage's card. Absent means none.
+  // Shown on the stage's card.
   style?: string;
-  // Length of the stage's beat in ticks, the tick rate staying the same (ADR 0012). Absent means 12.
+  // The tick rate stays the same (ADR 0012). Absent means 12.
   ticksPerBeat?: number;
   decor: DecorId;
   obstacles?: readonly ObstacleDefinition[];
-  // The tracks this stage draws from.
   trackIds: readonly string[];
-  // The stage's room reverb. Absent means a dry stage. `lowCutHz` keeps the lows out of the room,
-  // `toneHz` darkens its tail.
+  // Absent, a dry stage; `lowCutHz` keeps the lows out of the room, `toneHz` darkens its tail.
   acoustics?: { reverbSeconds: number; wet: number; lowCutHz?: number; toneHz?: number };
   arena: { width: number; height: number };
   core: { radius: number; maxHp: number };
-  // Traps a player carries at most, and those each player starts the game with.
+  // Traps a player carries at most.
   handSize: number;
   startingHand: readonly string[];
-  // Absent means no loot.
   loot?: LootRules;
-  // Absent means no bomb.
   bomb?: BombRules;
   maxTraps: number;
   levelCurve: { baseVibes: number; vibesPerLevel: number };
   pickups: { lifetimeTicks: number; speed: number };
   tiers: readonly TierDefinition[];
   speakers?: readonly SpeakerDefinition[];
-  // Absent means no shower.
   vibeRain?: VibeRainRules;
   // Absent means 3.
   weaponSlots?: number;
@@ -456,26 +443,23 @@ export interface SetDefinition {
   // Most the core can be repaired per bar, all sources together. Absent means no cap.
   coreRepairPerBar?: number;
   perPlayer?: { spawnMul: number; enemyHpMul: number };
-  // Endless games: what each minute past the last boss multiplies, on top of each bad vibe's own
-  // scaling. Absent, the endless part only replays the last tier.
+  // Per minute past the last boss, on top of each bad vibe's own; absent, endless replays the last tier.
   endlessPerMinute?: { hp: number; damage: number };
-  // Each window of `everyBars` bars comes from one or two sides with `chance`; `randomShare` of its
-  // rule spawns still come from anywhere on the edge. Absent means every spawn comes from anywhere.
+  // A window comes from one or two sides by `chance`; `randomShare` of its spawns still from anywhere.
   sidedWaves?: { everyBars: number; chance: number; randomShare: number };
 }
 
 export type EdgeSide = 'top' | 'right' | 'bottom' | 'left';
 
-// A character or a stage of the full game, shown locked in the demo (ADR 0014): its name and colour, never its data.
+// Shown locked in the demo (ADR 0014): a name and a colour, never the data.
 export interface TeaserDefinition {
   kind: 'class' | 'stage';
   name: string;
-  // The music style of a stage.
   style?: string;
   color: string;
 }
 
-// The dash every character has, the same for all (docs/game-design.md, « Le dash »).
+// The same for every character (docs/game-design.md, « Le dash »).
 export interface DashDefinition {
   distance: number;
   ticks: number;
@@ -489,15 +473,13 @@ export interface DashDefinition {
   onBeatDistanceMul: number;
 }
 
-// How a team calls more bosses on a stage of the full game (src/data/full/summons.ts): what it brings
-// from the sources to the sites, alone in a trap hand or two to a heavy offering.
 export type SummonLook = 'fire' | 'giants';
 
 export interface SummonSource {
   x: number;
   y: number;
   radius: number;
-  // Offerings it gives for the whole stage.
+  // For the whole stage.
   items: number;
 }
 
@@ -505,14 +487,13 @@ export interface SummonSite {
   x: number;
   y: number;
   radius: number;
-  // Offerings it takes for the whole stage.
+  // For the whole stage.
   capacity: number;
   // Where the bosses it calls come in; absent, anywhere on the edge, as a drawn boss.
   gates?: readonly { x: number; y: number }[];
 }
 
 export interface SummonDefinition {
-  // The set where a team calls more bosses this way.
   setId: string;
   look: SummonLook;
   sources: readonly SummonSource[];
@@ -531,11 +512,10 @@ export interface GameContent {
   weapons?: readonly WeaponDefinition[];
   fusions?: readonly FusionDefinition[];
   rarityWeights?: readonly RarityWeights[];
-  // Absent, nobody dashes.
   dash?: DashDefinition;
   // The sets a game walks through between two stages (ADR 0018), never offered at the stage choice.
   paths?: readonly SetDefinition[];
-  // The sets where a team can call more bosses, one each.
+  // One per set.
   summons?: readonly SummonDefinition[];
 }
 
@@ -591,12 +571,11 @@ export type MusicVoiceId =
   | 'pulse'
   | 'chant';
 
-// The set's layers that let a part play. `lead` plays until the theme arrives, `theme` replaces it.
-// `kick` plays out of the break, `clap` only in the drop.
+// `lead` plays until the theme arrives, `theme` then; `kick` out of the break, `clap` in the drop.
 export type MusicLayer =
   'bass' | 'texture' | 'arp' | 'squelch' | 'lead' | 'theme' | 'kick' | 'clap';
 
-// [sixteenth within the loop, scale degree, length in sixteenths], in ascending sixteenths.
+// Steps and lengths in sixteenths, in ascending steps.
 export type MusicNotes = readonly (readonly [step: number, degree: number, steps: number])[];
 
 export interface MusicPart {
@@ -607,10 +586,8 @@ export interface MusicPart {
   // The degree is added to the chord root of the bar.
   followsChord: boolean;
   notes: MusicNotes;
-  // Absent: in and out of the break. `light`: only in the break, `full`: never in it, `rise`: only
-  // in the buildup, `drop`: only in the drop.
+  // Absent, always; `light` only in the break, `full` never in it, `rise` the buildup, `drop` the drop.
   in?: 'full' | 'light' | 'rise' | 'drop';
-  // Multiplies the voice's level. Absent means 1.
   gain?: number;
   // Steps of the loop whose note is accented, or slides from the previous note.
   accents?: readonly number[];
@@ -640,7 +617,6 @@ export type DrumVoiceId =
   | 'sand-shaker'
   | 'wood-rim';
 
-// One drum of a track's own kit: [sixteenth within the loop, gain] hits, gated by its layer.
 export interface DrumPart {
   voice: DrumVoiceId;
   layer: MusicLayer;
@@ -648,7 +624,6 @@ export interface DrumPart {
   hits: readonly (readonly [step: number, gain: number])[];
   // From -1 (left) to 1 (right). Absent means centred.
   pan?: number;
-  // Same meaning as on a music part: the segments in which the drum is heard.
   in?: MusicPart['in'];
   // Pitch of a `tom` or a `tuned-kick`, in Hz.
   hz?: number;
@@ -656,8 +631,7 @@ export interface DrumPart {
   release?: number;
 }
 
-// A background track. Every track plays at the set's tempo and follows its buildups, breaks and
-// drops; the effects and the speaker layers play in its key.
+// Plays at the set's tempo; the effects and the speaker layers play in its key.
 export interface MusicTrack {
   id: string;
   name: string;
@@ -668,8 +642,7 @@ export interface MusicTrack {
   // Chord root degree of each bar, cycled.
   chords: readonly number[];
   kick: { fromHz: number; release: number };
-  // Replaces the engine's echo: the feedback of the repeats, their tone in Hz and what returns.
-  // `wide` bounces the repeats from left to right.
+  // Replaces the engine's echo; `tone` in Hz, `wide` bounces the repeats from left to right.
   echo?: { feedback: number; ret: number; tone: number; wide?: boolean };
   // `soft`: no snare roll before the drop, a low and quiet riser, a gentler fall into the break.
   build?: 'soft';

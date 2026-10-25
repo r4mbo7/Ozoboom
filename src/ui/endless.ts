@@ -2,7 +2,7 @@ import type { MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
 import { type Toggle, createToggle } from './toggle';
 
-export function createEndlessToggle(): Toggle {
+function createEndlessToggle(): Toggle {
   const toggle = createToggle(
     t('Sans fin'),
     t('Après le dernier boss, la nuit continue'),
@@ -19,14 +19,13 @@ export type PickerRow = 'cards' | 'endless';
 export interface EndlessStep {
   row: PickerRow;
   toggled: boolean;
-  // Left steps a choice back, anything else forward.
+  // Left steps back, anything else forward.
   direction: -1 | 1;
   // The presses were for the switch: the cards do nothing with them.
   taken: boolean;
 }
 
-// A picker that launches has the endless switch under its cards: up and down move between the two,
-// and on the switch a side or a validation flips it. Going back stays the picker's.
+// Up and down move between the cards and the switch; on it a side or a validation flips it. Going back stays the picker's.
 export function stepEndless(row: PickerRow, shown: boolean, edges: MenuIntents): EndlessStep {
   const direction = edges.left ? -1 : 1;
   if (!shown) {
@@ -51,8 +50,7 @@ export interface SwitchRow {
   handle(edges: MenuIntents): boolean;
 }
 
-// The switch under the cards of a picker, and which of the two the presses go to.
-export function createSwitchRow(
+function createSwitchRow(
   cards: HTMLElement,
   button: HTMLButtonElement,
   press: (direction: -1 | 1) => void,

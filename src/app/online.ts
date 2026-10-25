@@ -1,28 +1,19 @@
-import { generateCode, hostPeerId, joinHash, normalizeCode } from '../net/code';
-import { createGuestSource, createHostSource, type LockstepSource } from '../net/lockstep';
-import { createPeerTransport, type PeerTransport } from '../net/peerjs';
+import { generateCode, hostPeerId, normalizeCode } from '../net/code';
 import {
-  createRoom,
-  playerSlot,
-  type RefusalReason,
-  type Room,
-  type StartMessage,
-} from '../net/room';
+  type LockstepHooks,
+  type LockstepSource,
+  createGuestSource,
+  createHostSource,
+} from '../net/lockstep';
+import { createPeerTransport, type PeerTransport } from '../net/peerjs';
+import { createRoom, sendToGuests, startMessage, type Room, type StartMessage } from '../net/room';
 import type { PeerId, Role, Seat } from '../net/types';
-import { t, tn } from '../shared/i18n';
+import { t } from '../shared/i18n';
 import type { PlayerId } from '../sim/state';
-import type { LobbyModel, Notice, StageCard, Ui } from '../ui';
-import { formatNumber } from '../ui/format';
-
-const ITCH_ORIGIN = 'https://html-classic.itch.zone';
-const DEMO_SITE = 'https://r4mbo7.github.io/Ozoboom/';
-
-// itch.io serves the demo at an address that changes with every upload: a shared link points to the demo's own site.
-export function shareBase(origin: string, pathname: string): string {
-  return origin === ITCH_ORIGIN ? DEMO_SITE : `${origin}${pathname}`;
-}
-
-// One online game: what the app needs to run it, whoever hosts.
+import type { LobbyModel, Notice, Ui } from '../ui';
+import { type LobbyDefaults, canLaunch, lobbyModel } from './online-lobby';
+import { connectionText, hostSilentText, refusalText } from './online-text';
+import { createHostWatch, createRoundTripProbe } from './online-watch';
 
 export interface OnlineMatch {
   readonly role: Role;
@@ -34,114 +25,59 @@ export interface OnlineMatch {
 export interface Interruption {
   readonly notice: Notice;
   readonly details: string;
-  // The tick at which the peers diverged.
   readonly desyncTick?: number;
 }
 
-export interface OnlineEnv {
+export interface OnlineEnv extends LobbyDefaults {
   readonly ui: Pick<Ui, 'showLobby' | 'updateLobby'>;
-  // The scenes to pick from.
-  readonly stages: readonly StageCard[];
-  // The scene the host proposes when it opens a room: the last one played.
-  stageId(): string;
-  // Whether the host proposes an endless set when it opens a room: as in the last game.
-  endless(): boolean;
-  // Whether the host proposes the whole festival when it opens a room: as in the last game.
-  festival(): boolean;
   readonly classIds: readonly string[];
-  // Milliseconds, injectable for the watchdog tests.
-  now?(): number;
-  // The class picked on the title.
   classId(): string;
-  // The track of a new game, drawn by the host.
   trackId(): string;
   version(): string;
   onMatch(match: OnlineMatch): void;
-  // A game that cannot go on: the app shows the notice and stops stepping.
   onInterruption(interruption: Interruption): void;
-  // A player who left a game that goes on without them.
   onGuestLeft(playerId: PlayerId): void;
 }
 
 export interface Online {
   readonly active: boolean;
   readonly role: Role | null;
-  // Players of the current match, 0 outside one.
+  // 0 outside a match.
   readonly players: number;
-  // Frames received from the host and not played yet.
   readonly pending: number;
   readonly roundTripMs: number | null;
   readonly connectMs: number | null;
-  // The entry of the online lobby: create a room or join one.
   open(): void;
   createRoom(): void;
   joinRoom(code: string): void;
   setSeatName(name: string): void;
   setSeatClass(classId: string): void;
-  // Host only: the scene of the next set, sent to the guests.
+  // Host only.
   setStage(setId: string): void;
-  // Host only: whether the next game is endless or the whole festival, sent to the guests.
+  // Host only.
   setNight(endless: boolean, festival: boolean): void;
   launch(): void;
-  // The end screen shows: a guest tells the host its game is over.
   matchEnded(): void;
-  // Host only, from the end screen: the same players, a new set.
+  // Host only, from the end screen.
   relaunch(): void;
-  // Closes everything, telling the other players.
   leave(): void;
 }
 
-const ROUND_TRIP_REFRESH_MS = 2000;
 // The host sends a frame every tick: a guest that hears nothing for this long has lost it.
-export const HOST_SILENCE_MS = 8000;
-const WATCH_MS = 1000;
-
-export interface SilenceWatchdog {
-  heard(): void;
-  expired(): boolean;
-}
-
-export function createSilenceWatchdog(now: () => number, timeoutMs: number): SilenceWatchdog {
-  let last = now();
-  return {
-    heard() {
-      last = now();
-    },
-    expired() {
-      return now() - last > timeoutMs;
-    },
-  };
-}
-const MIN_PLAYERS_TO_LAUNCH = 2;
+const HOST_SILENCE_MS = 8000;
 
 type Phase = 'idle' | 'lobby' | 'playing' | 'ended';
 
-function refusalText(reason: RefusalReason): string {
-  switch (reason) {
-    case 'version':
-      return t('Recharge la page');
-    case 'full':
-      return t('Salon plein');
-    case 'started':
-      return t('La partie a déjà commencé');
-  }
+function randomSeed(): number {
+  return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
 }
 
-export function connectionText(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  if (message.includes('networks cannot reach each other')) {
-    return t('Le salon existe, mais vos réseaux n’arrivent pas à se joindre');
-  }
-  if (message.includes('no room with the code')) {
-    return t('Aucun salon ne porte ce code');
-  }
-  if (message.includes('already taken')) {
-    return t('Ce code est déjà pris, réessaie');
-  }
-  if (message.includes('did not answer') || message.includes('no answer from')) {
-    return t('Pas de réponse : réessaie, ou vérifie le code');
-  }
-  return t('Connexion impossible ({message})', { message });
+export function presentSeats(
+  seats: readonly Seat[],
+  localPeer: PeerId,
+  departed: ReadonlySet<PeerId>,
+): Seat[] {
+  return seats.filter((seat) => seat.peer === localPeer || !departed.has(seat.peer ?? ''));
 }
 
 export function createOnline(env: OnlineEnv): Online {
@@ -157,41 +93,36 @@ export function createOnline(env: OnlineEnv): Online {
   let generation = 0;
   let lobbyShown = false;
   let players = 0;
-  let roundTripMs: number | null = null;
   let connectMs: number | null = null;
-  let refresh: ReturnType<typeof setInterval> | undefined;
-  let watch: ReturnType<typeof setInterval> | undefined;
-  const silence = createSilenceWatchdog(() => env.now?.() ?? performance.now(), HOST_SILENCE_MS);
+  const roundTrip = createRoundTripProbe(() => transport?.roundTripMs());
+  const hostWatch = createHostWatch({
+    now: () => performance.now(),
+    timeoutMs: HOST_SILENCE_MS,
+    watching: () => phase === 'playing',
+    silent: hostWentSilent,
+  });
   const departed = new Set<PeerId>();
-
-  function link(): string | null {
-    return code === null
-      ? null
-      : `${shareBase(window.location.origin, window.location.pathname)}${joinHash(code)}`;
-  }
+  const lockstepHooks: LockstepHooks = {
+    onDesync(tick) {
+      if (phase === 'playing') {
+        interrupt({ notice: 'desync', details: `Tick ${String(tick)}`, desyncTick: tick });
+      }
+    },
+    onPeerLeft(playerId) {
+      if (phase === 'playing') {
+        env.onGuestLeft(playerId);
+      }
+    },
+    onHostLeft() {
+      interrupt({ notice: 'hostLeft', details: '' });
+    },
+    onFellBehind() {
+      interrupt({ notice: 'connectionLost', details: t('Ton onglet a pris trop de retard.') });
+    },
+  };
 
   function model(): LobbyModel {
-    const seats = room?.seats ?? [];
-    return {
-      mode: 'online',
-      role: role ?? 'host',
-      code,
-      link: link(),
-      seats: seats.map((seat) => ({
-        playerId: seat.playerId,
-        name: seat.name,
-        classId: seat.classId,
-        device: null,
-        remote: seat.peer !== transport?.id,
-        host: seat.playerId === 0,
-      })),
-      canLaunch: role === 'host' && seats.length >= MIN_PLAYERS_TO_LAUNCH,
-      error,
-      stages: env.stages,
-      stageId: room?.setId ?? env.stageId(),
-      endless: room?.endless ?? env.endless(),
-      festival: room?.festival ?? env.festival(),
-    };
+    return lobbyModel({ room, role, code, localPeer: transport?.id, error }, env, window.location);
   }
 
   function showLobby(): void {
@@ -206,10 +137,7 @@ export function createOnline(env: OnlineEnv): Online {
   function teardown(): void {
     generation += 1;
     busy = false;
-    clearInterval(refresh);
-    refresh = undefined;
-    clearInterval(watch);
-    watch = undefined;
+    hostWatch.stop();
     source?.close();
     source = null;
     room?.dispose();
@@ -221,12 +149,11 @@ export function createOnline(env: OnlineEnv): Online {
     phase = 'idle';
     interrupted = false;
     players = 0;
-    roundTripMs = null;
+    roundTrip.stop();
     connectMs = null;
     departed.clear();
   }
 
-  // Back to the entry of the lobby, with what went wrong.
   function failLobby(text: string): void {
     teardown();
     error = text;
@@ -240,6 +167,11 @@ export function createOnline(env: OnlineEnv): Online {
     interrupted = true;
     phase = 'ended';
     env.onInterruption(interruption);
+  }
+
+  function hostWentSilent(): void {
+    source?.close();
+    interrupt({ notice: 'connectionLost', details: hostSilentText(HOST_SILENCE_MS / 1000) });
   }
 
   function launched(
@@ -261,47 +193,14 @@ export function createOnline(env: OnlineEnv): Online {
     if (transport === null) {
       throw new Error('No transport to host a match');
     }
-    return createHostSource(transport, seats, [0], {
-      onDesync(tick) {
-        if (phase === 'playing') {
-          interrupt({ notice: 'desync', details: `Tick ${String(tick)}`, desyncTick: tick });
-        }
-      },
-      onPeerLeft(playerId) {
-        if (phase === 'playing') {
-          env.onGuestLeft(playerId);
-        }
-      },
-    });
+    return createHostSource(transport, seats, [0], lockstepHooks);
   }
 
   function guestSource(localPlayer: PlayerId): LockstepSource {
     if (transport === null || code === null) {
       throw new Error('No transport to join a match');
     }
-    return createGuestSource(transport, hostPeerId(code), [localPlayer], {
-      onDesync(tick) {
-        if (phase === 'playing') {
-          interrupt({ notice: 'desync', details: `Tick ${String(tick)}`, desyncTick: tick });
-        }
-      },
-      onHostLeft() {
-        interrupt({ notice: 'hostLeft', details: '' });
-      },
-      onFellBehind() {
-        interrupt({ notice: 'connectionLost', details: t('Ton onglet a pris trop de retard.') });
-      },
-    });
-  }
-
-  function startRoundTripProbe(): void {
-    clearInterval(refresh);
-    const measure = (): void => {
-      void transport?.roundTripMs().then((value) => {
-        roundTripMs = value;
-      });
-    };
-    refresh = setInterval(measure, ROUND_TRIP_REFRESH_MS);
+    return createGuestSource(transport, hostPeerId(code), [localPlayer], lockstepHooks);
   }
 
   function handleStart(start: StartMessage): void {
@@ -317,25 +216,65 @@ export function createOnline(env: OnlineEnv): Online {
       }
       launched(start, guestSource(localPlayer), localPlayer);
     }
-    startRoundTripProbe();
+    roundTrip.start();
     if (role === 'guest') {
-      silence.heard();
-      clearInterval(watch);
-      watch = setInterval(() => {
-        if (phase === 'playing' && silence.expired()) {
-          source?.close();
-          interrupt({
-            notice: 'connectionLost',
-            details: tn(
-              HOST_SILENCE_MS / 1000,
-              'Plus aucun signe de l’hôte depuis {seconds} seconde.',
-              'Plus aucun signe de l’hôte depuis {seconds} secondes.',
-              { seconds: formatNumber(HOST_SILENCE_MS / 1000) },
-            ),
-          });
-        }
-      }, WATCH_MS);
+      hostWatch.start();
     }
+  }
+
+  function transportFailed(failure: Error): void {
+    if (phase === 'playing' || phase === 'ended') {
+      // The broker only matters to those who have yet to join: a game goes on without it.
+      if (failure.message.startsWith('PeerJS broker')) {
+        console.warn(failure.message);
+      } else {
+        interrupt({ notice: 'connectionLost', details: failure.message });
+      }
+    } else {
+      failLobby(connectionText(failure));
+    }
+  }
+
+  function peerLeft(peer: PeerId, as: Role, roomCode: string): void {
+    departed.add(peer);
+    if (as === 'guest' && peer === hostPeerId(roomCode)) {
+      if (phase === 'lobby') {
+        failLobby(t('L’hôte a fermé le salon'));
+      } else {
+        interrupt({ notice: 'hostLeft', details: '' });
+      }
+    }
+  }
+
+  function enterRoom(opened: PeerTransport, as: Role, roomCode: string): void {
+    transport = opened;
+    role = as;
+    code = roomCode;
+    phase = 'lobby';
+    const joined = createRoom(opened, as, {
+      version: env.version(),
+      name: '',
+      classId: env.classId(),
+      classIds: env.classIds,
+      setId: env.stageId(),
+      endless: env.endless(),
+      festival: env.festival(),
+    });
+    room = joined;
+    joined.onChange(showLobby);
+    joined.onStart(handleStart);
+    joined.onRefused((reason) => {
+      failLobby(refusalText(reason));
+    });
+    opened.onMessage(() => {
+      hostWatch.heard();
+    });
+    opened.onPeer((peer, change) => {
+      if (change === 'left') {
+        peerLeft(peer, as, roomCode);
+      }
+    });
+    showLobby();
   }
 
   async function connect(as: Role, roomCode: string): Promise<void> {
@@ -352,18 +291,8 @@ export function createOnline(env: OnlineEnv): Online {
         role: as,
         code: roomCode,
         onError(failure) {
-          if (generation !== mine) {
-            return;
-          }
-          if (phase === 'playing' || phase === 'ended') {
-            // The broker only matters to those who have yet to join: a game goes on without it.
-            if (failure.message.startsWith('PeerJS broker')) {
-              console.warn(failure.message);
-            } else {
-              interrupt({ notice: 'connectionLost', details: failure.message });
-            }
-          } else {
-            failLobby(connectionText(failure));
+          if (generation === mine) {
+            transportFailed(failure);
           }
         },
       });
@@ -372,42 +301,7 @@ export function createOnline(env: OnlineEnv): Online {
         return;
       }
       connectMs = Math.round(performance.now() - began);
-      transport = opened;
-      role = as;
-      code = roomCode;
-      phase = 'lobby';
-      const joined = createRoom(opened, as, {
-        version: env.version(),
-        name: '',
-        classId: env.classId(),
-        classIds: env.classIds,
-        setId: env.stageId(),
-        endless: env.endless(),
-        festival: env.festival(),
-      });
-      room = joined;
-      joined.onChange(showLobby);
-      joined.onStart(handleStart);
-      joined.onRefused((reason) => {
-        failLobby(refusalText(reason));
-      });
-      opened.onMessage(() => {
-        silence.heard();
-      });
-      opened.onPeer((peer, change) => {
-        if (change !== 'left') {
-          return;
-        }
-        departed.add(peer);
-        if (as === 'guest' && peer === hostPeerId(roomCode)) {
-          if (phase === 'lobby') {
-            failLobby(t('L’hôte a fermé le salon'));
-          } else {
-            interrupt({ notice: 'hostLeft', details: '' });
-          }
-        }
-      });
-      showLobby();
+      enterRoom(opened, as, roomCode);
     } catch (failure) {
       if (generation === mine) {
         failLobby(connectionText(failure));
@@ -417,6 +311,23 @@ export function createOnline(env: OnlineEnv): Online {
         busy = false;
       }
     }
+  }
+
+  function relaunch(): void {
+    if (room === null || transport === null || role !== 'host') {
+      return;
+    }
+    source?.close();
+    const present = presentSeats(room.seats, transport.id, departed);
+    const start = startMessage(present, {
+      seed: randomSeed(),
+      setId: room.setId ?? env.stageId(),
+      trackId: env.trackId(),
+      endless: room.endless,
+      festival: room.festival,
+    });
+    sendToGuests(transport, present, start);
+    launched(start, hostSource(present), 0);
   }
 
   return {
@@ -433,7 +344,7 @@ export function createOnline(env: OnlineEnv): Online {
       return source?.pending ?? 0;
     },
     get roundTripMs() {
-      return roundTripMs;
+      return roundTrip.ms;
     },
     get connectMs() {
       return connectMs;
@@ -473,14 +384,10 @@ export function createOnline(env: OnlineEnv): Online {
       room?.setFestival(festival);
     },
     launch() {
-      if (room === null || role !== 'host' || !model().canLaunch) {
+      if (room === null || !canLaunch(role, room.seats)) {
         return;
       }
-      room.start(
-        room.setId ?? env.stageId(),
-        crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
-        env.trackId(),
-      );
+      room.start(room.setId ?? env.stageId(), randomSeed(), env.trackId());
     },
     matchEnded() {
       if (phase !== 'playing') {
@@ -492,30 +399,7 @@ export function createOnline(env: OnlineEnv): Online {
         source?.close();
       }
     },
-    relaunch() {
-      if (room === null || transport === null || role !== 'host') {
-        return;
-      }
-      source?.close();
-      const present = room.seats.filter(
-        (seat) => seat.peer === transport?.id || !departed.has(seat.peer ?? ''),
-      );
-      const start: StartMessage = {
-        type: 'start',
-        seed: crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
-        setId: room.setId ?? env.stageId(),
-        trackId: env.trackId(),
-        players: present.map(playerSlot),
-        ...(room.endless ? { endless: true } : {}),
-        ...(room.festival ? { festival: true } : {}),
-      };
-      for (const seat of present) {
-        if (seat.peer !== null && seat.peer !== transport.id) {
-          transport.send(seat.peer, start);
-        }
-      }
-      launched(start, hostSource(present), 0);
-    },
+    relaunch,
     leave() {
       teardown();
       lobbyShown = false;

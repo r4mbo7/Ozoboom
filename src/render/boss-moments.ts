@@ -1,10 +1,9 @@
+import { clamp01, frac, smoothstep } from '../shared/scalar';
 import { TICK_MS, type Tempo } from '../shared/tempo';
-import type { SimEvent, SimState } from '../sim/state';
+import type { EnemyState, PlayerState, SimEvent } from '../sim/state';
+import { easeOutCubic } from './motion';
 
-// What every boss shares, from its arrival to its farewell, in beats of the scene. Pure timing: the
-// boss family turns it into sprites.
-
-export const DIM_PEAK = 0.3;
+const DIM_PEAK = 0.3;
 const FALL_BEATS = 0.6;
 const FALL_FROM = 1.6;
 const FADE_IN_BEATS = 0.2;
@@ -17,7 +16,7 @@ const FLARE_BEATS = 1 / 6;
 const FLARE_PEAK = 0.8;
 const CALM_FLARE = { peak: 0.4, beats: 1 };
 export const FROZEN_BEATS = 1;
-export const GLAD_BEATS = 2;
+const GLAD_BEATS = 2;
 export const BURST_AT = FROZEN_BEATS + GLAD_BEATS;
 const TREMBLE = 0.04;
 const POP_BEATS = 0.5;
@@ -25,13 +24,8 @@ const POP = 0.18;
 const GLAD_HOP = 0.1;
 
 const TAU = Math.PI * 2;
-const ease = (p: number) => p * p * (3 - 2 * p);
-const easeOut = (p: number) => 1 - (1 - p) ** 3;
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-const hop = (beats: number) => Math.sin(Math.PI * (((beats % 1) + 1) % 1));
+const hop = (beats: number) => Math.sin(Math.PI * frac(beats));
 
-// The floor darkens over the bar before the drop while the boss takes shape, and lights up again
-// as it lands: at once, or over a beat in calm mode.
 export function breakDim(
   ticksToDrop: number | null,
   ticksIntoDrop: number | null,
@@ -41,7 +35,7 @@ export function breakDim(
   if (ticksToDrop !== null) {
     return ticksToDrop >= tempo.ticksPerBar
       ? 0
-      : DIM_PEAK * ease(1 - ticksToDrop / tempo.ticksPerBar);
+      : DIM_PEAK * smoothstep(1 - ticksToDrop / tempo.ticksPerBar);
   }
   if (calm && ticksIntoDrop !== null && ticksIntoDrop < tempo.ticksPerBeat) {
     return DIM_PEAK * (1 - ticksIntoDrop / tempo.ticksPerBeat);
@@ -54,26 +48,25 @@ export interface Landing {
   readonly alpha: number;
 }
 
-// It falls on the one of the drop: big and transparent, it shrinks to its size as it lands. In calm
-// mode it fades in where it stands.
 export function landing(ticksSinceSpawn: number, tempo: Tempo, calm: boolean): Landing {
   const beats = Math.max(0, ticksSinceSpawn / tempo.ticksPerBeat);
   const alpha = clamp01(beats / FADE_IN_BEATS);
   if (calm) {
     return { scale: 1, alpha };
   }
-  return { scale: 1 + (FALL_FROM - 1) * (1 - easeOut(clamp01(beats / FALL_BEATS))), alpha };
+  return { scale: 1 + (FALL_FROM - 1) * (1 - easeOutCubic(clamp01(beats / FALL_BEATS))), alpha };
 }
 
-// A boss lands on the drop: the screen shakes as for a bomb.
-export function isBossLanding(event: SimEvent, state: Pick<SimState, 'enemies'>): boolean {
+export function isBossLanding(
+  event: SimEvent,
+  state: { readonly enemies: readonly Pick<EnemyState, 'id' | 'isBoss'>[] },
+): boolean {
   return (
     event.type === 'enemySpawned' &&
     state.enemies.some((enemy) => enemy.id === event.id && enemy.isBoss)
   );
 }
 
-// One step on every beat: how high the mask is lifted, in boss radii.
 export function stepLift(now: number, tempo: Tempo, calm: boolean): number {
   return calm ? 0 : STEP_LIFT * hop((now - tempo.originTick) / tempo.ticksPerBeat);
 }
@@ -83,7 +76,6 @@ export interface Drawn<T> {
   readonly radius: number;
 }
 
-// How a chased boss was last drawn: standing still at its own size if it died before it was drawn.
 export function lastSeen<T>(
   drawn: Drawn<T> | undefined,
   still: T,
@@ -94,10 +86,13 @@ export function lastSeen<T>(
     : { texture: drawn.sprite.texture, tilt: drawn.sprite.rotation, radius: drawn.radius };
 }
 
-// A hit without a source, an aura or a beam: it comes from the player it is credited to.
+// A hit without a source, an aura or a beam, comes from the player it is credited to.
 export function towardHitter(
   hit: Extract<SimEvent, { type: 'enemyHit' }>,
-  state: Pick<SimState, 'tick' | 'players'>,
+  state: {
+    readonly tick: number;
+    readonly players: readonly Pick<PlayerState, 'id' | 'x' | 'y'>[];
+  },
 ): number {
   const hitter = state.players.find((player) => player.id === hit.by);
   return hitter === undefined
@@ -105,19 +100,15 @@ export function towardHitter(
     : Math.atan2(hitter.y - hit.y, hitter.x - hit.x);
 }
 
-// A boss cracks at two thirds of its life, then at one third.
 export function bossCrackStage(hp: number, maxHp: number): 0 | 1 | 2 {
   return hp * 3 < maxHp ? 2 : hp * 3 < maxHp * 2 ? 1 : 0;
 }
 
-// The hits a boss takes: each squashes it a little more, and whitens its rim for an instant. Calm
-// mode does not squash, and its rim whitens softly and stays white while the hits go on.
 export class Impact {
   private squash = 0;
   private squashAt = Number.NEGATIVE_INFINITY;
   private flareAt = Number.NEGATIVE_INFINITY;
 
-  // The rim whitens at most once a beat, however fast the hits come.
   hit(now: number, tempo: Tempo): void {
     this.squash = Math.min(SQUASH_MAX, this.squashAmount(now, tempo, false) + SQUASH_KICK);
     this.squashAt = now;
@@ -126,7 +117,6 @@ export class Impact {
     }
   }
 
-  // Width grows by this share, height shrinks by 0.7 of it.
   squashAmount(now: number, tempo: Tempo, calm: boolean): number {
     const beats = (now - this.squashAt) / tempo.ticksPerBeat;
     return calm || beats < 0 ? 0 : this.squash * Math.exp(-SQUASH_DECAY * beats);
@@ -144,14 +134,10 @@ export class Impact {
 }
 
 export interface FarewellPose {
-  // Frozen with its cracks lit, then glad in the color of whoever chased it, then gone in colors.
   readonly phase: 'frozen' | 'glad' | 'gone';
-  // Gold light through the cracks, from 0 to 1.
   readonly light: number;
-  // Sideways shake, in boss radii.
   readonly tremble: number;
   readonly scale: number;
-  // How high it hops, in boss radii.
   readonly lift: number;
 }
 
@@ -179,8 +165,7 @@ export function farewellPose(beats: number, calm: boolean): FarewellPose {
   return { phase: 'gone', light: 0, tremble: 0, scale: 1, lift: 0 };
 }
 
-// The ticks of what is on screen. They follow the sim while it runs, and go on in real time while it
-// waits for a choice or has ended, so that a boss's farewell plays out under a frozen game.
+// Goes on in real time while the sim waits or has ended: a farewell plays under a frozen game.
 export class ShowClock {
   private offset = 0;
   private frozenAt = Number.NaN;

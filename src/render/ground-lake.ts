@@ -10,8 +10,6 @@ import { createWater } from './ground-water';
 const TAU = Math.PI * 2;
 const WHITE = 0xffffff;
 
-// The ground of the main stage: a lawn by a lake, its trees, and the dance floor's rings and petals. Drawn white
-// once per arena and seed, tinted with the hour: only the reflections move.
 export function createLake(ctx: RenderContext, parent: Container) {
   const root = new Container();
   parent.addChild(root);

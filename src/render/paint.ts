@@ -1,4 +1,5 @@
 import { CanvasSource, Rectangle, Texture, type TextureSource } from 'pixi.js';
+import { keysOf, recordOf } from '../shared/records';
 
 export interface Shape {
   readonly texture: Texture;
@@ -7,7 +8,7 @@ export interface Shape {
 
 export const TAU = Math.PI * 2;
 export const WHITE = '#ffffff';
-// Textures are white and grays: the palette of the hour reaches them by tint, so a gray is a darker shade of it.
+// Textures are white and grays: the palette of the hour reaches them by tint.
 export const SHADE = '#808080';
 export const SHADE_SOFT = '#b4b4b4';
 export const SHADE_DEEP = '#404040';
@@ -15,41 +16,28 @@ export const SHADE_DEEP = '#404040';
 export type Ctx = CanvasRenderingContext2D;
 export type Draw = (ctx: Ctx) => void;
 
-// Width and height of the cell, the radius the shape stands for, and how to draw it around (0, 0).
 export type Piece = readonly [width: number, height: number, radius: number, draw: Draw];
-
-let density = 1;
-
-// What `make` paints, `times` finer at the same size on screen: for shapes shown larger than in a game.
-export function paintedFiner<T>(times: number, make: () => T): T {
-  const before = density;
-  density = times;
-  try {
-    return make();
-  } finally {
-    density = before;
-  }
-}
 
 export interface Later<T> {
   get(): T;
-  // What was painted, if anything was asked for yet.
   readonly painted: T | undefined;
 }
 
-// What `make` paints, at the density of the moment it is declared, the first time it is asked for.
 export function paintedLater<T>(make: () => T): Later<T> {
-  const times = density;
   let made: T | undefined;
   return {
-    get: () => (made ??= paintedFiner(times, make)),
+    get: () => (made ??= make()),
     get painted() {
       return made;
     },
   };
 }
 
-function canvas2d(width: number, height: number): { canvas: HTMLCanvasElement; ctx: Ctx } {
+function canvas2d(
+  width: number,
+  height: number,
+  density: number,
+): { canvas: HTMLCanvasElement; ctx: Ctx } {
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(width * density);
   canvas.height = Math.ceil(height * density);
@@ -61,19 +49,25 @@ function canvas2d(width: number, height: number): { canvas: HTMLCanvasElement; c
   return { canvas, ctx };
 }
 
-function sourceOf(canvas: HTMLCanvasElement): CanvasSource {
+function sourceOf(canvas: HTMLCanvasElement, density: number): CanvasSource {
   return new CanvasSource({ resource: canvas, resolution: density, autoGenerateMipmaps: true });
 }
 
-export function paint(width: number, height: number, radius: number, draw: Draw): Shape {
-  const { canvas, ctx } = canvas2d(width, height);
+export function paint(
+  width: number,
+  height: number,
+  radius: number,
+  draw: Draw,
+  density = 1,
+): Shape {
+  const { canvas, ctx } = canvas2d(width, height, density);
   ctx.translate(width / 2, height / 2);
   draw(ctx);
-  return { texture: new Texture({ source: sourceOf(canvas) }), radius };
+  return { texture: new Texture({ source: sourceOf(canvas, density) }), radius };
 }
 
 const SHEET_WIDTH = 1024;
-// Room between the cells, so that the smaller mipmap levels do not bleed one into the other.
+// So that the smaller mipmap levels do not bleed one into the other.
 const SHEET_GAP = 4;
 
 export interface Sheet<K extends string> {
@@ -81,10 +75,12 @@ export interface Sheet<K extends string> {
   readonly source: TextureSource;
 }
 
-// Many shapes painted on one canvas: drawn together, they share a texture, so that the batch of
-// sprites holds whatever number of them, and the GPU binds one texture instead of many.
-export function paintSheet<K extends string>(pieces: Readonly<Record<K, Piece>>): Sheet<K> {
-  const names = (Object.keys(pieces) as K[]).sort((a, b) => pieces[b][1] - pieces[a][1]);
+// One canvas for many shapes: the GPU binds one texture, and one batch holds any number of sprites.
+export function paintSheet<K extends string>(
+  pieces: Readonly<Record<K, Piece>>,
+  density = 1,
+): Sheet<K> {
+  const names = keysOf(pieces).sort((a, b) => pieces[b][1] - pieces[a][1]);
   const places = new Map<K, readonly [number, number]>();
   let x = SHEET_GAP;
   let y = SHEET_GAP;
@@ -100,7 +96,7 @@ export function paintSheet<K extends string>(pieces: Readonly<Record<K, Piece>>)
     x += width + SHEET_GAP;
     row = Math.max(row, height);
   }
-  const { canvas, ctx } = canvas2d(SHEET_WIDTH, y + row + SHEET_GAP);
+  const { canvas, ctx } = canvas2d(SHEET_WIDTH, y + row + SHEET_GAP, density);
   for (const name of names) {
     const [width, height, , draw] = pieces[name];
     const [left, top] = places.get(name) ?? [0, 0];
@@ -112,16 +108,15 @@ export function paintSheet<K extends string>(pieces: Readonly<Record<K, Piece>>)
     draw(ctx);
     ctx.restore();
   }
-  const source = sourceOf(canvas);
-  const shapes = {} as Record<K, Shape>;
-  for (const name of names) {
+  const source = sourceOf(canvas, density);
+  const shapes = recordOf(names, (name): Shape => {
     const [width, height, radius] = pieces[name];
     const [left, top] = places.get(name) ?? [0, 0];
-    shapes[name] = {
+    return {
       texture: new Texture({ source, frame: new Rectangle(left, top, width, height) }),
       radius,
     };
-  }
+  });
   return { shapes, source };
 }
 
@@ -156,7 +151,6 @@ export function glow(ctx: CanvasRenderingContext2D, color: string, blur: number)
   ctx.shadowBlur = blur;
 }
 
-// Two thin parallel lines along the current path: a wide stroke, then its middle knocked out.
 export function doubleStroke(ctx: Ctx, outer: number, gap: number) {
   ctx.lineWidth = outer;
   ctx.stroke();

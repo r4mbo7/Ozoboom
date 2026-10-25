@@ -8,13 +8,12 @@ import { LOCK } from './icons';
 export const CLASS_TEASERS = FULL_TEASERS.filter((teaser) => teaser.kind === 'class');
 export const STAGE_TEASERS = FULL_TEASERS.filter((teaser) => teaser.kind === 'stage');
 
-// The choice of the stage shows when there is more than one to see, locked ones included.
+// Locked stages count: the choice shows when there is more than one to see.
 export function showsStageChoice(stages: number): boolean {
   return stages + STAGE_TEASERS.length > 1;
 }
 
-// A card of the full game in the demo's pickers: the arrows pass it by, a click tells where to hear
-// more about it.
+// The arrows pass a teaser by; a click tells where to hear more about it.
 function teaser(className: string, entry: TeaserDefinition): HTMLButtonElement {
   const node = el('button', `${className} ui-teaser`);
   node.type = 'button';

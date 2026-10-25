@@ -18,7 +18,6 @@ interface Firefly {
   readonly rate: readonly [number, number, number];
 }
 
-// Slow additive sparks in `or`, out by day. The calm mode keeps fewer of them.
 export function createFireflies(ctx: RenderContext, parent: Container) {
   let flies: Firefly[] = [];
 

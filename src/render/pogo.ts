@@ -1,4 +1,5 @@
 import { Graphics } from 'pixi.js';
+import { frac } from '../shared/scalar';
 import { BEATS_PER_BAR } from '../shared/tempo';
 import type { EntityId, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
@@ -7,15 +8,10 @@ import type { Frame } from './frame';
 
 const KIND = 'pogo';
 const RING_SIZE = 8;
-// The arms between two members: lifted off their shoulders, sagging in the middle. In pixels.
 const ARM = { width: 3.4, lift: 4, sag: 8 };
-// The ring hops on every beat, higher on the one, in member radii.
 const HOP = { one: 0.5, beat: 0.3 };
-// Landing, each member raises two puffs of dust over the first share of the beat.
 const DUST = { share: 0.3, color: 0xc9c3dc, alpha: 0.4, minRadius: 22 };
-// An arm torn by a taunt flies apart in two stubs over this many beats.
 const BREAK_BEATS = 1.2;
-// A member holds arms only once in place: within this many orbits of the boss.
 const IN_PLACE = 1.6;
 
 interface Place {
@@ -30,10 +26,7 @@ interface Break {
   readonly y: number;
 }
 
-const frac = (value: number) => value - Math.floor(value);
-
-// How high the ring hops: nothing in calm mode.
-export function ringHop(beats: number, calm: boolean): number {
+function ringHop(beats: number, calm: boolean): number {
   if (calm) {
     return 0;
   }
@@ -41,8 +34,6 @@ export function ringHop(beats: number, calm: boolean): number {
   return Math.sin(Math.PI * frac(beats)) * (one ? HOP.one : HOP.beat);
 }
 
-// The Pogo, beyond his mask: his ring of bad vibes hopping on every beat, the arms they hold each
-// other by, the dust they raise landing, and the arms that break when a taunt tears members away.
 export function createPogo(
   ctx: RenderContext,
   poseOf: (id: EntityId) => EnemyPose | undefined,
@@ -70,7 +61,6 @@ export function createPogo(
       .stroke({ width: ARM.width, color: rim, cap: 'round', join: 'round' });
   }
 
-  // The arms a leaver held last image break at their middle.
   function tear(last: Map<number, EntityId>, ring: Map<number, Place>, now: number): void {
     for (const [slot, id] of last) {
       const gone = poseOf(id);

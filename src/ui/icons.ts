@@ -23,7 +23,7 @@ export const PHONE =
 export const HEART =
   '<path d="M12 20.5s-8.2-4.7-8.2-10.6A4.7 4.7 0 0 1 12 7a4.7 4.7 0 0 1 8.2 2.9c0 5.9-8.2 10.6-8.2 10.6z" fill="currentColor"/>';
 
-// A pearl thrown forward: the dash, beside the Charge's lines and arrow.
+// A pearl thrown forward, unlike the lines and arrow of the Charge.
 export const DASH =
   '<circle cx="15.5" cy="12" r="5" fill="currentColor"/><path d="M2 8.5h6M1 12h8M2 15.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
 
@@ -39,7 +39,6 @@ export const SUN =
 export const INFINITY =
   '<path d="M6.5 8.5c-2.2 0-4 1.6-4 3.5s1.8 3.5 4 3.5c4 0 7-7 11-7 2.2 0 4 1.6 4 3.5s-1.8 3.5-4 3.5c-4 0-7-7-11-7z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>';
 
-// The nights a game can play: one stage to its sunrise, and the whole festival, from stage to stage.
 export const SUNRISE =
   '<path d="M3 17.5h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
   '<path d="M6.5 17.5a5.5 5.5 0 0 1 11 0" fill="none" stroke="currentColor" stroke-width="2"/>' +
@@ -54,11 +53,9 @@ export const STAGES =
 export const MOON =
   '<path d="M19.5 14.6A8.2 8.2 0 0 1 9.4 4.5a8.2 8.2 0 1 0 10.1 10.1z" fill="currentColor"/>';
 
-// A chosen card clicked again goes on: the play mark over it.
 export const PLAY =
   '<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/>';
 
-// The two ways to play together: one screen with pads, or online.
 export const PAD =
   '<path d="M7 7.5h10a5 5 0 0 1 4.8 6.4l-1 3.3a2.3 2.3 0 0 1-3.9.9L14.6 15.5H9.4l-2.3 2.6a2.3 2.3 0 0 1-3.9-.9l-1-3.3A5 5 0 0 1 7 7.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
   '<path d="M7.5 10v3.5M5.75 11.75h3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
@@ -67,6 +64,11 @@ export const PAD =
 export const GLOBE =
   '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>' +
   '<path d="M3 12h18M12 3c3.2 3.4 3.2 14.6 0 18M12 3c-3.2 3.4-3.2 14.6 0 18" fill="none" stroke="currentColor" stroke-width="1.8"/>';
+
+export const GEAR =
+  '<circle cx="12" cy="12" r="5.6" fill="none" stroke="currentColor" stroke-width="2"/>' +
+  '<circle cx="12" cy="12" r="2" fill="currentColor"/>' +
+  '<path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>';
 
 export const SPEECH =
   '<path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
@@ -193,7 +195,7 @@ export function upgradeIcon(id: string, family: UpgradeFamily): string {
   return UPGRADE_GLYPHS[id] ?? familyIcon(family);
 }
 
-// A card's pictogram in a medallion of sacred geometry, six circles in a flower: drawn in a box of 84.
+// Six circles in a flower, drawn in a box of 84.
 export function medallion(glyph: string): string {
   const petals = Array.from({ length: 6 }, (_, petal) => {
     const angle = (petal * Math.PI) / 3;

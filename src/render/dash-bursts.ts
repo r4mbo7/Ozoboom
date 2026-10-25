@@ -18,7 +18,6 @@ export interface DashBursts {
   onEvent(event: DashEvent, state: SimState, frame: Frame): void;
 }
 
-// `extentOf`: how far the drawn body of a player reaches from its center, in world units.
 export function createDashBursts(
   ctx: RenderContext,
   spawn: Spawn,
@@ -34,8 +33,6 @@ export function createDashBursts(
     return state.players.find((candidate) => candidate.id === id);
   }
 
-  // Dust where the dash leaves, then three echoes of the body along its way, each as it passes;
-  // gold sparks around the start of a dash on the beat.
   function dashed(
     event: Extract<DashEvent, { type: 'dashed' }>,
     state: SimState,
@@ -68,7 +65,7 @@ export function createDashBursts(
       spawn(frame, {
         shape: textures.players.contour,
         now: frame.now,
-        delay: (ticks * echo) / ECHOES,
+        delayTicks: (ticks * echo) / ECHOES,
         duration: ECHO_TICKS,
         x: player.prevX + dx * along,
         y: player.prevY + dy * along,
@@ -100,7 +97,6 @@ export function createDashBursts(
     }
   }
 
-  // A small ring opens on the notch that came back.
   function back(id: PlayerId, state: SimState, frame: Frame): void {
     const player = playerOf(state, id);
     if (player === undefined || ctx.dash === null || frame.calm) {

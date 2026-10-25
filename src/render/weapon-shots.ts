@@ -7,7 +7,6 @@ import { byId } from './util';
 
 const SWING_TICKS = TICKS_PER_BEAT * 0.6;
 
-// What a weapon does the instant it fires: the arc of the baton, the rings of the hoops, the ribbon. The shots that stay in the state are drawn from it instead.
 export function drawFiring(
   ctx: RenderContext,
   kit: WeaponKit,

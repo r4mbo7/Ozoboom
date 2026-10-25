@@ -10,18 +10,15 @@ import { TICKS_PER_BAR } from '../shared/tempo';
 import { quantizeCommand } from './wire';
 import type { CommandSource, PeerId, Seat, Transport } from './types';
 
-// The action a host sends for a guest who left, on each frame.
 const LEAVE: PlayerAction = { type: 'leave' };
 
 export const GUEST_BUFFER_TICKS = 2;
-export const GUEST_CATCH_UP_TICKS = 6;
 // A tab paused for longer than this (under five minutes) loses its place: onFellBehind.
 export const GUEST_QUEUE_CAPACITY = 8192;
 const HOST_COMMAND_WINDOW = 64;
 const HASH_RING_SIZE = 4;
 
-// The fingerprint of a bar is that of the step that reaches it. A choice of card holds the tick
-// there for several steps whose states differ: hashing them too would compare different steps.
+// A card choice holds the tick for several steps whose states differ: only the step that reaches the bar is hashed.
 function reachesBar(state: SimState, lastTick: number): boolean {
   return state.tick > lastTick && state.tick % TICKS_PER_BAR === 0;
 }
@@ -34,7 +31,7 @@ export interface LockstepHooks {
 }
 
 export interface LockstepSource extends CommandSource {
-  // Entries kept right now. Bounded by constants, whatever the length of the game.
+  // Bounded by constants, whatever the length of the game.
   readonly retained: number;
 }
 

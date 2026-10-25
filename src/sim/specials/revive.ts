@@ -1,7 +1,6 @@
 import type { SpecialModule } from './types';
 
-// Called by `specials` every tick while alive (a no-op there) and by `deaths` once an enemy's hp
-// reaches 0, which decides whether it goes down instead of dying or stands back up.
+// A no-op from `specials`; `deaths` calls it at 0 hp to go down instead of dying, or stand back up.
 export const revive: SpecialModule = (ctx, enemy, effect) => {
   if (effect.kind !== 'revive' || enemy.hp > 0) {
     return;

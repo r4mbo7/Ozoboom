@@ -1,6 +1,7 @@
 import { Container, type Sprite } from 'pixi.js';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { Frame } from './frame';
+import { easeOutQuad } from './motion';
 import type { NameTextures } from './textures-names';
 import { NAME_TEXTURE_SCALE } from './textures-names';
 import type { Shape } from './paint';
@@ -9,7 +10,7 @@ import { add, setTint } from './util';
 const NUMBER_TICKS = 1.5 * TICKS_PER_BEAT;
 const POP_TICKS = TICKS_PER_BEAT / 4;
 const POP = 0.4;
-// Screen pixels, like the names: a number keeps its size whatever the camera frames.
+// In screen pixels, like the names: a number keeps its size whatever the camera frames.
 const RISE = 26;
 const GAP = 6;
 const SIZE = 1.15;
@@ -25,7 +26,6 @@ interface HitNumber {
   tint: number;
 }
 
-// The damage numbers that rise above the bad vibes and fade, the oldest reused first.
 export class HitNumbers {
   private readonly items: HitNumber[];
   private readonly names: NameTextures;
@@ -42,7 +42,6 @@ export class HitNumbers {
     });
   }
 
-  // `reach` is how far the bad vibe extends above (x, y).
   spawn(amount: number, x: number, y: number, reach: number, tint: number, now: number): void {
     const item = this.items[this.next];
     if (item === undefined) {
@@ -68,7 +67,7 @@ export class HitNumbers {
       if (!item.live) {
         continue;
       }
-      const eased = 1 - (1 - progress) * (1 - progress);
+      const eased = easeOutQuad(progress);
       const pop = age < POP_TICKS ? POP * (1 - age / POP_TICKS) : 0;
       const size = (SIZE * (1 + pop)) / (NAME_TEXTURE_SCALE * camera.scale);
       const y = item.y - item.reach - (GAP + RISE * eased) / camera.scale;

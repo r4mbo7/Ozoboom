@@ -1,24 +1,21 @@
 import type { Container, Sprite } from 'pixi.js';
+import { clamp } from '../shared/scalar';
 import { type Look, type Spawn, angleTo, fade, spring } from './player-look';
 import type { Textures } from './textures';
-import { BAG_BACK, MAT_BACK, MUG_HOOK, REFERENCE } from './textures-looks';
+import { BAG_BACK, MAT_BACK, MUG_HOOK, REFERENCE_RADIUS } from './textures-looks';
 import { add, hide, placeOutline, setTint } from './util';
 
-// Springs in reference pixels and ticks: the bag lags and bounces, the mug swings, the bag squashes.
 const BAG = { stiffness: 0.42, damping: 0.5, lag: 0.9, reach: 7, bounce: 1.6 };
 const MUG = { stiffness: 0.08, damping: 0.06, step: 0.25, turn: 0.6, hit: 0.5 };
 const SQUISH = { stiffness: 0.6, damping: 0.35, hit: 0.12, most: 0.2 };
 const STEP_TICKS = 1.5;
 const STEP_MOVING = 0.35;
 
-// Slots of the spring state.
 const BAG_X = 0;
 const BAG_Y = 2;
 const MUG_ANGLE = 4;
 const SQUISH_AT = 6;
 
-// Le Nounours: a festival-goer with a huge camping bag on his back. A heavy step on every beat
-// while he walks, the bag following on a spring, the mug swinging on its hook.
 export function createBagLook(bodies: Container, textures: Textures, spawn: Spawn): Look {
   const t = textures.players;
   const parts = t.bag;
@@ -39,7 +36,6 @@ export function createBagLook(bodies: Container, textures: Textures, spawn: Spaw
   let lastHitAt = Number.NaN;
   let stepAt = Number.NEGATIVE_INFINITY;
   let foot = 1;
-  // The frame of the player for this image: where a point of its reference drawing lands.
   let originX = 0;
   let originY = 0;
   let cos = 1;
@@ -123,15 +119,15 @@ export function createBagLook(bodies: Container, textures: Textures, spawn: Spaw
 
       const along = ((player.x - player.prevX) * cos + (player.y - player.prevY) * sin) / scale;
       const across = (-(player.x - player.prevX) * sin + (player.y - player.prevY) * cos) / scale;
-      const lagX = Math.max(-BAG.reach, Math.min(BAG.reach, -along * BAG.lag));
-      const lagY = Math.max(-BAG.reach, Math.min(BAG.reach, -across * BAG.lag));
+      const lagX = clamp(-along * BAG.lag, -BAG.reach, BAG.reach);
+      const lagY = clamp(-across * BAG.lag, -BAG.reach, BAG.reach);
       spring(springs, BAG_X, lagX, BAG.stiffness, BAG.damping, dt);
       spring(springs, BAG_Y, lagY, BAG.stiffness, BAG.damping, dt);
       spring(springs, MUG_ANGLE, 0, MUG.stiffness, MUG.damping, dt);
       spring(springs, SQUISH_AT, 0, SQUISH.stiffness, SQUISH.damping, dt);
       const bagX = springs[BAG_X] ?? 0;
       const bagY = springs[BAG_Y] ?? 0;
-      const squish = Math.max(-SQUISH.most, Math.min(SQUISH.most, springs[SQUISH_AT] ?? 0));
+      const squish = clamp(springs[SQUISH_AT] ?? 0, -SQUISH.most, SQUISH.most);
       const squash = input.moving * fade(frame.now - stepAt, STEP_TICKS);
       const wide = scale * (1 + 0.06 * squash);
       const short = scale * (1 - 0.05 * squash);
@@ -142,7 +138,7 @@ export function createBagLook(bodies: Container, textures: Textures, spawn: Spaw
       put(pack, bagX - BAG_BACK, bagY, 0);
       pack.scale.set(scale * (1 - squish), scale * (1 + squish * 0.6));
       setTint(pack, color);
-      placeOutline(packOutline, pack, parts.pack.texture, REFERENCE, frame);
+      placeOutline(packOutline, pack, parts.pack.texture, REFERENCE_RADIUS, frame);
       put(mat, bagX - MAT_BACK, bagY, 0);
       mat.scale.set(scale);
       setTint(mat, frame.palette.turquoise);
@@ -153,7 +149,7 @@ export function createBagLook(bodies: Container, textures: Textures, spawn: Spaw
       put(torso, 0, 0, 0);
       torso.scale.set(short, wide);
       setTint(torso, color);
-      placeOutline(torsoOutline, torso, parts.torso.texture, REFERENCE, frame);
+      placeOutline(torsoOutline, torso, parts.torso.texture, REFERENCE_RADIUS, frame);
       put(hands, 0, 0, 0);
       hands.scale.set(short, wide);
       setTint(hands, input.teint);

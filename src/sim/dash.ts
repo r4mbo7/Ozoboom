@@ -3,12 +3,9 @@ import { ticksIntoBeat, type Tempo } from '../shared/tempo';
 import type { PlayerState } from './state';
 import { dashCharges, dashRechargeBeats } from './stats';
 
-// What the arc at the feet and the touch tile show, at a time `now` in ticks that may fall
-// between two.
 export interface DashGauge {
   charges: number;
   ready: number;
-  // How far the next spent dash is on its way back, in [0, 1]; 0 while all are in.
   fill: number;
 }
 

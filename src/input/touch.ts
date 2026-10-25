@@ -1,3 +1,4 @@
+import { distance } from '../shared/vec';
 import type { Vec2 } from '../sim/state';
 import {
   TOUCH_DRAG_THRESHOLD,
@@ -9,8 +10,6 @@ import { applyRadialDeadzone } from './gamepad';
 import type { TouchFrame } from './merge';
 import './touch.css';
 
-// What a finger lands on, from the `data-touch-control` of the element under it: the arena takes
-// the virtual stick, the HUD its trap tiles, its skill, its dash and its pause button.
 export type TouchControl = 'stick' | 'skill' | 'dash' | 'pause' | `trap:${number}`;
 
 interface Stick {
@@ -38,8 +37,7 @@ export interface TouchState {
   readonly active: boolean;
 }
 
-// `control` is null for a finger on anything else, a menu for one: it only tells that the player
-// is on a touch screen.
+// A null `control` (a menu, anything else) only tells that the player is on a touch screen.
 export type TouchEventLike =
   | {
       readonly type: 'down';
@@ -69,8 +67,11 @@ export const INITIAL_TOUCH_STATE: TouchState = {
 
 export function parseTouchControl(value: string | undefined): TouchControl | null {
   if (value === 'stick' || value === 'skill' || value === 'dash' || value === 'pause') return value;
-  const slot = trapSlot(value);
-  return slot === null ? null : (`trap:${String(slot)}` as TouchControl);
+  return value !== undefined && isTrapControl(value) ? value : null;
+}
+
+function isTrapControl(value: string): value is `trap:${number}` {
+  return trapSlot(value) !== null;
 }
 
 function trapSlot(value: string | undefined): number | null {
@@ -136,8 +137,6 @@ function slide(state: TouchState, id: number, at: Vec2, onArena: boolean): Touch
   };
 }
 
-// A tap places the trap at the player's feet, a drag where the finger leaves the arena; a drag
-// that ends back on the HUD changes nothing.
 function lift(state: TouchState, id: number, placing: boolean): TouchState {
   const skill = new Set(state.skill);
   skill.delete(id);
@@ -168,10 +167,6 @@ function follow(stick: Stick, at: Vec2): Stick {
   return { ...stick, at, origin: { x: stick.origin.x + dx * pull, y: stick.origin.y + dy * pull } };
 }
 
-function distance(a: Vec2, b: Vec2): number {
-  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-}
-
 export function takeTouchFrame(state: TouchState): { frame: TouchFrame; state: TouchState } {
   const { stick } = state;
   return {
@@ -198,8 +193,7 @@ export interface TouchAdapter {
   destroy(): void;
 }
 
-// The target is the arena: a finger that lands on it, and on nothing of the interface above it,
-// steers the virtual stick. Coordinates are relative to it, like the mouse pointer's.
+// Coordinates are relative to the target, like the mouse pointer's.
 export function attachTouch(target: HTMLElement): TouchAdapter {
   const document = target.ownerDocument;
   const view = document.defaultView;
@@ -222,15 +216,14 @@ export function attachTouch(target: HTMLElement): TouchAdapter {
     const rect = target.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   };
-  // Until the HUD knows it is on a touch screen, it lets fingers through to the arena like the
-  // mouse: its controls are also found by their box, so that they answer the first touch.
+  // Until the HUD knows it is on a touch screen it lets fingers through: its controls are also found by their box.
   const controlAt = (event: PointerEvent): TouchControl | null => {
     const element = document.elementFromPoint(event.clientX, event.clientY);
     const found = parseTouchControl(
-      element?.closest<HTMLElement>('[data-touch-control]')?.dataset.touchControl,
+      element?.closest('[data-touch-control]')?.getAttribute('data-touch-control') ?? undefined,
     );
     if (found !== 'stick') return found;
-    for (const control of document.querySelectorAll<HTMLElement>('[data-touch-control]')) {
+    for (const control of document.querySelectorAll('[data-touch-control]')) {
       const under = [...control.getClientRects()].some(
         (rect) =>
           event.clientX >= rect.left &&
@@ -238,7 +231,9 @@ export function attachTouch(target: HTMLElement): TouchAdapter {
           event.clientY >= rect.top &&
           event.clientY <= rect.bottom,
       );
-      if (control !== target && under) return parseTouchControl(control.dataset.touchControl);
+      if (control !== target && under) {
+        return parseTouchControl(control.getAttribute('data-touch-control') ?? undefined);
+      }
     }
     return found;
   };
@@ -262,8 +257,7 @@ export function attachTouch(target: HTMLElement): TouchAdapter {
     draw();
   };
 
-  // Taken from the browser, a finger on a control would also scroll, zoom, or press the mouse and
-  // fire. A finger elsewhere keeps its default: a tap on a menu still clicks it.
+  // Taken from the browser, a finger on a control would also scroll, zoom or fire; one on a menu still clicks it.
   const onDown = (event: PointerEvent) => {
     if (event.pointerType !== 'touch') return;
     const control = controlAt(event);

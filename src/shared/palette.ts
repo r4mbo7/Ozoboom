@@ -1,4 +1,7 @@
 import { FULL_TINTS } from './full';
+import { isOneOf } from './guards';
+import { keysOf } from './records';
+import { clamp01 } from './scalar';
 
 const BASE_TOKENS = [
   'sol',
@@ -27,15 +30,14 @@ export type SunPalette = (typeof SUN_PALETTES)[SunMoment];
 
 export type PaletteToken = keyof SunPalette;
 
-const FULL_TINT_IDS = Object.keys(FULL_TINTS) as FullTintId[];
+const FULL_TINT_IDS = keysOf(FULL_TINTS);
 
 export const PALETTE_TOKENS: readonly PaletteToken[] = [...BASE_TOKENS, ...FULL_TINT_IDS];
 
-// The tint of a class is the token of its id: the three classes, then the characters of the full game.
 export const CLASS_TOKENS: readonly PaletteToken[] = ['mage', 'tank', 'healer', ...FULL_TINT_IDS];
 
 export function isClassToken(id: string): id is PaletteToken {
-  return (CLASS_TOKENS as readonly string[]).includes(id);
+  return isOneOf(id, CLASS_TOKENS);
 }
 
 export interface Light {
@@ -104,13 +106,11 @@ const BASE_PALETTES: Record<SunMoment, Record<BaseToken, string>> = {
 
 export const SUN_PALETTES = withClassTints<BaseToken, FullTintId>(BASE_PALETTES, FULL_TINTS);
 
-// Each tint joins the palette of every moment under the id of its class.
 export function withClassTints<B extends string, C extends string>(
   palettes: Readonly<Record<SunMoment, Readonly<Record<B, string>>>>,
   tints: Readonly<Record<C, ClassTint>>,
 ): Record<SunMoment, Record<B | C, string>> {
-  const tinted = {} as Record<SunMoment, Record<B | C, string>>;
-  for (const moment of Object.keys(palettes) as SunMoment[]) {
+  const tinted = (moment: SunMoment): Record<B | C, string> => {
     const palette: Record<string, string> = { ...palettes[moment] };
     for (const [id, tint] of Object.entries<ClassTint>(tints)) {
       if (id in palette) {
@@ -118,9 +118,14 @@ export function withClassTints<B extends string, C extends string>(
       }
       palette[id] = tint[moment];
     }
-    tinted[moment] = palette;
-  }
-  return tinted;
+    return palette;
+  };
+  return {
+    crepuscule: tinted('crepuscule'),
+    nuit: tinted('nuit'),
+    aube: tinted('aube'),
+    jour: tinted('jour'),
+  };
 }
 
 export const NIGHT_START = 0.25;
@@ -154,14 +159,13 @@ export function spanAt(fraction: number): { from: SunMoment; to: SunMoment; mix:
   return { from, to, mix: (t - fromAt) / (toAt - fromAt) };
 }
 
-// A table of the four moments at an hour: its `#rrggbb` colors mixed channel by channel, its numbers linearly.
 export function momentAt<T extends Readonly<Record<keyof T, string | number>>>(
   table: Record<SunMoment, T>,
   fraction: number,
 ): T {
   const { from, to, mix } = spanAt(fraction);
-  const mixed: Partial<Record<keyof T, string | number>> = {};
-  for (const key of Object.keys(table[from]) as (keyof T)[]) {
+  const mixed: Record<string, string | number> = {};
+  for (const key in table[from]) {
     const a = table[from][key];
     const b = table[to][key];
     mixed[key] =
@@ -169,7 +173,7 @@ export function momentAt<T extends Readonly<Record<keyof T, string | number>>>(
         ? a * (1 - mix) + b * mix
         : mixHex(String(a), String(b), mix);
   }
-  return mixed as T;
+  return Object.assign({ ...table[from] }, mixed);
 }
 
 export function lightAt(fraction: number): Light {
@@ -198,12 +202,7 @@ function mixHex(from: string, to: string, mix: number): string {
   return `#${rgb.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
 }
 
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, value));
-}
-
-// sRGB to linear light. x^2.4 is x^2 times x^(2/5), the latter from a bisected fifth root:
-// Math.pow is not reproducible across engines, so shared does not use it.
+// x^2.4 as x^2 times a bisected fifth root of x^2: Math.pow is not reproducible across engines.
 function linearize(value: number): number {
   if (value <= 0.04045) {
     return value / 12.92;

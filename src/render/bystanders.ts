@@ -1,11 +1,12 @@
 import type { Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import type { PlayerState, SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
 import { Particles } from './effects';
 import type { Frame } from './frame';
 import { ringStep } from './help';
-import { lerp } from './motion';
+import { mixColor } from './palette';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
@@ -35,12 +36,6 @@ interface Ghost {
   y: number;
   radius: number;
   active: boolean;
-}
-
-function mix(from: number, to: number, amount: number): number {
-  const channel = (shift: number): number =>
-    Math.round(lerp((from >> shift) & 0xff, (to >> shift) & 0xff, amount)) << shift;
-  return channel(16) | channel(8) | channel(0);
 }
 
 export function createBystanders(ctx: RenderContext): Family {
@@ -126,7 +121,7 @@ export function createBystanders(ctx: RenderContext): Family {
       );
       body.alpha = progress < 0.5 ? 1 : 2 * (1 - progress);
     } else {
-      setTint(body, mix(pale, palette.badVibe, Math.min(1, progress * 3)));
+      setTint(body, mixColor(pale, palette.badVibe, Math.min(1, progress * 3)));
       body.position.set(ghost.x, ghost.y);
       body.scale.set(((ghost.radius * MASK_SCALE) / MASK_RADIUS) * (1 - 0.25 * progress));
       body.alpha = 1 - progress;

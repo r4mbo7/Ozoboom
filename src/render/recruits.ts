@@ -1,22 +1,20 @@
 import type { Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import type { SimEvent, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import { Particles } from './effects';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { add, byId, hide, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
 const TAU = Math.PI * 2;
 const LEAN = 0.3;
-// The pop of a bad vibe as it joins, over its first beat, then a swell on every beat.
 const POP = 0.25;
 const SWELL = 0.12;
 const HALO = 2.4;
 const SPARKLES = 3;
 const SPARKLE_ORBIT = 1.45;
 const SPARKLE_SIZE = 0.38;
-// The ring a bad vibe joins with grows from its edge to this many radii, in the recruiter's color.
 const RING_REACH = 3.5;
 const CALM_SLOWDOWN = 2;
 const FALLBACK_RADIUS = 12;
@@ -33,7 +31,6 @@ interface RecruitView {
 
 export type Burst = (x: number, y: number, id: number, frame: Frame) => void;
 
-// Scale of a recruit over its radius: a pop as it joins, then the beat. No pop in calm mode.
 export function recruitSwell(
   sinceJoined: number,
   ticksPerBeat: number,
@@ -44,7 +41,6 @@ export function recruitSwell(
   return 1 + (joining ? POP * Math.sin((sinceJoined / ticksPerBeat) * Math.PI) : 0) + SWELL * pulse;
 }
 
-// Its glitter goes round it once a bar, each recruit from its own point; it holds still in calm mode.
 export function sparkleAngle(
   now: number,
   ticksPerBar: number,
@@ -56,8 +52,6 @@ export function sparkleAngle(
   return (turn + index / SPARKLES + id * 0.618) * TAU;
 }
 
-// A bad vibe a player recruited: the gold smile it was chased with, hands up, glitter around it.
-// It joins in a ring of its recruiter's color and, when it leaves, bursts like a chased bad vibe.
 export function createRecruits(ctx: RenderContext, burst: Burst): Family {
   const { textures: t, layers } = ctx;
   const views = new ViewPool<RecruitView>(

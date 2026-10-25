@@ -1,10 +1,9 @@
 import type { GameContent } from '../data/types';
 import type { Inset, Renderer } from '../render/types';
+import { clamp } from '../shared/scalar';
 import { TICK_MS } from '../shared/tempo';
 import { type WeaponWorld, createWeaponWorld } from '../sim/weapon-world';
 
-// The scenes on the cards of circus weapons: a small world each, stepped on the clock of the page
-// and painted by the renderer of the game before each of its images.
 export interface WeaponScenes {
   // Until the returned function is called.
   show(canvas: HTMLCanvasElement, weaponId: string, setId: string, classId: string): () => void;
@@ -25,14 +24,13 @@ const MIN_VIEW_HEIGHT = 140;
 const MAX_VIEW_HEIGHT = 320;
 // A slow frame steps at most this many ticks, so that a late card does not freeze the page.
 const MAX_TICKS_PER_FRAME = 8;
-// Ticks played on after the weapon first acts before a calm scene holds, and the bars of its stage
-// it plays at most before it does: a weapon fires at least once every two bars.
+// A calm scene holds ACTS_FOR ticks after its weapon first acts, or after HOLDS_BY_BARS bars: a weapon fires at least once every two bars.
 const ACTS_FOR = 4;
 const HOLDS_BY_BARS = 3;
 
 function viewHeight(canvas: HTMLCanvasElement): number {
   const share = canvas.clientHeight / Math.max(canvas.clientWidth, 1);
-  return Math.min(Math.max(VIEW_WIDTH * share, MIN_VIEW_HEIGHT), MAX_VIEW_HEIGHT);
+  return clamp(VIEW_WIDTH * share, MIN_VIEW_HEIGHT, MAX_VIEW_HEIGHT);
 }
 
 function acts(world: WeaponWorld): boolean {

@@ -5,8 +5,7 @@ import type { PlayerState, Vec2 } from '../state';
 import { dashCharges, dashRechargeBeats } from '../stats';
 import type { StepContext } from './types';
 
-// Before `playerMovement`, which carries a dash under way and drops it the tick after its last.
-// A beat brings back a spent dash before a dash of the same tick spends one.
+// Before `playerMovement`; a beat brings back a spent dash before a dash of its tick spends one.
 export function dashes(ctx: StepContext): void {
   const { state, content, commands } = ctx;
   const definition = content.dash;

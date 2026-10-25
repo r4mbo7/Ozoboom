@@ -3,7 +3,6 @@ import { FULL_PREVIEWS } from './full';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// The main stage: a geodesic dome by the lake, at night.
 const LAKE = `
   <rect width="160" height="90" fill="#060a1c"/>
   <circle cx="132" cy="18" r="6" fill="#ffe9b0" opacity="0.85"/>
@@ -16,7 +15,6 @@ const LAKE = `
 
 const PREVIEWS: Readonly<Record<DecorId, string>> = { lake: LAKE, ...FULL_PREVIEWS };
 
-// A small picture of a stage, drawn by the interface for the picker and the lobby.
 export function stagePreview(decor: DecorId): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 160 90');

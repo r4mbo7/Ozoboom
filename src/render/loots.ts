@@ -1,8 +1,8 @@
 import type { Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { TRAP_TOKENS } from './textures';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
@@ -13,7 +13,6 @@ const HALO_RADIUS = 34;
 const CARRIER_GAP = 7;
 const CARRIER_CRATE_WIDTH = 24;
 const CARRIER_CRATE_LIFT = 15;
-// A loot blinks on the beat over its last bars, so that the team sees it is about to go.
 const FADING_BARS = 4;
 
 interface CrateView {
@@ -30,8 +29,6 @@ interface CarrierView {
   readonly crate: Sprite;
 }
 
-// A loot lies as a turquoise flight case showing the icon of its trap; the bad vibe carrying one
-// wears a turquoise ring and the case floats above it.
 export function createLoots(ctx: RenderContext): Family {
   const { textures: t, layers } = ctx;
   const crates = new ViewPool<CrateView>(
@@ -79,7 +76,10 @@ export function createLoots(ctx: RenderContext): Family {
       crates.begin();
       for (const loot of state.loots ?? []) {
         const view = crates.acquire(loot.id);
-        const fading = !frame.calm && loot.ticksLeft < FADING_BARS * frame.tempo.ticksPerBar;
+        const fading =
+          !frame.calm &&
+          loot.ticksLeft !== undefined &&
+          loot.ticksLeft < FADING_BARS * frame.tempo.ticksPerBar;
         const shown = fading ? 0.45 + 0.55 * frame.pulse : 1;
         placeCrate(
           view.crate,

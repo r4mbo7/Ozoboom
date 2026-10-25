@@ -1,6 +1,6 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
-import { type GoMark, el, fillHint, goMark, setText } from './dom';
+import { type GoMark, el, fillHint, findAll, goMark, setText } from './dom';
 import { PLAY } from './icons';
 import {
   createNightTabs,
@@ -13,7 +13,7 @@ import {
 } from './night';
 import { formatTempo } from './format';
 import { stepClass } from './lobby-model';
-import { promptsFor } from './prompts';
+import type { Prompts } from './prompts';
 import { stagePreview } from './stage-preview';
 import { STAGE_TEASERS, stageTeaser } from './teaser';
 import type { Night, StageCard, StagePickerModel } from './types';
@@ -24,11 +24,11 @@ export interface StageCards {
   set(stages: readonly StageCard[], stageId: string, festival?: boolean): void;
   // A guest sees the host's pick and cannot change it.
   setReadonly(readonly: boolean): void;
-  // What clicking the picked card again does, shown over it; null when it does nothing.
+  // Shown over the picked card; null when clicking it again does nothing.
   setGo(label: string | null): void;
 }
 
-// The next scene before or after the picked one, wrapping; null with nothing to choose from.
+// Wraps; null with nothing to choose from.
 export function stepStage(
   stages: readonly StageCard[],
   stageId: string,
@@ -71,7 +71,6 @@ function card(
   return node;
 }
 
-// One card per scene, the picked one lit. Shared by the picker and the lobby.
 export function createStageCards(label: string, onChoose: (setId: string) => void): StageCards {
   const element = el('div', 'ui-stagecards');
   element.setAttribute('role', 'radiogroup');
@@ -114,7 +113,7 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
         const node = nodes[index];
         const picked = stage.setId === stageId;
         node?.setAttribute('aria-checked', String(picked));
-        const tag = node?.querySelector<HTMLElement>('.ui-stage__tag');
+        const [tag] = node === undefined ? [] : findAll(node, '.ui-stage__tag', HTMLElement);
         if (tag) {
           tag.hidden = !festival;
           tag.toggleAttribute('data-start', picked);
@@ -145,16 +144,17 @@ export interface StagePickerActions {
 
 export interface StagePickerScreen {
   readonly element: HTMLElement;
-  // The picker opens: the cards are picked, not the switch.
+  // The cards are picked, not the switch.
   open(): void;
   setModel(model: StagePickerModel): void;
   setDevice(device: InputDevice): void;
   update(edges: MenuIntents): void;
 }
 
-// Solo: after the class, pick the night and the scene. The tab keys choose the night, left and right the scene,
-// Enter launches, Escape goes back.
-export function createStagePicker(actions: StagePickerActions): StagePickerScreen {
+export function createStagePicker(
+  prompts: Prompts,
+  actions: StagePickerActions,
+): StagePickerScreen {
   let model: StagePickerModel = { stages: [], stageId: '', endless: false };
 
   const element = el('section', 'ui-screen ui-stagepicker');
@@ -201,17 +201,17 @@ export function createStagePicker(actions: StagePickerActions): StagePickerScree
     if (device === null) {
       return;
     }
-    const prompts = promptsFor(device);
-    nights.setKeys(prompts.tabs, prompts.style);
+    const shown = prompts.for(device);
+    nights.setKeys(shown.tabs, shown.style);
     fillHint(
       hint,
       [
-        ...(prompts.tabs.length === 0 ? [] : [{ keys: prompts.tabs, label: t('mode') }]),
-        { keys: prompts.navigateRow, label: t('scène') },
-        { keys: [prompts.confirm], label: t('lancer') },
-        { keys: [prompts.back], label: t('retour') },
+        ...(shown.tabs.length === 0 ? [] : [{ keys: shown.tabs, label: t('mode') }]),
+        { keys: shown.navigateRow, label: t('scène') },
+        { keys: [shown.confirm], label: t('lancer') },
+        { keys: [shown.back], label: t('retour') },
       ],
-      prompts.style,
+      shown.style,
     );
   }
 

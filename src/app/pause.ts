@@ -4,7 +4,7 @@ import type { Vec2 } from '../sim/state';
 import { el, fillHint, setText } from '../ui/dom';
 import { createMenu } from '../ui/menu';
 import { createMenuInput } from '../ui/navigation';
-import { promptsFor } from '../ui/prompts';
+import type { Prompts } from '../ui/prompts';
 
 export interface PauseConfirmation {
   readonly question: string;
@@ -25,23 +25,21 @@ const pauseText = (): PauseText => ({
 
 export interface PauseItem {
   readonly label: string;
-  // An item built elsewhere, for an entry that must look the same on every screen.
+  // Built elsewhere, for an entry that must look the same on every screen.
   readonly element?: HTMLElement;
-  // Asked before `activate`, which only « leave » runs: « stay » goes back to the pause menu.
+  // Asked before `activate`: « stay » goes back to the pause menu.
   readonly confirm?: PauseConfirmation;
   activate(): void;
-  // Takes the left and right presses, for an entry set from side to side.
   adjust?(side: -1 | 1): void;
 }
 
 export interface PauseScreen {
   readonly confirming: boolean;
-  // `text` replaces the line under the heading, for a pause that does not stop the set.
+  // For a pause that does not stop the set.
   show(device: InputDevice, text?: PauseText): void;
   hide(): void;
-  // Leaves the confirmation for the pause menu, on the entry that asked it.
-  cancel(): void;
-  // Moves the selection and activates the selected item; `back` is the caller's to handle.
+  cancelConfirmation(): void;
+  // `back` is the caller's to handle.
   handle(menu: MenuIntents, move: Vec2): void;
 }
 
@@ -76,10 +74,12 @@ function button(className: string, label: string): HTMLButtonElement {
   return node;
 }
 
-// The pause screen is the app's, but it wears the interface's styles so that it reads as one of
-// its screens: it sits in its own `.ui` layer, above the interface. Its items are a list, the first
-// one selected when it opens: adding an entry is adding an item.
-export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]): PauseScreen {
+// The pause screen is the app's, but wears the interface's styles so that it reads as one of its screens.
+export function createPauseScreen(
+  root: HTMLElement,
+  prompts: Prompts,
+  items: readonly PauseItem[],
+): PauseScreen {
   const layer = el('div', 'ui');
   const resting = pauseText();
   const main = view('dialog', resting.heading, resting.text);
@@ -120,7 +120,7 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
   confirmation.nav.append(stay, leave);
   const confirmMenu = createMenu((index) => {
     if (index === 0) {
-      cancel();
+      cancelConfirmation();
     } else {
       pending?.activate();
     }
@@ -136,15 +136,15 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
     setText(confirmation.text, asked.text);
     setText(stay, asked.stay);
     setText(leave, asked.leave);
-    const prompts = promptsFor(device);
+    const shown = prompts.for(device);
     fillHint(
       confirmation.hint,
       [
-        { keys: prompts.navigate, label: t('naviguer') },
-        { keys: [prompts.confirm], label: t('valider') },
-        { keys: [prompts.back], label: asked.stay.toLowerCase() },
+        { keys: shown.navigate, label: t('naviguer') },
+        { keys: [shown.confirm], label: t('valider') },
+        { keys: [shown.back], label: asked.stay.toLowerCase() },
       ],
-      prompts.style,
+      shown.style,
     );
     confirmMenu.select(0);
     menuInput.open();
@@ -152,7 +152,7 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
     confirmation.section.hidden = false;
   }
 
-  function cancel(): void {
+  function cancelConfirmation(): void {
     if (pending === null) {
       return;
     }
@@ -170,16 +170,16 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
       device = next;
       setText(main.heading, text.heading);
       setText(main.text, text.text);
-      const prompts = promptsFor(device);
-      const navigate = items.length > 1 ? [{ keys: prompts.navigate, label: t('naviguer') }] : [];
+      const shown = prompts.for(device);
+      const navigate = items.length > 1 ? [{ keys: shown.navigate, label: t('naviguer') }] : [];
       fillHint(
         main.hint,
         [
           ...navigate,
-          { keys: [prompts.confirm], label: t('valider') },
+          { keys: [shown.confirm], label: t('valider') },
           { keys: [device === 'gamepad' ? 'Start' : t('Échap')], label: t('reprendre') },
         ],
-        prompts.style,
+        shown.style,
       );
       menu.select(0);
       menuInput.open();
@@ -190,7 +190,7 @@ export function createPauseScreen(root: HTMLElement, items: readonly PauseItem[]
       main.section.hidden = true;
       confirmation.section.hidden = true;
     },
-    cancel,
+    cancelConfirmation,
     handle(intents, move) {
       (pending === null ? menu : confirmMenu).handle(menuInput.edges(intents, move));
     },

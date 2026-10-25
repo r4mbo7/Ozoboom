@@ -1,9 +1,12 @@
 import type { SimState } from '../sim/state';
 
-// The game behind a level offer stands still: drawn once, it is not drawn again until it moves or
-// the window changes size. Behind relics the boss says farewell in real time: it is drawn on.
+// Behind a level offer the game is drawn once, until it moves or resizes; behind relics the boss's farewell is drawn on.
 export interface Stillness {
-  draws(state: SimState, width: number, height: number): boolean;
+  draws(
+    state: Pick<SimState, 'status' | 'pendingUpgrades' | 'tick'>,
+    width: number,
+    height: number,
+  ): boolean;
 }
 
 export function createStillness(): Stillness {

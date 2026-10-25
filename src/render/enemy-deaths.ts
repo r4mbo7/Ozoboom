@@ -1,9 +1,8 @@
 import type { PaletteToken } from '../shared/palette';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 
-export const SMILE_TICKS = TICKS_PER_BEAT;
-// Calm mode has no burst: after its smile the mask fades.
-export const CALM_FADE_TICKS = TICKS_PER_BEAT;
+const SMILE_TICKS = TICKS_PER_BEAT;
+const CALM_FADE_TICKS = TICKS_PER_BEAT;
 
 export interface Farewell<V> {
   readonly view: V;
@@ -20,14 +19,12 @@ export interface Farewell<V> {
 export type FarewellSpec = Omit<Farewell<never>, 'view' | 'live'>;
 
 export interface FarewellHooks<V> {
-  // smile and fade run from 0 to 1: the smile first, then, in calm mode only, the fade.
   show(farewell: Farewell<V>, smile: number, fade: number): void;
   hide(view: V): void;
   burst(farewell: Farewell<V>): void;
 }
 
-// A bad vibe that was chased smiles for a beat, then bursts into colors. The sim has already
-// dropped it: this queue is all that is left of it on screen.
+// The sim has already dropped it: this queue is all that is left of it on screen.
 export class Farewells<V> {
   private readonly items: Farewell<V>[];
   private next = 0;

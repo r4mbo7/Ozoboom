@@ -2,7 +2,8 @@ import { type Container, Sprite } from 'pixi.js';
 import type { Frame } from './frame';
 import type { Tree } from './ground-layout';
 import { crown, crownRim, shadow } from './ground-paint';
-import { darker, mixColor, shadowAt } from './ground-sun';
+import { darker, shadowAt } from './ground-sun';
+import { mixColor } from './palette';
 import { setTint } from './util';
 
 const LEAF_TEAL = { night: 0.08, day: 0.25 } as const;
@@ -40,8 +41,6 @@ function sprite(shape: { texture: Sprite['texture'] }): Sprite {
   return made;
 }
 
-// Dark discs off the dance floor, in the colours of the lake unless given others. Their shadows turn with the sun of the set: long at dusk and dawn,
-// short at noon, none at night.
 export function createTrees(parent: Container) {
   const shadowShape = shadow();
   const crownShape = crown();

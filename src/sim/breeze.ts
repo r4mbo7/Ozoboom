@@ -8,7 +8,7 @@ export type BreezeEffect = Extract<TrapEffect, { kind: 'breeze' }>;
 
 const SWEEP_BARS = 2;
 
-// One bar out and one bar back: every fan sweeps together.
+// On the bar, so that every fan sweeps together.
 export function breezeDirection(
   effect: BreezeEffect,
   facing: Vec2,
@@ -23,7 +23,6 @@ export function breezeDirection(
   );
 }
 
-// Whether a body stands in the cone: its center inside it, or the body over the fan itself.
 export function inBreeze(
   body: Vec2 & { radius: number },
   fan: Vec2,

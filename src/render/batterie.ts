@@ -1,5 +1,6 @@
 import { Container, type Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
+import { clamp01, lerp } from '../shared/scalar';
 import type { EntityId, SimEvent, SimState } from '../sim/state';
 import { type Cables, type Shine, createCables } from './batterie-cables';
 import { type MaskAt, onMask, paintLooks, pointOnMask } from './batterie-looks';
@@ -17,28 +18,22 @@ import type { Family, RenderContext } from './context';
 import type { EnemyPose } from './enemies';
 import { BOSS_SCALE, FACE_RADIUS } from './face-kit';
 import type { Frame } from './frame';
-import { lerp } from './motion';
+import { mixColor } from './palette';
 import { TRAP_TOKENS } from './textures';
 import { add, hide, lookup, setTint } from './util';
 import { ViewPool } from './views';
-import { mixColor } from './weapon-kit';
 
 const KIND = 'batterie-a-plat';
-// The cold light of a charged cell.
 const CELL = { tint: 0xc9d2f5, alpha: 0.85 };
-// How much of a halo she takes while plugged into it.
-const DRAIN = 0.6;
+const HALO_DRAINED = 0.6;
 const BULGE_BEATS = 1;
-// Where a cable plugs into a player or a trap: at its feet, in radii.
 const PLUG_AT = { player: 0.8, trap: 0.6 };
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 interface Boss {
   readonly cells: Sprite[];
   readonly flanks: Sprite;
   readonly cables: Cables;
-  // Beats spent plugged into something: they charge her gauge.
-  charge: number;
+  chargeBeats: number;
   lastNow: number;
   bulgeSince: number;
 }
@@ -59,10 +54,6 @@ function raise<K>(map: Map<K, number>, key: K, value: number): void {
   map.set(key, Math.max(map.get(key) ?? 0, value));
 }
 
-// The Batterie à plat, beyond her mask: the cells of her gauge, her flanks swelling as she heats up,
-// and the three cables she plugs into what shines, whose pearls she drains while their halos go
-// down. Chased, she gives the pearls back and her gauge fades through the team's colors before it
-// bursts with her. Render only.
 export function createBatterieAPlat(
   ctx: RenderContext,
   poseOf: (id: EntityId) => EnemyPose | undefined,
@@ -80,14 +71,14 @@ export function createBatterieAPlat(
       cells: Array.from({ length: GAUGE.cells }, () => add(liveCells, looks.cell)),
       flanks: add(liveCells, looks.flanks),
       cables: createCables(cableLines, pearls, looks.pearl, looks.calmPearl),
-      charge: 0,
+      chargeBeats: 0,
       lastNow: Number.NaN,
       bulgeSince: Number.NaN,
     }),
     (boss) => {
       hide(boss.flanks, ...boss.cells);
       boss.cables.hide();
-      boss.charge = 0;
+      boss.chargeBeats = 0;
       boss.lastNow = boss.bulgeSince = Number.NaN;
     },
   );
@@ -138,7 +129,7 @@ export function createBatterieAPlat(
       scaleY: scale.y,
     };
     const beats = frame.now / frame.tempo.ticksPerBeat;
-    const lit = cellsLit(boss.charge);
+    const lit = cellsLit(boss.chargeBeats);
     boss.cells.forEach((cell, index) => {
       placeCell(cell, liveCells, at, index);
       setTint(cell, CELL.tint);
@@ -157,21 +148,21 @@ export function createBatterieAPlat(
       boss: [pose.x, pose.y] as const,
       sockets: SOCKETS.map((socket) => pointOnMask(at, socket)),
       reach: REACH * pose.radius,
-      unit: pose.radius / FACE_RADIUS,
+      maskUnit: pose.radius / FACE_RADIUS,
       beats,
       mode: 'drain' as const,
     };
     let full = 0;
     for (const { shine, reach } of boss.cables.update(run, shines, frame)) {
       if (shine.kind === 'player') {
-        raise(frame.drained.players, shine.id, reach * DRAIN);
+        raise(frame.drained.players, shine.id, reach * HALO_DRAINED);
       } else {
-        raise(frame.drained.traps, shine.id, reach * DRAIN);
+        raise(frame.drained.traps, shine.id, reach * HALO_DRAINED);
       }
       full += reach >= 1 ? 1 : 0;
     }
     if (full > 0 && !Number.isNaN(boss.lastNow)) {
-      boss.charge += Math.max(0, frame.now - boss.lastNow) / frame.tempo.ticksPerBeat;
+      boss.chargeBeats += Math.max(0, frame.now - boss.lastNow) / frame.tempo.ticksPerBeat;
     }
     boss.lastNow = frame.now;
   }
@@ -220,7 +211,7 @@ export function createBatterieAPlat(
       boss: [x, y] as const,
       sockets: SOCKETS.map((socket) => pointOnMask(at, socket)),
       reach: REACH * radius,
-      unit: radius / FACE_RADIUS,
+      maskUnit: radius / FACE_RADIUS,
       beats: frame.show / frame.tempo.ticksPerBeat,
       mode: pose.phase === 'gone' ? ('off' as const) : ('give' as const),
     };
@@ -266,7 +257,7 @@ export function createBatterieAPlat(
         radius,
         tilt: pose?.tilt ?? 0,
         scale: radius / (FACE_RADIUS * BOSS_SCALE),
-        lit: cellsLit(bosses.peek(event.id)?.charge ?? 0),
+        lit: cellsLit(bosses.peek(event.id)?.chargeBeats ?? 0),
         team: team.length > 0 ? team : ['or'],
       });
     },

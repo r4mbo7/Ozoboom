@@ -1,5 +1,6 @@
 import type { Sprite, Texture } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
+import { clamp01 } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import { type BossDecor, place, placeShadow } from './boss-decor';
 import { GIFTS_BEATS, Gifts } from './boss-gifts';
@@ -17,19 +18,16 @@ const CALM_COLORS = 10;
 
 export interface FarewellSpec {
   readonly id: number;
-  // The sim tick it was chased on, and the show tick its farewell starts from (`Frame.show`).
-  readonly tick: number;
-  readonly start: number;
+  readonly chasedTick: number;
+  readonly showStart: number;
   readonly x: number;
   readonly y: number;
   readonly radius: number;
-  // Of the mask texture, and its tilt, as it was last drawn.
   readonly scale: number;
   readonly tilt: number;
   readonly texture: Texture;
   readonly look: BossLook;
-  // The color of whoever chased it.
-  readonly token: PaletteToken;
+  readonly chaserToken: PaletteToken;
 }
 
 interface Farewell {
@@ -49,14 +47,11 @@ interface Farewell {
 
 export interface BossFarewells {
   start(spec: FarewellSpec): void;
-  // The boss chased on that tick dropped relics.
   dropRelics(tick: number): void;
   update(state: SimState, frame: Frame): void;
   clear(): void;
 }
 
-// A chased boss freezes as gold light fills its cracks, smiles in the color of whoever chased it,
-// then bursts into colors and leaves its gifts. It plays on the show clock, through a frozen game.
 export function createBossFarewells(ctx: RenderContext, decor: BossDecor): BossFarewells {
   const { textures, layers } = ctx;
   const rings = new Particles(layers.fx, decor.ring, 8);
@@ -126,7 +121,7 @@ export function createBossFarewells(ctx: RenderContext, decor: BossDecor): BossF
 
   function show(item: Farewell, spec: FarewellSpec, state: SimState, frame: Frame): void {
     const { palette, calm, tempo } = frame;
-    const beats = (frame.show - spec.start) / tempo.ticksPerBeat;
+    const beats = (frame.show - spec.showStart) / tempo.ticksPerBeat;
     hide(item.mask, item.crack, item.light, item.glad, item.heart, item.smile);
     item.glow.visible = false;
     const { look, x, y, radius, scale, tilt } = spec;
@@ -148,14 +143,14 @@ export function createBossFarewells(ctx: RenderContext, decor: BossDecor): BossF
         setTint(sprite, tint);
       }
       item.light.alpha = pose.light;
-      const glow = Math.min(1, Math.max(0, (beats - GLOW.from) * 2));
+      const glow = clamp01((beats - GLOW.from) * 2);
       if (glow > 0) {
         place(item.glow, at, lifted, 0, (GLOW.radius * radius) / textures.halo.radius);
         setTint(item.glow, palette.noyau);
         item.glow.alpha = GLOW.alpha * glow;
       }
     } else if (pose.phase === 'glad') {
-      const color = palette[spec.token];
+      const color = palette[spec.chaserToken];
       for (const [sprite, shape, tint] of [
         [item.glad, look.glad, color],
         [item.heart, look.heart, WHITE],
@@ -182,7 +177,7 @@ export function createBossFarewells(ctx: RenderContext, decor: BossDecor): BossF
     },
     dropRelics(tick) {
       for (const item of items) {
-        if (item.spec?.tick === tick) {
+        if (item.spec?.chasedTick === tick) {
           item.relics = true;
         }
       }
@@ -193,7 +188,7 @@ export function createBossFarewells(ctx: RenderContext, decor: BossDecor): BossF
         if (spec === null) {
           continue;
         }
-        const beats = (frame.show - spec.start) / frame.tempo.ticksPerBeat;
+        const beats = (frame.show - spec.showStart) / frame.tempo.ticksPerBeat;
         if (beats < 0 || beats >= BURST_AT + GIFTS_BEATS) {
           release(item);
         } else {

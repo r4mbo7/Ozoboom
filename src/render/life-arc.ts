@@ -1,4 +1,5 @@
 import { type Container, Graphics, type Sprite } from 'pixi.js';
+import { clamp01 } from '../shared/scalar';
 import type { Tempo } from '../shared/tempo';
 import type { PlayerState } from '../sim/state';
 import type { RenderContext } from './context';
@@ -7,7 +8,6 @@ import { LABEL_FONT_PX, LABEL_PAD, NAME_TEXTURE_SCALE } from './textures-names';
 import { add, setTint } from './util';
 
 const NEVER = Number.NEGATIVE_INFINITY;
-// The arc of the dash, mirrored above the body: same reach, same span, open at the top.
 const REACH = 23 / 14;
 const SPAN = 1.9;
 const TOP = -Math.PI / 2;
@@ -23,15 +23,13 @@ const NUMBER_SIZE = 11 / LABEL_FONT_PX;
 const NUMBER_GAP = 2;
 const NUMBER_HEIGHT = (LABEL_FONT_PX * 1.4 + 2 * LABEL_PAD) * NUMBER_SIZE;
 
-export const DANGER_RATIO = 0.25;
+const DANGER_RATIO = 0.25;
 
-// The ends of the living part of the arc: it drains from both ends toward the top.
 export function lifeAngles(fraction: number): { from: number; to: number } {
-  const half = (SPAN / 2) * Math.min(1, Math.max(0, fraction));
+  const half = (SPAN / 2) * clamp01(fraction);
   return { from: TOP - half, to: TOP + half };
 }
 
-// How strong a full arc shows: pale for a bar, then gone over a beat, down to a third in calm mode.
 export function fullAlpha(
   sinceFull: number,
   { ticksPerBeat }: Pick<Tempo, 'ticksPerBeat'>,
@@ -44,7 +42,6 @@ export function fullAlpha(
   return Math.max(calm ? PALE : 0, FULL_ALPHA * (1 - (sinceFull - bar) / ticksPerBeat));
 }
 
-// The width of the living part: thickest in danger, thick a bar after a hit, thin at rest.
 export function lifeWidth(
   sinceHit: number,
   fraction: number,
@@ -56,7 +53,6 @@ export function lifeWidth(
   return sinceHit < ticksPerBeat * 4 ? HIT_WIDTH : REST_WIDTH;
 }
 
-// The life a player has left, as an arc above its head with the number at the top.
 export class LifeArc {
   private readonly arc = new Graphics();
   private readonly numberEdge: Sprite;
@@ -72,7 +68,6 @@ export class LifeArc {
     this.number = add(labels, ctx.textures.halo);
   }
 
-  // How far above the center the arc and its number reach, in world units, for what sits above.
   extent(player: PlayerState, frame: Frame): number {
     return (
       player.radius * REACH + EDGE_WIDTH / 2 + (NUMBER_HEIGHT + NUMBER_GAP) / frame.camera.scale
@@ -89,7 +84,7 @@ export class LifeArc {
   ): void {
     const { arc, number, numberEdge } = this;
     const { now, tempo, calm, light, palette, camera, pulse } = frame;
-    const fraction = player.maxHp > 0 ? Math.min(1, Math.max(0, player.hp / player.maxHp)) : 0;
+    const fraction = player.maxHp > 0 ? clamp01(player.hp / player.maxHp) : 0;
     const full = fraction >= 1;
     if (full && !this.wasFull) {
       this.fullSince = now;

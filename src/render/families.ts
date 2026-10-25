@@ -32,7 +32,6 @@ import { createCoupDeVent } from './vent';
 
 const BOSSES = [createCouvreFeu, createBatterieAPlat, createCoupDeVent, createPogo];
 
-// Every family the scene draws, from the ground up.
 export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
   if (inset) {
     return createInsetFamilies(ctx);
@@ -73,8 +72,6 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
   ];
 }
 
-// The scene on the card of a weapon keeps what tells the weapon: the player, its weapon and its
-// shots, and the bad vibes that come at it, on a plain dark ground.
 function createInsetFamilies(ctx: RenderContext): Family[] {
   return [createEnemies(ctx), createProjectiles(ctx), createWeapons(ctx), createPlayers(ctx)];
 }

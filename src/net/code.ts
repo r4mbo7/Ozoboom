@@ -1,6 +1,6 @@
 export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-export const CODE_LENGTH = 6;
-export const PEER_ID_PREFIX = 'ozoboom-';
+const CODE_LENGTH = 6;
+const PEER_ID_PREFIX = 'ozoboom-';
 
 const JOIN_PARAMETER = 'rejoindre';
 
@@ -24,8 +24,11 @@ export function parseJoinCode(hash: string): string | null {
   }
   try {
     return normalizeCode(decodeURIComponent(match[1]));
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof URIError) {
+      return null;
+    }
+    throw error;
   }
 }
 

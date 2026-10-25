@@ -1,4 +1,5 @@
 import type { GameplayIntents, MenuIntents } from '../input/intents';
+import { wrap } from '../shared/scalar';
 import type { Vec2 } from '../sim/state';
 import { type Direction, direction } from '../shared/i18n';
 
@@ -44,15 +45,12 @@ function eachIntent(value: (intent: keyof MenuIntents) => boolean): MenuIntents 
 }
 
 export interface MenuInput {
-  // A menu opens: what is held at that moment waits for its release.
+  // What is held when a menu opens waits for its release.
   open(): void;
-  // The intents that start on this update, for the menu on screen.
   edges(menu: MenuIntents, move: Vec2): MenuIntents;
 }
 
-// Menu intents are presses and the repeats of a held direction. A direction held in combat shows in
-// the move (keys and left stick): after an opening, it stays ignored, repeats included, until that
-// move lets go of it. A validation is a press, ignored on the update the menu opens.
+// A direction held in combat stays ignored after an opening, repeats included, until the move lets go of it; a validation is ignored on the opening update.
 export function createMenuInput(): MenuInput {
   let previous: MenuIntents | null = null;
   let waiting: MenuIntents = NO_MENU_INTENTS;
@@ -83,8 +81,7 @@ export function createMenuInput(): MenuInput {
   };
 }
 
-// Menus read `left` and `right` as a step back or forward along their rows. A right-to-left
-// language lays those rows out from the right, so a push to the right steps back.
+// A right-to-left language lays the rows out from the right, so a push to the right steps back.
 export function readingEdges(edges: MenuIntents, reading: Direction): MenuIntents {
   return reading === 'rtl'
     ? { ...edges, left: edges.right, right: edges.left, previous: edges.next, next: edges.previous }
@@ -130,11 +127,6 @@ export function selectTrap(
   return wrap(index + delta, count);
 }
 
-// The hand slot a selection points to: the last trap held when the selected slot is empty.
 export function heldSlot(selected: number, held: number): number {
   return Math.min(selected, held - 1);
-}
-
-function wrap(index: number, count: number): number {
-  return ((index % count) + count) % count;
 }

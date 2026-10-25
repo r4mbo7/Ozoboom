@@ -1,17 +1,16 @@
 import { Container, type Sprite } from 'pixi.js';
+import { clamp, clamp01 } from '../shared/scalar';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import { TAU } from './paint';
 import { type Look, type Spawn, fade, spring } from './player-look';
 import type { Textures } from './textures';
-import { POMPOM_STRING, REFERENCE } from './textures-looks';
+import { POMPOM_STRING, REFERENCE_RADIUS } from './textures-looks';
 import { PARASOL_RADIUS } from './textures-players';
 import { add, hide, placeOutline, setTint } from './util';
 
 const POMPOMS = 8;
 const FIREFLIES = 5;
 const RUN_SPIN = 2.8;
-// Springs in reference pixels and ticks: the pompoms fly out as the parasol spins faster, lag behind
-// the run and bounce on the beat.
 const FLING = { stiffness: 0.084, damping: 0.11, reach: 1.6, beat: 0.5, hit: 1.6 };
 const LAG = { stiffness: 0.07, damping: 0.14, follow: 1, most: 8 };
 const POMPOM_OUT = POMPOM_STRING - 1.5;
@@ -23,8 +22,6 @@ const FLING_AT = 0;
 const LAG_X = 2;
 const LAG_Y = 4;
 
-// The pompoms light up one after the other on the sixteenths, a tail of three behind the head; the
-// calm mode holds them all at the same glow.
 export function chase(
   now: number,
   index: number,
@@ -39,8 +36,6 @@ export function chase(
   return 0.3 + 0.7 * Math.max(0, 1 - ((head - index + POMPOMS) % POMPOMS) / 3);
 }
 
-// L'Hygie: a small hop on every beat while she walks, her sneakers out under the parasol, pompoms
-// on springs that light up in turn, a pool of light under her at night and of shade by day.
 export function createParasolLook(
   bodies: Container,
   glows: Container,
@@ -147,7 +142,7 @@ export function createParasolLook(
       spring(
         springs,
         LAG_X,
-        Math.max(-LAG.most, Math.min(LAG.most, -driftX * LAG.follow)),
+        clamp(-driftX * LAG.follow, -LAG.most, LAG.most),
         LAG.stiffness,
         LAG.damping,
         dt,
@@ -155,13 +150,13 @@ export function createParasolLook(
       spring(
         springs,
         LAG_Y,
-        Math.max(-LAG.most, Math.min(LAG.most, -driftY * LAG.follow)),
+        clamp(-driftY * LAG.follow, -LAG.most, LAG.most),
         LAG.stiffness,
         LAG.damping,
         dt,
       );
 
-      const beatShare = Math.min(1, Math.max(0, input.sinceBeat / frame.tempo.ticksPerBeat));
+      const beatShare = clamp01(input.sinceBeat / frame.tempo.ticksPerBeat);
       const hop = input.moving * Math.sin(Math.PI * beatShare) * strength;
       const land = input.moving * fade(now - landAt, LAND_TICKS) * strength;
       const sway = (1 - input.moving) * Math.sin((TAU * now) / (2 * frame.tempo.ticksPerBar));
@@ -201,7 +196,7 @@ export function createParasolLook(
       parasol.rotation = spin - angle + sway * 0.12;
       parasol.scale.set(1);
       setTint(parasol, color);
-      placeOutline(outline, parasol, object.texture, REFERENCE, frame);
+      placeOutline(outline, parasol, object.texture, REFERENCE_RADIUS, frame);
 
       const fling = POMPOM_OUT + (springs[FLING_AT] ?? 0) + 2.5 * frame.pulse;
       const lagX = springs[LAG_X] ?? 0;
@@ -211,7 +206,6 @@ export function createParasolLook(
       for (let index = 0; index < POMPOMS; index += 1) {
         const rib = spin + (index / POMPOMS) * TAU + sway * 0.12;
         const reach = PARASOL_RADIUS + fling + Math.sin(now * 0.17 + index) * 0.8;
-        // Along the aim and across it, squashed like the canopy, then the lag in the world.
         const localX = (Math.cos(rib - angle) * reach * long) / scale;
         const localY = (Math.sin(rib - angle) * reach * wide) / scale;
         const pompomX = centerX + (localX * cos - localY * sin) * scale + lagX * 0.9 * scale;

@@ -1,7 +1,7 @@
+import { clamp } from '../../shared/scalar';
 import { place } from './place';
 import type { WeaponModule } from './types';
 
-// Distance from the player's edge to the totem's centre.
 const PLANT_GAP = 40;
 
 export const totem: WeaponModule = {
@@ -16,8 +16,8 @@ export const totem: WeaponModule = {
       player,
       slot.id,
       {
-        x: Math.min(Math.max(player.x + direction.x * reach, 0), width),
-        y: Math.min(Math.max(player.y + direction.y * reach, 0), height),
+        x: clamp(player.x + direction.x * reach, 0, width),
+        y: clamp(player.y + direction.y * reach, 0, height),
       },
       effect.radius,
       effect.durationBars * tempo.ticksPerBar,

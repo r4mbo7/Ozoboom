@@ -1,18 +1,17 @@
 import type { Sprite } from 'pixi.js';
+import { frac, lerp } from '../shared/scalar';
 import type { BreezeEffect } from '../sim/breeze';
 import { trapPointing } from '../sim/pointing';
 import type { EntityId, PlayerState, SimState, TrapState } from '../sim/state';
+import { mixColor } from './palette';
 import { BEAM_LENGTH, TRAP_TOKENS } from './textures';
 import { CONE_DEGREES, CONE_LENGTH, DROPLET_RADIUS } from './textures-traps';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { trapReach } from './reach';
 import { add, byId, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
-import { mixColor } from './weapon-kit';
 
-// A trap drowned in a puddle goes out: grayed, its halo down.
 const DROWNED_GRAY = 0x6a6f85;
 const DROWNED_MIX = 0.7;
 
@@ -27,7 +26,6 @@ interface TrapView {
 }
 
 const DROPS = 24;
-// Beats a droplet takes to fly from the fan to the end of the cone.
 const DROP_BEATS = 2.2;
 
 export interface TrapsFamily extends Family {
@@ -72,7 +70,7 @@ function drawBreeze(
       continue;
     }
     const flown = now / flight + index * 0.137;
-    const travel = flown - Math.floor(flown);
+    const travel = frac(flown);
     const lane = (index * 0.618 + Math.floor(flown) * 0.382) % 1;
     const spread = (lane - 0.5) * 1.8;
     const angle = facing + spread * opening;

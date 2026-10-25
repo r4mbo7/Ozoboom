@@ -17,7 +17,7 @@ export function frontGlintOf(event: SimEvent): EntityId | undefined {
   return event.type === 'enemyHit' && event.front === true ? event.id : undefined;
 }
 
-// A burst of hits lights the guard at most three times a second; the calm mode holds it lit instead.
+// At most three times a second (WCAG 2.3.1); the calm mode holds it lit instead.
 export function glintStart(tick: number, start: number, calm: boolean): number {
   return calm || tick - start >= MIN_TICKS_BETWEEN_FLASHES ? tick : start;
 }

@@ -1,4 +1,5 @@
 import { locale, t } from '../shared/i18n';
+import { clamp01 } from '../shared/scalar';
 import { TICK_RATE_HZ } from '../shared/tempo';
 import { scoreOf } from '../sim/score';
 import type { SimState } from '../sim/state';
@@ -46,7 +47,7 @@ export function ratio(value: number, max: number): number {
   if (!(max > 0)) {
     return 0;
   }
-  return Math.min(1, Math.max(0, value / max));
+  return clamp01(value / max);
 }
 
 export function formatPercent(fraction: number): string {

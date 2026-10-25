@@ -48,7 +48,7 @@ export function createDashTile(): DashTile {
         }
       }
       [...pearls.children].forEach((pearl, index) => {
-        setFlag(pearl as HTMLElement, 'on', index < gauge.ready);
+        setFlag(pearl, 'on', index < gauge.ready);
       });
       const ready = gauge.ready > 0;
       setVar(view.root, '--charge', String(ready ? 1 : gauge.fill));

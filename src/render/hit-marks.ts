@@ -3,14 +3,13 @@ import type { EntityId, PlayerId, SimEvent } from '../sim/state';
 
 export type EnemyHit = Extract<SimEvent, { type: 'enemyHit' }>;
 
-export const SPARK_GAP_TICKS = 4;
-export const SPARKS_PER_TICK = 8;
+const SPARK_GAP_TICKS = 4;
+const SPARKS_PER_TICK = 8;
 const FORGET_ABOVE = 256;
 
 export interface Contact {
   readonly x: number;
   readonly y: number;
-  // Outward, back toward where the hit came from.
   readonly angle: number;
 }
 
@@ -68,7 +67,6 @@ export class SparkBudget {
 
 export const CRACK_STAGES = 3;
 
-// 0 while unhurt, then one more crack for each third of its life a bad vibe has lost.
 export function crackStage(hp: number, maxHp: number): number {
   if (hp >= maxHp) {
     return 0;
@@ -77,7 +75,7 @@ export function crackStage(hp: number, maxHp: number): number {
   return Math.min(CRACK_STAGES, Math.ceil(lost - 1e-9));
 }
 
-export const NUMBER_GAP_TICKS = TICKS_PER_BEAT / 2;
+const NUMBER_GAP_TICKS = TICKS_PER_BEAT / 2;
 
 export interface Tallied {
   id: EntityId;
@@ -92,8 +90,7 @@ interface Tally extends Tallied {
   shownAt: number;
 }
 
-// The hits on one bad vibe add up into the number shown above it, one per gap at most: a beam that
-// hits on every tick shows what it did in half a beat, not a number per tick.
+// One number per gap: a beam hitting every tick shows half a beat of damage, not one per tick.
 export class DamageTally {
   private readonly tallies = new Map<EntityId, Tally>();
 
@@ -122,7 +119,6 @@ export class DamageTally {
     tally.lastHit = tick;
   }
 
-  // `show` receives each number that is due; the object it is handed is reused afterwards.
   flush(tick: number, show: (number: Tallied) => void): void {
     for (const tally of this.tallies.values()) {
       if (tick - tally.shownAt < NUMBER_GAP_TICKS) {
@@ -145,10 +141,9 @@ export class DamageTally {
   }
 }
 
-export const HEAVY_SHARE = 0.5;
+const HEAVY_SHARE = 0.5;
 export const HOLD_TICKS = 2;
 
-// A heavy hit takes at one go this share of the full life of a bad vibe, and leaves it standing.
 export function isHeavy(
   hit: EnemyHit,
   enemy: { readonly hp: number; readonly maxHp: number } | undefined,

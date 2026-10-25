@@ -1,4 +1,6 @@
 import type { MenuIntents } from '../input/intents';
+import { clamp } from '../shared/scalar';
+import { onPointerClick } from './dom';
 import { navigateMenu } from './navigation';
 import { onMouseMove } from './pointer';
 
@@ -9,8 +11,7 @@ export interface Menu {
   handle(edges: MenuIntents): void;
 }
 
-// `onAdjust` takes the left and right presses of an item that is picked from side to side: it
-// answers whether it did, and a press it did not take moves through the menu as before.
+// `onAdjust` answers whether it took a left or right press; one it did not take moves through the menu.
 export function createMenu(
   onActivate: (index: number) => void,
   onAdjust?: (index: number, side: -1 | 1) => boolean,
@@ -21,7 +22,7 @@ export function createMenu(
   const bound = new WeakSet<HTMLElement>();
 
   function select(next: number): void {
-    index = Math.min(Math.max(next, 0), Math.max(items.length - 1, 0));
+    index = clamp(next, 0, Math.max(items.length - 1, 0));
     items.forEach((item, position) => {
       if (position === index) {
         item.setAttribute('aria-current', 'true');
@@ -49,9 +50,9 @@ export function createMenu(
             select(position);
           }
         });
-        item.addEventListener('click', (event) => {
+        onPointerClick(item, () => {
           const position = items.indexOf(item);
-          if (event.detail === 0 || position < 0) {
+          if (position < 0) {
             return;
           }
           select(position);

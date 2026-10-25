@@ -1,6 +1,7 @@
 import type { StraightAttack } from '../../data/types';
-import { angleOf, rotate } from '../../shared/angle';
+import { angleOf } from '../../shared/angle';
 import { statValue } from '../stats';
+import { fan } from './fan';
 import { fireShot, type Shot } from './shot';
 import { pullTrigger } from './trigger';
 import type { AttackModule } from './types';
@@ -19,10 +20,8 @@ export const straight: AttackModule<StraightAttack> = {
       pierce: statValue(player, 'pierceAdd', attack.pierce),
       ...(attack.knockback === undefined ? {} : { knockback: attack.knockback }),
     };
-    for (let i = 0; i < count; i++) {
-      const offset =
-        count === 1 ? 0 : -attack.spreadRadians / 2 + (i * attack.spreadRadians) / (count - 1);
-      fireShot(state, player, offset === 0 ? player.aim : rotate(player.aim, offset), shot);
+    for (const way of fan(player.aim, count, attack.spreadRadians)) {
+      fireShot(state, player, way, shot);
     }
     state.events.push({
       type: 'playerFired',

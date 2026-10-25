@@ -1,4 +1,6 @@
+import { isOneOf } from '../shared/guards';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import type { SpeakerState } from '../sim/state';
 import { barSeconds, sixteenthSeconds } from './clock';
 import { keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
@@ -6,10 +8,10 @@ import { playNoise, playTone } from './synth';
 export const SPEAKER_LAYER_IDS = ['dome-chill', 'foret', 'sub', 'cercle-acid'] as const;
 export type SpeakerLayerId = (typeof SPEAKER_LAYER_IDS)[number];
 
-export const MUFFLED_HZ = 260;
-export const MUFFLED_LEVEL = 0.3;
-export const BREAK_LEVEL = 0.5;
-export const BREAK_OPEN = 0.6;
+const MUFFLED_HZ = 260;
+const MUFFLED_LEVEL = 0.3;
+const BREAK_LEVEL = 0.5;
+const BREAK_OPEN = 0.6;
 
 export interface Presence {
   level: number;
@@ -31,17 +33,37 @@ export interface VoiceContext {
 }
 
 export function isSpeakerLayerId(id: string): id is SpeakerLayerId {
-  return (SPEAKER_LAYER_IDS as readonly string[]).includes(id);
+  return isOneOf(id, SPEAKER_LAYER_IDS);
 }
 
-// The first beat that is still to be scheduled: a layer never starts between two beats.
+// A layer never starts between two beats.
 export function entryTickOf(tick: number, cursor: number, tempo: Tempo = MAIN_TEMPO): number {
   const { ticksPerBeat: beat, originTick } = tempo;
   return originTick + Math.ceil((Math.max(tick + 1, cursor) - originTick) / beat) * beat;
 }
 
-// A speaker that is being plugged, or plugged but not yet in, is heard muffled and quiet; from its
-// entry tick the filter opens over one bar. The break lightens it like the other layers.
+export function speakerEntries(
+  entered: ReadonlyMap<SpeakerLayerId, number>,
+  speakers: readonly SpeakerState[],
+  tick: number,
+  cursor: number,
+  tempo: Tempo,
+): Map<SpeakerLayerId, number> {
+  const entries = new Map<SpeakerLayerId, number>();
+  for (const { id, plugged } of speakers) {
+    if (plugged && isSpeakerLayerId(id) && !entries.has(id)) {
+      entries.set(id, entered.get(id) ?? entryTickOf(tick, cursor, tempo));
+    }
+  }
+  return entries;
+}
+
+export function pluggingSpeakers(speakers: readonly SpeakerState[]): SpeakerLayerId[] {
+  return speakers.flatMap(({ id, plugged, plugTicks }) =>
+    !plugged && plugTicks > 0 && isSpeakerLayerId(id) ? [id] : [],
+  );
+}
+
 export function presenceAt(
   step: number,
   entry: number | null,

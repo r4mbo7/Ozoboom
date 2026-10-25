@@ -1,19 +1,17 @@
 import type { Sprite } from 'pixi.js';
+import { clamp01, lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
-import { type Piece, type WeaponKit, mixColor } from './weapon-kit';
+import { mixColor } from './palette';
+import { type Piece, type WeaponKit } from './weapon-kit';
 import { add, hide, setTint } from './util';
 import { ViewPool } from './views';
 
 const TRAIL_DOTS = 14;
 const TRAIL_SAMPLE_TICKS = 3;
-// Points a fused monocycle keeps of the ways of its dashes: a few dashes' worth.
 const DASH_DOTS = 24;
 
-// The wheel and the trail of the monocycle, which have no shot to hang on. The action bar shows
-// what else a festivalier carries.
 export function createCarried(ctx: RenderContext, kit: WeaponKit): Pick<Family, 'update'> {
   const { textures: t, layers } = ctx;
   const icons = t.weapons.icons;
@@ -89,7 +87,7 @@ export function createCarried(ctx: RenderContext, kit: WeaponKit): Pick<Family, 
           setTint(dot, mixColor(end, color, left));
           dot.position.set(kept[at] ?? x, kept[at + 1] ?? y);
           dot.scale.set((player.radius * 1.3) / t.halo.radius);
-          dot.alpha = frame.light.haloAlpha * Math.max(0, Math.min(1, left)) * 1.2;
+          dot.alpha = frame.light.haloAlpha * clamp01(left) * 1.2;
         });
       }
       wheels.end();

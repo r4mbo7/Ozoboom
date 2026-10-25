@@ -12,15 +12,13 @@ import {
   stroke,
 } from './face-kit';
 import { TAU, type Ctx } from './paint';
-import { SCALE } from './vent-moments';
+import { MOCKUP_SCALE } from './vent-moments';
 
 const SOFT = 'rgb(255 255 255 / 0.55)';
 const GLAD_SOFT = 'rgb(20 20 20 / 0.35)';
-// His face, an egg; his lips, a round that blows.
 const FACE = { y: 2, rx: 23, ry: 27 };
 const LIPS = { y: 15, radius: 3.6, hole: 2.2 };
 
-// Arcs and a diamond painted on his brow.
 function brow(ctx: Ctx, soft: string, ink: string): void {
   for (const radius of [16, 11]) {
     ctx.beginPath();
@@ -39,7 +37,6 @@ function brow(ctx: Ctx, soft: string, ink: string): void {
   ctx.fill();
 }
 
-// A heavy-lidded almond eye under a painted brow, a spiral on the cheek below.
 function eyeAndCheek(ctx: Ctx, pose: Pose, side: number): void {
   ctx.beginPath();
   ctx.moveTo(side * 3, -6);
@@ -73,11 +70,8 @@ function eyeAndCheek(ctx: Ctx, pose: Pose, side: number): void {
   stroke(ctx, SOFT, 1.4, ...spiral);
 }
 
-// A wind spirit's face, painted like the faces of psychedelic canvases: arcs and a diamond on the
-// brow, heavy-lidded eyes, spirals on the cheeks, round lips that blow. His mane of ribbons is
-// `vent-mane.ts`, drawn live behind him.
-export function coupDeVent(ctx: Ctx, pose: Pose): void {
-  ctx.scale(SCALE, SCALE);
+function coupDeVent(ctx: Ctx, pose: Pose): void {
+  ctx.scale(MOCKUP_SCALE, MOCKUP_SCALE);
   body(ctx, () => {
     ctx.beginPath();
     ctx.ellipse(0, FACE.y, FACE.rx, FACE.ry, 0, 0, TAU);
@@ -94,9 +88,8 @@ export function coupDeVent(ctx: Ctx, pose: Pose): void {
   dot(ctx, 0, LIPS.y, LIPS.hole, INK);
 }
 
-// Chased, he shuts his eyes and smiles, his brow painted in ink.
-export function coupDeVentGlad(ctx: Ctx): void {
-  ctx.scale(SCALE, SCALE);
+function coupDeVentGlad(ctx: Ctx): void {
+  ctx.scale(MOCKUP_SCALE, MOCKUP_SCALE);
   brow(ctx, GLAD_SOFT, INK);
   gladFace(ctx, { eyeY: -2, eyeX: 9, mouthY: 9, mouthWidth: 9, part: 'smile' });
 }

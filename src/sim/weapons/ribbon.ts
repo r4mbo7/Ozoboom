@@ -3,7 +3,6 @@ import type { WeaponModule } from './types';
 
 const RIBBON_HALF_WIDTH = 14;
 
-// A wave from the player towards the closest bad vibe marks every bad vibe it crosses.
 export const ribbon: WeaponModule = {
   fire({ state, set }, player, _slot, { effect }, { direction }) {
     if (effect.kind !== 'ribbon') {

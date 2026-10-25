@@ -24,20 +24,19 @@ import {
   POI_ORBIT,
   PARASOL_PIECES,
   POI_PIECES,
-  REFERENCE,
+  REFERENCE_RADIUS,
   type BagParts,
   type ParasolParts,
   type PoiParts,
 } from './textures-looks';
 
-export { REFERENCE } from './textures-looks';
+export { REFERENCE_RADIUS } from './textures-looks';
 
-// Radius of the ring drawn in the contour piece, in its own pixels.
 export const CONTOUR_RING = 58;
 
 export type PlayerLook = 'poi' | 'bag' | 'parasol';
 
-// The classes are content, their look is not: a class with no entry here fails loud in the scene.
+// A class with no look here fails loud in the scene: classes are content, looks are not.
 export const PLAYER_LOOKS: Readonly<Record<string, PlayerLook>> = {
   mage: 'poi',
   tank: 'bag',
@@ -49,21 +48,14 @@ export const PARASOL_RADIUS = 46;
 const PARASOL_REACH = 56;
 
 export interface LookTextures {
-  // The object drawn whole, for the looks that do not move its parts on their own.
   readonly object?: Shape;
-  // Outer reach of the object, in reference pixels: where the aim line starts and the contour sits.
   readonly extent: number;
-  // How high the object is held above the ground: it stretches the shadow.
   readonly height: number;
-  // How far ahead of the player the middle of the drawing is, in reference pixels: a portrait
-  // frames it there. Absent, on the player.
-  readonly middle?: number;
+  readonly centerAhead?: number;
   readonly shadow: Shape;
-  // A character who aims at nothing shows no aim line.
   readonly aimless?: true;
 }
 
-// A downed player, whatever the class: the fill comes back during the relève, over the ground.
 export interface DownedTextures {
   readonly fill: Shape;
   readonly line: Shape;
@@ -72,7 +64,6 @@ export interface DownedTextures {
   readonly veil: Shape;
 }
 
-// The gestures of the directional pad, whatever the class.
 export interface EmoteTextures {
   readonly sun: Shape;
   readonly stroke: Shape;
@@ -96,7 +87,6 @@ export interface PlayerTextures {
   readonly bag: BagParts;
   readonly parasol: ParasolParts;
   readonly drawings: Drawings;
-  // The one source under every texture above, destroyed once.
   readonly source: TextureSource;
 }
 
@@ -151,7 +141,7 @@ function softBlob(width: number, height: number, roundness: number): Piece {
   return [
     128,
     128,
-    REFERENCE,
+    REFERENCE_RADIUS,
     (ctx) => {
       glow(ctx, WHITE, 8);
       ctx.fillStyle = WHITE;
@@ -163,8 +153,8 @@ function softBlob(width: number, height: number, roundness: number): Piece {
 }
 
 const PIECES = {
-  shoulders: [64, 64, REFERENCE, shoulders],
-  head: [32, 32, REFERENCE, head],
+  shoulders: [64, 64, REFERENCE_RADIUS, shoulders],
+  head: [32, 32, REFERENCE_RADIUS, head],
   aim: [
     32,
     8,
@@ -195,7 +185,7 @@ const PIECES = {
   ],
   poiShadow: softBlob(14, 24, 1),
   bagShadow: softBlob(26, 28, 1),
-  parasol: [112, 112, REFERENCE, parasol],
+  parasol: [112, 112, REFERENCE_RADIUS, parasol],
   parasolShadow: softBlob(PARASOL_RADIUS - 4, PARASOL_RADIUS - 4, 1),
   ...DOWNED_PIECES,
   ...EMOTE_PIECES,
@@ -204,10 +194,9 @@ const PIECES = {
   ...PARASOL_PIECES,
 } satisfies Record<string, Piece>;
 
-// Every texture of the players is one cell of a single sheet: whatever the class of who is on
-// screen, their sprites are drawn in one batch.
-export function playerTextures(): PlayerTextures {
-  const { shapes: t, source } = paintSheet(PIECES);
+// One sheet for every class, so that whoever is on screen is drawn in one batch.
+export function playerTextures(density = 1): PlayerTextures {
+  const { shapes: t, source } = paintSheet(PIECES, density);
   return {
     shoulders: t.shoulders,
     head: t.head,
@@ -257,7 +246,7 @@ export function playerTextures(): PlayerTextures {
     },
     parasol: { sneaker: t.sneaker, pompom: t.pompom },
     drawings: new Map(
-      FULL_DRAWINGS.map((drawing) => [drawing.classId, paintedLater(() => drawing.paint())]),
+      FULL_DRAWINGS.map((drawing) => [drawing.classId, paintedLater(() => drawing.paint(density))]),
     ),
     source,
   };

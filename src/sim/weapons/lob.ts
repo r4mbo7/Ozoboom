@@ -38,8 +38,7 @@ export const lob: WeaponModule = {
   },
 };
 
-// The enemy within `range` with the most bad vibes around it; the nearest one wins a tie. Reads
-// the grid `weapons` just rebuilt for the closest-enemy query.
+// Reads the grid `weapons` just rebuilt for the closest-enemy query.
 function densestSpot(
   { state, enemyGrid }: StepContext,
   from: { x: number; y: number },

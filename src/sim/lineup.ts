@@ -33,7 +33,7 @@ export function setOf(content: GameContent, setId: string): SetDefinition {
 
 const TEMPOS = new WeakMap<SetDefinition, Map<number, Tempo>>();
 
-// The set's tempo, its grid counted from `startTick`, the tick the set started at (ADR 0018).
+// Its grid counts from `startTick`, the tick the set started at (ADR 0018).
 export function setTempo(set: SetDefinition, startTick = 0): Tempo {
   let byStart = TEMPOS.get(set);
   if (byStart === undefined) {
@@ -48,7 +48,6 @@ export function setTempo(set: SetDefinition, startTick = 0): Tempo {
   return tempo;
 }
 
-// The tempo of the set a game plays, as the sim counts it.
 export function playedTempo(
   set: SetDefinition,
   state: { set: Pick<SetProgress, 'startTick'> },
@@ -135,7 +134,6 @@ function slotCount(tiers: readonly TierDefinition[]): number {
 // A drop lasts as long as its boss stands: about this long.
 const DROP_SECONDS = 45;
 
-// About how long a stage lasts, in whole minutes: its buildups and breaks at its tempo, and its drops.
 export function stageMinutes(set: SetDefinition): number {
   const { ticksPerBar, ticksPerPhrase } = setTempo(set);
   const ticks = set.tiers.reduce(

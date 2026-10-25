@@ -3,10 +3,8 @@ import type { BurstSpec } from './bursts';
 import type { Frame } from './frame';
 import { TAU } from './paint';
 
-// What a look needs to draw one standing player for one image. A single object is filled in place
-// for every player: nothing is allocated per image.
+// Filled in place for every player: nothing is allocated per image.
 export interface LookInput {
-  // The state the player is drawn from, for what it holds apart from itself (the clubs in hand).
   state: SimState;
   player: PlayerState;
   x: number;
@@ -16,9 +14,7 @@ export interface LookInput {
   color: number;
   teint: number;
   frame: Frame;
-  // Ticks since the previous image of this player, clamped.
   dt: number;
-  // Share of its top speed, and the same eased in and out, from 0 to 1.
   speed: number;
   moving: number;
   heading: number;
@@ -30,18 +26,17 @@ export interface LookInput {
   sinceSkill: number;
 }
 
-// Every field is written before a look reads it.
-export function createLookInput(): LookInput {
+export function createLookInput(state: SimState, player: PlayerState, frame: Frame): LookInput {
   return {
-    state: undefined as unknown as SimState,
-    player: undefined as unknown as PlayerState,
+    state,
+    player,
     x: 0,
     y: 0,
     angle: 0,
     scale: 1,
     color: 0,
     teint: 0,
-    frame: undefined as unknown as Frame,
+    frame,
     dt: 0,
     speed: 0,
     moving: 0,
@@ -56,10 +51,8 @@ export function createLookInput(): LookInput {
 }
 
 export interface Look {
-  // Returns how high the player is lifted, 0 on the ground, for the shadow.
   place(input: LookInput): number;
   hide(): void;
-  // A new player takes this view: forget the springs of the previous one, if any.
   reset?(): void;
 }
 
@@ -79,8 +72,7 @@ export function lerpAngle(from: number, to: number, share: number): number {
   return from + angleTo(from, to) * share;
 }
 
-// A damped spring on one value, stepped in ticks: values[at] is the position, values[at + 1] the
-// velocity. Semi-implicit, in steps of at most one tick: a slow image cannot make it blow up.
+// Semi-implicit, in steps of at most one tick: a slow image cannot make it blow up.
 export function spring(
   values: Float64Array,
   at: number,
@@ -92,7 +84,6 @@ export function spring(
   step(values, at, target, stiffness, damping, dt, false);
 }
 
-// The same on an angle, along the shortest way round.
 export function angleSpring(
   values: Float64Array,
   at: number,
@@ -126,7 +117,6 @@ function step(
   values[at + 1] = velocity;
 }
 
-// A burst of light that fades out over a few ticks after an event: 1 at the event, 0 once gone.
 export function fade(sinceTicks: number, lifeTicks: number): number {
   return sinceTicks >= 0 && sinceTicks < lifeTicks * 4 ? Math.exp(-sinceTicks / lifeTicks) : 0;
 }

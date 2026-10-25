@@ -34,7 +34,6 @@ export interface ResolvedContent {
   readonly fusions: readonly FusionDefinition[];
   readonly rarityWeights: readonly RarityWeights[];
   readonly dash: DashDefinition | null;
-  // By set id, the sets where a team calls more bosses.
   readonly summons: ReadonlyMap<string, SummonDefinition>;
 }
 

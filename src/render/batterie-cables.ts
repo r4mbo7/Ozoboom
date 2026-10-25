@@ -15,10 +15,9 @@ import {
 import { MASK_BODY, maskTone } from './face-kit';
 import type { Frame } from './frame';
 import type { Shape } from './paint';
+import { mixColor } from './palette';
 import { add, setTint } from './util';
-import { mixColor } from './weapon-kit';
 
-// Something that shines, which a cable can plug into: a player or a trap, in its own color.
 export type Shine = Target & { readonly token: PaletteToken } & (
     | { readonly kind: 'player'; readonly id: PlayerId }
     | { readonly kind: 'trap'; readonly id: EntityId }
@@ -29,37 +28,31 @@ export interface Plugged {
   readonly reach: number;
 }
 
-// Draining what she plugs into, giving it back once chased, or letting it all go.
 export type CableMode = 'drain' | 'give' | 'off';
 
 export interface CableRun {
   readonly boss: Point;
   readonly sockets: readonly Point[];
   readonly reach: number;
-  // A mask unit in world pixels.
-  readonly unit: number;
+  readonly maskUnit: number;
   readonly beats: number;
   readonly mode: CableMode;
 }
 
 export interface Cables {
-  // Plugs the cables into the shines and draws them; the shines still held, and how far along each
-  // cable is.
   update(run: CableRun, shines: readonly Shine[], frame: Frame): readonly Plugged[];
   hide(): void;
 }
 
 interface Slot {
   shine: Shine | null;
-  // Where its plug is, kept where the shine last was once the cable let go.
   x: number;
   y: number;
   since: number;
   leftAt: number | null;
 }
 
-// Pearls gray toward this as they near her.
-const GRAY = 0x8f95ad;
+const DRAINED_PEARL = 0x8f95ad;
 export const PEARL = 2.6;
 const LINE = { rim: 8, core: 4.4, plug: 5, plugRim: 2.4, samples: 24 };
 
@@ -143,18 +136,18 @@ export function createCables(
     }
     const rim = frame.palette.badVibeRim;
     const core = maskTone(rim, MASK_BODY);
-    const path = cablePath(socket, [slot.x, slot.y], index, run.beats, run.unit);
+    const path = cablePath(socket, [slot.x, slot.y], index, run.beats, run.maskUnit);
     trace(path, reach);
-    graphics.stroke({ width: LINE.rim * run.unit, color: rim, cap: 'round', join: 'round' });
+    graphics.stroke({ width: LINE.rim * run.maskUnit, color: rim, cap: 'round', join: 'round' });
     trace(path, reach);
-    graphics.stroke({ width: LINE.core * run.unit, color: core, cap: 'round', join: 'round' });
+    graphics.stroke({ width: LINE.core * run.maskUnit, color: core, cap: 'round', join: 'round' });
     if (reach < 1) {
       return;
     }
     graphics
-      .circle(slot.x, slot.y, LINE.plug * run.unit)
+      .circle(slot.x, slot.y, LINE.plug * run.maskUnit)
       .fill({ color: core })
-      .stroke({ width: LINE.plugRim * run.unit, color: rim });
+      .stroke({ width: LINE.plugRim * run.maskUnit, color: rim });
     const color = frame.palette[slot.shine.token];
     const shape = frame.calm ? calmPearl : pearl;
     for (let count = 0; count < PEARLS; count += 1) {
@@ -166,9 +159,9 @@ export function createCables(
       const [x, y] = alongCable(path, p);
       sprite.visible = true;
       sprite.texture = shape.texture;
-      setTint(sprite, run.mode === 'drain' ? mixColor(color, GRAY, 1 - p) : color);
+      setTint(sprite, run.mode === 'drain' ? mixColor(color, DRAINED_PEARL, 1 - p) : color);
       sprite.position.set(x, y);
-      sprite.scale.set((PEARL * run.unit) / shape.radius);
+      sprite.scale.set((PEARL * run.maskUnit) / shape.radius);
     }
   }
 

@@ -1,8 +1,7 @@
 import { touches } from '../effects';
 import type { SpecialModule } from './types';
 
-// Asleep is tracked through stunTicks, already an obstacle for steering and attacks, and already
-// decremented each tick by `traps`.
+// Asleep is stunTicks: steering and attacks already respect it, and `traps` counts it down.
 export const yawn: SpecialModule = (ctx, enemy, effect) => {
   if (effect.kind !== 'yawn' || enemy.stunTicks > 0) {
     return;

@@ -1,7 +1,7 @@
 import type { Vec2 } from '../sim/state';
 import { SHIFTED_KEY_BINDINGS, SHIFT_KEYS, type Control, type InputBindings } from './bindings';
-import { learnKeyName } from './key-names';
-import { DEFAULT_INPUT_BINDINGS, inputBindings } from './profile';
+import type { KeyNames } from './key-names';
+import { DEFAULT_INPUT_BINDINGS, type PlayerKeys } from './profile';
 import { clampLength, type KeyboardMouseFrame } from './merge';
 
 export interface KeyboardMouseState {
@@ -130,7 +130,11 @@ const KEYS_WITH_BROWSER_DEFAULT: ReadonlySet<string> = new Set([
   'Tab',
 ]);
 
-export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
+export function attachKeyboardMouse(
+  target: HTMLElement,
+  keys: Pick<PlayerKeys, 'bindings'>,
+  names: Pick<KeyNames, 'learn'>,
+): KeyboardMouseAdapter {
   const view = target.ownerDocument.defaultView;
   if (view === null) throw new Error('Input target is not attached to a window');
   let state = INITIAL_KEYBOARD_MOUSE_STATE;
@@ -143,9 +147,9 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
     if (isEditable(event.target)) return;
     if (KEYS_WITH_BROWSER_DEFAULT.has(event.code)) event.preventDefault();
     if (!(event.shiftKey || event.altKey || event.ctrlKey || event.metaKey)) {
-      learnKeyName(event.code, event.key);
+      names.learn(event.code, event.key);
     }
-    state = reduceKeyboard(state, { type: 'keydown', code: event.code }, inputBindings());
+    state = reduceKeyboard(state, { type: 'keydown', code: event.code }, keys.bindings());
   };
   const onKeyUp = (event: KeyboardEvent) => {
     state = reduceKeyboard(state, { type: 'keyup', code: event.code });
@@ -160,11 +164,10 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
     state = reducePointer(
       state,
       { type: 'down', button: event.button, ...local(event) },
-      inputBindings(),
+      keys.bindings(),
     );
   };
-  // A clicked button would keep the browser focus: Space would then press it, and any key show
-  // its focus ring, which looks like the selection. The click still fires; focus only leaves.
+  // A clicked button would keep the focus: Space would press it again and any key show its focus ring.
   const onButtonMouseDown = (event: MouseEvent) => {
     if (!(event.target instanceof Element) || event.target.closest('button') === null) return;
     event.preventDefault();
@@ -177,7 +180,7 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
   };
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
-    state = reducePointer(state, { type: 'wheel', deltaY: event.deltaY }, inputBindings());
+    state = reducePointer(state, { type: 'wheel', deltaY: event.deltaY }, keys.bindings());
   };
   const onContextMenu = (event: MouseEvent) => {
     event.preventDefault();
@@ -195,7 +198,7 @@ export function attachKeyboardMouse(target: HTMLElement): KeyboardMouseAdapter {
 
   return {
     take() {
-      const taken = takeKeyboardMouseFrame(state, inputBindings());
+      const taken = takeKeyboardMouseFrame(state, keys.bindings());
       state = taken.state;
       return taken.frame;
     },

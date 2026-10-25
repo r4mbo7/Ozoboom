@@ -1,3 +1,5 @@
+import { clamp } from '../shared/scalar';
+
 export interface Circle {
   readonly x: number;
   readonly y: number;
@@ -6,8 +8,7 @@ export interface Circle {
 
 const INITIAL_CAPACITY = 256;
 
-// Uniform grid rebuilt each tick by counting sort. Its buffers only grow, so once they fit the
-// largest crowd a rebuild or a query allocates nothing. Results are indices in the rebuilt list.
+// Its buffers only grow, so once they fit the largest crowd, nothing allocates in the hot loop.
 export class SpatialHash {
   private readonly cellSize: number;
   private readonly columns: number;
@@ -59,7 +60,6 @@ export class SpatialHash {
     }
   }
 
-  // Finds the circles that overlap the query circle; read them with result(0 .. count - 1).
   query(x: number, y: number, radius: number): number {
     const reach = radius + this.maxRadius;
     const firstColumn = this.column(x - reach);
@@ -100,11 +100,11 @@ export class SpatialHash {
   }
 
   private column(x: number): number {
-    return Math.min(this.columns - 1, Math.max(0, Math.floor(x / this.cellSize)));
+    return clamp(Math.floor(x / this.cellSize), 0, this.columns - 1);
   }
 
   private row(y: number): number {
-    return Math.min(this.rows - 1, Math.max(0, Math.floor(y / this.cellSize)));
+    return clamp(Math.floor(y / this.cellSize), 0, this.rows - 1);
   }
 }
 

@@ -13,8 +13,6 @@ export interface WeaponsFamily extends Family {
   shadowOf(projectileId: EntityId): { scale: number; alpha: number; visible: boolean } | undefined;
 }
 
-// The ten circus weapons and their evolved forms, drawn from the state: what players carry, what
-// flies, what is planted, what is marked, and, on `weaponFired`, the instant of the strike.
 export function createWeapons(ctx: RenderContext): WeaponsFamily {
   const kit = createKit(ctx);
   const carried = createCarried(ctx, kit);

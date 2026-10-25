@@ -1,4 +1,5 @@
 import { Container, Graphics, type Sprite } from 'pixi.js';
+import { clamp01, lerp } from '../shared/scalar';
 import type { EntityId, SimEvent, SimState } from '../sim/state';
 import { GIFTS_BEATS } from './boss-gifts';
 import { BURST_AT } from './boss-moments';
@@ -16,16 +17,13 @@ import type { EnemyPose } from './enemies';
 import { FACE_RADIUS } from './face-kit';
 import { COUVRE_FEU_WHISTLE, couvreFeuCap } from './faces-bosses';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { TAU, WHITE, circle, paint, type Shape } from './paint';
 import { add, hide, setTint } from './util';
 import { ViewPool } from './views';
 
 const KIND = 'couvre-feu';
-// Painted twice finer than the mask units they are drawn in.
 const FINE = 2;
-// A cold light, never pure white: the torch and the hoop it leaves on whoever it lights.
-const COLD = 0xe1e8ff;
+const TORCH_LIGHT = 0xe1e8ff;
 const CONE = { length: 256, from: 24.6, width: 6.2, night: 0.32, day: 0.34, dayTint: 0x8ea4e6 };
 const HOOP = { size: 1.75, alpha: 0.85 };
 const WAVE = { from: 14, travel: 26, spread: 0.7, width: 3.4 };
@@ -41,7 +39,6 @@ interface Exit {
   readonly x: number;
   readonly y: number;
   readonly radius: number;
-  // Away from the stage: -1 left, 1 right.
   readonly side: number;
   readonly cap: Sprite;
   readonly sun: Sprite;
@@ -105,9 +102,6 @@ function paintLooks(): Looks {
   };
 }
 
-// The Couvre-feu, beyond his mask: the torch that sweeps the floor ahead of him and rings whoever
-// it lights, the waves of his whistle on the one of every bar, and, chased, his cap flying off as his
-// badge rises as a small golden sun. Render only.
 export function createCouvreFeu(
   ctx: RenderContext,
   poseOf: (id: EntityId) => EnemyPose | undefined,
@@ -119,8 +113,7 @@ export function createCouvreFeu(
   const whistles = layers.enemyShots.addChild(new Container());
   const caps = layers.farewells.addChild(new Container());
   const suns = layers.fx.addChild(new Container());
-  // When each was first drawn: its torch lights up, straight ahead, as it lands.
-  const landed = new Map<EntityId, number>();
+  const firstDrawnAt = new Map<EntityId, number>();
   const exits: Exit[] = [];
   const spareExits: Pick<Exit, 'cap' | 'sun'>[] = [];
   const cones: { x: number; y: number; aim: number; reach: number; light: number }[] = [];
@@ -143,7 +136,7 @@ export function createCouvreFeu(
     const night = frame.light.additive;
     cone.visible = true;
     cone.blendMode = night ? 'add' : 'normal';
-    setTint(cone, night ? COLD : CONE.dayTint);
+    setTint(cone, night ? TORCH_LIGHT : CONE.dayTint);
     cone.alpha = (night ? CONE.night : CONE.day) * light;
     cone.position.set(pose.x, pose.y);
     cone.rotation = aim;
@@ -189,7 +182,7 @@ export function createCouvreFeu(
       }
       const hoop = rings.acquire(player.id);
       hoop.visible = true;
-      setTint(hoop, night ? COLD : frame.palette.badVibe);
+      setTint(hoop, night ? TORCH_LIGHT : frame.palette.badVibe);
       hoop.alpha = HOOP.alpha * lit;
       hoop.position.set(x, y);
       hoop.scale.set((HOOP.size * player.radius) / looks.hoop.radius);
@@ -233,15 +226,15 @@ export function createCouvreFeu(
           continue;
         }
         const boss = bosses.acquire(enemy.id);
-        let at = landed.get(enemy.id);
+        let at = firstDrawnAt.get(enemy.id);
         if (at === undefined) {
           at = frame.now;
-          landed.set(enemy.id, at);
+          firstDrawnAt.set(enemy.id, at);
         }
         const since = (frame.now - at) / frame.tempo.ticksPerBeat;
         const toStage = Math.atan2(state.core.y - pose.y, state.core.x - pose.x);
         const aim = toStage + torchSweep(since, frame.calm);
-        const light = Math.min(1, Math.max(0, since / LIGHT_UP_BEATS));
+        const light = clamp01(since / LIGHT_UP_BEATS);
         const reach = TORCH.reach * pose.radius;
         cones.push({ x: pose.x, y: pose.y, aim, reach, light });
         torch(boss, pose, aim, light, frame);
@@ -260,9 +253,9 @@ export function createCouvreFeu(
     },
     onEvent(event: SimEvent, state: SimState, frame: Frame): void {
       if (event.type === 'enemyFled') {
-        landed.delete(event.id);
+        firstDrawnAt.delete(event.id);
       } else if (event.type === 'enemyDied' && event.kind === KIND) {
-        landed.delete(event.id);
+        firstDrawnAt.delete(event.id);
         const sprites = spareExits.pop() ?? {
           cap: add(caps, looks.cap),
           sun: add(suns, looks.sun),
@@ -280,7 +273,7 @@ export function createCouvreFeu(
     reset(): void {
       bosses.releaseAll();
       rings.releaseAll();
-      landed.clear();
+      firstDrawnAt.clear();
       for (const exit of exits) {
         hide(exit.cap, exit.sun);
         spareExits.push(exit);

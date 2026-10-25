@@ -21,11 +21,10 @@ export interface Layout {
   readonly trees: readonly Tree[];
 }
 
-export const TREE_COUNT = 10;
-// Share of solClair laid over sol: the lawn, its lightest tufts, the dance floor.
+const TREE_COUNT = 10;
 export const SOL_CLAIR_SHARE = { lawn: 0.3, tufts: 0.5, floor: 0.6 } as const;
 export const LAKE_SKY_MIX = 0.5;
-// How far the ground runs past the arena, for a screen wider than it at the usual scale (up to 32:9).
+// For a screen up to 32:9 at the usual scale.
 export const OVERFLOW = 640;
 const LAKE_SHARE = 0.17;
 const SHORE_MARGIN = 70;
@@ -41,8 +40,6 @@ export function shoreAt(layout: Layout, y: number): number {
   return x;
 }
 
-// The lake's left shore and the trees come from the seed of the run: same arena, same seed, same shore. No tree
-// stands in a clearing, as a festival's exits.
 export function layoutGround(seed: number, arena: Arena, clearings: readonly Tree[] = []): Layout {
   const rng = seedRng(seed >>> 0);
   const waves = [

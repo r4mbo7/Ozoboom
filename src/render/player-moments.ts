@@ -9,7 +9,6 @@ export interface Moments {
   skill: number;
 }
 
-// The last ticks a player fired, was hit or used its skill, for what the looks and the arcs show of them.
 export class MomentLog {
   private readonly items = new Map<PlayerId, Moments>();
 

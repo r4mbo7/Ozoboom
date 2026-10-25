@@ -1,6 +1,7 @@
 import type { WeaponEffect, WeaponRhythm } from '../../data/types';
 import { MAIN_TEMPO, type Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
+import { blackedOut } from '../blackout';
 import { compound } from '../effects';
 import type { EnemyState, PlayerState, WeaponSlot } from '../state';
 import { statValue } from '../stats';
@@ -20,8 +21,6 @@ import type { StepContext } from './types';
 
 const INITIAL_REACH = 128;
 
-// One module per effect kind; an issue replaces its own module and touches this registry only on
-// its line (docs/plans/v0.1.md). All inert until then.
 export const WEAPONS: Readonly<Record<WeaponEffect['kind'], WeaponModule>> = {
   sweep,
   spark,
@@ -46,12 +45,11 @@ export function firesOnTick(
   return stepOn(rhythm, tick, tempo) !== undefined;
 }
 
-// A sixteenth is not a whole number of ticks on every stage: each step fires on its tick, rounded down.
+// A sixteenth is not a whole number of ticks on every stage.
 function sixteenthTick(step: number, tempo: Tempo): number {
   return Math.floor((step * tempo.ticksPerBeat) / 4);
 }
 
-// Ticks into the rhythm's period of bars, counted from the set's start.
 function ticksIntoPeriod(
   rhythm: Exclude<WeaponRhythm, 'continuous'>,
   tick: number,
@@ -75,9 +73,7 @@ function stepOn(
   return undefined;
 }
 
-// A weapon fired `rate` times as often as its rhythm says gathers that share of a shot each time it
-// fires; a whole one slips in as a ghost shot on the next sixteenth its rhythm leaves free, so it
-// stays on the grid. A continuous weapon is already always on.
+// A gathered whole shot slips in on the next free sixteenth of the rhythm, so it stays on the grid.
 function gatherGhost(
   slot: WeaponSlot,
   rhythm: WeaponRhythm,
@@ -117,6 +113,7 @@ function nextFreeTick(
 
 export function weapons(ctx: StepContext): void {
   const { state, content } = ctx;
+  const silent = blackedOut(state);
   for (const player of state.players) {
     if (player.downed) {
       continue;
@@ -130,10 +127,13 @@ export function weapons(ctx: StepContext): void {
       const ghost = slot.ghostTick === state.tick;
       if (ghost) {
         delete slot.ghostTick;
-      } else if (firesOnTick(definition.rhythm, state.tick, ctx.tempo)) {
-        gatherGhost(slot, definition.rhythm, rate, state.tick, ctx.tempo);
-      } else {
+      }
+      const due = ghost || firesOnTick(definition.rhythm, state.tick, ctx.tempo);
+      if (!due || silent) {
         continue;
+      }
+      if (!ghost) {
+        gatherGhost(slot, definition.rhythm, rate, state.tick, ctx.tempo);
       }
       const target = closestEnemy(ctx, player);
       const aim = normalize(player.aim);

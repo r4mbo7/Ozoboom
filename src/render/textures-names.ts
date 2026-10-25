@@ -5,7 +5,6 @@ const SCALE = 2;
 const EDGE = 1.5;
 const FAMILY = '"Space Grotesk", "Readex Pro", system-ui, sans-serif';
 
-// A name is drawn twice, white: the letters, and the letters thickened to hold a backing or a dark contour.
 export interface NameLabel {
   readonly fill: Texture;
   readonly edge: Texture;
@@ -16,10 +15,8 @@ export interface NameTextures {
   destroy(): void;
 }
 
-// Textures are painted at SCALE times the size they are shown at, so the label stays crisp on a dense screen.
 export const NAME_TEXTURE_SCALE = SCALE;
 
-// Plain letters around which the texture keeps this many logical pixels of room on each side.
 export const LABEL_PAD = EDGE + 2;
 
 function draw(name: string, edge: boolean, weight = 700): Texture {
@@ -68,7 +65,6 @@ export function createNameTextures(): NameTextures {
   };
 }
 
-// White lines of text at the size of the names, without the edge, for a panel that gives them a backing.
 export interface LineTextures {
   get(text: string, weight: number): Texture;
   destroy(): void;

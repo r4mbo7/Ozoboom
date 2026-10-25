@@ -1,10 +1,10 @@
+import { clamp, clamp01 } from '../shared/scalar';
 import { normalize } from '../shared/vec';
 import { applyEnemyStatus } from './enemy-status';
 import type { EnemyState, PlayerState, SimState, WallState } from './state';
 import type { StepContext } from './systems/types';
 
 export interface WallShape {
-  // From the player to the middle of the wall, along their aim.
   distance: number;
   length: number;
   ticks: number;
@@ -26,8 +26,7 @@ export function raiseWall(state: SimState, player: PlayerState, shape: WallShape
   return wall;
 }
 
-// After every system that moves bad vibes: each one is held on the side it stood on at the start
-// of the step, a boss is slowed for a beat instead.
+// After every system that moves bad vibes; a boss is slowed for a beat instead of held.
 export function walls({ state, tempo }: StepContext): void {
   const raised = state.walls;
   if (raised === undefined) {
@@ -61,7 +60,7 @@ function touchesWall(wall: WallState, enemy: EnemyState): boolean {
   const rx = enemy.x - wall.x;
   const ry = enemy.y - wall.y;
   const u = rx * -normal.y + ry * normal.x;
-  const along = u - Math.min(halfLength, Math.max(-halfLength, u));
+  const along = u - clamp(u, -halfLength, halfLength);
   const across = rx * normal.x + ry * normal.y;
   return along * along + across * across < enemy.radius * enemy.radius;
 }
@@ -90,8 +89,7 @@ function holdBack(wall: WallState, enemy: EnemyState): void {
   const su = u - pu;
   const sv = v - pv;
   const length = su * su + sv * sv;
-  const t =
-    side * v < 0 && length > 0 ? Math.min(1, Math.max(0, ((end - pu) * su - pv * sv) / length)) : 1;
+  const t = side * v < 0 && length > 0 ? clamp01(((end - pu) * su - pv * sv) / length) : 1;
   const du = pu + su * t - end;
   const dv = side * Math.abs(pv + sv * t);
   const squared = du * du + dv * dv;

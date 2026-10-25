@@ -8,10 +8,9 @@ import type { Textures } from './textures';
 const TAU = Math.PI * 2;
 const COLORS: readonly PaletteToken[] = ['mage', 'tank', 'healer', 'or', 'turquoise'];
 
-export const BOSS_BURST = 28;
+const BOSS_BURST = 28;
 
 export interface Burst {
-  // `count` shards fly off a boss: fewer in calm mode.
   burst(
     x: number,
     y: number,
@@ -25,7 +24,6 @@ export interface Burst {
   clear(): void;
 }
 
-// The colors a chased bad vibe bursts into once its smile is over.
 export function createBurst(layers: Layers, textures: Textures): Burst {
   const shards = new Particles(layers.fx, textures.shard, 600);
   const puffs = new Particles(layers.fx, textures.halo, 96);

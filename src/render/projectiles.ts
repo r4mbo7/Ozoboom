@@ -1,10 +1,10 @@
 import type { Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import { STREAK_HEAD } from './textures';
 import type { Family, RenderContext } from './context';
 import { enemyShotLook, shotRotation } from './enemy-shots';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { add, byId, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
@@ -13,7 +13,7 @@ interface ShotView {
   readonly outline: Sprite;
 }
 
-// The thrower's sort is read once per shot: the shot keeps its look after the thrower is gone.
+// Read once per shot: the shot keeps its look after the thrower is gone.
 interface EnemyShotView {
   readonly sprite: Sprite;
   kind: string | undefined;

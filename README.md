@@ -1,8 +1,8 @@
 # Ozoboom
 
-[![Play in browser](https://img.shields.io/badge/Play-in_browser-brightgreen)](https://r4mbo7.github.io/Ozoboom/) [![itch.io](https://img.shields.io/badge/itch.io-Ozoboom-fa5c5c)](https://brothercos.itch.io/ozoboom) [![Discord](https://img.shields.io/badge/Discord-chat-5865F2)](https://discord.gg/YcEGRxaqcu)
+[![Play in browser](https://img.shields.io/badge/Play-in_browser-brightgreen)](https://r4mbo7.github.io/Ozoboom/) [![itch.io](https://img.shields.io/badge/itch.io-Ozoboom-fa5c5c)](https://brothercos.itch.io/ozoboom) [![Discord](https://img.shields.io/badge/Discord-chat-5865F2)](https://discord.gg/YcEGRxaqcu) ![Visitors](https://visitor-badge.laobi.icu/badge?page_id=r4mbo7.Ozoboom)
 
-![Ozoboom: the Main stage at dawn](media/banner.jpg)
+![Ozoboom: four players defend the Main stage at night against a boss](media/banner.jpg)
 
 Ozoboom is a co-op survival game (a _bullet heaven_) set at a psytrance festival. Defend the sound system against ever stronger waves of _bad vibes_, from sunset to sunrise.
 
@@ -30,7 +30,7 @@ Ozoboom is a co-op survival game (a _bullet heaven_) set at a psytrance festival
 
 The full game, with more stages, will come out on Steam. The name comes from _Ozora_ and _Boom_, two psytrance festivals.
 
-![Pick your upgrade: a legendary card among the offers](media/upgrades.jpg)
+![Pick your upgrade: a fusion and a legendary card among the offers](media/upgrades.jpg)
 
 ## Playing together
 

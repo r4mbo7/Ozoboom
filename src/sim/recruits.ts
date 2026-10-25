@@ -1,4 +1,5 @@
 import type { EnemyDefinition, RecruitDefinition } from '../data/types';
+import { clamp } from '../shared/scalar';
 import { isBeatTick } from '../shared/tempo';
 import { lookup } from './content';
 import { playerById } from './damage';
@@ -7,12 +8,10 @@ import { resolveObstacles } from './obstacles';
 import type { EnemyState, PlayerState, RecruitState, SimState } from './state';
 import type { StepContext } from './systems/types';
 
-// Where a recruit waits by its recruiter while no bad vibe is left, from center to center.
 const FOLLOW_DISTANCE = 48;
 // A recruit stops against its target: a float slack lets it touch it again after the step.
 const CONTACT_SLACK = 1;
 
-// From `deaths`: a bad vibe of the horde chased by a player whose class recruits joins their side.
 // Never a boss (R6) nor a heavy.
 export function recruitFallen(
   ctx: StepContext,
@@ -32,8 +31,8 @@ export function recruitFallen(
   }
 }
 
-// The bad vibe joins under its own id: the caller removes it from `state.enemies`.
-export function recruit(
+// The bad vibe keeps its id: the caller removes it from `state.enemies`.
+function recruit(
   { state, tempo }: StepContext,
   player: PlayerState,
   enemy: EnemyState,
@@ -71,8 +70,7 @@ export function recruit(
   return joined;
 }
 
-// After everything that moves or hurts bad vibes but before `walls`, which holds back those a
-// recruit shoves, and `deaths`, which recruits those it chases.
+// After what moves or hurts bad vibes, before `walls` (holds the shoved) and `deaths` (recruits).
 export function recruits(ctx: StepContext): void {
   const { state, content, set, tempo } = ctx;
   const list = state.recruits;
@@ -122,7 +120,6 @@ export function recruits(ctx: StepContext): void {
   }
 }
 
-// Recruits rushing the same bad vibe stand side by side around it, never on each other.
 export function spreadRecruits(list: readonly RecruitState[]): void {
   for (let i = 0; i < list.length; i++) {
     const a = list[i];
@@ -189,7 +186,7 @@ function approach(
   if (distance === 0) {
     return;
   }
-  const advance = Math.min(speed, Math.max(0, distance - stopAt));
+  const advance = clamp(distance - stopAt, 0, speed);
   recruit.x += (dx / distance) * advance;
   recruit.y += (dy / distance) * advance;
 }

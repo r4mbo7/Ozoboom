@@ -10,8 +10,7 @@ import { ViewPool } from './views';
 
 const POP_TICKS = TICKS_PER_BEAT / 3;
 const POP = 0.5;
-// Cracks turn by this much from one bad vibe to the next, so that a horde does not wear the same wound.
-const TURN = 2.4;
+const TURN_PER_VIBE = 2.4;
 
 interface Wound {
   readonly sprite: Sprite;
@@ -19,7 +18,6 @@ interface Wound {
   since: number;
 }
 
-// The cracks a hurt bad vibe wears, bosses aside (`bosses.ts`), laid over its mask where `poseOf` says it was drawn.
 export function createWounds(
   ctx: RenderContext,
   poseOf: (id: EntityId) => EnemyPose | undefined,
@@ -61,7 +59,7 @@ export function createWounds(
         const pop = frame.calm || age < 0 || age >= 1 ? 0 : POP * (1 - age) * (1 - age);
         sprite.visible = true;
         sprite.position.set(pose.x, pose.y);
-        sprite.rotation = pose.tilt + enemy.id * TURN;
+        sprite.rotation = pose.tilt + enemy.id * TURN_PER_VIBE;
         sprite.scale.set((enemy.radius / shape.radius) * (1 + pop));
       }
       views.end();

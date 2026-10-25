@@ -38,7 +38,6 @@ const roleLabels = (): Record<WeaponRole, string> => ({
 
 export type CardTint = 'common' | 'rare' | 'legendary' | 'relic' | 'fusion';
 
-// The rank a card gives, out of how many: one pearl per rank, and the words that say it.
 export interface Pearls {
   rank: number;
   max: number;
@@ -113,7 +112,7 @@ export function offerKicker(offer: UpgradeOffer, player: PlayerState | undefined
     : t('Niveau {level}', { level: formatNumber(player.level) });
 }
 
-export function stepsOf(weapon: WeaponDefinition): readonly boolean[] | 'continuous' {
+function stepsOf(weapon: WeaponDefinition): readonly boolean[] | 'continuous' {
   if (weapon.rhythm === 'continuous') {
     return 'continuous';
   }
@@ -226,7 +225,6 @@ export function cardFor(
   };
 }
 
-// One of the places a player has for circus weapons, as the level screen shows them.
 export interface WeaponPlace {
   // `ghost`: the free place the new weapon of the focused card would take.
   state: 'held' | 'ghost' | 'free';
@@ -299,7 +297,6 @@ export function cardName(id: string, content: GameContent): string {
 export type Celebrated = 'rare' | 'legendary';
 
 export interface Dealt {
-  // The place of the card in its offer.
   index: number;
   delayMs: number;
   celebrated: Celebrated | null;
@@ -322,7 +319,6 @@ export function dealOf(tints: readonly CardTint[]): Dealt[] {
     }));
 }
 
-// The card a player has just taken, whatever its kind.
 export function pickOf(event: SimEvent): { playerId: PlayerId; cardId: string } | null {
   switch (event.type) {
     case 'upgradeChosen':
@@ -343,7 +339,6 @@ function listOf(names: readonly string[]): string {
     : t('{names} et {last}', { names: names.slice(0, -1).join(', '), last });
 }
 
-// A player of another screen: still choosing, or the name of the card taken.
 export interface RemoteChoice {
   name: string;
   classId: string;
@@ -357,9 +352,8 @@ export interface WaitChip {
 }
 
 export interface Waiting {
-  // One chip per remote player of this offer.
   chips: WaitChip[];
-  // Once every player of this screen has chosen: who the set waits for.
+  // Once every player of this screen has chosen.
   waiting: string | null;
 }
 

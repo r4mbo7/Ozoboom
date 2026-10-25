@@ -26,11 +26,11 @@ import type { RenderContext } from './context';
 import { Particles } from './effects';
 import type { Frame } from './frame';
 import { contactOf } from './hit-marks';
+import { mixColor } from './palette';
 import type { Mask } from './textures-enemies';
 import { type BossLook, createBossLook } from './textures-bosses';
 import { add, byId, hide, keepIn, setTint } from './util';
 import { ViewPool } from './views';
-import { mixColor } from './weapon-kit';
 
 const WHITE = 0xffffff;
 const TAU = Math.PI * 2;
@@ -51,22 +51,16 @@ interface BossView {
 }
 
 export interface BossStage {
-  // Below the masks, and above them.
   readonly under: Container;
   readonly over: Container;
-  // The same over the stage, round the masks that fly, which go in `masks`.
   readonly flying: {
     readonly under: Container;
     readonly masks: Container;
     readonly over: Container;
   };
-  // Starts a pass over the live bosses, which `update` ends.
   begin(): void;
-  // Shadow, step, breath, squash and cracks of a live boss, around the mask the enemies family placed.
   dress(enemy: EnemyState, mask: Mask, sprite: Sprite, frame: Frame): void;
-  // `radius` is the hit bad vibe's, as last drawn.
-  onEvent(event: SimEvent, state: SimState, frame: Frame, radius: number | undefined): void;
-  // A boss was chased: `drawn` is its mask as last drawn, absent if it never was.
+  onEvent(event: SimEvent, state: SimState, frame: Frame, drawnRadius: number | undefined): void;
   farewell(
     event: Extract<SimEvent, { type: 'enemyDied' }>,
     drawn: Drawn<Texture> | undefined,
@@ -78,8 +72,6 @@ export interface BossStage {
   destroy(): void;
 }
 
-// What every boss shares, from its arrival to its farewell. The look of each boss is drawn from its
-// mask the first time it shows up.
 export function createBossStage(ctx: RenderContext): BossStage {
   const { textures, layers } = ctx;
   const decor = createBossDecor();
@@ -103,7 +95,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
     return look;
   }
 
-  // Drawing a look takes a few frames' time: the break draws them, one per frame, before a boss lands.
+  // Drawing a look takes a few frames: the break draws one per frame before a boss lands.
   function prepareOne(): void {
     for (const [kind, mask] of textures.masks.masks) {
       if (mask.face.boss && !looks.has(kind)) {
@@ -129,7 +121,6 @@ export function createBossStage(ctx: RenderContext): BossStage {
     },
   );
 
-  // The wave of a landing: two rings from where it fell, one slow ring in calm mode.
   function land(x: number, y: number, size: number, frame: Frame, tick: number): void {
     const wave = { now: tick, x, y, tint: frame.palette.badVibeRim };
     const beat = WAVE_BEATS * frame.tempo.ticksPerBeat;
@@ -234,8 +225,8 @@ export function createBossStage(ctx: RenderContext): BossStage {
       const killer = event.byPlayer === null ? undefined : byId(state.players, event.byPlayer);
       farewells.start({
         id: event.id,
-        tick: state.tick,
-        start: frame.show,
+        chasedTick: state.tick,
+        showStart: frame.show,
         x: event.x,
         y: event.y,
         radius: last.radius,
@@ -243,7 +234,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
         tilt: last.tilt,
         texture: last.texture,
         look: lookOf(event.kind, mask),
-        token: (killer && ctx.classTokens.get(killer.classId)) ?? 'or',
+        chaserToken: (killer && ctx.classTokens.get(killer.classId)) ?? 'or',
       });
     },
     update(state, frame): void {

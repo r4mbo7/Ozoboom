@@ -85,8 +85,6 @@ export function strikeCooldownMul(enemy: EnemyState): number {
   return hasStatus(enemy, 'halfTime') ? HALF_TIME_COOLDOWN_MUL : 1;
 }
 
-// A full lap every DISORIENTED_HEADING_COUNT * DISORIENTED_TICKS_PER_HEADING ticks, each bad vibe
-// on its own part of the lap.
 export function disorientedHeading(tick: number, enemy: EnemyState): Vec2 {
   const index =
     (Math.floor(tick / DISORIENTED_TICKS_PER_HEADING) + enemy.id) % DISORIENTED_HEADING_COUNT;

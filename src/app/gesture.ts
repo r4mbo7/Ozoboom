@@ -10,10 +10,7 @@ export interface AudioGate {
   pad(pressed: () => boolean): void;
 }
 
-// Browsers keep the audio shut until a gesture, and they alone decide what counts as one: neither a
-// modifier key nor Escape does. So every click, key or pad press asks again until the audio runs. A
-// finger counts only when it lifts, a pad button only when it goes down. Some let it run at once: an
-// installed app, or a page reloaded after a gesture, such as a change of language.
+// Browsers alone decide what opens the audio (not a modifier key, not Escape): every press asks until it runs.
 export function openAudioOnGesture(source: GestureSource, start: () => Promise<void>): AudioGate {
   let open = false;
   let padHeld = false;

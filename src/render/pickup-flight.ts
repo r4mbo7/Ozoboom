@@ -1,9 +1,8 @@
+import { lerp } from '../shared/scalar';
 import type { PickupState } from '../sim/state';
-import { lerp } from './motion';
 
-export const ARC_HEIGHT = 150;
+const ARC_HEIGHT = 150;
 const ARC_GROWTH = 0.7;
-// Share of the flight after which the vibe is fully lit.
 const FADE_IN = 0.25;
 
 export interface FlightPose {
@@ -11,12 +10,9 @@ export interface FlightPose {
   y: number;
   scale: number;
   alpha: number;
-  // 0 as it leaves its speaker, 1 once on the ground.
   progress: number;
 }
 
-// Where a vibe is drawn: a bell from its speaker to its landing spot while it flies. In calm mode
-// it does not fly, it fades in where it lands.
 export function flightPose(pickup: PickupState, alpha: number, calm: boolean): FlightPose {
   const { flight } = pickup;
   if (flight === undefined) {

@@ -25,8 +25,7 @@ export function tempo({ state, tempo: grid, set: definition }: StepContext): voi
     return;
   }
   set.phrase = phraseOfTick(tick, grid);
-  // The game freezes once lost, so each phrase started past a set's first is one held to its end, set after set;
-  // a set held, or without tiers, has nothing left to hold.
+  // The game freezes once lost, so a phrase started past a set's first is one held to its end.
   if (set.phrase > 0 && !isSetFinished(set, definition)) {
     state.stats.phrasesHeld += 1;
   }

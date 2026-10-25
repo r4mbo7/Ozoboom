@@ -97,7 +97,6 @@ function spawnAtEdge(
   spawnScaled(state, set, definition, edge, isBoss);
 }
 
-// A boss of the drop brought in at `at`, scaled as the drop's own.
 export function spawnBossAt(
   state: SimState,
   set: SetDefinition,
@@ -130,7 +129,6 @@ function spawnScaled(
   );
 }
 
-// 1 + mul per player beyond the first; 1 when the set does not scale.
 function perPlayerMul(state: SimState, mul: number | undefined): number {
   return 1 + (mul ?? 0) * (state.players.length - 1);
 }
@@ -180,7 +178,6 @@ function drawSides(rng: SimState['rng'], chance: number): EdgeSide[] {
   return sides;
 }
 
-// A point on the edge of the arena, drawn uniformly along its perimeter, as bad vibes spawn.
 export function edgePosition(rng: SimState['rng'], arena: Arena, radius: number): Vec2 {
   const [spanX, spanY] = spans(arena, radius);
   return pointAlong(arena, radius, nextFloat(rng) * 2 * (spanX + spanY));

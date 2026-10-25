@@ -68,7 +68,7 @@ export function createChargeBursts(
       spawn(frame, {
         shape: t.ring,
         now: state.tick,
-        delay: index * 4,
+        delayTicks: index * 4,
         duration: TICKS_PER_BEAT * 1.5,
         x: event.x,
         y: event.y,

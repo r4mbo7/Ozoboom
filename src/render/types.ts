@@ -7,8 +7,7 @@ export interface RenderOptions {
   focus?: CameraFocus;
 }
 
-// A small view of another world, painted into a canvas of the page before each image of the game:
-// the scene of a weapon on its card. It shows `viewHeight` units of that world from top to bottom.
+// The scene of a weapon on its card, painted before each image; `viewHeight` is in world units.
 export interface Inset {
   readonly canvas: HTMLCanvasElement;
   readonly state: SimState;

@@ -1,5 +1,6 @@
 import type { Graphics, Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
+import { clamp01 } from '../shared/scalar';
 import { TICKS_PER_BAR, type Tempo, ticksIntoBeat } from '../shared/tempo';
 import type { SimState, SpeakerState } from '../sim/state';
 import { setTint } from './util';
@@ -24,9 +25,7 @@ export interface SpeakerWaves {
   readonly from: number;
 }
 
-// Drawn for a radius of 40: a drawing with a front turns it toward the scène and sends its waves
-// from there, the others all around.
-export const SPEAKER_WAVES: Readonly<Record<string, SpeakerWaves>> = {
+const SPEAKER_WAVES: Readonly<Record<string, SpeakerWaves>> = {
   'dome-chill': { front: true, from: 44 },
   foret: { front: false, from: 54 },
   sub: { front: true, from: 28 },
@@ -45,7 +44,6 @@ export function speakerToken(id: string): PaletteToken {
   return ofSpeaker(SPEAKER_TOKENS, id, 'palette token');
 }
 
-// A drawing with a front turns it, its +y, toward the scène.
 export function speakerTurn(
   speaker: { id: string; x: number; y: number },
   core: { x: number; y: number },
@@ -61,16 +59,7 @@ export function plugShare(
   ticksPerBar: number = TICKS_PER_BAR,
 ): number {
   const needed = plugBars * ticksPerBar;
-  return needed > 0 ? Math.min(1, Math.max(0, plugTicks / needed)) : 0;
-}
-
-export function mixColor(from: number, to: number, share: number): number {
-  const channel = (shift: number) => {
-    const a = (from >> shift) & 0xff;
-    const b = (to >> shift) & 0xff;
-    return Math.round(a + (b - a) * share);
-  };
-  return (channel(16) << 16) | (channel(8) << 8) | channel(0);
+  return needed > 0 ? clamp01(plugTicks / needed) : 0;
 }
 
 export function drawCable(
@@ -103,7 +92,6 @@ export function drawCable(
   }
 }
 
-// Three waves leave the speaker over each beat, from its front or all around it, at a radius of 40.
 export function drawWaves(
   view: { waves: Graphics; wavePhase: number },
   speaker: { id: string; radius: number },

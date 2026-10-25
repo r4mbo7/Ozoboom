@@ -3,17 +3,13 @@ import { BOSS_CELL } from './textures-enemies';
 import { BOSS_SCALE, FACE_RADIUS, INK, gladFace, type Face } from './face-kit';
 import { TAU, WHITE, type Ctx, type Shape } from './paint';
 
-// Rim band, in mask units: what the rim gains when it breathes or whitens.
-const BAND = 4;
-// The mask's own rim, in mask units: cracks and the glad body stay inside it.
+const RIM_BAND = 4;
 const RIM_INSIDE = 3.5;
 const GLAD_LINE = 1.8;
 const DIRECTIONS = 16;
 
 type Point = readonly [number, number];
 
-// Run across the mask from its edge, in mask units: the first at two thirds of its life, all three
-// at one third.
 const CRACKS: readonly (readonly Point[])[] = [
   [
     [6, -42],
@@ -37,14 +33,9 @@ const CRACKS: readonly (readonly Point[])[] = [
 ];
 
 export interface BossLook {
-  // White outside the mask's rim, as wide as BAND: the rim that breathes and whitens.
   readonly band: Shape;
-  // Dark cracks with a pale lip, kept inside the rim: two thirds, then one third of life lost.
   readonly cracks: readonly [Shape, Shape];
-  // Every crack as white light, for the gold that shines through them when it is chased.
   readonly light: Shape;
-  // The chased mask, tinted in the color of whoever chased it: its silhouette with blushes. Then,
-  // untinted, the white light at its heart and, tinted, its smile: `Face.glad` or `gladFace`.
   readonly glad: Shape;
   readonly heart: Shape;
   readonly smile: Shape;
@@ -61,7 +52,6 @@ function canvasOf(size: number): { canvas: HTMLCanvasElement; ctx: Ctx } {
   return { canvas, ctx };
 }
 
-// Draws in mask units around the middle of a boss cell.
 function inMask(ctx: Ctx, draw: (ctx: Ctx) => void): void {
   ctx.save();
   ctx.translate(BOSS_CELL / 2, BOSS_CELL / 2);
@@ -70,8 +60,6 @@ function inMask(ctx: Ctx, draw: (ctx: Ctx) => void): void {
   ctx.restore();
 }
 
-// The mask's shape grown (positive) or shrunk (negative) by `units`: the union, or the
-// intersection, of the shape moved all around.
 function morph(silhouette: HTMLCanvasElement, units: number): HTMLCanvasElement {
   const { canvas, ctx } = canvasOf(BOSS_CELL);
   const reach = Math.abs(units) * BOSS_SCALE;
@@ -116,7 +104,6 @@ function filled(shape: HTMLCanvasElement, color: string): HTMLCanvasElement {
   return canvas;
 }
 
-// The boss's own pieces, drawn from its mask: one canvas per boss, made when it first shows up.
 export function createBossLook(face: Face): BossLook {
   const { canvas: silhouette, ctx: drawn } = canvasOf(BOSS_CELL);
   inMask(drawn, (ctx) => {
@@ -126,7 +113,7 @@ export function createBossLook(face: Face): BossLook {
 
   const cells: ((ctx: Ctx) => void)[] = [
     (ctx) => {
-      ctx.drawImage(morph(silhouette, BAND), 0, 0);
+      ctx.drawImage(morph(silhouette, RIM_BAND), 0, 0);
       ctx.globalCompositeOperation = 'source-in';
       ctx.fillStyle = WHITE;
       ctx.fillRect(0, 0, BOSS_CELL, BOSS_CELL);

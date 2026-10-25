@@ -1,6 +1,6 @@
 import type { InputDevice } from '../input/intents';
 import type { Locale } from '../shared/languages';
-import type { GameEvent, GameMode, GameOutcome } from '../shared/stats';
+import type { GameEnd, GameEvent, GameMode, GameOutcome, GameStart } from '../shared/stats';
 import { TICK_RATE_HZ } from '../shared/tempo';
 import type { SimState } from '../sim/state';
 
@@ -20,7 +20,7 @@ export function gameEvent(
   state: SimState,
   { mode, device, version, locale }: GameContext,
   outcome?: GameOutcome,
-): GameEvent {
+): GameStart | GameEnd {
   const fields = {
     stage: state.setId,
     mode,
@@ -78,9 +78,13 @@ export function sendGameEvent(
   if (url === undefined || url === '' || new URLSearchParams(search).has('dev')) {
     return false;
   }
+  const data = JSON.stringify(event);
   try {
-    return beacon(`${url}/event`, JSON.stringify(event));
-  } catch {
-    return false;
+    return beacon(`${url}/event`, data);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return false;
+    }
+    throw error;
   }
 }

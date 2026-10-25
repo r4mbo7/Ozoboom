@@ -1,4 +1,5 @@
 import type { ObstacleDefinition } from '../data/types';
+import { clamp01 } from '../shared/scalar';
 
 const RESOLVE_PASSES = 2;
 // Float slack so a circle pushed exactly to tangency does not count as overlapping.
@@ -10,9 +11,7 @@ interface Circle {
   radius: number;
 }
 
-// Moves the circle out of every obstacle it overlaps, along the normal. When it cannot fit
-// (a gap narrower than itself) it goes back to `fromX`, `fromY`, the spot it moved from, unless
-// that spot was already inside an obstacle: then the push stands so it can get out.
+// A circle that cannot fit goes back to `fromX`, `fromY`, unless already inside there: then it gets out.
 export function resolveObstacles(
   circle: Circle,
   fromX: number,
@@ -49,8 +48,7 @@ export function resolveObstacles(
   }
 }
 
-// The point itself moved out of every obstacle, to the edge of the nearest one: nothing is
-// drawn from the rng, so the same state always gives the same spot.
+// Nothing is drawn from the rng, so the same state always gives the same spot.
 export function clearOfObstacles(
   point: { x: number; y: number },
   radius: number,
@@ -83,7 +81,6 @@ function overlaps(
   return false;
 }
 
-// Whether a circle of `radius` walking the straight line from (x0, y0) to (x1, y1) would touch an obstacle.
 export function lineBlocked(
   x0: number,
   y0: number,
@@ -98,8 +95,7 @@ export function lineBlocked(
   for (const obstacle of obstacles) {
     const ox = obstacle.x - x0;
     const oy = obstacle.y - y0;
-    const t =
-      lengthSquared === 0 ? 0 : Math.min(1, Math.max(0, (ox * lx + oy * ly) / lengthSquared));
+    const t = lengthSquared === 0 ? 0 : clamp01((ox * lx + oy * ly) / lengthSquared);
     const dx = ox - lx * t;
     const dy = oy - ly * t;
     const touch = radius + obstacle.radius;
@@ -110,8 +106,7 @@ export function lineBlocked(
   return false;
 }
 
-// The share of the straight line from (x0, y0) to (x1, y1) a circle of `radius` covers before it touches an
-// obstacle: 1 when nothing is in the way. An obstacle it already overlaps does not hold it, so that it can get out.
+// An obstacle it already overlaps does not hold it, so that it can get out.
 export function freeShare(
   x0: number,
   y0: number,

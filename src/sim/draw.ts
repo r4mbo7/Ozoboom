@@ -10,10 +10,9 @@ import { nextInt, nextU32, pick, seedRng } from '../shared/prng';
 import type { ResolvedContent } from './content';
 import type { PlayerState, RngState, SimState, UpgradeOffer } from './state';
 
-export const OFFER_SIZE = 3;
-// Circus weapons in one offer, fusions included: the rest of it are upgrades.
-export const MAX_WEAPONS_PER_OFFER = 2;
-export const DEFAULT_WEAPON_SLOTS = 3;
+const OFFER_SIZE = 3;
+const MAX_WEAPONS_PER_OFFER = 2;
+const DEFAULT_WEAPON_SLOTS = 3;
 const AFFINITY_WEIGHT = 2;
 const FUSION_WEIGHT = 3;
 
@@ -31,8 +30,6 @@ export function isEligible(upgrade: UpgradeDefinition, player: PlayerState): boo
   return stacks < upgrade.maxStacks;
 }
 
-// The recipe that turns `weapon`, a fused form, out of what the player holds: the base weapon at
-// its maximum level and the upgrade at its maximum stacks, a recipe serving once per player.
 export function openFusion(
   weapon: WeaponDefinition,
   player: PlayerState,
@@ -65,7 +62,6 @@ export function weaponSlotCount(set: SetDefinition): number {
   return set.weaponSlots ?? DEFAULT_WEAPON_SLOTS;
 }
 
-// A held weapon is offered as a level up, a new one only while a slot is free.
 export function isWeaponOffered(
   weapon: WeaponDefinition,
   player: PlayerState,
@@ -90,7 +86,6 @@ function isPlugged(state: SimState, speakerId: string): boolean {
   return (state.speakers ?? []).some((speaker) => speaker.id === speakerId && speaker.plugged);
 }
 
-// Every speaker of the set plugged opens the fusions; a set without speakers never holds them back.
 function fusionsOpen(state: SimState): boolean {
   return (state.speakers ?? []).every((speaker) => speaker.plugged);
 }
@@ -99,7 +94,7 @@ function pluggedSpeakers(state: SimState): number {
   return (state.speakers ?? []).filter((speaker) => speaker.plugged).length;
 }
 
-// A Volume without rare nor legendary weight draws nothing, so that it leaves the generator as is.
+// Draws nothing without rare nor legendary weight, so that it leaves the generator as is.
 function drawRarity(rng: RngState, weights: RarityWeights | undefined): Rarity {
   if (weights === undefined || weights.rare + weights.legendary === 0) {
     return 'common';
@@ -111,8 +106,7 @@ function drawRarity(rng: RngState, weights: RarityWeights | undefined): Rarity {
   return roll < weights.common + weights.rare ? 'rare' : 'legendary';
 }
 
-// A weapon is drawn more often for the class of its `classAffinity` and for those that list it.
-export function hasAffinity(
+function hasAffinity(
   content: Pick<ResolvedContent, 'classes'>,
   weapon: WeaponDefinition,
   classId: string,
@@ -150,8 +144,7 @@ function candidates(
   return pool;
 }
 
-// Weighted draw without replacement; a pool of unit weights consumes the generator exactly as a
-// uniform draw would. The rarity of each upgrade is drawn right after the upgrade (ADR 0010).
+// Unit weights consume the generator as a uniform draw would; rarity right after its upgrade (ADR 0010).
 export function drawOffer(
   rng: RngState,
   state: SimState,
@@ -195,7 +188,7 @@ export function drawOffer(
   return { options, rarities };
 }
 
-export function relicOfferSize(state: SimState): number {
+function relicOfferSize(state: SimState): number {
   return OFFER_SIZE + (state.volume ?? 0);
 }
 
@@ -220,10 +213,7 @@ export function drawRelics(
 
 const BOSS_STREAM = 0xb055;
 
-// The boss of the next drop, among the bosses of the content not drawn yet in this round. Once each
-// came, a new round starts without the last one, so that no boss comes twice in a row. The n-th
-// boss takes the n-th value of a stream drawn from the seed alone: what the game drew before the
-// break leaves the bosses as they are, and drawing them leaves the game's generator as it is.
+// A stream from the seed alone: the game's draws leave the bosses as they are, and the other way round.
 export function drawBoss(seed: number, content: ResolvedContent, drawn: readonly string[]): string {
   const rng = seedRng((seed ^ BOSS_STREAM) >>> 0);
   drawn.forEach(() => nextU32(rng));
@@ -231,6 +221,7 @@ export function drawBoss(seed: number, content: ResolvedContent, drawn: readonly
     .filter((enemy) => enemy.behaviour === 'boss')
     .map((enemy) => enemy.id);
   const round = drawn.slice(drawn.length - (drawn.length % pool.length));
+  // A new round leaves out the last boss, so that none comes twice in a row.
   const excluded = round.length > 0 ? round : drawn.slice(-1);
   const fresh = pool.filter((id) => !excluded.includes(id));
   return pick(rng, fresh.length > 0 ? fresh : pool);

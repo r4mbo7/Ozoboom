@@ -43,7 +43,6 @@ export function reviveMulOf(content: ResolvedContent, player: PlayerState): numb
   return lookup(content.classes, player.classId, 'class').reviveMul ?? 1;
 }
 
-// The standing ally in contact with the highest reviveMul; the first one wins a tie.
 function bestHelper(
   state: SimState,
   content: ResolvedContent,

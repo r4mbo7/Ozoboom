@@ -2,7 +2,7 @@ import type { InputDevice, MenuIntents } from '../input/intents';
 import { LOCALES, type Locale, t } from '../shared/i18n';
 import { el, fillHint, icon } from './dom';
 import { createMenu } from './menu';
-import { promptsFor } from './prompts';
+import type { Prompts } from './prompts';
 
 const CHECK =
   '<path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -10,8 +10,7 @@ const CHECK =
 const nameOf = (locale: Locale): string =>
   LOCALES.find((entry) => entry.id === locale)?.name ?? locale;
 
-// The row of the title that opens the list. Each language is written in itself, for a player who
-// does not read the current one.
+// Each language is written in itself, for a player who does not read the current one.
 export function createLanguageControl(current: Locale): HTMLButtonElement {
   const button = el('button', 'ui-button ui-toggle ui-language');
   button.type = 'button';
@@ -35,9 +34,8 @@ export interface LanguageList {
   handle(edges: MenuIntents): void;
 }
 
-// Every language of the game, over the title. A choice reloads the game in it; `close` gives the
-// title back unchanged.
 export function createLanguageList(
+  prompts: Prompts,
   current: Locale,
   choose: (locale: Locale) => void,
   close: () => void,
@@ -98,15 +96,15 @@ export function createLanguageList(
       element.hidden = false;
     },
     setDevice(device) {
-      const prompts = promptsFor(device);
+      const shown = prompts.for(device);
       fillHint(
         hint,
         [
-          { keys: prompts.navigate, label: t('naviguer') },
-          { keys: [prompts.confirm], label: t('valider') },
-          { keys: [prompts.back], label: t('retour') },
+          { keys: shown.navigate, label: t('naviguer') },
+          { keys: [shown.confirm], label: t('valider') },
+          { keys: [shown.back], label: t('retour') },
         ],
-        prompts.style,
+        shown.style,
       );
     },
     handle(edges) {

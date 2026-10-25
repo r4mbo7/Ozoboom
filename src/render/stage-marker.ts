@@ -23,7 +23,6 @@ const SEGMENT_WIDTH = 5;
 const RIM_GROW = 2;
 const LABEL_GAP = 3;
 
-// Screen space: while the scene is out of view, an arrow on the border toward it, with its VU-meter in small.
 export function createStageMarker(ctx: RenderContext): Family {
   const { textures, layers } = ctx;
   const root = layers.screen.addChild(new Container());

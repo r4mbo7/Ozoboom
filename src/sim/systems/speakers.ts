@@ -52,7 +52,6 @@ export function speakers({ state, content, set, tempo }: StepContext): void {
   }
 }
 
-// The aura plays on the kick when it hits, as a trap would; the others last as long as it is lit.
 function cadence(aura: TrapEffect): TrapCadence {
   return aura.kind === 'shockwave' ? 'beat' : 'continuous';
 }

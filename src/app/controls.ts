@@ -14,14 +14,12 @@ export type ScreenToWorld = (point: Vec2) => Vec2;
 type Body = Pick<PlayerState, 'id' | 'x' | 'y' | 'radius' | 'aim' | 'hand'>;
 export type Target = Pick<EnemyState, 'x' | 'y' | 'radius' | 'hp'>;
 
-// What the game does by itself for the player, on the nearest bad vibe in reach. A touch screen
-// always has both; elsewhere the player turns them on.
 export interface Assist {
   readonly autoFire: boolean;
   readonly autoAim: boolean;
 }
 
-export const NO_ASSIST: Assist = { autoFire: false, autoAim: false };
+const NO_ASSIST: Assist = { autoFire: false, autoAim: false };
 const TOUCH_ASSIST: Assist = { autoFire: true, autoAim: true };
 
 export interface CommandRequest {
@@ -35,14 +33,12 @@ export interface CommandRequest {
   readonly emote: Emote | null;
   readonly upgradeId: string | null;
   readonly assist: Assist;
-  // The bad vibe the assist aims or fires at.
   readonly target: Vec2 | null;
-  // Where on the screen a finger dropped the trap; null places it under the player.
+  // null places the trap under the player.
   readonly trapScreen: Vec2 | null;
 }
 
-// The bad vibe nearest to the player among those their attack reaches.
-export function autoTarget(player: Vec2, enemies: readonly Target[], reach: number): Target | null {
+function nearestInReach(player: Vec2, enemies: readonly Target[], reach: number): Target | null {
   let best: Target | null = null;
   let bestDistance = Infinity;
   for (const enemy of enemies) {
@@ -56,12 +52,7 @@ export function autoTarget(player: Vec2, enemies: readonly Target[], reach: numb
   return best;
 }
 
-export function aimOf(
-  snapshot: InputSnapshot,
-  player: Body,
-  toWorld: ScreenToWorld,
-  heldAim: Vec2,
-): Vec2 {
+function aimOf(snapshot: InputSnapshot, player: Body, toWorld: ScreenToWorld, heldAim: Vec2): Vec2 {
   if (snapshot.aimFromPointer && snapshot.pointerScreen !== null) {
     const pointer = toWorld(snapshot.pointerScreen);
     const toPointer = { x: pointer.x - player.x, y: pointer.y - player.y };
@@ -109,10 +100,8 @@ export function buildCommand(request: CommandRequest): PlayerCommand {
   };
 }
 
-// Away from the pointer, the aim is held: the right stick sets it when it moves, and the keyboard,
-// which has no aiming keys, aims where the player last moved. The input keeps the last stick
-// direction in `gameplay.aim`, so a change there is the stick moving.
-export function nextHeldAim(
+// The keyboard has no aiming keys: it aims where the player last moved. A change of `gameplay.aim` is the stick.
+function nextHeldAim(
   previous: Vec2,
   snapshot: InputSnapshot,
   previousGameplay: GameplayIntents | null,
@@ -130,8 +119,7 @@ export function nextHeldAim(
   return previous;
 }
 
-// Input is read once per frame; the sim steps 0 to n times per frame. Discrete intents of a frame
-// wait for its first step, continuous ones apply to every step until the next frame.
+// The sim steps 0 to n times a frame: discrete intents wait for the first step, continuous ones apply to each.
 export class Controls {
   private snapshot: InputSnapshot | null = null;
   private previousGameplay: GameplayIntents | null = null;
@@ -145,8 +133,6 @@ export class Controls {
   private fireTicks = 0;
   private readonly handSize: number;
 
-  // The first aim, before any input, should point away from the scene, where the bad vibes come
-  // from and where a trap placed in front of the player fits.
   constructor(handSize: number, initialAim: Vec2) {
     this.handSize = handSize;
     this.heldAim = initialAim;
@@ -170,13 +156,11 @@ export class Controls {
     this.upgradeId = upgradeId;
   }
 
-  // `reach`: how far the player's attack flies now, for the assist. `chargeTicks`: how long it
-  // takes to charge, 0 for an attack that does not.
   command(
     player: Body,
     toWorld: ScreenToWorld,
     enemies: readonly Target[],
-    reach: number,
+    attackReach: number,
     chosen: Assist = NO_ASSIST,
     chargeTicks = 0,
   ): PlayerCommand {
@@ -195,7 +179,8 @@ export class Controls {
       emote: this.emote,
       upgradeId: this.upgradeId,
       assist,
-      target: assist.autoFire || assist.autoAim ? autoTarget(player, enemies, reach) : null,
+      target:
+        assist.autoFire || assist.autoAim ? nearestInReach(player, enemies, attackReach) : null,
       trapScreen: this.trapScreen,
     });
     this.placeTrap = false;
@@ -212,8 +197,7 @@ export class Controls {
     };
   }
 
-  // A charged attack learns how many steps the fire has been held. A fire no hand holds, that of
-  // the assist, lets go at half charge.
+  // A fire no hand holds, that of the assist, lets go at half charge.
   private charge(input: PlayerInput, pressed: boolean, chargeTicks: number): PlayerInput {
     const letGo = !pressed && this.fireTicks >= Math.ceil(chargeTicks / 2);
     this.fireTicks = input.fire && !letGo ? this.fireTicks + 1 : 0;

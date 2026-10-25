@@ -14,7 +14,6 @@ import {
 import type { PlacedState, SimState } from '../state';
 import type { StepContext } from './types';
 
-// Half-width of a totem: the enemies it draws stop at its edge.
 const TOTEM_BODY_RADIUS = 14;
 
 // Before the steering, so the slow of this tick is the one the enemies move with.
@@ -36,8 +35,7 @@ export function placedZones(ctx: StepContext): void {
   removeExpired(state);
 }
 
-// After the steering: the totem replaces the step the enemies just took, as a lure does, then
-// pushes them back on each bar.
+// After the steering: the totem replaces the step the enemies just took, as a lure does.
 export function placedTotems(ctx: StepContext): void {
   const { state, content } = ctx;
   const markedMul = markedDamageMul(content);

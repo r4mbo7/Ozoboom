@@ -1,9 +1,9 @@
 import type { Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { EntityId, PlayerState, ProjectileState, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
 import { type Piece, SIZES, type WeaponKit } from './weapon-kit';
 import { type WeaponStyle, arcLook, arcProgress } from './weapon-looks';
 import { add, byId, hide, setTint } from './util';
@@ -75,7 +75,6 @@ function heading(
   return look.kind === 'lob' ? now * 0.25 : now * 0.4;
 }
 
-// Shots of the weapons: sparks, diabolos in their arc, frisbees and fans in their curve.
 export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
   const { textures: t, layers } = ctx;
   const w = t.weapons;
@@ -98,7 +97,6 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
   const landings = new Map<EntityId, Landing>();
   let frameNo = 0;
 
-  // The diabolo draws its shadow on the ground and rises above it: the shadow tells how high.
   function lob(
     view: ProjectileView,
     projectile: ProjectileState,
@@ -157,7 +155,6 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
       x,
       y,
     );
-    // A frisbee that has turned back no longer hurts: it flies home, paler.
     const pale = projectile.returning === true ? 0.65 : 1;
     kit.place(
       view.piece,

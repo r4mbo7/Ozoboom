@@ -4,16 +4,9 @@ import {
   type SunPalette,
   isClassToken,
 } from '../shared/palette';
+import { recordOf } from '../shared/records';
 
 export type PixiPalette = Record<PaletteToken, number>;
-
-export function cssColor(color: number, alpha = 1): string {
-  if (alpha >= 1) {
-    return `#${color.toString(16).padStart(6, '0')}`;
-  }
-  const channels = [color >> 16, (color >> 8) & 0xff, color & 0xff].map(String).join(' ');
-  return `rgb(${channels} / ${String(alpha)})`;
-}
 
 export function parseHexColor(hex: string): number {
   if (!/^#[0-9a-f]{6}$/i.test(hex)) {
@@ -22,12 +15,17 @@ export function parseHexColor(hex: string): number {
   return Number.parseInt(hex.slice(1), 16);
 }
 
+export function mixColor(from: number, to: number, amount: number): number {
+  const channel = (shift: number): number => {
+    const a = (from >> shift) & 0xff;
+    const b = (to >> shift) & 0xff;
+    return Math.round(a + (b - a) * amount);
+  };
+  return (channel(16) << 16) | (channel(8) << 8) | channel(0);
+}
+
 export function createPixiPalette(): PixiPalette {
-  const palette = {} as PixiPalette;
-  for (const token of PALETTE_TOKENS) {
-    palette[token] = 0;
-  }
-  return palette;
+  return recordOf(PALETTE_TOKENS, () => 0);
 }
 
 export function writePixiPalette(into: PixiPalette, palette: SunPalette): void {

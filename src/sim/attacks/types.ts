@@ -6,21 +6,17 @@ import type { StepContext } from '../systems/types';
 export type Upgraded = Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts'>;
 
 export interface AttackModule<A extends AttackDefinition> {
-  // Runs on every tick for each standing player whose class has this attack.
+  // Every tick, for each standing player of a class with this attack.
   step(ctx: StepContext, player: PlayerState, attack: A, input: PlayerInput): void;
-  // How far from the player the attack hits: the bot keeps to it, the aim and the class screen show it.
+  // The bot keeps to it; the aim and the class screen show it.
   reach(attack: A, player: Upgraded): number;
-  // For an attack that charges while the fire is held: the ticks to full charge. Touch and
-  // automatic fire let go at half of it.
+  // Touch and automatic fire let go at half of it.
   chargeTicks?(attack: A): number;
-  // Each shot spends what the player has to get back (the Jongleur's clubs): the bot fires only
-  // at what it reaches.
+  // Shots spend what the player must get back (clubs): the bot fires only at what it reaches.
   readonly ammunition?: true;
-  // Runs once per tick after every player's step, for what the attack leaves in the game,
-  // whoever threw it, standing or not.
+  // Once per tick after every player's step, whoever threw what it left, standing or not.
   update?(ctx: StepContext): void;
-  // Where the player should walk to keep attacking (a club lying on the ground), if anywhere: the
-  // bot goes there.
+  // Where the bot walks to keep attacking (a club lying on the ground).
   fetch?(state: SimState, player: PlayerState, attack: A): Vec2 | undefined;
 }
 

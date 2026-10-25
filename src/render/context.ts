@@ -34,7 +34,6 @@ export interface RenderContent {
   readonly enemies: readonly Pick<EnemyDefinition, 'id' | 'behaviour' | 'special' | 'radius'>[];
   readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect' | 'shade'>[];
   readonly sets: readonly SetDefinition[];
-  // The paths a festival walks between two stages, drawn like a stage.
   readonly paths?: readonly SetDefinition[];
   readonly bystanders?: readonly Pick<BystanderDefinition, 'id' | 'helpTicks'>[];
   readonly weapons?: readonly (WeaponLook & Pick<WeaponDefinition, 'id'>)[];
@@ -54,19 +53,15 @@ export interface RenderContext {
   readonly options: RenderOptions;
   readonly classTokens: ReadonlyMap<string, PaletteToken>;
   readonly behaviours: ReadonlyMap<string, EnemyBehaviour>;
-  // Each bad vibe's radius as defined, for one that left before it was drawn.
   readonly enemyRadii?: ReadonlyMap<string, number>;
   readonly trapLooks: ReadonlyMap<string, TrapLook>;
   readonly specials: ReadonlyMap<string, SpecialEffect>;
   readonly helpTicks: ReadonlyMap<string, number>;
   readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
-  // Every set a game may play, the paths of a festival included, by id.
   readonly stages: ReadonlyMap<string, SetDefinition>;
   readonly weaponLooks: ReadonlyMap<string, WeaponLook>;
   readonly skillEffects: ReadonlyMap<string, SkillEffect>;
-  // The shade each class casts around its players, by class id: the parasol of the Hygie.
   readonly shadeRadii: ReadonlyMap<string, number>;
-  // Each class's attack, where the content gives it.
   readonly attacks: ReadonlyMap<string, AttackDefinition>;
   readonly dash: DashDefinition | null;
 }

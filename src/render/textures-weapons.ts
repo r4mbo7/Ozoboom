@@ -1,4 +1,5 @@
 import type { WeaponEffect } from '../data/types';
+import { recordOf } from '../shared/records';
 import {
   SHADE_DEEP,
   TAU,
@@ -15,7 +16,6 @@ import {
 export type WeaponKind = WeaponEffect['kind'];
 
 export interface WeaponTextures {
-  // One silhouette per weapon, told by its effect kind: the sheet at 16 and 32 pixels is made of these.
   readonly icons: Readonly<Record<WeaponKind, Shape>>;
   readonly sparkShot: Shape;
   readonly swing: Shape;
@@ -26,8 +26,8 @@ export interface WeaponTextures {
   readonly shadow: Shape;
 }
 
-export const ICON_RADIUS = 32;
-export const SWING_RADIUS = 64;
+const ICON_RADIUS = 32;
+const SWING_RADIUS = 64;
 export const POLE_HEIGHT = 1.8 * ICON_RADIUS;
 const OUTER = 8;
 const GAP = 3;
@@ -219,10 +219,7 @@ function swing(full: boolean): Shape {
 
 export function createWeaponTextures(): WeaponTextures {
   return {
-    icons: Object.fromEntries(WEAPON_KINDS.map((kind) => [kind, icon(kind)])) as Record<
-      WeaponKind,
-      Shape
-    >,
+    icons: recordOf(WEAPON_KINDS, icon),
     sparkShot: paint(32, 32, 12, (ctx) => {
       glow(ctx, WHITE, 6);
       ctx.fillStyle = SHADE_DEEP;

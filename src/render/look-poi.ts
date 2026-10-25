@@ -3,7 +3,7 @@ import { MAIN_TEMPO, type Tempo, ticksIntoBar } from '../shared/tempo';
 import { TAU } from './paint';
 import { type Look, type LookInput, type Spawn, angleSpring, fade, lerpAngle } from './player-look';
 import type { Textures } from './textures';
-import { POI_ORBIT, REFERENCE, STRAND_LENGTH } from './textures-looks';
+import { POI_ORBIT, REFERENCE_RADIUS, STRAND_LENGTH } from './textures-looks';
 import { add, hide, placeOutline, setTint } from './util';
 
 const STRANDS = 5;
@@ -14,17 +14,14 @@ const WHIP_TICKS = 1.6;
 const RECOIL = 5;
 const NOVA_TICKS = 48;
 
-// The poi make a turn per bar: they follow the time, not the frame.
 export function poiAngle(now: number, tempo: Tempo = MAIN_TEMPO): number {
   return ticksIntoBar(now, tempo) * (TAU / tempo.ticksPerBar);
 }
 
-// The last ball thrown alternates: the first shot throws ball 0.
 export function whippedBall(fireCount: number): number {
   return (fireCount + 1) % 2;
 }
 
-// After the nova the poi fly out and come back on an elastic, then settle on their orbit.
 export function novaStretch(sinceSkill: number): number {
   if (sinceSkill < 0 || sinceSkill >= NOVA_TICKS) {
     return 1;
@@ -32,8 +29,6 @@ export function novaStretch(sinceSkill: number): number {
   return Math.max(0.6, 1 + 1.1 * Math.exp(-sinceSkill / 7) * Math.cos(sinceSkill * 0.38));
 }
 
-// La Luxiole: five ribbons in her hair on springs, and two poi of which the last thrown whips
-// toward the aim on every shot while her body recoils a little.
 export function createPoiLook(bodies: Container, textures: Textures, spawn: Spawn): Look {
   const t = textures.players;
   const parts = t.poi;
@@ -51,7 +46,6 @@ export function createPoiLook(bodies: Container, textures: Textures, spawn: Spaw
   }
   const balls = [add(bodies, parts.ball), add(bodies, parts.ball)] as const;
   const sprites = [...arms, outline, shoulders, head, ...roots, ...tips, ...beads, ...balls];
-  // Per ribbon: root angle, its speed, tip angle, its speed.
   const hair = new Float64Array(STRANDS * 4);
   let fresh = true;
   let lastBeat = -1;
@@ -136,7 +130,7 @@ export function createPoiLook(bodies: Container, textures: Textures, spawn: Spaw
       head.rotation = angle;
       head.scale.set(scale);
       setTint(head, input.teint);
-      placeOutline(outline, shoulders, t.shoulders.texture, REFERENCE, frame);
+      placeOutline(outline, shoulders, t.shoulders.texture, REFERENCE_RADIUS, frame);
 
       const turn = poiAngle(frame.now, frame.tempo);
       const thrown = whippedBall(input.fireCount);

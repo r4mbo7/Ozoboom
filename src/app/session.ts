@@ -11,16 +11,18 @@ export interface Session {
   endFrame(): void;
 }
 
-// The loop can run several steps per frame, but the renderer and the interface only see the state
-// once per frame: they read the events of every step of the frame through a view of the state,
-// while the sim keeps its own last-step events.
+// The renderer and the interface see the state once a frame, the sim once a step.
 export function createSession(options: SimulationOptions): Session {
   const simulation = createSimulation(options);
   const { state } = simulation;
   const frameEvents: SimEvent[] = [...state.events];
   const frame = new Proxy(state, {
     get(target, key, receiver) {
-      return key === 'events' ? frameEvents : (Reflect.get(target, key, receiver) as unknown);
+      if (key === 'events') {
+        return frameEvents;
+      }
+      const value: unknown = Reflect.get(target, key, receiver);
+      return value;
     },
   });
 

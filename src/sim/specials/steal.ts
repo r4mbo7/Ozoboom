@@ -5,7 +5,6 @@ import type { EnemyState, PickupState, SimState } from '../state';
 import type { StepContext } from '../systems/types';
 import type { SpecialModule, SteeringTarget } from './types';
 
-// Squared distance below which a fleeing Arnaqueur counts as having reached the edge.
 const AT_EDGE_SQUARED = 1e-6;
 
 export const steal: SpecialModule = (ctx, enemy, effect) => {
@@ -91,7 +90,6 @@ function nearestVibesPickup(state: SimState, enemy: EnemyState): PickupState | u
   return nearest;
 }
 
-// The point on the boundary where a fleeing enemy's center stops, closest to its current position.
 function nearestEdgePoint(state: SimState, enemy: EnemyState): Circle {
   const { width, height } = state.arena;
   const r = enemy.radius;

@@ -5,9 +5,8 @@ import { setTempo, setOf } from '../sim/lineup';
 import type { SimState } from '../sim/state';
 import { el, setText } from './dom';
 
-export const BANNER_BEATS = 9;
+const BANNER_BEATS = 9;
 
-// The name of the boss that landed in these events, in the language of the screen, null if none did.
 export function landedBoss(state: Pick<SimState, 'events'>, content: GameContent): string | null {
   for (const event of state.events) {
     if (event.type === 'enemySpawned') {
@@ -26,8 +25,6 @@ export interface BossBanner {
   reset(): void;
 }
 
-// A boss's name, alone and large, while it lands on the drop. It stands on its own band of night,
-// so that it reads the same at every hour.
 export function createBossBanner(): BossBanner {
   const element = el('div', 'ui-boss');
   element.setAttribute('role', 'status');

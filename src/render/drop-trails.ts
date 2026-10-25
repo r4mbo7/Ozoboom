@@ -24,7 +24,6 @@ function hueChannel(turn: number, offset: number): number {
   return 0.5 + 0.5 * Math.cos(2 * Math.PI * (turn + offset));
 }
 
-// Echoes of our players, their shots and the stage: a half-resolution buffer fed back into itself, drawn under the entities.
 export function createDropTrails(pixi: Renderer, layers: Layers) {
   const sources = new Set<Container>([layers.core, layers.shots, layers.weapons, layers.players]);
   const display = layers.echoes.addChild(new Sprite());
@@ -64,17 +63,17 @@ export function createDropTrails(pixi: Renderer, layers: Layers) {
     pixi.render({ container: new Container(), target, clear: true });
   }
 
-  const shown: boolean[] = [];
+  const shown = new Map<Container, boolean>();
+  const layered = () => [...layers.world.children, ...layers.setting.children];
 
   function drawSources(world: Container, target: RenderTexture): void {
-    const { children } = world;
-    for (const [index, child] of children.entries()) {
-      shown[index] = child.visible;
-      child.visible = child.visible && sources.has(child);
+    for (const child of layered()) {
+      shown.set(child, child.visible);
+      child.visible = child.visible && (sources.has(child) || child === layers.setting);
     }
     pixi.render({ container: world, target, clear: true });
-    for (const [index, child] of children.entries()) {
-      child.visible = shown[index] ?? true;
+    for (const child of layered()) {
+      child.visible = shown.get(child) ?? true;
     }
   }
 

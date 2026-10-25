@@ -286,7 +286,7 @@ const GOA_LEAD: MusicNotes = [
   [60, 6, 4],
 ];
 
-export const GOA_DES_ETOILES: MusicTrack = {
+const GOA_DES_ETOILES: MusicTrack = {
   id: 'goa-des-etoiles',
   name: 'Goa des étoiles',
   rootMidi: 28,
@@ -372,7 +372,7 @@ const ACID_LINE = {
   slides: [3, 6, 10, 14],
 } as const;
 
-export const GRENOUILLE_ACIDE: MusicTrack = {
+const GRENOUILLE_ACIDE: MusicTrack = {
   id: 'grenouille-acide',
   name: 'La Grenouille acide',
   rootMidi: 33,

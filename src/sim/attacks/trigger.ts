@@ -1,8 +1,7 @@
 import type { PlayerState } from '../state';
 import { statValue } from '../stats';
 
-// The cooldown runs down on every tick; once spent, a pulled trigger fires and reloads it. The
-// fractional part of a shortened cooldown carries over, so the fire rate stays exact.
+// The fraction of a shortened cooldown carries over, so the fire rate stays exact.
 export function pullTrigger(player: PlayerState, pulled: boolean, cooldownTicks: number): boolean {
   if (player.attackCooldown > 0) {
     player.attackCooldown -= 1;

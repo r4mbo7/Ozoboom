@@ -5,9 +5,8 @@ import type { StepContext } from '../systems/types';
 export interface WeaponShot {
   // `compound(levelMul, level - 1)`: scales the effect's damage and healing.
   power: number;
-  // Closest enemy to the player, or null when none is alive.
   target: EnemyState | null;
-  // Unit vector towards `target`, or along the player's aim without one: where an aimed weapon goes.
+  // Along the player's aim without a target.
   direction: Vec2;
 }
 

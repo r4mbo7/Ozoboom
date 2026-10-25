@@ -1,4 +1,5 @@
 import type { PaletteToken } from '../shared/palette';
+import { clamp01 } from '../shared/scalar';
 import type { RenderContext, WeaponLook } from './context';
 import type { WeaponKind } from './textures-weapons';
 import { lookup } from './util';
@@ -8,7 +9,6 @@ export interface WeaponStyle {
   readonly token: PaletteToken;
   readonly evolved: boolean;
   readonly look: WeaponLook;
-  // An evolved form keeps the silhouette of its origin, bigger and sometimes in several copies.
   readonly copies: number;
   readonly scale: number;
 }
@@ -43,16 +43,14 @@ export function styleOf(ctx: RenderContext, weaponId: string): WeaponStyle {
   };
 }
 
-// The diabolo's arc: 0 at launch, 1 on landing; `alpha` is how far the render is into the tick.
 export function arcProgress(ticksLeft: number, ticksTotal: number, alpha: number): number {
-  return Math.min(1, Math.max(0, 1 - (ticksLeft - alpha) / Math.max(ticksTotal, 1)));
+  return clamp01(1 - (ticksLeft - alpha) / Math.max(ticksTotal, 1));
 }
 
 const ARC_LIFT = 46;
 
 export interface ArcLook {
   readonly height: number;
-  // Seen from above, what rises gets smaller on the ground and fainter: the shadow says how high.
   readonly shadowScale: number;
   readonly shadowAlpha: number;
   readonly lift: number;

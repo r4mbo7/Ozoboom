@@ -5,10 +5,8 @@ import { BOSS_SCALE, FACE_RADIUS } from './face-kit';
 import { batterieAPlatFlanks } from './faces-bosses';
 import { WHITE, circle, glow, paint, type Shape } from './paint';
 
-// Painted twice finer than the mask units they are drawn in.
 const FINE = 2;
 
-// Where a mask is drawn: its scale is of its texture, FINE pixels to the mask unit.
 export interface MaskAt {
   readonly x: number;
   readonly y: number;
@@ -60,7 +58,6 @@ export function pointOnMask(at: MaskAt, [ox, oy]: Point): Point {
   return [at.x + dx * cos - dy * sin, at.y + dx * sin + dy * cos];
 }
 
-// Lays `sprite` over the mask drawn at `at`, at (ox, oy) mask units from its middle.
 export function onMask(sprite: Sprite, at: MaskAt, ox: number, oy: number): void {
   const [x, y] = pointOnMask(at, [ox, oy]);
   sprite.visible = true;

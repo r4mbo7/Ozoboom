@@ -1,8 +1,8 @@
 import type { Graphics, Sprite } from 'pixi.js';
+import { clamp, clamp01 } from '../shared/scalar';
 import type { CoreState } from '../sim/state';
 import type { Frame } from './frame';
-import { mixColor } from './ground-sun';
-import type { PixiPalette } from './palette';
+import { type PixiPalette, mixColor } from './palette';
 import type { Textures } from './textures';
 import { NAME_TEXTURE_SCALE } from './textures-names';
 import { setTint } from './util';
@@ -19,7 +19,7 @@ export interface Label {
 }
 
 export function litShare(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
-  return core.maxHp > 0 ? Math.min(1, Math.max(0, core.hp / core.maxHp)) : 0;
+  return core.maxHp > 0 ? clamp01(core.hp / core.maxHp) : 0;
 }
 
 export function stageColor(
@@ -31,11 +31,9 @@ export function stageColor(
     : mixColor(palette.rouge, palette.or, share / 0.5);
 }
 
-// A segment stays lit until its last hit point is gone: the ring is empty only once the scene is.
+// The ring is empty only once the scene is.
 export function litSegments(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
-  return core.maxHp > 0
-    ? Math.min(SEGMENTS, Math.max(0, Math.ceil((core.hp * SEGMENTS) / core.maxHp)))
-    : 0;
+  return core.maxHp > 0 ? clamp(Math.ceil((core.hp * SEGMENTS) / core.maxHp), 0, SEGMENTS) : 0;
 }
 
 export function percentOf(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
@@ -66,7 +64,6 @@ export function drawSegments(
   }
 }
 
-// A line of text centered on x, its top at y, `size` world units per texture pixel; returns where the next line starts.
 export function placeLabel(
   textures: Textures,
   label: Label,

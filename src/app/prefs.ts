@@ -1,4 +1,5 @@
-import { type KeyProfile, parseKeyProfile } from '../input/profile';
+import type { GameContent } from '../data/types';
+import { DEFAULT_KEY_PROFILE, type KeyProfile, parseKeyProfile } from '../input/profile';
 import { VOLUME_STEPS } from '../ui/volume';
 
 export interface Prefs {
@@ -6,23 +7,19 @@ export interface Prefs {
   muted: boolean;
   // From 1 to `VOLUME_STEPS`.
   volume: number;
-  // The note of a hit on a bad vibe: off unless the player asks for it.
   hitSound: boolean;
   autoFire: boolean;
   autoAim: boolean;
-  // The class of a solo game: the last one chosen on the title.
   classId: string;
-  // The stage of the last game: the next one proposes it again.
   stageId: string;
-  // The track of the last game, which the next one does not play.
+  // The next game does not play it again.
   trackId: string;
-  // Whether the last game went on past its last boss: the next one proposes it again.
   endless: boolean;
-  // Whether the last game played the whole festival: the next one proposes it again.
   festival: boolean;
-  // The keys and buttons the player chose for each action.
   keys: KeyProfile;
 }
+
+const DEFAULT_CLASS_ID = 'mage';
 
 const KEYS: Readonly<Record<keyof Prefs, string>> = {
   calmMode: 'ozoboom.calmMode',
@@ -39,9 +36,8 @@ const KEYS: Readonly<Record<keyof Prefs, string>> = {
   keys: 'ozoboom.keys',
 };
 
-// Storage can be missing or throw (private browsing, blocked site data): the game then plays with
-// the defaults and forgets the choice.
-export function loadPrefs(storage: () => Storage, defaults: Prefs): Prefs {
+// Storage can be missing or refused (private browsing, blocked site data, a full quota): the game then plays with the defaults.
+export function loadPrefs(storage: () => Storage | null, defaults: Prefs): Prefs {
   return {
     calmMode: readFlag(storage, KEYS.calmMode) ?? defaults.calmMode,
     muted: readFlag(storage, KEYS.muted) ?? defaults.muted,
@@ -58,15 +54,47 @@ export function loadPrefs(storage: () => Storage, defaults: Prefs): Prefs {
   };
 }
 
+export function loadPlayerPrefs(
+  storage: () => Storage | null,
+  content: GameContent,
+  calmMode: boolean,
+): Prefs {
+  const classIds = content.classes.map((definition) => definition.id);
+  const firstSetId = content.sets[0]?.id ?? '';
+  const prefs = loadPrefs(storage, {
+    calmMode,
+    muted: false,
+    volume: VOLUME_STEPS,
+    hitSound: false,
+    autoFire: true,
+    autoAim: true,
+    classId: DEFAULT_CLASS_ID,
+    stageId: firstSetId,
+    trackId: '',
+    endless: false,
+    festival: false,
+    keys: DEFAULT_KEY_PROFILE,
+  });
+  if (!classIds.includes(prefs.classId)) {
+    prefs.classId = classIds.includes(DEFAULT_CLASS_ID) ? DEFAULT_CLASS_ID : (classIds[0] ?? '');
+  }
+  if (!content.sets.some((definition) => definition.id === prefs.stageId)) {
+    prefs.stageId = firstSetId;
+  }
+  return prefs;
+}
+
 export function savePref<K extends keyof Prefs>(
-  storage: () => Storage,
+  storage: () => Storage | null,
   key: K,
   value: Prefs[K],
 ): void {
   try {
-    storage().setItem(KEYS[key], stored(value));
-  } catch {
-    // Not remembered: the choice still applies to this visit.
+    storage()?.setItem(KEYS[key], stored(value));
+  } catch (error) {
+    if (!(error instanceof DOMException)) {
+      throw error;
+    }
   }
 }
 
@@ -77,20 +105,23 @@ function stored(value: Prefs[keyof Prefs]): string {
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
-function readFlag(storage: () => Storage, key: string): boolean | null {
+function readFlag(storage: () => Storage | null, key: string): boolean | null {
   const value = readText(storage, key);
   return value === '1' ? true : value === '0' ? false : null;
 }
 
-function readVolume(storage: () => Storage, key: string): number | null {
+function readVolume(storage: () => Storage | null, key: string): number | null {
   const value = Number(readText(storage, key));
   return Number.isInteger(value) && value >= 1 && value <= VOLUME_STEPS ? value : null;
 }
 
-function readText(storage: () => Storage, key: string): string | null {
+function readText(storage: () => Storage | null, key: string): string | null {
   try {
-    return storage().getItem(key);
-  } catch {
-    return null;
+    return storage()?.getItem(key) ?? null;
+  } catch (error) {
+    if (error instanceof DOMException) {
+      return null;
+    }
+    throw error;
   }
 }

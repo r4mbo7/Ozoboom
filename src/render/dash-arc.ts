@@ -6,7 +6,6 @@ import type { PlayerState } from '../sim/state';
 import type { Frame } from './frame';
 
 const NEVER = Number.NEGATIVE_INFINITY;
-// The arc of the maquette: 23 px under a body of 14, over 1.9 radians, notches 0.16 apart.
 const REACH = 23 / 14;
 const SPAN = 1.9;
 const GAP = 0.16;
@@ -18,7 +17,6 @@ const PALE = 1 / 3;
 const EMPTY_GREY = 0x8e8e98;
 const SHAKE = 3;
 
-// The angles of notch `index` among `charges`, the first on the left, under the player.
 export function notchAngles(charges: number, index: number): { from: number; to: number } {
   const gap = charges > 1 ? GAP : 0;
   const length = (SPAN - gap * (charges - 1)) / charges;
@@ -32,7 +30,6 @@ export function notchMiddle(radius: number, charges: number, index: number): [nu
   return [Math.cos(angle) * radius * REACH, Math.sin(angle) * radius * REACH];
 }
 
-// How strong the arc shows: full while something is spent, pale a bar after the last came back.
 export function arcAlpha(sinceFull: number, { ticksPerBeat }: Pick<Tempo, 'ticksPerBeat'>): number {
   const bar = ticksPerBeat * 4;
   if (sinceFull <= bar) {
@@ -41,7 +38,6 @@ export function arcAlpha(sinceFull: number, { ticksPerBeat }: Pick<Tempo, 'ticks
   return Math.max(PALE, 1 - ((1 - PALE) * (sinceFull - bar)) / ticksPerBeat);
 }
 
-// The dashes a player has in hand, as notches in an arc at its feet.
 export class DashArc {
   private readonly arc = new Graphics();
   private fullSince = NEVER;

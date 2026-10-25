@@ -1,5 +1,4 @@
-// The languages the game speaks, each written in itself. Apart from the catalogs, so that the stats Worker reads
-// them without carrying the translations.
+// Apart from the catalogs, so the stats Worker reads them without carrying the translations.
 export const LOCALES = [
   { id: 'fr', name: 'Français', dir: 'ltr' },
   { id: 'en', name: 'English', dir: 'ltr' },

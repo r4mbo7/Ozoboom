@@ -17,16 +17,13 @@ export interface Ground {
   destroy(): void;
 }
 
-// What a stage beyond the main one brings to the scene: its ground, and the families of its decor, which show
-// only at the stages of that decor.
 export interface StageLook {
   readonly decor: DecorId;
   ground(parent: Container): Ground;
   families(ctx: RenderContext): Family[];
 }
 
-// Only the ground of the stage played is drawn, once per arena and seed, white, then tinted with the hour: only
-// the shadows, the reflections and the fireflies move.
+// Drawn once per arena and seed, white, then tinted with the hour: only the light moves on it.
 export function createGround(ctx: RenderContext): Family {
   const parent = ctx.layers.ground;
   const grounds = new Map<DecorId, Ground>([
@@ -34,7 +31,7 @@ export function createGround(ctx: RenderContext): Family {
     ...FULL_LOOKS.map((look): [DecorId, Ground] => [look.decor, look.ground(parent)]),
   ]);
   const fireflies = createFireflies(ctx, parent);
-  // Each ground keeps what it last drew: the one a festival walks toward is drawn ahead, unseen.
+  // The ground a festival walks toward is drawn ahead, unseen.
   const drawn = new Map<DecorId, string>();
   let shownKey = '';
   let styledAt = Number.NaN;
@@ -47,7 +44,6 @@ export function createGround(ctx: RenderContext): Family {
     return ground;
   }
 
-  // A festival keeps its exits clear of trees.
   function layoutOf(set: SetDefinition, state: SimState): Layout {
     const clearings = state.festival === undefined ? [] : (FULL_CLEARINGS[set.id] ?? []);
     return layoutGround(state.seed, set.arena, clearings);
@@ -70,7 +66,7 @@ export function createGround(ctx: RenderContext): Family {
       if (upcoming !== undefined && upcoming.decor !== decor) {
         drawAhead(upcoming, state);
       }
-      // A festival leaves stages behind: their grounds give their shapes back until they come again.
+      // A festival leaves stages behind: their grounds free their shapes until they come again.
       for (const [left, key] of drawn) {
         if (key !== '' && left !== decor && left !== upcoming?.decor) {
           releaseDrawing(groundOf(left).root);

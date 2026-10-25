@@ -1,4 +1,5 @@
 import type { SetDefinition } from '../data/types';
+import { clamp } from '../shared/scalar';
 import { touchesObstacle } from './obstacles';
 
 const CELL = 16;
@@ -19,8 +20,7 @@ export interface FlowFields {
   classes: readonly SizeClass[];
 }
 
-// One field per distinct bad vibe radius, built once from a set where bad vibes come: a breadth-first search from the
-// core over a grid of cells where a circle of that radius fits. Integers and + - * / only.
+// Integers and + - * / only, so every engine builds the same field.
 export function createFlowFields(
   set: SetDefinition,
   radii: readonly number[],
@@ -95,8 +95,7 @@ function buildClass(set: SetDefinition, cols: number, rows: number, radius: numb
   return next;
 }
 
-// The neighbour of `cell` in direction `k` if a circle can walk there, else -1. A diagonal step
-// may not cut the corner of a blocked cell. `fromBlocked` lets a blocked cell step out to a clear one.
+// A diagonal step may not cut a blocked corner; `fromBlocked` lets a blocked cell step out.
 function stepTo(
   cell: number,
   k: number,
@@ -125,8 +124,6 @@ function stepTo(
   return neighbour;
 }
 
-// Writes in `out` the center of the cell to walk to from (x, y) for a bad vibe of this radius.
-// False when this radius has no field or there is no way to the core from here.
 export function flowWaypoint(
   fields: FlowFields,
   radius: number,
@@ -138,8 +135,8 @@ export function flowWaypoint(
     if (sizeClass.radius !== radius) {
       continue;
     }
-    const col = Math.min(fields.cols - 1, Math.max(0, Math.floor(x / CELL)));
-    const row = Math.min(fields.rows - 1, Math.max(0, Math.floor(y / CELL)));
+    const col = clamp(Math.floor(x / CELL), 0, fields.cols - 1);
+    const row = clamp(Math.floor(y / CELL), 0, fields.rows - 1);
     const target = sizeClass.next[row * fields.cols + col] ?? -1;
     if (target < 0) {
       return false;

@@ -96,8 +96,6 @@ export function trap(look: TrapLook): Shape {
   });
 }
 
-// A flight case seen from above: a dark body the tint turns turquoise, a light rim and handle,
-// and room in the middle for the icon of its trap.
 export function crate(): Shape {
   return paint(48, 44, 16, (ctx) => {
     glow(ctx, WHITE, 6);
@@ -130,11 +128,8 @@ export function crate(): Shape {
   });
 }
 
-// Where the fuse of `bomb()` ends, in texture pixels from its center: the spark sits there.
 export const BOMB_FUSE_TIP = { x: 16, y: -23 } as const;
 
-// A round bomb with a capped fuse, dark inside a light double rim: its shape alone tells it from
-// the square flight case of a loot.
 export function bomb(): Shape {
   return paint(64, 64, 20, (ctx) => {
     glow(ctx, WHITE, 6);
@@ -164,7 +159,6 @@ export function bomb(): Shape {
   });
 }
 
-// The cone of the misting fan, painted from its tip on the left at the opening of the data.
 export const CONE_LENGTH = 128;
 export const CONE_DEGREES = 50;
 

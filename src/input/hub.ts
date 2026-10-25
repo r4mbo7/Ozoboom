@@ -19,7 +19,8 @@ import {
   type MergeState,
   type TouchFrame,
 } from './merge';
-import { DEFAULT_INPUT_BINDINGS, inputBindings } from './profile';
+import { DEFAULT_INPUT_BINDINGS, type PlayerKeys } from './profile';
+import type { KeyNames } from './key-names';
 import { attachTouch } from './touch';
 
 interface PadState {
@@ -58,8 +59,16 @@ const IDLE_KEYBOARD_MOUSE_FRAME: KeyboardMouseFrame = {
   pointerMoved: false,
 };
 
-export function gamepadDeviceId(index: number): DeviceId {
-  return `gamepad:${String(index)}` as DeviceId;
+function gamepadDeviceId(index: number): DeviceId {
+  const device = `gamepad:${String(index)}`;
+  if (!isGamepadDeviceId(device)) {
+    throw new RangeError(`not a gamepad index: ${String(index)}`);
+  }
+  return device;
+}
+
+function isGamepadDeviceId(device: string): device is `gamepad:${number}` {
+  return /^gamepad:\d+$/.test(device);
 }
 
 function gamepadIndex(device: DeviceId): number | null {
@@ -113,8 +122,12 @@ export function stepHub(
   };
 }
 
-export function createInputHub(target: HTMLElement): InputHub {
-  const keyboardMouse = attachKeyboardMouse(target);
+export function createInputHub(
+  target: HTMLElement,
+  keys: Pick<PlayerKeys, 'bindings'>,
+  names: Pick<KeyNames, 'learn'>,
+): InputHub {
+  const keyboardMouse = attachKeyboardMouse(target, keys, names);
   const touch = attachTouch(target);
   let state = INITIAL_HUB_STATE;
   let merged = mergeFrames(
@@ -132,7 +145,7 @@ export function createInputHub(target: HTMLElement): InputHub {
         navigatorGamepads(),
         performance.now(),
         touch.take(),
-        inputBindings(),
+        keys.bindings(),
       );
       state = stepped.state;
       merged = stepped.merged;

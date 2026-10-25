@@ -1,4 +1,6 @@
-export interface StatEntry {
+import { isRecord } from '../shared/guards';
+
+interface StatEntry {
   id?: string;
   type: string;
   state?: string;
@@ -8,11 +10,9 @@ export interface StatEntry {
   currentRoundTripTime?: number;
 }
 
-// The round trip, in ms, of the connection in use from an RTCStatsReport. Which pair is flagged
-// differs by side and browser: the controlled side (the guest) may never see `nominated`, so the
-// pair the transport selected comes first, then any nominated, selected or succeeded pair.
-export function roundTripFromStats(entries: Iterable<StatEntry>): number | null {
-  const all = [...entries];
+// In ms. The guest may never see `nominated`: the pair the transport selected comes first, then any nominated, selected or succeeded one.
+export function roundTripFromStats(entries: Iterable<unknown>): number | null {
+  const all = [...entries].filter(isStatEntry);
   const pairs = all.filter(
     (stat) => stat.type === 'candidate-pair' && (stat.currentRoundTripTime ?? 0) > 0,
   );
@@ -29,4 +29,21 @@ export function roundTripFromStats(entries: Iterable<StatEntry>): number | null 
     .filter((pair) => rank(pair) === best && best < 3)
     .map((pair) => (pair.currentRoundTripTime ?? 0) * 1000);
   return measures.length === 0 ? null : Math.min(...measures);
+}
+
+function isStatEntry(value: unknown): value is StatEntry {
+  return (
+    isRecord(value) &&
+    typeof value.type === 'string' &&
+    isOptional(value.id, 'string') &&
+    isOptional(value.state, 'string') &&
+    isOptional(value.nominated, 'boolean') &&
+    isOptional(value.selected, 'boolean') &&
+    isOptional(value.selectedCandidatePairId, 'string') &&
+    isOptional(value.currentRoundTripTime, 'number')
+  );
+}
+
+function isOptional(value: unknown, type: 'string' | 'number' | 'boolean'): boolean {
+  return value === undefined || typeof value === type;
 }

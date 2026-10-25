@@ -8,7 +8,7 @@ import { openDiscord } from './discord';
 import { endStats, formatDuration } from './format';
 import { DISCORD, FOG, SUN } from './icons';
 import { type Menu, createMenu } from './menu';
-import { promptsFor } from './prompts';
+import type { Prompts } from './prompts';
 import type { Ending } from './end-parts';
 import { FULL_END } from './full';
 import type { EndSession } from './types';
@@ -59,6 +59,7 @@ export function endingOf(state: SimState): Ending {
 }
 
 export function createEnd(
+  prompts: Prompts,
   onRestart: () => void,
   onQuit: () => void,
   onFeedback?: () => void,
@@ -105,12 +106,12 @@ export function createEnd(
   let device: InputDevice | null = null;
 
   function fillHints(): void {
-    const prompts = promptsFor(device ?? 'none');
-    const confirm = { keys: [prompts.confirm], label: t('valider') };
+    const shown = prompts.for(device ?? 'none');
+    const confirm = { keys: [shown.confirm], label: t('valider') };
     fillHint(
       hint,
-      items.length > 1 ? [{ keys: prompts.navigate, label: t('naviguer') }, confirm] : [confirm],
-      prompts.style,
+      items.length > 1 ? [{ keys: shown.navigate, label: t('naviguer') }, confirm] : [confirm],
+      shown.style,
     );
   }
 
@@ -165,7 +166,6 @@ export function createEnd(
           return item;
         }),
       );
-      // A guest cannot restart: only the host does.
       const guest = session?.role === 'guest';
       restart.hidden = guest;
       wait.hidden = !guest;

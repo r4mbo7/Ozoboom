@@ -23,8 +23,7 @@ export interface VibeNote {
 }
 
 export interface VibeArp {
-  // Called once per tick with the vibes it collected: returns the note of the sixteenth that comes
-  // due, if vibes wait for it. Without an anchor no set plays, and the note does not wait.
+  // Without an anchor no set plays, and the note does not wait.
   collect(vibes: number, now: number, tempo: Tempo, anchor: Anchor | null): VibeNote | null;
 }
 
@@ -34,7 +33,7 @@ export function createVibeArp(): VibeArp {
   let collectedAt = -Infinity;
   let consumed = -Infinity;
 
-  // The next sixteenth not yet consumed, once the next call would come too late to schedule it.
+  // Once the next call would come too late to schedule it.
   function dueStep(now: number, tempo: Tempo, anchor: Anchor): { at: number; bar: number } | null {
     const earliest = Math.max(now - LATE_TOLERANCE_SECONDS, consumed + sixteenthSeconds(tempo) / 2);
     const step = firstStepAtOrAfter(

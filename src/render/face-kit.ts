@@ -2,13 +2,10 @@ import { type PaletteToken, SUN_PALETTES } from '../shared/palette';
 import { SHADE_SOFT, TAU, WHITE, circle, type Ctx } from './paint';
 
 export const FACE_RADIUS = 40;
-// A boss mask is painted, and drawn, at twice a bad vibe's size.
 export const BOSS_SCALE = 2;
 export const NEUTRAL = 'neutral';
 
 export const INK = '#141414';
-// Masks stand against the light: a dark body, a pale rim and pale marks. The rim token of the hour
-// tints them, so the rim and the marks take its color and the body a dark share of it.
 export const MARK = WHITE;
 export const MASK_BODY = '#262626';
 const MASK_BODY_LIT = '#3a3a3a';
@@ -21,7 +18,7 @@ export function maskTone(tint: number, gray: string): number {
 }
 
 export interface Pose {
-  // Position in the animation loop, from 0 included to 1 excluded.
+  // Share of the animation loop, in [0, 1).
   readonly t: number;
   readonly asleep: boolean;
   readonly down: boolean;
@@ -29,18 +26,12 @@ export interface Pose {
 
 export interface Face {
   readonly draw: (ctx: Ctx, pose: Pose) => void;
-  // Awake frames in one loop; 1 for a mask that does not move.
   readonly frames: number;
   readonly loopBeats: number;
   readonly boss: boolean;
-  // A mask whose tone leans toward a palette token, so that it stays gray but not the same gray.
   readonly tone?: { readonly token: PaletteToken; readonly amount: number };
-  // Sleepers and the Fatigué let small "z" rise above them.
   readonly drowsy?: boolean;
-  // A boss chased: its silhouette is filled bright, white at heart, in the color of whoever chased
-  // it, and wears this smile in ink; `gladFace` without it.
   readonly glad?: (ctx: Ctx) => void;
-  // A mask that flies is drawn over the stage, its shadow still on the ground (`layers.sky`).
   readonly flies?: boolean;
 }
 
@@ -73,8 +64,6 @@ export function body(ctx: Ctx, trace: () => void): void {
   ctx.stroke();
 }
 
-// The rim all outside the outline, as wide as the masks' own: shapes traced together, overlapping,
-// share one rim round them all.
 export function bodyRimOutside(ctx: Ctx, trace: () => void): void {
   trace();
   ctx.lineJoin = 'round';
@@ -92,7 +81,6 @@ export function bodyRimOutside(ctx: Ctx, trace: () => void): void {
   ctx.restore();
 }
 
-// The smile of a chased bad vibe is painted bright, to take the color of whoever chased it.
 export function gladBody(ctx: Ctx, trace: () => void): void {
   ctx.save();
   trace();
@@ -189,7 +177,6 @@ export function crossEye(ctx: Ctx, x: number, y: number, size: number): void {
   line(ctx, 3.4, [x + size, y - size], [x - size, y + size]);
 }
 
-// An open eye: a pale disc and a dark pupil. A shut mask shows it asleep or crossed.
 export function eye(
   ctx: Ctx,
   pose: Pose,
@@ -235,11 +222,9 @@ export interface GladPlace {
   readonly eyeX?: number;
   readonly mouthY?: number;
   readonly mouthWidth?: number;
-  // The blushes go on the tinted body, the smile over the white light at its heart.
   readonly part?: 'blush' | 'smile';
 }
 
-// The smile of a chased boss, in ink on its bright body: eyes shut with joy, an open mouth, blushes.
 export function gladFace(ctx: Ctx, place: GladPlace = {}): void {
   const { eyeY = -4, eyeX = 13, mouthY = 12, mouthWidth = 15, part } = place;
   if (part !== 'smile') {
@@ -281,8 +266,6 @@ const CRACKS: readonly Crack[] = [
   ['or', [7, -27], [4, -19], [9, -14], [3, -8]],
 ];
 
-// The cracks of a hurt mask, one more per stage, kept inside every body. Painted in the colors of
-// the night whatever the hour: they glow on the dark body, like the burst they announce.
 export function cracks(ctx: Ctx, stage: number): void {
   for (const [token, ...points] of CRACKS.slice(0, stage)) {
     const color = SUN_PALETTES.nuit[token];

@@ -11,6 +11,30 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+export function button(className: string, text: string): HTMLButtonElement {
+  const node = el('button', className, text);
+  node.type = 'button';
+  node.tabIndex = -1;
+  return node;
+}
+
+// A click a keyboard or a pad makes (no pointer) already went through the cursor.
+export function onPointerClick(node: HTMLElement, action: () => void): void {
+  node.addEventListener('click', (event) => {
+    if (event.detail !== 0) {
+      action();
+    }
+  });
+}
+
+export function findAll<T extends Element>(
+  root: ParentNode,
+  selector: string,
+  type: abstract new () => T,
+): T[] {
+  return [...root.querySelectorAll(selector)].filter((node): node is T => node instanceof type);
+}
+
 export function icon(className: string, svgBody: string, viewBox = '0 0 24 24'): HTMLSpanElement {
   const node = el('span', className);
   node.setAttribute('aria-hidden', 'true');
@@ -23,7 +47,6 @@ export interface GoMark {
   set(label: string): void;
 }
 
-// Over a chosen card under the pointer: what clicking it again does.
 export function goMark(svgBody: string): GoMark {
   const element = el('span', 'ui-go');
   element.setAttribute('aria-hidden', 'true');
@@ -39,8 +62,7 @@ export function goMark(svgBody: string): GoMark {
 
 const ARROW_TURNS: Readonly<Record<string, number>> = { '↑': 0, '→': 90, '↓': 180, '←': 270 };
 
-// Arrow glyphs sit at a different height in each font: they are drawn, and keep their text for
-// screen readers.
+// Arrow glyphs sit at a different height in each font: they are drawn, and keep their text for screen readers.
 export function keycap(label: string, style: 'key' | 'button'): HTMLElement {
   const turn = ARROW_TURNS[label];
   if (turn === undefined) {
@@ -61,7 +83,7 @@ export function keycap(label: string, style: 'key' | 'button'): HTMLElement {
 export interface HintPart {
   keys: readonly string[];
   label: string;
-  // Only on wide or narrow screens, for a menu whose layout changes between them.
+  // For a menu whose layout changes between wide and narrow screens.
   screen?: 'wide' | 'narrow';
 }
 
@@ -96,10 +118,28 @@ export function setVar(node: HTMLElement, name: string, value: string): void {
   }
 }
 
-export function setFlag(node: HTMLElement, name: string, on: boolean): void {
+export function setFlag(node: Element, name: string, on: boolean): void {
   if (on) {
     node.setAttribute(`data-${name}`, '');
   } else {
     node.removeAttribute(`data-${name}`);
+  }
+}
+
+export async function copyText(
+  clipboard: Pick<Clipboard, 'writeText'> | undefined,
+  text: string,
+): Promise<boolean> {
+  if (clipboard === undefined) {
+    return false;
+  }
+  try {
+    await clipboard.writeText(text);
+    return true;
+  } catch (error) {
+    if (error instanceof DOMException) {
+      return false;
+    }
+    throw error;
   }
 }

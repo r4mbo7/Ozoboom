@@ -10,7 +10,6 @@ import {
   ribbonStart,
 } from './vent-moments';
 
-// What a ribbon is drawn with: its body, its rim and the fine lines along it, with their alpha.
 export interface RibbonColors {
   readonly fill: number;
   readonly fillAlpha: number;
@@ -22,8 +21,6 @@ export interface RibbonColors {
 
 const VIOLET = 0xa98bff;
 
-// The fine lines of the ribbons, one tint each, round and round; and the colors of the team a
-// chased mane takes.
 export function windTints(palette: Frame['palette']): readonly (readonly [number, number])[] {
   return [
     [VIOLET, 0.55],
@@ -45,8 +42,7 @@ const LINE_WIDTH = 1.2;
 const MANE_LINES = [-0.6, -0.2, 0.2, 0.6];
 const WIND_LINES = [-0.45, 0.1];
 
-// A band round the centerline, `grow` wider than the ribbon on each side, as one filled polygon:
-// a fill costs far less to rebuild every image than a stroke with its joins.
+// One filled polygon: a fill costs far less to rebuild every image than a stroke with its joins.
 function band(graphics: Graphics, points: readonly RibbonPoint[], grow: number): void {
   points.forEach((point, index) => {
     const reach = point.width + grow;
@@ -68,7 +64,6 @@ function band(graphics: Graphics, points: readonly RibbonPoint[], grow: number):
   graphics.closePath();
 }
 
-// A tapered band along `points`, rimmed, with fine lines running along it.
 export function drawRibbon(
   graphics: Graphics,
   points: readonly RibbonPoint[],
@@ -98,8 +93,6 @@ export function drawRibbon(
   }
 }
 
-// His mane: six wide ribbons of wind, layered like strata, each streaming from his head, waving and
-// curling into a spiral at its end. Drawn in mask units, the outer ribbons first.
 export function drawMane(
   graphics: Graphics,
   phase: number,

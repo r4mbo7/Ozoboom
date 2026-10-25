@@ -1,7 +1,7 @@
 import type { Emote } from '../commands';
 import type { StepContext } from './types';
 
-// A gesture is only seen: the sim tells who makes which, and keeps nothing of it.
+// A gesture is only seen: the sim keeps nothing of it.
 export function emotes(ctx: StepContext): void {
   const { state, commands } = ctx;
   for (const player of state.players) {

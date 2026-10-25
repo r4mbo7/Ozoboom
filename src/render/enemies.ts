@@ -1,5 +1,6 @@
 import { Container, Sprite } from 'pixi.js';
 import type { PaletteToken } from '../shared/palette';
+import { lerp } from '../shared/scalar';
 import type { EntityId, SimEvent, SimState } from '../sim/state';
 import { createBossStage } from './bosses';
 import type { Family, RenderContext } from './context';
@@ -8,14 +9,12 @@ import { createBurst } from './enemy-burst';
 import { picker, warnUnknown } from './faces';
 import { frontGlintOf, glintAlpha, glintStart, placeGlint } from './front-glint';
 import { type Frame, createFrame } from './frame';
-import { blinkLit, lerp } from './motion';
-import type { PixiPalette } from './palette';
+import { blinkLit } from './motion';
+import { type PixiPalette, mixColor } from './palette';
 import { add, byId, hide, keepIn, setTint } from './util';
 import { ViewPool } from './views';
-import { mixColor } from './weapon-kit';
 
 const TAU = Math.PI * 2;
-// A mask leans toward its heading, never upside down, readable at 16 pixels; a heavy boss barely.
 const LEAN = 0.5;
 const BOSS_LEAN = 0.12;
 const POP = 0.18;
@@ -28,14 +27,12 @@ const BLINK_MIX = { normal: 0.65, calm: 0.35 };
 const GLINT_SIZE = 1.2;
 const GUARD_GRAY = 0.4;
 
-// How a bad vibe was last drawn: what is laid over its mask follows it.
 export interface EnemyPose {
   readonly x: number;
   readonly y: number;
   readonly tilt: number;
   readonly radius: number;
   readonly boss: boolean;
-  // The mask as drawn this frame: its position carries the step, its scale the squash.
   readonly sprite: Sprite;
 }
 
@@ -58,10 +55,8 @@ export type PoseOf = (id: EntityId) => EnemyPose | undefined;
 
 export interface EnemiesFamily extends Family {
   blink(id: number, untilTick: number): void;
-  // A mask stays where it was drawn until that tick: the stop of a heavy hit.
   hold(id: number, untilTick: number): void;
   poseOf(id: number): EnemyPose | undefined;
-  // The colors a chased bad vibe bursts into, for what leaves the party the same way.
   burst(x: number, y: number, id: number, frame: Frame): void;
 }
 

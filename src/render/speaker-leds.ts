@@ -4,7 +4,7 @@ import type { Frame } from './frame';
 import { ofSpeaker, plugShare } from './speaker-kit';
 import { setTint } from './util';
 
-export const LEDS = 8;
+const LEDS = 8;
 const DANCE_FLOOR = 4;
 const DANCE_LEVELS = 5;
 const DANCE_DROP = 3;
@@ -17,7 +17,6 @@ const LED_BOTTOM = 38;
 const UNLIT_ALPHA = 0.22;
 const STANDBY_DIM = 0.25;
 
-// How far each drawing reaches from its centre, drawn for a radius of 40.
 export const SPEAKER_EXTENTS: Readonly<Record<string, number>> = {
   'dome-chill': 60,
   foret: 52,
@@ -78,8 +77,6 @@ export function createLedViews(): Pick<LedView, 'leds' | 'standby'> {
   return { leds: new Graphics(), standby: new Graphics().circle(0, 0, 4).fill(0xffffff) };
 }
 
-// Eight LEDs right of the drawing, bottom to top, the top one white at night once plugged; above
-// them, the standby LED of an unplugged speaker.
 export function drawLeds(
   view: LedView,
   speaker: Plug & { readonly x: number; readonly y: number; readonly radius: number },

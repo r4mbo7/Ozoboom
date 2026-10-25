@@ -11,16 +11,15 @@ import type { AudioEngine, Mood } from './types';
 export interface AudioEngineOptions {
   readonly track?: MusicTrack;
   readonly breakBars?: (tier: number) => number;
-  // The set a game plays, by id: its beat length and its room. Absent means the main stage.
+  // Absent means the main stage.
   readonly setOf?: (setId: string) => SetDefinition | undefined;
-  // A track of a set a festival enters, when the one playing is not among its tracks.
+  // When the one playing is not among the tracks of the set a festival enters.
   readonly trackFor?: (set: SetDefinition) => MusicTrack;
   readonly trapEffectOf?: TrapEffectOf;
   readonly sfxLookups?: SfxLookups;
   readonly createContext?: () => BaseAudioContext;
   readonly onKickScheduled?: (tick: number, time: number) => void;
-  // Calls back regularly while the menu ambience plays, and returns how to stop. The offline bench
-  // drives it from the audio clock.
+  // The offline bench drives it from the audio clock.
   readonly repeat?: (callback: () => void) => () => void;
 }
 
@@ -95,8 +94,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     }
   };
 
-  // A mood asked for in the same frame as an update waits for it: the end screen opens on the
-  // update that ends the game, and the menu ambience must know the ending has begun.
+  // A mood asked in the same frame as an update waits for it: the menu ambience must know the ending has begun.
   const applyMood = () => {
     if (running === null || heard === mood) {
       return;

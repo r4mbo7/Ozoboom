@@ -67,7 +67,7 @@
 
 .ui-remap__tab[aria-selected='true'] {
   background: var(--or);
-  color: var(--sol);
+  color: var(--ui-ink);
 }
 
 .ui-remap__panel {

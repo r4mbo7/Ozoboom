@@ -15,7 +15,6 @@ function tile(size: number, draw: (ctx: CanvasRenderingContext2D) => void): Text
   return new Texture({ source });
 }
 
-// Dry grass: short strokes, thin and scattered, tinted straw by the caller.
 export function grainTile(seed: number): Texture {
   const size = 256;
   return tile(size, (ctx) => {
@@ -37,7 +36,6 @@ export function grainTile(seed: number): Texture {
   });
 }
 
-// Wide soft patches, the lighter tufts of the lawn, wrapped so the tile repeats without a seam.
 export function patchTile(seed: number): Texture {
   const size = 512;
   return tile(size, (ctx) => {
@@ -77,7 +75,6 @@ export function crown(): Shape {
   });
 }
 
-// Drawn centred; the caller anchors its start on the foot of the tree and stretches it in x.
 export function shadow(): Shape {
   const width = 128;
   const height = 96;
@@ -101,7 +98,6 @@ export function crownRim(): Shape {
   });
 }
 
-// Fine dots of sand, round and short, tinted by the caller.
 export function sandTile(seed: number): Texture {
   const size = 256;
   return tile(size, (ctx) => {
@@ -122,7 +118,6 @@ export function sandTile(seed: number): Texture {
   });
 }
 
-// A white disc blurred like a Gaussian of `blur` radii: stretched by its sprite into a soft ellipse.
 export function softDisc(blur = 0.14): Shape {
   const reach = 1 + 2.5 * blur;
   const size = 512;

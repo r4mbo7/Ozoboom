@@ -18,9 +18,6 @@ interface Farewell extends Exit {
   readonly tilt: number;
 }
 
-// The Coup de vent, beyond his face: his mane of six wind ribbons, drawn live behind his mask so
-// that it turns downwind, fills and whips with his gust; his warning, his gust and the drift of the
-// players (`vent-weather.ts`); chased, his ribbons in the colors of the team, then confetti.
 export function createCoupDeVent(
   ctx: RenderContext,
   poseOf: (id: EntityId) => EnemyPose | undefined,
@@ -30,7 +27,6 @@ export function createCoupDeVent(
   const weather = createWeather(ctx);
   const exits: Farewell[] = [];
   let lastGust: GustTimes | undefined;
-  // The wave's clock and the show beats it was last advanced at.
   let wave = 0;
   let wavedAt = 0;
 

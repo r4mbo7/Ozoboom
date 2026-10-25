@@ -6,8 +6,7 @@ import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { byId } from './util';
 
-// What the roadie and the care add to the picture: read from the events and from the kind of the
-// skill of the class of the player, never from a class identifier.
+// Read from the kind of the skill, never from a class identifier.
 export function createClassEffects(
   ctx: RenderContext,
   blinkEnemy: (id: number, untilTick: number) => void,

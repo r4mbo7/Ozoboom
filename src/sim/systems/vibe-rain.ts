@@ -6,7 +6,7 @@ import { clearOfObstacles } from '../obstacles';
 import type { SpeakerState } from '../state';
 import type { StepContext } from './types';
 
-// Kept between a landing spot and the core or an obstacle: a vibe is drawn about that wide.
+// A vibe is drawn about that wide.
 const LANDING_GAP = 8;
 
 export function vibeRain(ctx: StepContext): void {
@@ -43,7 +43,6 @@ export function vibeRain(ctx: StepContext): void {
   }
 }
 
-// The vibe lands on the speaker's half of the disc around the core, denser toward the core.
 function lob({ state, set, tempo }: StepContext, rules: VibeRainRules, from: SpeakerState): void {
   const { core } = state;
   const dx = from.x - core.x;

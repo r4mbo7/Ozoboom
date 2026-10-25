@@ -7,7 +7,7 @@ import {
   FIREWORKS,
   HAND,
   HEART_FRONT,
-  K,
+  MOCKUP_PIXEL,
   arrowFly,
   arrowHand,
   emoteBeats,
@@ -29,7 +29,6 @@ interface Glowing {
   readonly core: Sprite;
 }
 
-// The gesture a player makes with the directional pad, drawn around them for a bar.
 export class PlayerEmote {
   private emote: Emote | null = null;
   private start = NEVER;
@@ -48,7 +47,6 @@ export class PlayerEmote {
   private readonly all: Sprite[] = [];
   private readonly fly: Fly = { x: 0, y: 0, alpha: 0, size: 0 };
 
-  // `gestures` is over everything else of the players, their names included.
   constructor(ctx: RenderContext, gestures: Container) {
     const { textures, layers } = ctx;
     const e = textures.players.emote;
@@ -95,8 +93,6 @@ export class PlayerEmote {
     hide(...this.all);
   }
 
-  // `angle` is the aim of the player; `top` the highest point of what is drawn above them, on
-  // screen, where the sunrise rises.
   place(
     x: number,
     y: number,
@@ -186,7 +182,7 @@ export class PlayerEmote {
       halo,
       fx,
       hy,
-      (20 * K * size) / this.haloRadius,
+      (20 * MOCKUP_PIXEL * size) / this.haloRadius,
       NaN,
       color,
       light.haloAlpha * 0.8 * moment.alpha,
@@ -200,8 +196,8 @@ export class PlayerEmote {
         const side = index === 0 ? -1 : 1;
         show(
           star,
-          fx + side * 15 * K * size,
-          hy - 4 * K * view.scale,
+          fx + side * 15 * MOCKUP_PIXEL * size,
+          hy - 4 * MOCKUP_PIXEL * view.scale,
           starSize * view.scale,
           starSize * view.scale,
           palette.or,

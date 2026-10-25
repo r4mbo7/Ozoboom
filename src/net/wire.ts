@@ -1,19 +1,9 @@
+import { isOneOf, isRecord } from '../shared/guards';
+import { clamp } from '../shared/scalar';
 import { EMOTES, type PlayerAction, type PlayerCommand } from '../sim/commands';
-import type { PlayerId } from '../sim/state';
-import type { NetMessage } from './types';
-
-// The hot messages (one command per guest per tick, one frame per tick) are bytes; the rare ones
-// (room, launch, hashes) stay JSON text, readable in the devtools.
-//
-//   command  0x01 | tick (varint) | command
-//   frame    0x02 | tick (varint) | count (u8) | command...
-//   command  playerId (u8) | flags (u8) | move.x, move.y, aim.x, aim.y (i16 each, units of 1/32767)
-//            | fire ticks (varint, 1 to 65535), only when the flag is set
-//            | actions, only when the flag is set: count (u8) | action...
-//   flags    bit 0 fire, bit 1 skill, bit 2 has actions, bit 3 has fire ticks
-//   action   0x00 placeTrap: id | x, y, dx, dy (f32)   0x01 chooseUpgrade: id
-//            0x02 takeTrap: x, y (f32)
-//   id       length (u8) | UTF-8
+import type { PlayerSlot } from '../sim/initial-state';
+import { PLAYER_IDS } from '../sim/state';
+import type { NetMessage, Seat } from './types';
 
 const COMMAND = 1;
 const FRAME = 2;
@@ -30,7 +20,10 @@ const EMOTE = 4;
 const LEAVE = 5;
 const AXIS_SCALE = 32767;
 const MAX_COUNT = 255;
-const MAX_PLAYER_ID = 3;
+const REFUSALS = ['version', 'full', 'started'] as const satisfies readonly Extract<
+  NetMessage,
+  { type: 'refused' }
+>['reason'][];
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder('utf-8', { fatal: true });
@@ -151,7 +144,7 @@ class Reader {
 }
 
 function axis(value: number): number {
-  return Math.round(Math.min(1, Math.max(-1, value)) * AXIS_SCALE);
+  return Math.round(clamp(value, -1, 1) * AXIS_SCALE);
 }
 
 function unaxis(value: number): number {
@@ -237,7 +230,7 @@ function writeCommand(writer: Writer, command: PlayerCommand): void {
   writer.i16(axis(input.aim.x));
   writer.i16(axis(input.aim.y));
   if (fireTicks !== undefined) {
-    writer.varint(Math.min(MAX_FIRE_TICKS, Math.max(1, Math.round(fireTicks))));
+    writer.varint(clamp(Math.round(fireTicks), 1, MAX_FIRE_TICKS));
   }
   if (actions.length > 0) {
     writer.u8(actions.length);
@@ -249,7 +242,7 @@ function writeCommand(writer: Writer, command: PlayerCommand): void {
 
 function readCommand(reader: Reader): PlayerCommand {
   const playerId = reader.u8();
-  if (playerId > MAX_PLAYER_ID) {
+  if (!isOneOf(playerId, PLAYER_IDS)) {
     throw new RangeError(`unknown player ${String(playerId)}`);
   }
   const flags = reader.u8();
@@ -263,7 +256,7 @@ function readCommand(reader: Reader): PlayerCommand {
     }
   }
   return {
-    playerId: playerId as PlayerId,
+    playerId,
     input: {
       move,
       aim,
@@ -301,16 +294,7 @@ export function encodeMessage(message: NetMessage): string | Uint8Array {
 // Throws on anything that is not a message of ours: the transport reports it as an error.
 export function decodeMessage(data: unknown): NetMessage {
   if (typeof data === 'string') {
-    const parsed: unknown = JSON.parse(data);
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      !('type' in parsed) ||
-      typeof parsed.type !== 'string'
-    ) {
-      throw new TypeError('not a message');
-    }
-    return parsed as NetMessage;
+    return readText(JSON.parse(data));
   }
   let bytes: Uint8Array;
   if (data instanceof ArrayBuffer) {
@@ -339,8 +323,129 @@ export function decodeMessage(data: unknown): NetMessage {
   return message;
 }
 
-// What a command is once it has crossed the wire. Online, every command enters the sim in this
-// form, the host's own included: the host simulates what the guests decode.
+function readText(message: unknown): NetMessage {
+  if (!isRecord(message)) {
+    throw new TypeError('not a message');
+  }
+  switch (message.type) {
+    case 'hello':
+      return {
+        type: 'hello',
+        version: text(message.version),
+        name: text(message.name),
+        classId: text(message.classId),
+      };
+    case 'refused':
+      return {
+        type: 'refused',
+        reason: oneOf(message.reason, REFUSALS),
+        version: text(message.version),
+      };
+    case 'lobby':
+      return {
+        type: 'lobby',
+        seats: list(message.seats, readSeat),
+        ...(message.setId === undefined ? {} : { setId: text(message.setId) }),
+        ...(message.endless === undefined ? {} : { endless: flag(message.endless) }),
+        ...(message.festival === undefined ? {} : { festival: flag(message.festival) }),
+      };
+    case 'seat':
+      return {
+        type: 'seat',
+        ...(message.name === undefined ? {} : { name: text(message.name) }),
+        ...(message.classId === undefined ? {} : { classId: text(message.classId) }),
+      };
+    case 'start':
+      return {
+        type: 'start',
+        seed: integer(message.seed),
+        setId: text(message.setId),
+        trackId: text(message.trackId),
+        players: list(message.players, readSlot),
+        ...(message.endless === undefined ? {} : { endless: flag(message.endless) }),
+        ...(message.festival === undefined ? {} : { festival: flag(message.festival) }),
+      };
+    case 'hash':
+      return { type: 'hash', tick: tick(message.tick), hash: text(message.hash) };
+    case 'desync':
+      return { type: 'desync', tick: tick(message.tick) };
+    case 'bye':
+      return { type: 'bye' };
+    default:
+      throw new TypeError(`not a message: ${String(message.type)}`);
+  }
+}
+
+function readSeat(value: unknown): Seat {
+  const seat = record(value);
+  return {
+    playerId: oneOf(seat.playerId, PLAYER_IDS),
+    peer: seat.peer === null ? null : text(seat.peer),
+    name: text(seat.name),
+    classId: text(seat.classId),
+  };
+}
+
+function readSlot(value: unknown): PlayerSlot {
+  const slot = record(value);
+  return {
+    id: oneOf(slot.id, PLAYER_IDS),
+    classId: text(slot.classId),
+    ...(slot.name === undefined ? {} : { name: text(slot.name) }),
+  };
+}
+
+function record(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new TypeError(`expected an object, got ${String(value)}`);
+  }
+  return value;
+}
+
+function list<T>(value: unknown, read: (item: unknown) => T): T[] {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`expected a list, got ${String(value)}`);
+  }
+  return value.map(read);
+}
+
+function text(value: unknown): string {
+  if (typeof value !== 'string') {
+    throw new TypeError(`expected a string, got ${String(value)}`);
+  }
+  return value;
+}
+
+function flag(value: unknown): boolean {
+  if (typeof value !== 'boolean') {
+    throw new TypeError(`expected a boolean, got ${String(value)}`);
+  }
+  return value;
+}
+
+function integer(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
+    throw new TypeError(`expected an integer, got ${String(value)}`);
+  }
+  return value;
+}
+
+function tick(value: unknown): number {
+  const count = integer(value);
+  if (count < 0) {
+    throw new RangeError(`negative tick ${String(count)}`);
+  }
+  return count;
+}
+
+function oneOf<T>(value: unknown, options: readonly T[]): T {
+  if (!isOneOf(value, options)) {
+    throw new RangeError(`unexpected ${String(value)}`);
+  }
+  return value;
+}
+
+// Online, every command enters the sim in this form, the host's own included.
 export function quantizeCommand(command: PlayerCommand): PlayerCommand {
   const message = decodeMessage(encodeMessage({ type: 'command', tick: 0, command }));
   if (message.type !== 'command') {

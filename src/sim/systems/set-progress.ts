@@ -23,12 +23,10 @@ export function isSetFinished(progress: SetProgress, set: SetDefinition): boolea
   return progress.tier >= set.tiers.length;
 }
 
-// The tier whose drop ends the game: an endless game has none.
 export function isLastTier(progress: SetProgress, set: SetDefinition): boolean {
   return progress.endlessFromTick === undefined && progress.tier >= set.tiers.length - 1;
 }
 
-// Whole minutes into the endless part: 0 until the last boss first falls, and in a game that ends.
 export function endlessMinutes({ tick, set }: SimState): number {
   return Math.floor((tick - (set.endlessFromTick ?? tick)) / TICKS_PER_MINUTE);
 }
@@ -53,7 +51,6 @@ function isSegmentOver(state: SimState, tier: TierDefinition, tempo: Tempo): boo
   }
 }
 
-// A boss on the floor, or still to come in this drop.
 function bossLeft(state: SimState): boolean {
   return state.bossesDue !== undefined || state.enemies.some((enemy) => enemy.isBoss);
 }

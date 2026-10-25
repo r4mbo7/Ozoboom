@@ -1,17 +1,14 @@
 import type { SpecialModule } from './types';
 import type { EdgeSide, Vec2 } from '../state';
 
-// Where a gust blows toward, from the side it comes from.
-const BLOWS: Readonly<Record<EdgeSide, Vec2>> = {
+const BLOW_DIRECTION_FROM: Readonly<Record<EdgeSide, Vec2>> = {
   top: { x: 0, y: 1 },
   right: { x: -1, y: 0 },
   bottom: { x: 0, y: -1 },
   left: { x: 1, y: 0 },
 };
 
-// Every `everyBars` bars, on the one of the bar before the gust, the bad vibe raises the warning:
-// `SimState.gust` says where it will blow from the next bar on (`src/sim/gusts.ts` blows it and
-// ends it). It comes from the next side of `from` each time.
+// Raised on the one of the bar before the gust; `src/sim/gusts.ts` blows it and ends it.
 export const gust: SpecialModule = ({ state, tempo }, _enemy, effect) => {
   if (
     effect.kind !== 'gust' ||
@@ -29,7 +26,7 @@ export const gust: SpecialModule = ({ state, tempo }, _enemy, effect) => {
   if (side === undefined) {
     return;
   }
-  const direction = BLOWS[side];
+  const direction = BLOW_DIRECTION_FROM[side];
   state.gust = {
     x: direction.x,
     y: direction.y,

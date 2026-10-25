@@ -1,4 +1,5 @@
 import type { EnemyDefinition } from '../../data/types';
+import { clamp } from '../../shared/scalar';
 import { distanceSquared } from '../../shared/vec';
 import { lookup, type ResolvedContent } from '../content';
 import { playerById } from '../damage';
@@ -18,9 +19,7 @@ import type { SteeringOverride } from '../specials/types';
 import type { EnemyState, SimState } from '../state';
 import type { StepContext } from './types';
 
-// A chased player who gets farther than this many aggro radii is dropped for the core.
 const LEASH_IN_AGGRO_RADII = 2;
-// Share of its speed a horde enemy spends moving away from the ones it overlaps.
 const SEPARATION_WEIGHT = 0.5;
 const separation = { x: 0, y: 0 };
 const waypoint = { x: 0, y: 0 };
@@ -54,8 +53,7 @@ export function enemySteering(ctx: StepContext): void {
       const override = steeringOverride(ctx, enemy, definition);
       const target = override?.target ?? targetOf(state, enemy);
       speed *= override?.speedMul ?? 1;
-      // When the straight line to its target is blocked, a bad vibe walks the core's flow field
-      // instead, whoever its target is: a chased player behind a pole is reached once the line clears.
+      // A chased player behind a pole is reached once the line clears.
       const detour =
         ctx.flowFields !== undefined &&
         override === undefined &&
@@ -68,8 +66,8 @@ export function enemySteering(ctx: StepContext): void {
       const gap = detour ? distance : distance - enemy.radius - target.radius;
       const advance =
         !detour && override === undefined && definition.ranged !== undefined
-          ? Math.min(speed, Math.max(-speed, gap - definition.ranged.keepDistance))
-          : Math.min(speed, Math.max(0, gap));
+          ? clamp(gap - definition.ranged.keepDistance, -speed, speed)
+          : clamp(gap, 0, speed);
       moveX = distance === 0 ? 0 : (dx / distance) * advance;
       moveY = distance === 0 ? 0 : (dy / distance) * advance;
     }
@@ -103,7 +101,7 @@ function steeringOverride(
   return special === undefined ? undefined : STEERING_TARGETS[special.kind]?.(ctx, enemy, special);
 }
 
-export function targetOf(state: SimState, enemy: EnemyState): Circle {
+function targetOf(state: SimState, enemy: EnemyState): Circle {
   if (enemy.target === 'core') {
     return state.core;
   }
@@ -111,7 +109,6 @@ export function targetOf(state: SimState, enemy: EnemyState): Circle {
 }
 
 function chooseTarget(state: SimState, enemy: EnemyState, definition: EnemyDefinition): void {
-  // Players pass through it and it strikes none: it keeps on to the stage.
   if (definition.passable === true) {
     enemy.target = 'core';
     return;
@@ -136,7 +133,6 @@ function chooseTarget(state: SimState, enemy: EnemyState, definition: EnemyDefin
   }
 }
 
-// Writes in `separation` the direction away from the enemies this one overlaps, at most 1 long.
 function separate(state: SimState, grid: StepContext['enemyGrid'], enemy: EnemyState): void {
   let x = 0;
   let y = 0;
@@ -178,8 +174,4 @@ function pushTraps(state: SimState, content: ResolvedContent, enemy: EnemyState)
     trap.x = clamp(trap.x + awayX * overlap, radius, state.arena.width - radius);
     trap.y = clamp(trap.y + awayY * overlap, radius, state.arena.height - radius);
   }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }

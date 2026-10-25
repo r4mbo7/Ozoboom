@@ -8,10 +8,10 @@ import { PLAY } from './icons';
 import { createEndlessRow } from './endless';
 import { formatNumber, formatSeconds, formatTenth } from './format';
 import { stepClass } from './lobby-model';
-import { endlessHint, promptsFor } from './prompts';
+import { type Prompts, endlessHint } from './prompts';
 import type { ClassPickerModel, CreatePortrait } from './types';
 
-export const STAT_STEPS = 5;
+const STAT_STEPS = 5;
 
 export interface ClassStat {
   readonly label: string;
@@ -34,7 +34,6 @@ function stepsAmong(classes: readonly ClassInfo[], of: (info: ClassInfo) => numb
   return 1 + Math.round(((STAT_STEPS - 1) * (value - low)) / (high - low));
 }
 
-// Life, speed and reach of a class, each with its value and its rank among the classes.
 export function classStats(classes: readonly ClassInfo[], info: ClassInfo): readonly ClassStat[] {
   const rows: readonly [string, (entry: ClassInfo) => number, (value: number) => string][] = [
     [t('Vie'), (entry) => entry.maxHp, formatNumber],
@@ -48,8 +47,7 @@ export function classStats(classes: readonly ClassInfo[], info: ClassInfo): read
   }));
 }
 
-// The card above or below in a grid of `columns`, the last one when the row below is shorter; null
-// past the first or the last row.
+// The last card when the row below is shorter; null past the first or the last row.
 export function gridStep(
   count: number,
   columns: number,
@@ -72,7 +70,7 @@ export interface ClassPickerActions {
 
 export interface ClassPickerScreen {
   readonly element: HTMLElement;
-  // The picker opens: the cards are picked, not the switch.
+  // The cards are picked, not the switch.
   open(): void;
   setModel(model: ClassPickerModel): void;
   setDevice(device: InputDevice): void;
@@ -96,9 +94,8 @@ function statRow(stat: ClassStat): HTMLElement {
   return row;
 }
 
-// Solo: after « Jouer », pick a class, drawn alive. The arrows choose, Enter goes on, Escape
-// goes back to the title.
 export function createClassPicker(
+  prompts: Prompts,
   classes: readonly ClassInfo[],
   portrait: CreatePortrait,
   actions: ClassPickerActions,
@@ -126,12 +123,12 @@ export function createClassPicker(
   const name = el('h3', 'ui-hero__name');
   const role = el('p', 'ui-hero__role');
   const skill = el('div', 'ui-hero__skill');
-  const skillName = el('span', 'ui-hero__skillname');
   const skillRecharge = el('span', 'ui-hero__recharge');
-  const skillText = el('p', 'ui-hero__skilltext');
   const skillHead = el('p', 'ui-hero__skillhead');
-  skillHead.append(skillName, skillRecharge);
-  skill.append(skillHead, skillText);
+  skillHead.append(el('span', 'ui-hero__skilllabel', t('Spéciale')), skillRecharge);
+  const skillName = el('p', 'ui-hero__skillname');
+  const skillText = el('p', 'ui-hero__skilltext');
+  skill.append(skillHead, skillName, skillText);
   const stats = el('div', 'ui-hero__stats');
   const info = el('div', 'ui-hero__info');
   info.setAttribute('aria-live', 'polite');
@@ -200,8 +197,7 @@ export function createClassPicker(
     return Math.max(1, cards.filter((card) => card.offsetTop === top).length);
   }
 
-  // Up and down walk the rows of a grid: past the last row, down goes on to the endless switch when
-  // there is one. True when the press was for the grid.
+  // Past the last row, down goes on to the endless switch when there is one. True when the press was for the grid.
   function stepRows(edges: MenuIntents): boolean {
     const side = edges.down ? 1 : edges.up ? -1 : 0;
     if (endless.row !== 'cards' || side === 0 || edges.back || edges.confirm) {
@@ -232,25 +228,23 @@ export function createClassPicker(
     if (device === null) {
       return;
     }
-    const prompts = promptsFor(device);
+    const shown = prompts.for(device);
     fillHint(
       hint,
       [
         {
-          keys: grid
-            ? [...new Set([...prompts.navigateRow, ...prompts.navigate])]
-            : prompts.navigateRow,
+          keys: grid ? [...new Set([...shown.navigateRow, ...shown.navigate])] : shown.navigateRow,
           label: t('choisir'),
         },
-        ...(model.launches && !grid ? endlessHint(prompts) : []),
+        ...(model.launches && !grid ? endlessHint(shown) : []),
         {
-          keys: [prompts.confirm],
+          keys: [shown.confirm],
           label:
             endless.row === 'endless' ? t('changer') : model.launches ? t('lancer') : t('valider'),
         },
-        { keys: [prompts.back], label: t('retour') },
+        { keys: [shown.back], label: t('retour') },
       ],
-      prompts.style,
+      shown.style,
     );
   }
 

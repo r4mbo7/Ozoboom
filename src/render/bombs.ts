@@ -1,8 +1,9 @@
 import { Graphics, type Sprite } from 'pixi.js';
+import { lerp } from '../shared/scalar';
 import type { Arena, SimEvent, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { lerp } from './motion';
+import { easeOutCubic } from './motion';
 import { BOMB_FUSE_TIP } from './textures-traps';
 import { add, hide, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
@@ -13,11 +14,9 @@ const CARRIER_GAP = 7;
 const CARRIER_BOMB_LIFT = 20;
 const HALO_RADIUS = 40;
 const SPARK_RADIUS = 8;
-// A bomb blinks on the beat over its last bars, like a loot.
 const FADING_BARS = 4;
 const FLASH_RADIUS = { from: 40, to: 320 };
 
-// How the wave crosses the floor, in bars of the stage: softer and slower in calm mode.
 const WAVE = { bars: 1, peak: 0.95, band: 34, line: 6 };
 const CALM_WAVE = { bars: 2, peak: 0.4, band: 0, line: 4 };
 
@@ -45,9 +44,6 @@ export function farthestCorner(arena: Arena, x: number, y: number): number {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// A bomb lies as a round magenta bomb whose fuse sparkles on the beat; the bad vibe carrying one
-// wears a magenta ring and the bomb floats above it. Set off, a wave runs from it over the whole
-// floor.
 export function createBombs(ctx: RenderContext): Family {
   const { textures: t, layers } = ctx;
   const lying = new ViewPool<BombView>(
@@ -62,7 +58,6 @@ export function createBombs(ctx: RenderContext): Family {
     },
   );
   const carriers = new ViewPool<CarrierView>(
-    // Above the zones and the crowd, like a loot carrier.
     () => ({
       halo: add(layers.glow, t.halo),
       ring: add(layers.bubbles, t.ring),
@@ -118,7 +113,7 @@ export function createBombs(ctx: RenderContext): Family {
       if (progress < 0) {
         continue;
       }
-      const eased = 1 - (1 - progress) * (1 - progress) * (1 - progress);
+      const eased = easeOutCubic(progress);
       const radius = Math.max(1, item.reach * eased);
       const fade = look.peak * (1 - progress);
       if (look.band > 0) {

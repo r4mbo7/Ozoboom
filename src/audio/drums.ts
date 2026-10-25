@@ -8,7 +8,6 @@ export interface DrumContext {
   pan: number | undefined;
   hz: number | undefined;
   release: number | undefined;
-  // The track's kick: it falls from `fromHz` to the key's root.
   kick: { fromHz: number; toHz: number; release: number };
 }
 
@@ -40,7 +39,6 @@ function tom(ctx: DrumContext, hz: number, gain: number, release: number) {
   });
 }
 
-// A peaking filter on the way out: the shine of a hat.
 function shine(out: AudioNode, hz: number, q: number, gain: number): AudioNode {
   const filter = out.context.createBiquadFilter();
   filter.type = 'peaking';

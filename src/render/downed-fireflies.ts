@@ -1,6 +1,8 @@
 import type { Container, Sprite } from 'pixi.js';
+import { clamp01 } from '../shared/scalar';
 import type { RenderContext } from './context';
 import type { Frame } from './frame';
+import { easeOutCubic } from './motion';
 import { TAU } from './paint';
 import { DOWNED_HEAD } from './textures-players-downed';
 import { add, hide, setTint } from './util';
@@ -18,38 +20,32 @@ export interface Fly {
 export interface FlyMoment {
   readonly now: number;
   readonly ticksPerBeat: number;
-  // Share of the relève done: the fireflies gather into the crown one after the other.
-  readonly share: number;
-  // 0 when the player stands back up, 1 once the fireflies are gone; null while lying down.
-  readonly away: number | null;
+  readonly reviveShare: number;
+  readonly flownAway: number | null;
   readonly calm: boolean;
 }
 
-const ease = (t: number) => 1 - (1 - t) ** 3;
-const clamp = (v: number) => Math.min(1, Math.max(0, v));
-
-// Where firefly `index` is, in reference pixels around the player, the body lying along +x.
 export function fireflyAt(index: number, moment: FlyMoment, out: Fly): Fly {
-  const { now, ticksPerBeat, share, away, calm } = moment;
+  const { now, ticksPerBeat, reviveShare, flownAway, calm } = moment;
   const beats = now / ticksPerBeat;
   const phase = (index / FIREFLIES) * TAU + (index % 2) * 1.9;
   const turn = (index % 2 === 0 ? -1 : 1) * (calm ? 0.04 : 0.2) * beats + phase;
   let x = Math.cos(turn) * (62 + (index % 3) * 8);
   let y = Math.sin(turn) * (46 + (index % 2) * 8);
-  const gathered = away === null ? clamp(share * FIREFLIES - index) : 1;
+  const gathered = flownAway === null ? clamp01(reviveShare * FIREFLIES - index) : 1;
   const crown = (index / FIREFLIES) * TAU + (calm ? 0 : beats * 0.15);
-  const eased = ease(gathered);
+  const eased = easeOutCubic(gathered);
   x += (DOWNED_HEAD.x + Math.cos(crown) * CROWN - x) * eased;
   y += (Math.sin(crown) * CROWN - y) * eased;
   let alpha = calm ? 0.85 : 0.4 + 0.6 * Math.max(0, Math.sin(beats * TAU + phase * 3));
   if (gathered >= 1) {
     alpha = 1;
   }
-  if (away !== null) {
-    const flight = ease(away);
+  if (flownAway !== null) {
+    const flight = easeOutCubic(flownAway);
     x += Math.cos(phase * 2) * 70 * flight;
     y -= Math.abs(Math.sin(phase * 2)) * 60 * flight;
-    alpha = 1 - away;
+    alpha = 1 - flownAway;
   }
   out.x = x;
   out.y = y;
@@ -57,7 +53,6 @@ export function fireflyAt(index: number, moment: FlyMoment, out: Fly): Fly {
   return out;
 }
 
-// The fireflies of the lake that watch over a downed player, in its colour.
 export class DownedFireflies {
   private readonly sprites: { readonly halo: Sprite; readonly core: Sprite }[] = [];
   private readonly haloRadius: number;

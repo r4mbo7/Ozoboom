@@ -12,8 +12,7 @@ import type { LocalPlayer } from '../ui';
 import { type Assist, Controls, type ScreenToWorld } from './controls';
 import { createSession, type Session } from './session';
 
-// What the hub saw this frame. A local player reads the snapshot of their device, or the merged
-// view when they have none (a solo game, or a guest online: the one screen is theirs alone).
+// A local player without a device reads the merged view: a solo game, or a guest online.
 export interface InputView {
   readonly devices: ReadonlyMap<DeviceId, InputSnapshot>;
   readonly merged: InputSnapshot;
@@ -27,11 +26,10 @@ export interface MatchOptions {
   readonly festival?: boolean;
   readonly content: GameContent;
   readonly slots: readonly PlayerSlot[];
-  // The players of this screen and what drives them. The others come from the source.
+  // The players of this screen; the others come from the source.
   readonly locals: ReadonlyMap<PlayerId, DeviceId | null>;
   readonly source: CommandSource;
   readonly focus: CameraFocus;
-  // What the game does by itself for the players of this screen, read at every step.
   readonly assist?: () => Assist;
 }
 
@@ -49,13 +47,11 @@ export interface Match {
   readonly source: CommandSource;
   readonly focus: CameraFocus;
   readonly seats: readonly MatchSeat[];
-  // The local players with the snapshot each one played this frame, as the interface wants them.
   readonly players: readonly LocalPlayer[];
   // Once per rendered frame, before its steps.
   frame(view: InputView): void;
   chooseUpgrade(playerId: PlayerId, upgradeId: string): void;
-  // One tick: local commands through the source, then the sim. False when the source has nothing
-  // yet and the sim must wait.
+  // False when the source has nothing yet and the sim must wait.
   step(toWorld: ScreenToWorld): boolean;
   close(): void;
 }
@@ -90,8 +86,7 @@ export const IDLE_SNAPSHOT: InputSnapshot = {
   aimFromPointer: false,
 };
 
-// The press that pauses or resumes, and any press during the pause, acts on nothing else: the A
-// that resumes must not place a trap. Movement is kept, as it always was.
+// Any press that pauses, resumes or falls in the pause acts on nothing else: the A that resumes must not place a trap.
 export function withoutPresses(snapshot: InputSnapshot): InputSnapshot {
   return {
     ...snapshot,
@@ -196,8 +191,7 @@ export function createMatch(options: MatchOptions): Match {
   };
 }
 
-// The first aim, before any input, points away from the scene, where the bad vibes come from and
-// where a trap placed in front of the player fits.
+// Away from the scene, where the bad vibes come from and where a trap placed in front of the player fits.
 function outwardAim({ state }: Session, playerId: PlayerId) {
   const player = state.players.find((candidate) => candidate.id === playerId);
   const outward =

@@ -1,3 +1,4 @@
+import { clamp } from '../../shared/scalar';
 import { length, normalize } from '../../shared/vec';
 import { IDLE_INPUT } from '../commands';
 import { gustDrift } from '../gusts';
@@ -41,8 +42,4 @@ export function playerMovement({ state, set, content, commands }: StepContext): 
 function walk(move: Vec2, speed: number): { dx: number; dy: number } {
   const direction = length(move) > 1 ? normalize(move) : move;
   return { dx: direction.x * speed, dy: direction.y * speed };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }

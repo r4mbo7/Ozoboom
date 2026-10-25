@@ -1,7 +1,7 @@
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 
-export const BUBBLE_TICKS = 2 * TICKS_PER_BAR;
-export const MAX_BUBBLES = 3;
+const BUBBLE_TICKS = 2 * TICKS_PER_BAR;
+const MAX_BUBBLES = 3;
 const FADE_IN_TICKS = TICKS_PER_BEAT / 4;
 const FADE_OUT_TICKS = TICKS_PER_BEAT;
 
@@ -12,7 +12,6 @@ export interface Bubble {
   y: number;
 }
 
-// The speech bubbles of the Bavards on screen: at most MAX_BUBBLES, each gone BUBBLE_TICKS after it opened.
 export class BubbleLog {
   private readonly items: Bubble[] = [];
 

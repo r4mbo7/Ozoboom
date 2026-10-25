@@ -23,6 +23,16 @@ export function navigateForm(
   return { ...navigateMenu(index, items.length, edges), typeShift: 0 };
 }
 
+export interface TypingStep {
+  leave: boolean;
+  navigate: boolean;
+}
+
+export function stepWhileTyping(edges: MenuIntents): TypingStep {
+  const vertical = edges.up || edges.down;
+  return { leave: edges.back || vertical, navigate: vertical };
+}
+
 export function shiftType(type: FeedbackType | null, shift: -1 | 0 | 1): FeedbackType | null {
   if (shift === 0) {
     return type;

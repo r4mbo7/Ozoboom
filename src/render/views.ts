@@ -13,7 +13,7 @@ export class ViewPool<V> {
   private readonly release: (view: V) => void;
   private frame = 0;
 
-  // Bound once: iterating with a stored callback allocates neither an iterator nor [key, value] pairs.
+  // Bound once: a stored callback allocates neither an iterator nor [key, value] pairs.
   private readonly releaseStale = (entry: Entry<V>): void => {
     if (entry.frame !== this.frame) {
       this.active.delete(entry.id);

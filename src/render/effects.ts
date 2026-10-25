@@ -4,6 +4,7 @@ import type { EntityId, SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
+import { easeOutQuad } from './motion';
 import { trapReach } from './reach';
 import { TRAP_TOKENS, type Shape } from './textures';
 import { byId, lookup } from './util';
@@ -34,7 +35,6 @@ export interface ParticleSpec {
   readonly toRadius: number;
   readonly tint: number;
   readonly peak: number;
-  // The angle it is born with, then how far it turns over its life.
   readonly rotation?: number;
   readonly spin?: number;
 }
@@ -100,7 +100,7 @@ export class Particles {
         sprite.visible = false;
         continue;
       }
-      const eased = 1 - (1 - progress) * (1 - progress);
+      const eased = easeOutQuad(progress);
       sprite.position.set(particle.x + particle.dx * eased, particle.y + particle.dy * eased);
       sprite.scale.set(particle.from + (particle.to - particle.from) * eased);
       sprite.rotation = particle.rotation + particle.spin * progress;
@@ -128,7 +128,7 @@ export function createEffects(
     if (owner !== undefined) {
       return trapReach(effect, owner);
     }
-    // A trap broken in the tick it fired has already left the state: keep the reach it was drawn with.
+    // A trap broken in the tick it fired has left the state: keep the reach it was drawn with.
     return reachOf(trapId) ?? trapReach(effect, { modifiers: {} });
   }
 

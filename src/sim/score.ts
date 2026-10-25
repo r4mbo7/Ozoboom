@@ -9,8 +9,6 @@ const PER_CORE_PERCENT = 2;
 const PER_STAGE_HELD = 5000;
 const PER_CALLED_BOSS = 500;
 
-// Phrases held, then survival time, then kills and the core's remaining life, raised by the Volume. A
-// festival adds each stage held to its sunrise, a fire or a giant each boss it called and the team chased.
 export function scoreOf(state: SimState): number {
   const { core, stats } = state;
   const stagesHeld = (state.festival?.scenes ?? []).filter(

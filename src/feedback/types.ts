@@ -6,6 +6,8 @@ export interface FeedbackDraft {
   context: string | null;
 }
 
+export type DraftInProgress = Omit<FeedbackDraft, 'type'> & { type: FeedbackType | null };
+
 export type FeedbackOutcome = { status: 'opened'; truncated: boolean } | { status: 'failed' };
 
 export interface FeedbackTransport {

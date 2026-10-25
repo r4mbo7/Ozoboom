@@ -7,7 +7,6 @@ export interface Toast {
   clear(): void;
 }
 
-// A line over the game that fades by itself: who left, while the set goes on.
 export function createToast(root: HTMLElement): Toast {
   const layer = el('div', 'ui toast');
   layer.setAttribute('role', 'status');

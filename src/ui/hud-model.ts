@@ -3,12 +3,14 @@ import type {
   GaugeDefinition,
   SetDefinition,
   SkillDefinition,
+  SummonLook,
   TrapDefinition,
   WeaponDefinition,
 } from '../data/types';
 import { t, tn } from '../shared/i18n';
 import { NIGHT_END, NIGHT_START, type PaletteToken, isClassToken } from '../shared/palette';
-import { setTempo, ticksToDrop } from '../sim/lineup';
+import { clamp01 } from '../shared/scalar';
+import { type LineupSlot, setTempo, ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
 import { gaugeValue } from '../sim/gauges';
 import { skillCooldownTicks } from '../sim/stats';
@@ -31,7 +33,6 @@ export interface GaugeReading {
   text: string;
 }
 
-// The notches the ring of a gauge marks: none for a gauge that fills smoothly.
 export function gaugeNotches(gauge: Pick<GaugeDefinition, 'max'>): number {
   return gauge.max > 1 && Number.isInteger(gauge.max) ? gauge.max : 0;
 }
@@ -61,14 +62,12 @@ export function classToken(classId: string): PaletteToken {
 
 const DANGER_RATIO = 0.25;
 
-// Whether a player of this screen is low enough on life for the screen to say so.
 export function inDanger(
   players: readonly Pick<PlayerState, 'hp' | 'maxHp' | 'downed'>[],
 ): boolean {
   return players.some((player) => !player.downed && ratio(player.hp, player.maxHp) <= DANGER_RATIO);
 }
 
-// Whether every player of this screen lies down: the screen then waits for the relève.
 export function allDown(players: readonly Pick<PlayerState, 'downed'>[]): boolean {
   return players.length > 0 && players.every((player) => player.downed);
 }
@@ -78,11 +77,11 @@ export function playerLabel(player: Pick<PlayerState, 'id' | 'name'>): string {
 }
 
 export interface Roster {
-  // More than one player in the sim: the HUD shows a band per player. Alone, it is the solo HUD.
+  // More than one player in the sim: a band per player; alone, the solo HUD.
   team: boolean;
-  // The players of this screen, in the order of the frame.
+  // In the order of the frame.
   locals: PlayerState[];
-  // The other players of the sim, remote ones, in the order of the sim.
+  // Remote players, in the order of the sim.
   others: PlayerState[];
 }
 
@@ -99,6 +98,12 @@ export function rosterOf(
     locals,
     others: state.players.filter((player) => !locals.includes(player)),
   };
+}
+
+// On a shared screen every player wears a bracelet; online, the players of other screens do.
+export function braceletedPlayers(roster: Roster): PlayerState[] {
+  const locals = roster.team ? roster.locals : [];
+  return locals.length > 1 ? [...locals, ...roster.others] : roster.others;
 }
 
 const SPEAKER_TOKENS: Readonly<Record<string, PaletteToken>> = {
@@ -130,9 +135,9 @@ export function levelReading(
   return { fill, gained, levelled, near: fill >= NEAR_LEVEL };
 }
 
-export const GEAR_SLOTS = 3;
+const GEAR_SLOTS = 3;
 
-export function speakerToken(id: string, index: number): PaletteToken {
+function speakerToken(id: string, index: number): PaletteToken {
   return SPEAKER_TOKENS[id] ?? FALLBACK_TOKENS[index % FALLBACK_TOKENS.length] ?? 'or';
 }
 
@@ -170,7 +175,6 @@ export interface HandTile {
   offering?: true;
 }
 
-// The kind of the trap the trap key would take back where the player stands, if a hand is free.
 export function trapToTake(
   definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
   state: Pick<SimState, 'traps'>,
@@ -182,8 +186,7 @@ export function trapToTake(
   return under === undefined || held >= handSize ? null : under.kind;
 }
 
-// One tile per hand slot. A held trap is available unless the field is full or a trap stands where
-// it would go.
+// A held trap is available unless the field is full or a trap stands where it would go.
 export function handTiles(
   definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
   state: Pick<SimState, 'traps'>,
@@ -203,6 +206,34 @@ export function handTiles(
   });
 }
 
+export function trapTileTitle(
+  tile: HandTile,
+  trap: Pick<TrapDefinition, 'name' | 'description'> | undefined,
+  look: SummonLook | undefined,
+): string {
+  if (tile.offering === true) {
+    return look === 'giants' ? t('Des spores, à porter à un géant') : t('Un bâton, à jeter au feu');
+  }
+  return trap === undefined
+    ? t('Main libre')
+    : t('{name} : {description}', { name: t(trap.name), description: t(trap.description) });
+}
+
+export function trapCaption(
+  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'name'>>,
+  taken: string | null,
+  held: string | undefined,
+): string | null {
+  const name = (id: string | undefined) => {
+    const trap = id === undefined ? undefined : definitions.get(id);
+    return trap === undefined ? '' : t(trap.name);
+  };
+  if (taken !== null) {
+    return t('Reprendre : {trap}', { trap: name(taken) });
+  }
+  return held === undefined ? null : name(held);
+}
+
 const plugHelps = (): readonly string[] => [
   t('Reste zéro mesure pour brancher'),
   t('Reste une mesure pour brancher'),
@@ -220,7 +251,6 @@ export function plugHelp(bars: number): string {
   );
 }
 
-// The unplugged speaker a living player stands in, if any.
 export function enteredSpeaker(set: SetDefinition, state: SimState): { plugBars: number } | null {
   for (const speaker of state.speakers ?? []) {
     if (speaker.plugged) {
@@ -236,6 +266,24 @@ export function enteredSpeaker(set: SetDefinition, state: SimState): { plugBars:
     }
   }
   return null;
+}
+
+export interface PlugHelp {
+  readonly seen: boolean;
+  readonly text: string | null;
+}
+
+export const NO_PLUG_HELP: PlugHelp = { seen: false, text: null };
+
+export function nextPlugHelp(previous: PlugHelp, set: SetDefinition, state: SimState): PlugHelp {
+  if (previous.seen) {
+    return previous;
+  }
+  const entered = enteredSpeaker(set, state);
+  if (entered !== null) {
+    return { seen: false, text: plugHelp(entered.plugBars) };
+  }
+  return { seen: previous.text !== null, text: null };
 }
 
 export interface GearSlotView {
@@ -256,6 +304,22 @@ export function gearSlots(
   });
 }
 
+export function slotLabel(slot: LineupSlot): string {
+  switch (slot.kind) {
+    case 'phrase':
+      return t('Palier {tier}, phrase {phrase}', {
+        tier: formatNumber(slot.tier + 1),
+        phrase: formatNumber(slot.phrase + 1),
+      });
+    case 'break':
+      return t('Palier {tier}, break', { tier: formatNumber(slot.tier + 1) });
+    case 'drop':
+      return t('Palier {tier}, drop', { tier: formatNumber(slot.tier + 1) });
+    case 'sunrise':
+      return t('Sunrise');
+  }
+}
+
 export function isNight(fraction: number): boolean {
   return fraction >= NIGHT_START && fraction < NIGHT_END;
 }
@@ -266,14 +330,13 @@ export interface SlotEdges {
   width: number;
 }
 
-// Where the sun sits on the line-up, as a share of its track: the set fraction is the slot it is in
-// plus how far through that slot it is, so the sun crosses each slot as the slot fills.
+// The set fraction is the slot the sun is in plus how far through it, so the sun crosses each slot as the slot fills.
 export function sunPosition(fraction: number, slots: readonly SlotEdges[]): number {
   const count = slots.length;
   if (count === 0) {
     return 0;
   }
-  const at = Math.min(1, Math.max(0, fraction)) * count;
+  const at = clamp01(fraction) * count;
   const index = Math.min(Math.floor(at), count - 1);
   const slot = slots[index];
   return slot === undefined ? 0 : slot.start + (at - index) * slot.width;
@@ -285,7 +348,6 @@ export interface DropReading {
   dropping: boolean;
 }
 
-// The first thing the line-up says: how long until the drop, who the drop brought, or the sunrise.
 export function dropReading(
   set: SetDefinition,
   state: SimState,

@@ -50,9 +50,9 @@ export interface SimulationOptions {
   players: readonly PlayerSlot[];
   setId: string;
   content: GameContent;
-  // The last boss down, its tier starts over instead of winning the game.
+  // The last boss down, its tier starts over instead of winning.
   endless?: boolean;
-  // Plays every stage of the festival in one game, from `setId` (ADR 0018).
+  // Every stage of the festival in one game, from `setId` (ADR 0018).
   festival?: boolean;
 }
 
@@ -124,7 +124,6 @@ function modeOf(options: SimulationOptions): GameMode | undefined {
   return FULL_MODES.festival;
 }
 
-// `mode` is the options' own, but a test may play a set through one of its own.
 export function createSimulation(
   options: SimulationOptions,
   mode: GameMode | undefined = modeOf(options),

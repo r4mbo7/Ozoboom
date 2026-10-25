@@ -7,10 +7,11 @@ export interface LoopOptions {
 }
 
 export interface LoopCallbacks {
-  // Returning false means the step has nothing to run yet (an online guest waiting for the host's
-  // frame): the loop stops stepping for this frame and holds the interpolation.
+  // False: nothing to run yet (a guest waiting for the host). The loop stops stepping this frame and holds the interpolation.
   step(): false | undefined;
   render(alpha: number): void;
+  // The exception that stops the loop, told before it surfaces.
+  crashed(error: unknown): void;
 }
 
 export interface FixedStepLoop {
@@ -19,8 +20,7 @@ export interface FixedStepLoop {
   readonly running: boolean;
 }
 
-// The ticks a timer owes after `elapsedMs`, bounded like the loop: past the bound the time is
-// dropped, not owed.
+// Bounded like the loop: past the bound the time is dropped, not owed.
 export function dueTicks(
   elapsedMs: number,
   tickMs: number,
@@ -78,6 +78,7 @@ export function createFixedStepLoop(options: LoopOptions, callbacks: LoopCallbac
       advance(timeMs, frameSession);
     } catch (error) {
       stop();
+      callbacks.crashed(error);
       throw error;
     }
     if (session === frameSession) {
@@ -101,8 +102,7 @@ export function createFixedStepLoop(options: LoopOptions, callbacks: LoopCallbac
         return;
       }
       if (stepped === false) {
-        // Keep one tick of credit: the step runs the frame the missing input arrives, and the
-        // time spent waiting is not owed.
+        // Keep one tick of credit: the step runs the frame the missing input arrives, and the wait is not owed.
         accumulatorMs = tickMs;
         waiting = true;
         break;

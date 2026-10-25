@@ -8,7 +8,6 @@ import { dropLoot } from './loot';
 import { isLastTier } from './set-progress';
 import type { StepContext } from './types';
 
-// Between the loots a boss drops side by side, one per player.
 const LOOT_SPACING = 40;
 
 export function deaths(ctx: StepContext): void {

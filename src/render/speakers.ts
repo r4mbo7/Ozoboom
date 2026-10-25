@@ -3,14 +3,9 @@ import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { SimEvent, SimState, SpeakerState } from '../sim/state';
 import type { Family, RenderContext, SpeakerLook } from './context';
 import type { Frame } from './frame';
-import {
-  drawCable,
-  drawWaves,
-  mixColor,
-  ofSpeaker,
-  speakerToken,
-  speakerTurn,
-} from './speaker-kit';
+import { easeOutQuad } from './motion';
+import { mixColor } from './palette';
+import { drawCable, drawWaves, ofSpeaker, speakerToken, speakerTurn } from './speaker-kit';
 import { type LedView, createLedViews, drawLeds } from './speaker-leds';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
@@ -171,7 +166,7 @@ export function createSpeakers(ctx: RenderContext): Family {
         shock.scale.set(radius / t.ring.radius);
         shock.alpha = 0.3;
       } else if (progress >= 0 && progress < 1) {
-        const eased = 1 - (1 - progress) * (1 - progress);
+        const eased = easeOutQuad(progress);
         shock.scale.set((radius * (0.25 + 0.75 * eased)) / t.ring.radius);
         shock.alpha = (1 - progress) * (1 - progress) * 0.85;
       } else {
@@ -194,7 +189,7 @@ export function createSpeakers(ctx: RenderContext): Family {
       flash.scale.set((speaker.radius * 2) / t.ring.radius);
       flash.alpha = 0.6 * Math.sin(progress * Math.PI);
     } else {
-      const eased = 1 - (1 - progress) * (1 - progress);
+      const eased = easeOutQuad(progress);
       flash.scale.set((speaker.radius * (1 + 2 * eased)) / t.ring.radius);
       flash.alpha = (1 - progress) * (1 - progress);
     }

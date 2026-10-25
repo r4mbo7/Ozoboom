@@ -1,12 +1,12 @@
+import { clamp } from '../shared/scalar';
 import type { Arena, Vec2 } from '../sim/state';
 
-export const VIEW_HEIGHT = 720;
-// Screen pixels per world unit at the least: a phone in landscape, 390 pixels high, shows 515 units
-// instead of 720, so that its players are not drawn too small to read.
-export const MIN_SCALE = 390 / 515;
-export const GROUP_MARGIN = 140;
-export const MIN_SCALE_SHARE = 0.6;
-export const EASE_TICKS = 10;
+const VIEW_HEIGHT = 720;
+// A phone in landscape, 390 pixels high, shows 515 units instead of 720: its players stay readable.
+const MIN_SCALE = 390 / 515;
+const GROUP_MARGIN = 140;
+const MIN_SCALE_SHARE = 0.6;
+const EASE_TICKS = 10;
 const SETTLED_PIXELS = 0.5;
 const SETTLED_SCALE = 0.001;
 
@@ -46,7 +46,6 @@ function place(
   };
 }
 
-// `viewHeight` is the height of world an inset shows; the game's own view is the usual one.
 export function frameCamera(
   focus: Vec2,
   arena: Arena,
@@ -59,8 +58,6 @@ export function frameCamera(
   return place(focus.x, focus.y, scale, arena, screenWidth, screenHeight);
 }
 
-// Frames a box, margin included, backing off down to MIN_SCALE_SHARE of the usual scale, and never past
-// the scale at which the arena fills the screen.
 export function frameBounds(
   bounds: Bounds,
   arena: Arena,
@@ -75,7 +72,7 @@ export function frameBounds(
     Math.max(screenWidth, 1) / arena.width,
     Math.max(screenHeight, 1) / arena.height,
   );
-  const scale = Math.min(base, Math.max(base * MIN_SCALE_SHARE, fit, filled));
+  const scale = clamp(Math.max(fit, filled), base * MIN_SCALE_SHARE, base);
   return place(
     (bounds.minX + bounds.maxX) / 2,
     (bounds.minY + bounds.maxY) / 2,
@@ -86,7 +83,6 @@ export function frameBounds(
   );
 }
 
-// Glides from one camera to the next at the same pace whatever the frame rate.
 export function easeCamera(from: Camera, to: Camera, ticks: number): Camera {
   const share = 1 - Math.exp(-Math.max(ticks, 0) / EASE_TICKS);
   return {
@@ -106,8 +102,7 @@ export function isSettled(from: Camera, to: Camera): boolean {
   );
 }
 
-// The view's center nearest (x, y) that shows nothing past the arena, or its middle on an axis the screen
-// is larger than: a glide between framings or a shake may otherwise reveal the edge.
+// A glide between framings or a shake would otherwise reveal the edge of the arena.
 export function centerInArena(
   camera: Camera,
   arena: Arena,
@@ -121,7 +116,7 @@ export function centerInArena(
 }
 
 function clampAxis(value: number, extent: number, size: number): number {
-  return extent >= size ? size / 2 : Math.min(Math.max(value, extent / 2), size - extent / 2);
+  return extent >= size ? size / 2 : clamp(value, extent / 2, size - extent / 2);
 }
 
 export interface EdgeMarker {
@@ -130,8 +125,6 @@ export interface EdgeMarker {
   angle: number;
 }
 
-// Where the arrow toward an off-screen point sits: on the ray from the screen center, `inset` pixels
-// inside the border. False when the point is on screen.
 export function edgeMarker(camera: Camera, point: Vec2, inset: number, out: EdgeMarker): boolean {
   const { screenWidth, screenHeight, scale } = camera;
   const x = (point.x - camera.centerX) * scale + screenWidth / 2;

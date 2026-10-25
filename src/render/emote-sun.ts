@@ -1,7 +1,9 @@
 import type { Sprite } from 'pixi.js';
+import { clamp01 } from '../shared/scalar';
 import type { RenderContext } from './context';
-import { K, clamp, easeOut, envelope, sunRay } from './emote-moments';
+import { MOCKUP_PIXEL, envelope, sunRay } from './emote-moments';
 import type { Frame } from './frame';
+import { easeOutCubic } from './motion';
 import { TAU, type Shape } from './paint';
 import { EMOTE_PLATE, EMOTE_STROKE } from './textures-players-emotes';
 import { setTint } from './util';
@@ -15,7 +17,6 @@ const REFLECTIONS = [
 
 type Make = (shape: Shape) => Sprite;
 
-// "Ouais !": the half sun of the logo rises above the player on its three reflections.
 export class EmoteSun {
   private readonly haloRadius: number;
   private readonly plate: Sprite;
@@ -25,7 +26,6 @@ export class EmoteSun {
   private readonly rays: readonly Sprite[];
   private readonly reflections: readonly Sprite[];
 
-  // `drawn` makes a sprite over the players, `glowing` one in the halos.
   constructor(ctx: RenderContext, drawn: Make, glowing: Make) {
     const { textures } = ctx;
     const e = textures.players.emote;
@@ -44,8 +44,8 @@ export class EmoteSun {
     if (alpha <= 0) {
       return;
     }
-    const up = calm ? 1 : easeOut(t);
-    const size = scale * (calm ? 1 : 0.85 + 0.15 * easeOut(t / 0.25));
+    const up = calm ? 1 : easeOutCubic(clamp01(t));
+    const size = scale * (calm ? 1 : 0.85 + 0.15 * easeOutCubic(clamp01(t / 0.25)));
     const cy = top - (EMOTE_PLATE + 3) * scale;
     const { plate, halo, disc, horizon, rays, reflections } = this;
     show(plate, x, cy, size, size, palette.sol, 0.82 * alpha);
@@ -53,20 +53,28 @@ export class EmoteSun {
       halo,
       x,
       cy,
-      (21 * K * size) / this.haloRadius,
+      (21 * MOCKUP_PIXEL * size) / this.haloRadius,
       NaN,
       palette.noyau,
       light.haloAlpha * alpha,
     );
     show(disc, x, cy, size, size * up, palette.noyau, alpha);
-    show(horizon, x, cy, ((26 * K) / EMOTE_STROKE) * size, size * 0.5, palette.or, alpha);
+    show(
+      horizon,
+      x,
+      cy,
+      ((26 * MOCKUP_PIXEL) / EMOTE_STROKE) * size,
+      size * 0.5,
+      palette.or,
+      alpha,
+    );
     rays.forEach((ray, index) => {
       const length = sunRay(index, t, calm);
       if (length < 0.3) {
         return;
       }
       const a = ((-150 + 30 * index) * Math.PI) / 180;
-      const middle = (10.5 * K + length / 2) * size;
+      const middle = (10.5 * MOCKUP_PIXEL + length / 2) * size;
       show(
         ray,
         x + Math.cos(a) * middle,
@@ -80,15 +88,15 @@ export class EmoteSun {
     });
     reflections.forEach((line, index) => {
       const [below, width] = REFLECTIONS[index] ?? [0, 0];
-      const dx = calm ? 0 : Math.sin((t * TAU) / 2 + index) * 1.2 * K;
+      const dx = calm ? 0 : Math.sin((t * TAU) / 2 + index) * 1.2 * MOCKUP_PIXEL;
       show(
         line,
         x + dx * size,
-        cy + below * K * size,
-        ((width * K) / EMOTE_STROKE) * size,
+        cy + below * MOCKUP_PIXEL * size,
+        ((width * MOCKUP_PIXEL) / EMOTE_STROKE) * size,
         size * 0.65,
         palette.turquoise,
-        alpha * clamp(t / 0.6) * (1 - index * 0.15),
+        alpha * clamp01(t / 0.6) * (1 - index * 0.15),
       );
     });
   }

@@ -1,10 +1,9 @@
 import { trimPlayerName } from '../shared/player-name';
 import type { PlayerSlot } from '../sim/initial-state';
-import type { PlayerId } from '../sim/state';
+import { PLAYER_IDS, type PlayerId } from '../sim/state';
 import type { NetMessage, PeerId, Role, Seat, Transport } from './types';
 
-const PLAYER_IDS: readonly PlayerId[] = [0, 1, 2, 3];
-export const MAX_SEATS = PLAYER_IDS.length;
+const MAX_SEATS = PLAYER_IDS.length;
 
 export type RefusalReason = 'version' | 'full' | 'started';
 export type StartMessage = Extract<NetMessage, { type: 'start' }>;
@@ -15,48 +14,77 @@ export interface RoomProfile {
   classId: string;
   // Known classes: an unknown one becomes the first of the list.
   classIds: readonly string[];
-  // Host only: the stage the room starts on.
+  // Host only.
   setId?: string;
-  // Host only: whether the room starts on an endless set.
+  // Host only.
   endless?: boolean;
-  // Host only: whether the room plays the whole festival.
+  // Host only.
   festival?: boolean;
 }
 
 export interface Room {
   readonly role: Role;
   readonly seats: readonly Seat[];
-  // The seat of this peer, once the host has given it one.
+  // Null until the host gives this peer a seat.
   readonly localSeat: Seat | null;
-  // The stage the host picked, as the room knows it; null until a guest hears of it.
+  // Null until a guest hears of the host's pick.
   readonly setId: string | null;
-  // Host only: changes the stage and tells the room.
+  // Host only.
   setStage(setId: string): void;
-  // Whether the host picked an endless set, as the room knows it.
   readonly endless: boolean;
-  // Host only: changes it and tells the room.
+  // Host only.
   setEndless(endless: boolean): void;
-  // Whether the host picked the whole festival, as the room knows it.
   readonly festival: boolean;
-  // Host only: changes it and tells the room.
+  // Host only.
   setFestival(festival: boolean): void;
-  // Changes this peer's own name and/or class and tells the room.
   setSeat(change: { name?: string; classId?: string }): void;
-  // Host only: freezes the room, sends the start to the guests and fires onStart here too.
+  // Host only: freezes the room and fires onStart here too.
   start(setId: string, seed: number, trackId: string): StartMessage;
   onChange(listener: (seats: readonly Seat[]) => void): () => void;
-  // Guest only: the host's version is given so the player can be told what to update to.
+  // Guest only.
   onRefused(listener: (reason: RefusalReason, hostVersion: string) => void): () => void;
   onStart(listener: (start: StartMessage) => void): () => void;
   dispose(): void;
 }
 
-export function playerSlot(seat: Seat): PlayerSlot {
+function playerSlot(seat: Seat): PlayerSlot {
   return {
     id: seat.playerId,
     classId: seat.classId,
     ...(seat.name === '' ? {} : { name: seat.name }),
   };
+}
+
+export interface StartPick {
+  readonly seed: number;
+  readonly setId: string;
+  readonly trackId: string;
+  readonly endless: boolean;
+  readonly festival: boolean;
+}
+
+export function startMessage(seats: readonly Seat[], pick: StartPick): StartMessage {
+  return {
+    type: 'start',
+    seed: pick.seed,
+    setId: pick.setId,
+    trackId: pick.trackId,
+    players: seats.map(playerSlot),
+    ...(pick.endless ? { endless: true } : {}),
+    ...(pick.festival ? { festival: true } : {}),
+  };
+}
+
+export function sendToGuests(
+  transport: Pick<Transport, 'id' | 'send'>,
+  seats: readonly Seat[],
+  message: NetMessage,
+): void {
+  for (const seat of seats) {
+    if (seat.peer !== null && seat.peer !== transport.id) {
+      transport.send(seat.peer, message);
+    }
+  }
 }
 
 export function createRoom(transport: Transport, role: Role, profile: RoomProfile): Room {
@@ -96,11 +124,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
       ...(endless ? { endless } : {}),
       ...(festival ? { festival } : {}),
     };
-    for (const seat of seats) {
-      if (seat.peer !== null && seat.peer !== transport.id) {
-        transport.send(seat.peer, message);
-      }
-    }
+    sendToGuests(transport, seats, message);
     notify();
   };
 
@@ -284,21 +308,8 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         throw new Error('the game has already started');
       }
       started = true;
-      const players = seats.map(playerSlot);
-      const message: StartMessage = {
-        type: 'start',
-        seed,
-        setId,
-        trackId,
-        players,
-        ...(endless ? { endless } : {}),
-        ...(festival ? { festival } : {}),
-      };
-      for (const seat of seats) {
-        if (seat.peer !== null && seat.peer !== transport.id) {
-          transport.send(seat.peer, message);
-        }
-      }
+      const message = startMessage(seats, { seed, setId, trackId, endless, festival });
+      sendToGuests(transport, seats, message);
       for (const listener of [...startListeners]) {
         listener(message);
       }

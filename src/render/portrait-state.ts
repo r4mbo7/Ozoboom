@@ -5,7 +5,6 @@ import type { PlayerState, SimEvent, SimState } from '../sim/state';
 const SKILL_EVERY = 2 * MAIN_TEMPO.ticksPerBar;
 const AIM = { x: 0.6, y: 0.8 };
 
-// A player standing still, facing down and to the right.
 export function standing(definition: Pick<ClassDefinition, 'id' | 'radius'>): PlayerState {
   return {
     id: 0,
@@ -52,8 +51,6 @@ export function emptyState(player: PlayerState, size: number): SimState {
   };
 }
 
-// What a standing player does at one tick of the portrait: a step and a shot on every beat, and
-// its skill every two bars, one bar in.
 export function portraitEvents(tick: number, player: PlayerState, effect: SkillEffect): SimEvent[] {
   const events: SimEvent[] = [];
   const { ticksPerBeat, ticksPerBar } = MAIN_TEMPO;
@@ -80,8 +77,6 @@ export function portraitEvents(tick: number, player: PlayerState, effect: SkillE
   return events;
 }
 
-// The size of the drawing buffer of a portrait: as fine as the screen, two pixels a point at most,
-// and within the renderer, its shape kept whatever the cap.
 export function portraitPixels(
   clientWidth: number,
   clientHeight: number,

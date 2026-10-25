@@ -1,3 +1,4 @@
+import { clamp01 } from '../shared/scalar';
 import type { Vec2 } from '../sim/state';
 import {
   MENU_DIRECTION_CONTROLS,
@@ -51,7 +52,7 @@ export function applyRadialDeadzone(x: number, y: number, deadzone = STICK_DEADZ
   return { x: (x / length) * scaled, y: (y / length) * scaled };
 }
 
-export function selectGamepad(
+function selectGamepad(
   pads: readonly (GamepadLike | null)[],
   currentIndex: number | null,
 ): GamepadLike | null {
@@ -123,7 +124,7 @@ export function reduceGamepad(
   };
 }
 
-export function stickMenuDirection(
+function stickMenuDirection(
   x: number,
   y: number,
   current: MenuDirection | null,
@@ -155,7 +156,7 @@ export function navigatorGamepads(): readonly (GamepadLike | null)[] {
 export function rumbleGamepad(pad: GamepadLike | null, strength: number, durationMs: number): void {
   const actuator = pad?.vibrationActuator;
   if (!actuator) return;
-  const magnitude = Math.min(1, Math.max(0, strength));
+  const magnitude = clamp01(strength);
   void actuator.playEffect('dual-rumble', {
     duration: durationMs,
     strongMagnitude: magnitude,

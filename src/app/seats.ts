@@ -1,8 +1,8 @@
 import type { DeviceId } from '../input/intents';
 import { trimPlayerName } from '../shared/player-name';
 import type { PlayerSlot } from '../sim/initial-state';
-import type { PlayerId } from '../sim/state';
-import { SEAT_IDS, defaultName, type LobbyModel, type LobbySeat } from '../ui';
+import { PLAYER_IDS, type PlayerId } from '../sim/state';
+import { defaultName, type LobbyModel, type LobbySeat } from '../ui';
 
 interface Seat {
   playerId: PlayerId;
@@ -16,7 +16,6 @@ export interface LaunchedSeats {
   locals: ReadonlyMap<PlayerId, DeviceId>;
 }
 
-// The seats of a local lobby: one device each, the first free place first, the lowest one launches.
 // Places keep their number while others come and go, so a cursor stays on its own place.
 export interface Seats {
   readonly count: number;
@@ -37,8 +36,7 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
   const sorted = () => [...seats].sort((a, b) => a.playerId - b.playerId);
   const find = (playerId: PlayerId) => seats.find((seat) => seat.playerId === playerId);
 
-  // A class not yet in the lobby, so that two friends do not both start on the same one: the class
-  // remembered from the title leads, the others follow in order.
+  // A class not yet in the lobby, so that two friends do not both start on the same one.
   function freshClass(): string {
     const taken = new Set(seats.map((seat) => seat.classId));
     const order = seats.length === 0 ? [firstClassId, ...classIds] : classIds;
@@ -50,10 +48,10 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
       return seats.length;
     },
     join(device) {
-      if (seats.length >= SEAT_IDS.length || seats.some((seat) => seat.device === device)) {
+      if (seats.length >= PLAYER_IDS.length || seats.some((seat) => seat.device === device)) {
         return false;
       }
-      const playerId = SEAT_IDS.find((id) => find(id) === undefined);
+      const playerId = PLAYER_IDS.find((id) => find(id) === undefined);
       if (playerId === undefined) {
         return false;
       }
@@ -105,7 +103,7 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
       const slots: PlayerSlot[] = [];
       const locals = new Map<PlayerId, DeviceId>();
       for (const [index, seat] of ordered.entries()) {
-        const id = SEAT_IDS[index];
+        const id = PLAYER_IDS[index];
         if (id !== undefined) {
           slots.push({ id, classId: seat.classId, name: seat.name });
           locals.set(id, seat.device);

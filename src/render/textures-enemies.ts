@@ -23,7 +23,6 @@ export interface Mask {
   readonly awake: readonly Texture[];
   readonly asleep: Texture;
   readonly down: Texture;
-  // Pixels of the texture between the center and the edge of the body: the sprite scales by it.
   readonly radius: number;
 }
 
@@ -32,7 +31,6 @@ export interface MaskSet {
   readonly neutral: Mask;
   readonly smile: Shape;
   readonly drowsy: Shape;
-  // One per stage of a hurt mask, each holding the cracks of the stages before it.
   readonly cracks: readonly Shape[];
   destroy(): void;
 }
@@ -41,7 +39,7 @@ interface Cell {
   readonly draw: (ctx: Ctx) => void;
 }
 
-// One canvas for a whole family: one texture source, so that hundreds of masks batch together.
+// One canvas for a whole family, so that hundreds of masks batch together.
 function atlas(cells: readonly Cell[], cell: number, scale: number): Texture[] {
   const columns = Math.ceil(Math.sqrt(cells.length));
   const rows = Math.ceil(cells.length / columns);

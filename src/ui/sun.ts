@@ -10,8 +10,7 @@ import {
 
 const MIN_FRACTION_STEP = 0.01;
 
-// The scene blends from the night to the dawn through a mid grey where no text colour holds 4.5:1.
-// The interface keeps the palette of the nearer end there and switches halfway: a step, not a dip.
+// No text colour holds 4.5:1 on the mid grey between night and dawn: the interface switches halfway, a step, not a dip.
 export function uiPaletteAt(fraction: number): SunPalette {
   if (fraction > NIGHT_END && fraction < DAWN_AT) {
     const half = (NIGHT_END + DAWN_AT) / 2;
@@ -24,7 +23,14 @@ export function cssName(token: PaletteToken): string {
   return `--${token.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
 }
 
-export function applyPalette(target: HTMLElement, palette: SunPalette): void {
+interface Styled {
+  readonly style: {
+    setProperty(name: string, value: string): void;
+    removeProperty(name: string): unknown;
+  };
+}
+
+export function applyPalette(target: Styled, palette: SunPalette): void {
   for (const token of PALETTE_TOKENS) {
     target.style.setProperty(cssName(token), palette[token]);
   }
@@ -36,8 +42,8 @@ export interface SunFollower {
   clear(): void;
 }
 
-// Writes the palette of the set time as CSS variables, only when it moved by more than a hundredth.
-export function createSunFollower(target: HTMLElement): SunFollower {
+// Only when the set time moved by more than a hundredth.
+export function createSunFollower(target: Styled): SunFollower {
   let applied: number | null = null;
   return {
     follow(fraction) {

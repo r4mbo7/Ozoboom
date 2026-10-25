@@ -10,7 +10,6 @@ export function whoColor(classId: string): string {
 
 type Identity = Pick<PlayerState, 'id' | 'name' | 'classId'>;
 
-// A player's name behind the mark of their class, in the colour of their class.
 export function createWho(): HTMLElement {
   return el('span', 'ui-who');
 }
