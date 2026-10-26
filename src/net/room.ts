@@ -40,6 +40,9 @@ export interface Room {
   setSeat(change: { name?: string; classId?: string }): void;
   // Host only: freezes the room and fires onStart here too.
   start(setId: string, seed: number, trackId: string): StartMessage;
+  // Host only, once started: takes the team back to the room, without those who left the game.
+  // A guest hears of it as a change of the room.
+  reopen(): void;
   onChange(listener: (seats: readonly Seat[]) => void): () => void;
   // Guest only.
   onRefused(listener: (reason: RefusalReason, hostVersion: string) => void): () => void;
@@ -154,12 +157,15 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
     );
   };
 
+  // During a game the others hear nothing: the seat is gone from the next one.
   const release = (peer: PeerId): void => {
-    if (started || !seats.some((seat) => seat.peer === peer)) {
+    if (!seats.some((seat) => seat.peer === peer)) {
       return;
     }
     seats = seats.filter((seat) => seat.peer !== peer);
-    publish();
+    if (!started) {
+      publish();
+    }
   };
 
   const handleAsHost = (from: PeerId, message: NetMessage): void => {
@@ -195,9 +201,6 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
           publish();
         }
         return;
-      case 'bye':
-        release(from);
-        return;
       default:
         return;
     }
@@ -206,6 +209,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
   const handleAsGuest = (message: NetMessage): void => {
     switch (message.type) {
       case 'lobby':
+        started = false;
         seats = [...message.seats];
         setId = message.setId ?? null;
         endless = message.endless === true;
@@ -314,6 +318,16 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
         listener(message);
       }
       return message;
+    },
+    reopen() {
+      if (role !== 'host') {
+        throw new Error('only the host reopens the room');
+      }
+      if (!started) {
+        throw new Error('the room is already open');
+      }
+      started = false;
+      publish();
     },
     onChange(listener) {
       changeListeners.add(listener);

@@ -1,7 +1,6 @@
 import { locale, t } from '../shared/i18n';
 import { clamp01 } from '../shared/scalar';
 import { TICK_RATE_HZ } from '../shared/tempo';
-import { scoreOf } from '../sim/score';
 import type { SimState } from '../sim/state';
 
 const formats = new Map<string, Intl.NumberFormat>();
@@ -65,6 +64,5 @@ export function endStats(state: SimState): EndStat[] {
     { label: t('Temps'), value: formatDuration(state.tick) },
     { label: t('Bad vibes dissipées'), value: formatNumber(state.stats.kills) },
     { label: t('Vie de la scène'), value: formatPercent(ratio(state.core.hp, state.core.maxHp)) },
-    { label: t('Score'), value: formatNumber(scoreOf(state)) },
   ];
 }

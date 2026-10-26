@@ -1,7 +1,15 @@
 {
   "1 à 5": "1 to 5",
+  "A chassé le plus de bad vibes": "Chased off the most bad vibes",
+  "A chassé les boss": {
+    "one": "Chased off the boss",
+    "other": "Chased off the bosses"
+  },
+  "A ramassé le plus de vibes": "Picked up the most vibes",
+  "A relevé l’équipe": "Got the team back up",
   "Agir": "Actions",
   "Agrès": "Props",
+  "Alliés soignés": "Allies healed",
   "Alt": "Alt",
   "Alt Gr": "Right Alt",
   "Ambyss": "Ambyss",
@@ -20,6 +28,7 @@
   "Avec tes amis": "With your friends",
   "B2B : {recipe}": "B2B: {recipe}",
   "Backstage": "Backstage",
+  "Bad vibes": "Bad vibes",
   "Bad vibes dissipées": "Bad vibes cleared",
   "Baisser le son": "Turn the sound down",
   "Balaie la foule de loin avec ses poi lumineux. Fragile.": "Sweeps the crowd from afar with glowing poi. Fragile.",
@@ -28,6 +37,7 @@
   "Bas": "Down",
   "Baskets légères": "Light Sneakers",
   "Bonnes ondes": "Good Vibrations",
+  "Boss": "Bosses",
   "Boss vaincu": "Boss down",
   "Boucle VJ": "VJ Loop",
   "Boule à facettes": "Disco Ball",
@@ -229,6 +239,7 @@
   "Le set reprend là où tu l’as laissé.": "The set picks up where you left it.",
   "Le set se joue en paysage.": "The set plays in landscape.",
   "Le set s’arrête pour tout le monde plutôt que de continuer de travers. Le rapport est prêt pour « Ton avis ».": "The set stops for everyone rather than go on out of step. The report is ready in “Your feedback”.",
+  "Le set s’arrête pour toute l’équipe, sans score : chacun peut changer de perso.": "The set stops for the whole team, with no score: everyone can change character.",
   "Le set va jusqu’au dernier boss, puis la nuit repart : elle s’arrête quand vous tombez.": "The set runs to the last boss, then the night takes off again: it ends when you fall.",
   "Le soleil se lève sur le dancefloor. Le sound system a tenu toute la nuit.": "The sun rises over the dancefloor. The sound system held all night long.",
   "Le sound system tient bon, mais les bad vibes ont vidé la piste. On se relève et on y retourne ?": "The sound system holds, but the bad vibes cleared the floor. Back on your feet and go again?",
@@ -293,6 +304,7 @@
   "Nom du joueur {number}": "Player {number}’s name",
   "Non": "Off",
   "Nouveau": "New",
+  "Nouveau record !": "New record!",
   "Nova": "Nova",
   "Ola": "Wave",
   "Ola déchaînée": "Tidal Wave",
@@ -322,6 +334,7 @@
     "one": "No sign of the host for {seconds} second.",
     "other": "No sign of the host for {seconds} seconds."
   },
+  "Plus de place pour un piège : reprends-en un": "No room for another trap: take one back",
   "Plus personne debout": "Nobody left standing",
   "Portée": "Range",
   "Pose ton mot sur Discord": "Drop us a line on Discord",
@@ -349,6 +362,7 @@
   "Rare": "Rare",
   "Recharge": "Cooldown",
   "Recharge la page": "Reload the page",
+  "Record : {score}": "Record: {score}",
   "Recrute tes roadies sur Discord": "Round up your roadies on Discord",
   "Rejoindre": "Join",
   "Rejouer": "Play again",
@@ -372,6 +386,8 @@
   "Retour": "Back",
   "Retour arrière": "Backspace",
   "Retour au perso": "Back to the character",
+  "Retour au salon": "Back to the lobby",
+  "Retour au salon ?": "Back to the lobby?",
   "Retour au titre": "Back to the title",
   "Ruban arc-en-ciel": "Rainbow Ribbon",
   "Réessayer": "Try again",
@@ -522,6 +538,7 @@
   "Ventilateur brumisant": "Misting Fan",
   "Verr. maj": "Caps Lock",
   "Vers la bad vibe à portée": "At the bad vibe in range",
+  "Vibes": "Vibes",
   "Vie": "Health",
   "Vie de la scène": "Stage health",
   "Viser": "Aim",
@@ -532,6 +549,7 @@
   "Volume à fond": "Volume Maxed",
   "annuler": "cancel",
   "aucune": "none",
+  "avant : {score}": "before: {score}",
   "avec {first} ou {second}, il fusionne": "with {first} or {second}, it fuses",
   "avec {upgrade}, devient {fusion}": "with {upgrade}, becomes {fusion}",
   "branchement : encore {beats} temps": {
@@ -549,6 +567,7 @@
   "lancer": "start",
   "mode": "mode",
   "naviguer": "navigate",
+  "niv. {level}": "lv. {level}",
   "ou rejoins le salon d’un ami": "or join a friend’s room",
   "quitter": "leave",
   "quitter sa place": "leave the seat",
@@ -574,6 +593,26 @@
   "{action} : appuie sur une touche, un bouton de la souris ou la molette.": "{action}: press a key, a mouse button or the wheel.",
   "{action} : case vidée.": "{action}: slot cleared.",
   "{action}, touche {number} : {key}": "{action}, slot {number}: {key}",
+  "{count} alliés soignés": {
+    "one": "{count} ally healed",
+    "other": "{count} allies healed"
+  },
+  "{count} bad vibes": {
+    "one": "{count} bad vibe",
+    "other": "{count} bad vibes"
+  },
+  "{count} boss": {
+    "one": "{count} boss",
+    "other": "{count} bosses"
+  },
+  "{count} cartes": {
+    "one": "{count} card",
+    "other": "{count} cards"
+  },
+  "{count} vibes": {
+    "one": "{count} vibe",
+    "other": "{count} vibes"
+  },
   "{count} visites": {
     "one": "{count} visit",
     "other": "{count} visits"
@@ -597,6 +636,7 @@
   "{role}, que tes agrès ne font pas encore": "{role}, which your props don’t do yet",
   "{skill} : en recharge": "{skill}: cooling down",
   "{skill} : prête": "{skill}: ready",
+  "{taken}/{capacity}": "{taken}/{capacity}",
   "{value} sur {max}": "{value} of {max}",
   "{weapon} + {upgrade}": "{weapon} + {upgrade}",
   "{weapon}, niveau {level}": "{weapon}, level {level}",

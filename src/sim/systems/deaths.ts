@@ -1,10 +1,12 @@
 import { lookup } from '../content';
+import { playerById } from '../damage';
 import { drawRelics } from '../draw';
 import { recruitFallen } from '../recruits';
 import { SPECIALS } from '../specials';
 import type { PickupKind, SimState } from '../state';
 import { dropBomb } from './bomb';
 import { dropLoot } from './loot';
+import { tallyOf } from '../tally';
 import { isLastTier } from './set-progress';
 import type { StepContext } from './types';
 
@@ -49,6 +51,14 @@ export function deaths(ctx: StepContext): void {
       byPlayer: enemy.lastHitBy ?? null,
     });
     state.stats.kills += 1;
+    const killer = enemy.lastHitBy === undefined ? undefined : playerById(state, enemy.lastHitBy);
+    if (killer !== undefined) {
+      const tally = tallyOf(killer);
+      tally.badVibes += 1;
+      if (enemy.isBoss) {
+        tally.bosses += 1;
+      }
+    }
     if (enemy.called === true) {
       state.stats.calledDown = (state.stats.calledDown ?? 0) + 1;
     }

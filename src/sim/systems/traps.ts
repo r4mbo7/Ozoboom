@@ -130,6 +130,10 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
   if (definition === undefined || held < 0) {
     return;
   }
+  if (state.traps.length >= trapCapacity(set, state)) {
+    state.events.push({ type: 'trapRefused', playerId: player.id });
+    return;
+  }
 
   const { x, y } = action;
 
@@ -143,8 +147,7 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
     y <= arena.height - radius &&
     !overlaps(footprint, core, core.radius) &&
     !touchesObstacle(footprint, set.obstacles ?? []) &&
-    !state.traps.some((trap) => overlaps(footprint, trap, trapDefinition(content, trap).radius)) &&
-    state.traps.length < trapCapacity(set, state);
+    !state.traps.some((trap) => overlaps(footprint, trap, trapDefinition(content, trap).radius));
   if (!fits) {
     return;
   }

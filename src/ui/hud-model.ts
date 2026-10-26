@@ -173,6 +173,8 @@ export interface HandTile {
   available: boolean;
   // The slot after the traps holds an offering for the fire or a giant.
   offering?: true;
+  // Every trap slot of the team is taken: the trap waits for one to be taken back.
+  full?: true;
 }
 
 export function trapToTake(
@@ -194,14 +196,17 @@ export function handTiles(
   handSize: number,
   capacity: number,
 ): HandTile[] {
-  const free =
-    state.traps.length < capacity && trapAt(definitions, state.traps, player) === undefined;
+  const full = trapsFull(state, capacity);
+  const free = !full && trapAt(definitions, state.traps, player) === undefined;
   const traps = player.hand?.length ?? 0;
-  return Array.from({ length: handSize }, (_, index) => {
+  return Array.from({ length: handSize }, (_, index): HandTile => {
     if (index === traps && player.offering !== undefined) {
       return { trapId: null, available: false, offering: true };
     }
     const trapId = player.hand?.[index] ?? null;
+    if (trapId !== null && full) {
+      return { trapId, available: false, full: true };
+    }
     return { trapId, available: trapId !== null && free };
   });
 }
@@ -219,10 +224,25 @@ export function trapTileTitle(
     : t('{name} : {description}', { name: t(trap.name), description: t(trap.description) });
 }
 
+export function trapsFull(state: Pick<SimState, 'traps'>, capacity: number): boolean {
+  return state.traps.length >= capacity;
+}
+
+// The count of the slots taken, shown only once none is left.
+export function trapSlotsFull(state: Pick<SimState, 'traps'>, capacity: number): string | null {
+  return trapsFull(state, capacity)
+    ? t('{taken}/{capacity}', {
+        taken: formatNumber(state.traps.length),
+        capacity: formatNumber(capacity),
+      })
+    : null;
+}
+
 export function trapCaption(
   definitions: ReadonlyMap<string, Pick<TrapDefinition, 'name'>>,
   taken: string | null,
   held: string | undefined,
+  full: boolean,
 ): string | null {
   const name = (id: string | undefined) => {
     const trap = id === undefined ? undefined : definitions.get(id);
@@ -231,7 +251,10 @@ export function trapCaption(
   if (taken !== null) {
     return t('Reprendre : {trap}', { trap: name(taken) });
   }
-  return held === undefined ? null : name(held);
+  if (held === undefined) {
+    return null;
+  }
+  return full ? t('Plus de place pour un piège : reprends-en un') : name(held);
 }
 
 const plugHelps = (): readonly string[] => [

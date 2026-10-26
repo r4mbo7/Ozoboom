@@ -75,5 +75,11 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
 }
 
 function createInsetFamilies(ctx: RenderContext): Family[] {
-  return [createEnemies(ctx), createProjectiles(ctx), createWeapons(ctx), createPlayers(ctx)];
+  return [
+    createGround(ctx),
+    createEnemies(ctx),
+    createProjectiles(ctx),
+    createWeapons(ctx),
+    createPlayers(ctx),
+  ];
 }

@@ -18,6 +18,7 @@ import { createPlayerKeys } from '../input/profile';
 import { createPortraits, createRenderer } from '../render';
 import type { GameEvent, GameMode } from '../shared/stats';
 import { TICK_MS } from '../shared/tempo';
+import { scoreOf } from '../sim/score';
 import { setOf, setTempo } from '../sim/lineup';
 import { parseJoinCode } from '../net/code';
 import { createLocalSource } from '../net/local';
@@ -28,6 +29,7 @@ import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId, SimState } from '../sim/state';
 import {
   type ClassPickerModel,
+  type EndSession,
   type LobbyModel,
   type StagePickerModel,
   type LocalPlayer,
@@ -67,6 +69,7 @@ import { type Settings, createSettings } from './settings';
 import { soundOf, type Screen } from './sound';
 import { createCrashReport } from './crash';
 import { createGameStats, outcomeOf, sendGameEvent } from './stats';
+import { keepRecord } from './records';
 import { browserStorage } from './storage';
 import { createTeamPause, pauseItems } from './team-pause';
 import { createToast } from './toast';
@@ -80,13 +83,7 @@ import { chooseLocale } from './locale';
 import { createStillness } from './stillness';
 import { createWeaponScenes } from './weapon-scenes';
 import { downloadJson } from './download';
-import {
-  type RecordedGame,
-  type Recorder,
-  type Recording,
-  createRecorder,
-  createReplaySource,
-} from './recording';
+import { type RecordedGame, type Recorder, type Recording, createRecorder } from './recording';
 
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const TOGETHER_FOCUS: CameraFocus = { kind: 'everyone' };
@@ -94,10 +91,12 @@ const TOGETHER_FOCUS: CameraFocus = { kind: 'everyone' };
 const MAX_TICKS_PER_FRAME = 4;
 const CATCH_UP_TICKS_PER_FRAME = 2;
 
-// A recorded game played back instead of the title; `ended` hears the state after its last step.
+// A recorded game played back instead of the title, its steps served by `source`.
 export interface Replay {
   readonly recording: Recording;
-  readonly ended: (state: SimState) => void;
+  readonly source: CommandSource;
+  // A film renders the game's sound offline, in step with the page clock.
+  readonly audio?: () => BaseAudioContext;
 }
 
 type MatchStart = Omit<RecordedGame, 'version' | 'query'>;
@@ -155,6 +154,7 @@ export async function startGame(
     state: () => match.session.state,
     lastTrackId: () => prefs.trackId,
     setNamed,
+    ...(replay?.audio === undefined ? {} : { createContext: replay.audio }),
   });
 
   let stageId = prefs.stageId;
@@ -243,6 +243,7 @@ export async function startGame(
     trackId: nextTrackId,
     version: () => probe?.forcedVersion ?? APP_VERSION,
     onMatch: startOnline,
+    onLobby: showOnlineLobby,
     onInterruption: interrupt,
     onGuestLeft(playerId) {
       toast.show(guestLeftText(match.session.state.players, playerId));
@@ -260,7 +261,9 @@ export async function startGame(
         openControls,
         openForm,
         quit,
+        backToLobby,
         online: () => onlineMatch !== null,
+        leadsTeam: () => teamSession()?.role === 'host',
       }),
     ),
     { online: () => onlineMatch !== null, changed: applySound },
@@ -283,6 +286,7 @@ export async function startGame(
           launch(lobbySeats);
         }
       },
+      onBackToLobby: backToLobby,
       onQuit: quit,
       onChooseUpgrade(playerId: PlayerId, upgradeId: string) {
         match.chooseUpgrade(playerId, upgradeId);
@@ -395,7 +399,7 @@ export async function startGame(
     recorder = null;
   }
 
-  function watch({ recording, ended }: Replay): void {
+  function watch({ recording, source }: Replay): void {
     setMatch(
       createMatch({
         seed: recording.seed,
@@ -405,7 +409,7 @@ export async function startGame(
         content,
         slots: recording.players,
         locals: new Map(),
-        source: createReplaySource(recording.steps, ended),
+        source,
         focus: recording.players.length > 1 ? TOGETHER_FOCUS : SOLO_FOCUS,
       }),
     );
@@ -602,14 +606,48 @@ export async function startGame(
     showTitle();
   }
 
-  function quit(): void {
+  function leaveMatch(): void {
     stats.end(match.session.state, 'quit');
     saveRecording(match.session.state);
     pause.dismiss();
     played = false;
     lobbySeats = null;
     setMatch(soloMatch());
+  }
+
+  function quit(): void {
+    leaveMatch();
     toTitle();
+  }
+
+  // On one screen the same players come back to their seats; online, the host takes the team back.
+  function backToLobby(): void {
+    if (onlineMatch !== null) {
+      online.backToLobby();
+      return;
+    }
+    leaveMatch();
+    screen = 'lobby';
+    applySound();
+    ui.showLobby(localLobby());
+  }
+
+  function showOnlineLobby(): void {
+    leaveMatch();
+    onlineMatch = null;
+    onlineLobby = true;
+    interruption = null;
+    toast.clear();
+    fade.lift();
+    screen = 'lobby';
+    applySound();
+  }
+
+  function teamSession(): EndSession | undefined {
+    if (onlineMatch !== null) {
+      return { role: onlineMatch.role };
+    }
+    return lobbySeats === null ? undefined : { role: 'host' };
   }
 
   function beginFrame(): void {
@@ -729,10 +767,11 @@ export async function startGame(
   }
 
   function openEnd(): void {
-    saveRecording(match.session.state);
+    const { state } = match.session;
+    saveRecording(state);
     screen = 'end';
     fade.lift();
-    ui.showEnd(match.session.state, onlineMatch === null ? undefined : { role: onlineMatch.role });
+    ui.showEnd(state, teamSession(), keepRecord(browserStorage, state, scoreOf(state)));
   }
 
   function render(alpha: number): void {
@@ -744,7 +783,7 @@ export async function startGame(
     }
     const { session } = match;
     const start = performance.now();
-    weaponScenes.frame(start, prefs.calmMode || prefersCalmMode());
+    weaponScenes.frame(start, prefs.calmMode || prefersCalmMode(), session.frame);
     renderer.render(
       session.frame,
       alpha,

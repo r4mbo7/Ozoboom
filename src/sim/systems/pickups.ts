@@ -3,6 +3,7 @@ import { lookup, type ResolvedContent } from '../content';
 import { gustDrift } from '../gusts';
 import type { PickupState, PlayerState, SimState } from '../state';
 import { statValue } from '../stats';
+import { tallyOf } from '../tally';
 import { volumeMul } from '../volume';
 import type { StepContext } from './types';
 
@@ -84,6 +85,7 @@ function collect(state: SimState, pickup: PickupState, player: PlayerState): voi
     }
   }
   state.stats.vibesCollected += amount;
+  tallyOf(player).vibes += amount;
   state.events.push({
     type: 'pickupCollected',
     playerId: player.id,

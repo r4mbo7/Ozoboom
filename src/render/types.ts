@@ -12,6 +12,8 @@ export interface Inset {
   readonly canvas: HTMLCanvasElement;
   readonly state: SimState;
   readonly viewHeight: number;
+  // The game the inset is shown over: its ground is lit at that game's hour.
+  readonly played: SimState;
 }
 
 export interface Renderer {

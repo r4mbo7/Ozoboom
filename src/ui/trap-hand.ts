@@ -5,7 +5,15 @@ import type { PlayerState, SimState } from '../sim/state';
 import { trapCapacity } from '../sim/stats';
 import { el, icon, keycap, setFlag, setText } from './dom';
 import { FULL_OFFERING_ICONS } from './full';
-import { type HandTile, handTiles, trapCaption, trapTileTitle, trapToTake } from './hud-model';
+import {
+  type HandTile,
+  handTiles,
+  trapCaption,
+  trapSlotsFull,
+  trapTileTitle,
+  trapToTake,
+  trapsFull,
+} from './hud-model';
 import { trapIcon } from './icons';
 import { heldSlot, selectTrap } from './navigation';
 
@@ -51,6 +59,16 @@ function flagTile(tile: HTMLElement, view: HandTile, selected: boolean): void {
   setFlag(tile, 'offering', view.offering === true);
   setFlag(tile, 'selected', selected);
   setFlag(tile, 'blocked', view.trapId !== null && !view.available);
+  setFlag(tile, 'full', view.full === true);
+}
+
+// A place refused for want of a slot flashes the count, from the last frame's events.
+function flash(count: HTMLElement, player: PlayerState, state: SimState): void {
+  for (const event of state.events) {
+    if (event.type === 'trapRefused' && event.playerId === player.id) {
+      count.dataset.flash = count.dataset.flash === 'a' ? 'b' : 'a';
+    }
+  }
 }
 
 export function createTrapHand(): TrapHand {
@@ -62,6 +80,8 @@ export function createTrapHand(): TrapHand {
   cyclePrevious.append(keycap('LB', 'button'));
   cycleNext.append(keycap('RB', 'button'));
   const trapName = el('div', 'ui-traps__name');
+  const count = el('span', 'ui-traps__count');
+  count.hidden = true;
   element.append(cyclePrevious, row, cycleNext, trapName);
 
   let tiles: HTMLElement[] = [];
@@ -78,12 +98,13 @@ export function createTrapHand(): TrapHand {
       definitions = new Map(content.traps.map((trap) => [trap.id, trap]));
       tiles = Array.from({ length: set.handSize }, (_, index) => trapTile(index));
       tileTraps = tiles.map(() => null);
-      row.replaceChildren(...tiles);
+      row.replaceChildren(...tiles, count);
     },
     update(player, state, content, set, gameplay) {
       selectedTrap = selectTrap(selectedTrap, tiles.length, gameplay, previousGameplay);
       previousGameplay = gameplay;
-      const views = handTiles(definitions, state, player, tiles.length, trapCapacity(set, state));
+      const capacity = trapCapacity(set, state);
+      const views = handTiles(definitions, state, player, tiles.length, capacity);
       const selected = heldSlot(selectedTrap, player.hand?.length ?? 0);
       const look = content.summons?.find((summon) => summon.setId === state.setId)?.look;
       views.forEach((view, index) => {
@@ -100,9 +121,14 @@ export function createTrapHand(): TrapHand {
         flagTile(tile, view, index === selected);
       });
       const taken = trapToTake(definitions, state, player, tiles.length);
-      const caption = trapCaption(definitions, taken, player.hand?.[selected]);
+      const full = trapsFull(state, capacity);
+      const caption = trapCaption(definitions, taken, player.hand?.[selected], full);
       setText(trapName, caption ?? '');
       trapName.hidden = caption === null;
+      const slots = trapSlotsFull(state, capacity);
+      setText(count, slots ?? '');
+      count.hidden = slots === null;
+      flash(count, player, state);
     },
     reset() {
       selectedTrap = 0;

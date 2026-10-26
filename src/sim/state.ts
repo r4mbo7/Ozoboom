@@ -133,6 +133,8 @@ export interface PlayerState extends Positioned {
   dash?: { dx: number; dy: number; ticksLeft: number };
   // The source of the light offering held in a trap hand.
   offering?: number;
+  // Absent until their first feat.
+  tally?: PlayerTally;
   carrying?: { logId: EntityId; end: 0 | 1 };
   // x, y pairs from the newest, as long as the Poussin's band in file behind him.
   steps?: number[];
@@ -423,6 +425,16 @@ export interface UpgradeOffer {
   kind?: 'levelUp' | 'relic';
 }
 
+// What one player did in the game, for the titles of the end screen.
+export interface PlayerTally {
+  // Those whose last hit was theirs, bosses included.
+  badVibes: number;
+  bosses: number;
+  // Allies they stood up.
+  revives: number;
+  vibes: number;
+}
+
 export interface SimStats {
   kills: number;
   phrasesHeld: number;
@@ -505,6 +517,8 @@ export type SimEvent =
   | { type: 'trapPlaced'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapFired'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapTaken'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
+  // A trap the player tried to place while every trap slot was taken.
+  | { type: 'trapRefused'; playerId: PlayerId }
   | { type: 'pickupCollected'; playerId: PlayerId; kind: PickupKind; amount: number }
   | { type: 'lootDropped'; id: EntityId; trapId: string; x: number; y: number }
   | {

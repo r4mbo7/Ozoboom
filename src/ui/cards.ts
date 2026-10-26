@@ -67,6 +67,8 @@ export interface WeaponCard extends CardBase {
   label: string;
   rank: string;
   pearls: Pearls;
+  // The player does not hold it yet: it takes a place, kept the whole run.
+  adds: boolean;
   // One entry per sixteenth note of the bar, or `continuous`.
   steps: readonly boolean[] | 'continuous';
   // Above one, the weapon fires on one bar out of that many.
@@ -210,6 +212,7 @@ export function cardFor(
       max: weapon.maxLevel,
       label: t('Niveau {level} sur {max}', { level: next, max: formatNumber(weapon.maxLevel) }),
     },
+    adds: level === 0,
     steps: stepsOf(weapon),
     everyBars: weapon.rhythm === 'continuous' ? 1 : weapon.rhythm.everyBars,
     roles: rolesOf(weapon, player, content),
@@ -252,7 +255,7 @@ export function weaponPlaces(
       ? []
       : [{ state: 'held', weapon, label: t(weapon.name), lit: slot.id === touched }];
   });
-  const adds = focused?.kind === 'weapon' && !held.some((place) => place.weapon?.id === focused.id);
+  const adds = focused?.kind === 'weapon' && focused.adds;
   const free = Array.from({ length: Math.max(slots - held.length, 0) }, (_, index): WeaponPlace =>
     adds && index === 0
       ? {

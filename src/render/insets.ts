@@ -4,7 +4,7 @@ import type { Inset, RenderOptions } from './types';
 
 export interface InsetScene {
   frameInset(width: number, height: number, viewHeight: number): void;
-  renderInto(state: SimState, alpha: number, target: RenderTexture): void;
+  renderInto(state: SimState, alpha: number, target: RenderTexture, played: SimState): void;
   setOptions(options: Partial<RenderOptions>): void;
   destroy(): void;
 }
@@ -103,12 +103,12 @@ export function createInsets(
         } else if (entry.texture.width !== width || entry.texture.height !== height) {
           entry.texture.resize(width, height, resolution);
         }
-        const shown = `${String(inset.state.tick)} ${String(width)}x${String(height)}`;
+        const shown = `${String(inset.state.tick)} ${String(inset.played.tick)} ${String(width)}x${String(height)}`;
         const moved = shown !== entry.shown;
         if (moved) {
           entry.shown = shown;
           entry.scene.frameInset(width, height, inset.viewHeight);
-          entry.scene.renderInto(inset.state, 1, entry.texture);
+          entry.scene.renderInto(inset.state, 1, entry.texture, inset.played);
         }
         entry.sprite.position.set(x, y);
         laid.push({ inset, x, y, width, height, moved });

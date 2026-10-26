@@ -1,23 +1,30 @@
 import type { GameContent } from '../data/types';
 import type { InputDevice } from '../input/intents';
 import { t } from '../shared/i18n';
+import { scoreOf } from '../sim/score';
 import type { SimState } from '../sim/state';
 import { el, fillHint, icon, setText } from './dom';
 import { createActionButton, createFeedbackButton } from './feedback-button';
 import { openDiscord } from './discord';
-import { endStats, formatDuration } from './format';
+import { type PlayerCard, playerCards, turnCard } from './end-cards';
+import { endStats, formatDuration, formatNumber } from './format';
 import { DISCORD, FOG, SUN } from './icons';
 import { type Menu, createMenu } from './menu';
 import type { Prompts } from './prompts';
 import type { Ending } from './end-parts';
 import { FULL_END } from './full';
 import type { EndSession } from './types';
-import { createWho, fillWho, whoColor } from './who';
 
 export interface EndScreen {
   readonly element: HTMLElement;
   readonly menu: Menu;
-  show(state: SimState, content: GameContent | null, session: EndSession | undefined): void;
+  // `best`: the record of this device before the game, null for its first.
+  show(
+    state: SimState,
+    content: GameContent | null,
+    session: EndSession | undefined,
+    best: number | null,
+  ): void;
   setDevice(device: InputDevice): void;
 }
 
@@ -61,6 +68,7 @@ export function endingOf(state: SimState): Ending {
 export function createEnd(
   prompts: Prompts,
   onRestart: () => void,
+  onBackToLobby: () => void,
   onQuit: () => void,
   onFeedback?: () => void,
 ): EndScreen {
@@ -69,11 +77,17 @@ export function createEnd(
   const emblem = el('div', 'ui-end__emblem');
   const title = el('h2', 'ui-end__title');
   const text = el('p', 'ui-end__text');
-  const team = el('ul', 'ui-team');
-  team.setAttribute('aria-label', t('L’équipe'));
-  const stats = el('dl', 'ui-stats');
+  const score = el('p', 'ui-end__score');
+  const scoreValue = el('strong', 'ui-end__score-value');
+  const record = el('span', 'ui-end__record');
+  score.append(el('span', 'ui-end__score-label', t('Score')), scoreValue, record);
+  const cards = el('ul', 'ui-end__cards');
+  cards.setAttribute('aria-label', t('L’équipe'));
+  const stats = el('dl', 'ui-end__stats');
   const restart = el('button', 'ui-button ui-button--primary', t('Rejouer'));
   restart.type = 'button';
+  const lobby = el('button', 'ui-button', t('Retour au salon'));
+  lobby.type = 'button';
   const quit = el('button', 'ui-button', t('Retour au titre'));
   quit.type = 'button';
   const feedback = onFeedback === undefined ? null : createFeedbackButton();
@@ -82,18 +96,24 @@ export function createEnd(
   wait.setAttribute('role', 'status');
   wait.hidden = true;
   const actions = el('div', 'ui-end__actions');
-  actions.append(restart, wait, quit, ...(feedback === null ? [] : [feedback]), discord);
+  actions.append(restart, wait, lobby, quit, ...(feedback === null ? [] : [feedback]), discord);
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-end__body');
   const details = el('div', 'ui-end__details');
-  body.append(emblem, title, text, details, team, stats, actions, hint);
+  body.append(emblem, title, text, score, details, cards, stats, actions, hint);
   element.append(body);
 
   let items: HTMLElement[] = [];
+  let players: PlayerCard[] = [];
   const menu = createMenu((index) => {
     const item = items[index];
-    if (item === restart) {
+    const turned = players.find((player) => player.card === item);
+    if (turned !== undefined) {
+      turnCard(turned.card);
+    } else if (item === restart) {
       onRestart();
+    } else if (item === lobby) {
+      onBackToLobby();
     } else if (item === quit) {
       onQuit();
     } else if (item === discord) {
@@ -110,40 +130,43 @@ export function createEnd(
     const confirm = { keys: [shown.confirm], label: t('valider') };
     fillHint(
       hint,
-      items.length > 1 ? [{ keys: shown.navigate, label: t('naviguer') }, confirm] : [confirm],
+      items.length > 1 ? [{ keys: shown.navigateRow, label: t('naviguer') }, confirm] : [confirm],
       shown.style,
     );
   }
 
-  function fillTeam(state: SimState, content: GameContent | null): void {
-    const shown = state.players.length > 1;
-    team.hidden = !shown;
-    team.replaceChildren(
-      ...(shown
-        ? state.players.map((player) => {
-            const who = createWho();
-            fillWho(who, player);
-            const item = el('li', 'ui-team__member');
-            item.dataset.downed = String(player.downed);
-            item.style.setProperty('--who', whoColor(player.classId));
-            item.append(
-              who,
-              el('span', 'ui-team__state', player.downed ? t('À terre') : t('Debout')),
-            );
-            const className = content?.classes.find((entry) => entry.id === player.classId)?.name;
-            if (className !== undefined) {
-              item.insertBefore(el('span', 'ui-team__class', t(className)), item.lastChild);
-            }
-            return item;
-          })
-        : []),
+  function fillScore(points: number, best: number | null): void {
+    setText(scoreValue, formatNumber(points));
+    record.hidden = best === null;
+    if (best === null) {
+      return;
+    }
+    const beaten = points > best;
+    record.dataset.beaten = String(beaten);
+    record.replaceChildren(
+      ...(beaten
+        ? [
+            el('span', 'ui-end__record-new', t('Nouveau record\u202f!')),
+            el(
+              'span',
+              'ui-end__record-old',
+              t('avant\u202f: {score}', { score: formatNumber(best) }),
+            ),
+          ]
+        : [
+            el(
+              'span',
+              'ui-end__record-old',
+              t('Record\u202f: {score}', { score: formatNumber(best) }),
+            ),
+          ]),
     );
   }
 
   return {
     element,
     menu,
-    show(state, content, session) {
+    show(state, content, session, best) {
       const won = state.status === 'won';
       element.dataset.outcome = won ? 'won' : 'lost';
       emblem.replaceChildren(icon('ui-end__icon', won ? SUN : FOG));
@@ -155,27 +178,33 @@ export function createEnd(
       setText(text, ending.text);
       details.replaceChildren(...(part === undefined ? [] : [part.details]));
       details.hidden = part === undefined;
-      fillTeam(state, content);
+      fillScore(scoreOf(state), best);
+      players = playerCards(state.players, content);
+      cards.replaceChildren(...players.map((player) => player.seat));
+      cards.style.setProperty('--count', String(state.players.length));
       stats.replaceChildren(
         ...endStats(state).map((stat) => {
-          const item = el('div', 'ui-stats__item');
-          item.append(
-            el('dt', 'ui-stats__label', stat.label),
-            el('dd', 'ui-stats__value', stat.value),
-          );
+          const item = el('div', 'ui-end__stat');
+          item.append(el('dt', '', stat.label), el('dd', '', stat.value));
           return item;
         }),
       );
       const guest = session?.role === 'guest';
+      const leads = session?.role === 'host';
       restart.hidden = guest;
+      lobby.hidden = !leads;
       wait.hidden = !guest;
+      // The cards come before the buttons, as they read; the screen opens on the first button.
       items = [
+        ...players.map((player) => player.card),
         ...(guest ? [] : [restart]),
+        ...(leads ? [lobby] : []),
         quit,
         ...(feedback === null ? [] : [feedback]),
         discord,
       ];
       menu.setItems(items);
+      menu.select(players.length);
       fillHints();
     },
     setDevice(next) {

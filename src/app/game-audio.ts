@@ -11,10 +11,13 @@ export interface PlayedGame {
   state(): SimState;
   lastTrackId(): string;
   setNamed(id: string): SetDefinition;
+  // Absent, the speakers of the machine.
+  createContext?: () => BaseAudioContext;
 }
 
 export function createGameAudio(content: GameContent, game: PlayedGame): AudioEngine {
   return createAudioEngine({
+    ...(game.createContext === undefined ? {} : { createContext: game.createContext }),
     setOf: (setId) =>
       [...content.sets, ...(content.paths ?? [])].find((candidate) => candidate.id === setId),
     // Every peer of a festival walks into the same track of the stage ahead.

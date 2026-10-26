@@ -2,12 +2,13 @@ import type { GameContent } from '../data/types';
 import type { Inset, Renderer } from '../render/types';
 import { clamp } from '../shared/scalar';
 import { TICK_MS } from '../shared/tempo';
+import type { SimState } from '../sim/state';
 import { type WeaponWorld, createWeaponWorld } from '../sim/weapon-world';
 
 export interface WeaponScenes {
   // Until the returned function is called.
   show(canvas: HTMLCanvasElement, weaponId: string, setId: string, classId: string): () => void;
-  frame(now: number, calm: boolean): void;
+  frame(now: number, calm: boolean, played: SimState): void;
 }
 
 interface Scene {
@@ -71,7 +72,7 @@ export function createWeaponScenes(
         scenes = scenes.filter((other) => other !== scene);
       };
     },
-    frame(now, calm) {
+    frame(now, calm, played) {
       start = now;
       if (scenes.length === 0 && painted) {
         return;
@@ -94,6 +95,7 @@ export function createWeaponScenes(
         canvas: scene.canvas,
         state: scene.world.state,
         viewHeight: viewHeight(scene.canvas),
+        played,
       }));
       renderer.setInsets(insets);
       painted = insets.length === 0;

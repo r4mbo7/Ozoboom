@@ -29,6 +29,8 @@ export interface PauseItem {
   readonly element?: HTMLElement;
   // Asked before `activate`: « stay » goes back to the pause menu.
   readonly confirm?: PauseConfirmation;
+  // Asked each time the pause shows; absent, the entry always is.
+  shown?(): boolean;
   activate(): void;
   adjust?(side: -1 | 1): void;
 }
@@ -91,6 +93,7 @@ export function createPauseScreen(
   const menuInput = createMenuInput();
   let device: InputDevice = 'none';
   let pending: PauseItem | null = null;
+  let visible: readonly PauseItem[] = items;
 
   const nodes = items.map(
     (item, index) =>
@@ -100,7 +103,7 @@ export function createPauseScreen(
   main.nav.append(...nodes);
   const menu = createMenu(
     (index) => {
-      const item = items[index];
+      const item = visible[index];
       if (item?.confirm === undefined) {
         item?.activate();
       } else {
@@ -108,12 +111,11 @@ export function createPauseScreen(
       }
     },
     (index, side) => {
-      const item = items[index];
+      const item = visible[index];
       item?.adjust?.(side);
       return item?.adjust !== undefined;
     },
   );
-  menu.setItems(nodes);
 
   const stay = button('ui-button ui-button--primary', '');
   const leave = button('ui-button', '');
@@ -156,7 +158,7 @@ export function createPauseScreen(
     if (pending === null) {
       return;
     }
-    menu.select(items.indexOf(pending));
+    menu.select(visible.indexOf(pending));
     pending = null;
     confirmation.section.hidden = true;
     main.section.hidden = false;
@@ -168,10 +170,15 @@ export function createPauseScreen(
     },
     show(next, text = pauseText()) {
       device = next;
+      nodes.forEach((node, index) => {
+        node.hidden = !(items[index]?.shown?.() ?? true);
+      });
+      visible = items.filter((_, index) => nodes[index]?.hidden === false);
+      menu.setItems(nodes.filter((node) => !node.hidden));
       setText(main.heading, text.heading);
       setText(main.text, text.text);
       const shown = prompts.for(device);
-      const navigate = items.length > 1 ? [{ keys: shown.navigate, label: t('naviguer') }] : [];
+      const navigate = visible.length > 1 ? [{ keys: shown.navigate, label: t('naviguer') }] : [];
       fillHint(
         main.hint,
         [

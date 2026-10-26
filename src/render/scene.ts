@@ -1,7 +1,7 @@
 import { Container, type Renderer as PixiRenderer, type RenderTexture } from 'pixi.js';
 import type { SetDefinition } from '../data/types';
-import { SUN_PALETTES } from '../shared/palette';
 import { lerp } from '../shared/scalar';
+import { setFraction } from '../sim/lineup';
 import type { Arena, SimEvent, SimState, Vec2 } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
@@ -33,7 +33,6 @@ const CALM = { glowAlpha: 0.4, pulse: 0.3 };
 const SHAKE = { pixels: 7, ticks: TICKS_PER_BEAT / 2 };
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const SNAP_TICKS = 4 * TICKS_PER_BEAT;
-const INSET_GROUND = SUN_PALETTES.nuit.sol;
 
 export class Scene implements Renderer, InsetScene {
   private readonly pixi: PixiRenderer;
@@ -104,11 +103,11 @@ export class Scene implements Renderer, InsetScene {
     }
   }
 
-  renderInto(state: SimState, alpha: number, target: RenderTexture): void {
-    this.draw(state, alpha, target);
+  renderInto(state: SimState, alpha: number, target: RenderTexture, played: SimState): void {
+    this.draw(state, alpha, target, played);
   }
 
-  private draw(state: SimState, alpha: number, target: RenderTexture | null): void {
+  private draw(state: SimState, alpha: number, target: RenderTexture | null, played = state): void {
     const stage = `${state.setId}@${String(state.set.startTick ?? 0)}`;
     if (state !== this.lastState || stage !== this.lastStage) {
       this.lastState = state;
@@ -130,6 +129,7 @@ export class Scene implements Renderer, InsetScene {
       state,
       alpha,
       toward === undefined ? undefined : lookup(this.sets, toward, 'set'),
+      setFraction(lookup(this.sets, played.setId, 'set'), played),
     );
     frame.show = this.showClock.read(frame.now, state.status === 'running', performance.now());
     frame.calm = this.options.calmMode;
@@ -161,7 +161,7 @@ export class Scene implements Renderer, InsetScene {
         container: this.stage,
         target,
         clear: true,
-        clearColor: this.borrowed ? INSET_GROUND : frame.palette.sol,
+        clearColor: frame.palette.sol,
       });
       return;
     }

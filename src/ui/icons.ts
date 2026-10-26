@@ -362,3 +362,13 @@ export const DOOR =
 export const BROKEN_LINK =
   `<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" ${STROKE}/>` +
   '<path d="M9 3.5 10 6M3.5 9 6 10M15 21l-1-2.5M21 15l-2.5-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+
+// Two cards of a hand, the one in front a little turned.
+export const CARDS =
+  `<rect x="4" y="4.5" width="10" height="14" rx="2" ${ROUND} opacity="0.6"/>` +
+  `<rect x="10" y="5.5" width="10" height="14" rx="2" transform="rotate(10 15 12.5)" ${ROUND}/>`;
+
+// Two arrows that chase each other round: the card turns over.
+export const TURN =
+  `<path d="M4.5 10a7.5 7.5 0 0 1 13.4-3.6M19.5 14a7.5 7.5 0 0 1-13.4 3.6" ${STROKE}/>` +
+  `<path d="M18.5 2.5v4.2h-4.2M5.5 21.5v-4.2h4.2" ${ROUND}/>`;

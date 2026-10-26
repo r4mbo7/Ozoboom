@@ -35,6 +35,7 @@ import { type UpgradeOverlay, createUpgradeOverlay } from './upgrade';
 export type {
   ClassPickerModel,
   CreatePortrait,
+  EndSession,
   LobbyModel,
   LobbySeat,
   LocalPlayer,
@@ -214,6 +215,9 @@ export function createUi(
         callbacks.onRestart();
       }),
       shown.once(() => {
+        callbacks.onBackToLobby();
+      }),
+      shown.once(() => {
         callbacks.onQuit();
       }),
       feedback,
@@ -309,8 +313,8 @@ export function createUi(
       sun.fix('nuit');
       show('game');
     },
-    showEnd(state, session) {
-      end.show(state, lastContent, session);
+    showEnd(state, session, best) {
+      end.show(state, lastContent, session, best);
       sun.fix(state.status === 'won' ? 'jour' : 'nuit');
       show('end');
       grace.start();

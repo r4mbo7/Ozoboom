@@ -2801,6 +2801,7 @@ svg.ui-title__lake {
 /* LB, RB and the number keys sit left to right on every controller and keyboard, in every
    language: the traps keep that order. */
 .ui-traps {
+  position: relative;
   display: flex;
   gap: 8px;
   direction: ltr;
@@ -2834,6 +2835,44 @@ svg.ui-title__lake {
 
 .ui-trap[data-blocked] .ui-trap__icon {
   opacity: 0.5;
+}
+
+.ui-trap[data-full] {
+  border-style: dashed;
+  border-color: var(--rouge);
+  background: color-mix(in srgb, var(--rouge) 14%, color-mix(in srgb, var(--sol) 60%, transparent));
+}
+
+.ui-trap[data-full] .ui-trap__icon {
+  opacity: 0.35;
+}
+
+/* Every trap slot is taken: the count sits on the corner of the last tile, like the keys on the first. */
+.ui-traps__count {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  display: grid;
+  place-items: center;
+  height: 18px;
+  padding-inline: 6px;
+  border: 1px solid var(--rouge);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--rouge) 24%, var(--sol));
+  box-shadow: 0 0 0 2px var(--sol);
+  color: var(--texte);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ui-traps__count[data-flash='a'] {
+  animation: ui-traps-flash-a calc(var(--beat) * 0.6) linear;
+}
+
+.ui-traps__count[data-flash='b'] {
+  animation: ui-traps-flash-b calc(var(--beat) * 0.6) linear;
 }
 
 .ui-trap[data-empty] {
@@ -3214,8 +3253,9 @@ svg.ui-title__lake {
   --card-radius: calc(36 * var(--card-unit));
   --strip-height: calc(10 * var(--card-unit));
   --strip-inset: calc(14 * var(--card-unit));
+  --card-gap: calc(12 * var(--card-unit));
 
-  gap: calc(12 * var(--card-unit));
+  gap: var(--card-gap);
   padding: 0 var(--card-pad-x) calc(20 * var(--card-unit));
   border: 1.5px solid var(--ui-line);
   border-radius: var(--card-radius);
@@ -3446,10 +3486,137 @@ svg.ui-title__lake {
 }
 
 .ui-card__name {
+  --name-size: calc(24 * var(--card-unit));
+
   font-family: var(--font-title);
-  font-size: calc(24 * var(--card-unit));
+  font-size: var(--name-size);
   font-weight: 700;
   line-height: 1.2;
+}
+
+/* A knotted friendship bracelet wraps the card on its seam: chevrons of knots, its ends tied at the side. */
+.ui-card__band {
+  --knot: calc(var(--card-unit) * 4);
+  --strap: calc(24 * var(--card-unit));
+  --tag-room: calc(100cqi - 2 * var(--card-pad-x) - 40 * var(--card-unit));
+
+  container-type: inline-size;
+  display: grid;
+  position: relative;
+  justify-items: center;
+  align-self: stretch;
+  margin: calc(-1 * var(--card-gap) - 6 * var(--card-unit))
+    calc(-1 * var(--card-pad-x) - 5 * var(--card-unit)) 0;
+}
+
+.ui-card__band::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--strap);
+  border-radius: calc(5 * var(--card-unit));
+  background:
+    linear-gradient(
+      var(--ui-to-end),
+      rgb(0 0 0 / 55%),
+      transparent 3%,
+      transparent 97%,
+      rgb(0 0 0 / 55%)
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 var(--knot),
+      rgb(0 0 0 / 22%) 0 calc(var(--knot) + 1px)
+    ),
+    repeating-linear-gradient(
+        -45deg,
+        var(--sol) 0 var(--knot),
+        var(--mage) 0 calc(var(--knot) * 2),
+        var(--or) 0 calc(var(--knot) * 3),
+        var(--enracine) 0 calc(var(--knot) * 4),
+        var(--turquoise) 0 calc(var(--knot) * 5),
+        var(--superfan) 0 calc(var(--knot) * 6)
+      )
+      top / 100% 50% no-repeat,
+    repeating-linear-gradient(
+        45deg,
+        var(--sol) 0 var(--knot),
+        var(--mage) 0 calc(var(--knot) * 2),
+        var(--or) 0 calc(var(--knot) * 3),
+        var(--enracine) 0 calc(var(--knot) * 4),
+        var(--turquoise) 0 calc(var(--knot) * 5),
+        var(--superfan) 0 calc(var(--knot) * 6)
+      )
+      bottom / 100% 50% no-repeat;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 30%),
+    inset 0 -2px 0 rgb(0 0 0 / 45%),
+    0 3px 6px rgb(0 0 0 / 50%);
+  content: '';
+}
+
+/* The woven tag sewn on the bracelet carries the name: it is the card's title. */
+.ui-card__tag {
+  position: relative;
+  max-width: var(--tag-room);
+  margin-top: calc(-3 * var(--card-unit));
+  padding: calc(7 * var(--card-unit)) calc(16 * var(--card-unit)) calc(5 * var(--card-unit));
+  border-radius: calc(4 * var(--card-unit));
+  background: linear-gradient(#f7ecd4, #e8d6b2);
+  box-shadow: 0 2px 5px rgb(0 0 0 / 50%);
+  outline: 1.5px dashed var(--turquoise);
+  outline-offset: calc(-4 * var(--card-unit));
+}
+
+/* The name stays on one line, as small as it must to fit the tag: a long name, a narrow window, a language. */
+.ui-card__tag .ui-card__name {
+  display: block;
+  white-space: nowrap;
+  font-size: min(
+    var(--name-size),
+    (var(--tag-room) - 32 * var(--card-unit)) / (var(--name-length) * 0.72)
+  );
+  color: #3a1858;
+  text-shadow:
+    0 1px 0 rgb(255 255 255 / 70%),
+    0 -1px 0 rgb(40 10 60 / 35%);
+}
+
+/* The ends knot together at the side, two braided tails hanging from the knot. */
+.ui-card__knot {
+  position: absolute;
+  top: calc(var(--strap) / 2 - 7 * var(--card-unit));
+  inset-inline-end: calc(4 * var(--card-unit));
+  width: calc(14 * var(--card-unit));
+  height: calc(14 * var(--card-unit));
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--or), var(--mage) 60%, var(--sol));
+  box-shadow: 0 2px 3px rgb(0 0 0 / 55%);
+}
+
+.ui-card__knot::before,
+.ui-card__knot::after {
+  position: absolute;
+  top: 70%;
+  left: 40%;
+  width: calc(4 * var(--card-unit));
+  height: calc(26 * var(--card-unit));
+  border-radius: 0 0 2px 2px;
+  background: repeating-linear-gradient(
+    -30deg,
+    var(--mage) 0 calc(3 * var(--card-unit)),
+    var(--turquoise) 0 calc(6 * var(--card-unit)),
+    var(--or) 0 calc(9 * var(--card-unit))
+  );
+  transform-origin: top center;
+  rotate: 18deg;
+  animation: ui-band-sway calc(var(--beat) * 4) ease-in-out infinite;
+  content: '';
+}
+
+.ui-card__knot::after {
+  height: calc(20 * var(--card-unit));
+  rotate: -10deg;
+  animation-delay: calc(var(--beat) * -1.3);
 }
 
 .ui-card__desc {
@@ -3705,14 +3872,14 @@ svg.ui-title__lake {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  width: min(100%, 880px);
+  gap: 10px;
+  width: min(100%, 1000px);
   text-align: center;
 }
 
 .ui-end__emblem {
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
   color: color-mix(in srgb, var(--bad-vibe) 70%, var(--texte));
 }
 
@@ -3729,7 +3896,7 @@ svg.ui-title__lake {
 
 .ui-end__title {
   font-family: var(--font-title);
-  font-size: clamp(32px, 7vw, 64px);
+  font-size: clamp(32px, 7vw, 56px);
   font-weight: 900;
   line-height: 1.05;
   text-wrap: balance;
@@ -3743,59 +3910,400 @@ svg.ui-title__lake {
 }
 
 .ui-end__text {
-  max-width: 32em;
+  max-width: 40em;
   text-wrap: balance;
   color: var(--ui-muted);
-  font-size: 18px;
+  font-size: 17px;
 }
 
-.ui-stats {
+.ui-end__score {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 12px;
-  width: 100%;
-  margin: 16px 0 12px;
+  gap: 6px 16px;
 }
 
-.ui-stats__item {
-  flex: 1 1 140px;
-  display: flex;
-  flex-direction: column-reverse;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 18px 16px;
-  border: 1px solid var(--ui-line);
-  border-radius: var(--ui-radius);
-  background: var(--ui-panel);
-  box-shadow: var(--ui-lift);
-}
-
-.ui-stats__value {
-  font-size: 32px;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.ui-stats__label {
+.ui-end__score-label {
   color: var(--ui-muted);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  text-wrap: balance;
   text-transform: uppercase;
+}
+
+.ui-end__score-value {
+  font-size: 44px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.ui-end__record {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ui-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ui-end__record-new {
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: var(--noyau);
+  box-shadow: 0 0 calc(18px * var(--ui-halo)) color-mix(in srgb, var(--noyau) 60%, transparent);
+  color: var(--ui-ink);
+  font-weight: 800;
+  animation: ui-end-record 420ms cubic-bezier(0.2, 1.6, 0.4, 1) 2.6s backwards;
+}
+
+.ui-end__cards {
+  display: grid;
+  grid-auto-columns: minmax(0, 220px);
+  grid-auto-flow: column;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-end__seat {
+  display: grid;
+  perspective: 1200px;
+  animation: ui-end-deal 420ms cubic-bezier(0.2, 0.8, 0.2, 1) calc(300ms + var(--deal) * 414ms)
+    backwards;
+}
+
+.ui-end-card {
+  --who: var(--or);
+
+  position: relative;
+  display: grid;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 520ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ui-end-card[aria-pressed='true'] {
+  transform: rotateY(180deg);
+}
+
+.ui-end-card__face {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  grid-area: 1 / 1;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--ui-line);
+  border-inline-start: 5px solid var(--who);
+  border-radius: var(--ui-radius);
+  background:
+    linear-gradient(color-mix(in srgb, var(--who) 12%, transparent), transparent 60%),
+    var(--ui-panel);
+  box-shadow: var(--ui-lift);
+  backface-visibility: hidden;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out,
+    visibility 0s linear 260ms;
+}
+
+/* The side turned away is gone at half the turn, for the eyes as for the screen readers. */
+.ui-end-card[aria-pressed='false'] .ui-end-card__face--back,
+.ui-end-card[aria-pressed='true'] .ui-end-card__face:not(.ui-end-card__face--back) {
+  visibility: hidden;
+}
+
+/* Both sides stack in one cell: the card takes the size of the taller. */
+.ui-end-card__face--back {
+  align-items: stretch;
+  gap: 8px;
+  transform: rotateY(180deg);
+}
+
+.ui-end-card[data-downed='true'] .ui-end-card__face {
+  border-inline-start-color: var(--bad-vibe);
+  background: var(--ui-panel);
+}
+
+.ui-end-card[aria-current] .ui-end-card__face,
+.ui-end-card:focus-visible .ui-end-card__face {
+  border-block-color: var(--turquoise);
+  border-inline-end-color: var(--turquoise);
+  box-shadow:
+    var(--ui-focus),
+    0 0 calc(30px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 40%, transparent);
+}
+
+.ui-end-card:focus-visible {
+  outline: none;
+}
+
+.ui-end-card__turn {
+  position: absolute;
+  inset-block-start: 14px;
+  inset-inline-start: 16px;
+  width: 16px;
+  height: 16px;
+  color: var(--ui-muted);
+}
+
+.ui-end-card:is([aria-current], :hover) .ui-end-card__turn {
+  color: var(--ui-turquoise);
+}
+
+.ui-end-card__turn svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ui-end-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.ui-end-card__mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 12px;
+  border: 2px solid color-mix(in srgb, var(--who) 50%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--who) 16%, transparent);
+  color: color-mix(in srgb, var(--who) 80%, var(--texte));
+}
+
+.ui-end-card__mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ui-end-card[data-downed='true'] .ui-end-card__mark {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--bad-vibe) 70%, transparent);
+  background: none;
+  color: color-mix(in srgb, var(--bad-vibe) 70%, var(--texte));
+  rotate: 70deg;
+}
+
+.ui-end-card__state {
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-end: 12px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--who) 45%, transparent);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--who) 80%, var(--texte));
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ui-end-card[data-downed='true'] .ui-end-card__state {
+  border-color: var(--ui-line);
+  color: var(--ui-muted);
+}
+
+.ui-end-card__name {
+  max-width: 100%;
+  margin-top: 6px;
+  overflow: hidden;
+  font-size: 19px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-end-card__face--back .ui-end-card__name {
+  margin-top: 0;
+  color: color-mix(in srgb, var(--who) 80%, var(--texte));
+  text-align: center;
+}
+
+.ui-end-card__class {
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ui-end-card__title {
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ui-line);
+  color: color-mix(in srgb, var(--who) 80%, var(--texte));
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-wrap: balance;
+  animation: ui-end-stamp 360ms cubic-bezier(0.3, 1.4, 0.5, 1)
+    calc(300ms + (var(--count) + var(--deal)) * 414ms) backwards;
+}
+
+.ui-end-card__proof {
+  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-end-card__build {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 14px;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--ui-line);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ui-end-card__gear,
+.ui-end-card__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ui-end-card__icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.ui-end-card__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ui-end-card__count .ui-end-card__icon {
+  color: var(--ui-muted);
+}
+
+.ui-end-card__feats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  font-size: 14px;
+  text-align: start;
+}
+
+.ui-end-card__feat {
+  display: contents;
+  color: var(--ui-muted);
+}
+
+.ui-end-card__feat strong {
+  color: var(--texte);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.ui-end-card__kit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ui-line);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: start;
+}
+
+.ui-end-card__line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ui-end-card__line .ui-end-card__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.ui-end-card__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-end-card__level {
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-end__stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 22px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.ui-end__stat {
+  display: flex;
+  gap: 6px;
+}
+
+.ui-end__stat dt {
+  color: var(--ui-muted);
+}
+
+.ui-end__stat dd {
+  margin: 0;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-end__actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 12px calc(var(--ui-chevron) + 8px);
   width: 100%;
+  margin-top: 6px;
 }
 
 .ui-end .ui-button {
-  width: min(100%, 320px);
+  width: auto;
+  min-height: 52px;
+  padding-inline: 24px;
+}
+
+.ui-end .ui-button--primary {
+  min-width: 180px;
+}
+
+/* The row keeps each button on one line: its hint is still read, not shown. */
+.ui-end .ui-action__hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 /* Team */
@@ -4048,6 +4556,7 @@ svg.ui-title__lake {
 .ui-places {
   display: flex;
   position: absolute;
+  z-index: 2;
   top: 20px;
   inset-inline-end: 24px;
   gap: 8px;
@@ -4099,8 +4608,49 @@ svg.ui-title__lake {
   box-shadow: 0 0 calc(18px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 45%, transparent);
 }
 
+/* The new weapon flies from the focused card to its place, where a friendship cord knots around it. */
+.ui-places__place[data-state='ghost'] .ui-places__ring {
+  --from-x: 0px;
+  --from-y: 0px;
+  --arc-x: 0px;
+  --arc-y: 0px;
+  --near-x: 0px;
+
+  position: relative;
+}
+
 .ui-places__place[data-state='ghost'] .ui-places__icon {
-  animation: ui-place-ghost calc(var(--beat) * 2) ease-in-out infinite;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--turquoise) 70%, transparent));
+  animation: ui-place-flight calc(var(--beat) * 8) linear infinite;
+}
+
+.ui-places__place[data-state='ghost'] .ui-places__ring::after {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    var(--mage) 0 9deg,
+    var(--or) 0 18deg,
+    var(--enracine) 0 27deg,
+    var(--turquoise) 0 36deg,
+    var(--superfan) 0 45deg
+  );
+  mask: radial-gradient(closest-side, transparent calc(100% - 5px), #000 calc(100% - 4.5px));
+  content: '';
+  animation: ui-place-cord calc(var(--beat) * 8) linear infinite;
+}
+
+.ui-places__place[data-state='ghost'] .ui-places__ring::before {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -5px;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--or), var(--mage) 60%, var(--sol));
+  content: '';
+  animation: ui-place-cord calc(var(--beat) * 8) linear infinite;
 }
 
 /* A name stays on one line, its place growing for it: two lines would push the places over the cards. */
@@ -4189,9 +4739,9 @@ svg.ui-title__lake {
 .ui-offers__panels[data-multi] .ui-card {
   --card-pad-x: 14px;
   --card-radius: 28px;
+  --card-gap: 8px;
 
   padding: 0 var(--card-pad-x) 14px;
-  gap: 8px;
 }
 
 /* No room for both: the pearls tell the rank. */
@@ -4208,7 +4758,7 @@ svg.ui-title__lake {
 }
 
 .ui-offers__panels[data-multi] .ui-card__name {
-  font-size: 18px;
+  --name-size: 18px;
 }
 
 .ui-offers__panels[data-multi] .ui-card__desc {
@@ -4428,52 +4978,8 @@ svg.ui-title__lake {
     forwards;
 }
 
-.ui-team {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ui-team__member {
-  --who: var(--or);
-
-  display: grid;
-  flex: 1 1 180px;
-  gap: 4px;
-  max-width: 240px;
-  padding-block: 14px;
-  padding-inline: 16px 18px;
-  border: 1px solid var(--ui-line);
-  border-inline-start: 5px solid var(--who);
-  border-radius: var(--ui-radius);
-  background: var(--ui-panel);
-  box-shadow: var(--ui-lift);
-  text-align: start;
-}
-
-.ui-team__class {
-  color: var(--ui-muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.ui-team__state {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.ui-team__member[data-downed='true'] {
-  border-inline-start-color: var(--bad-vibe);
-}
-
 .ui-end__wait {
+  flex-basis: 100%;
   color: var(--ui-muted);
   font-size: 18px;
   font-weight: 700;
@@ -4523,6 +5029,36 @@ svg.ui-title__lake {
     box-shadow:
       var(--ui-lift),
       0 0 calc(24px * var(--ui-halo)) color-mix(in srgb, var(--or) 55%, transparent);
+  }
+}
+
+@keyframes ui-traps-flash-a {
+  0%,
+  50% {
+    background: var(--rouge);
+    box-shadow:
+      0 0 0 2px var(--sol),
+      0 0 calc(14px * var(--ui-halo)) var(--rouge);
+  }
+
+  25%,
+  75% {
+    background: color-mix(in srgb, var(--rouge) 24%, var(--sol));
+  }
+}
+
+@keyframes ui-traps-flash-b {
+  0%,
+  50% {
+    background: var(--rouge);
+    box-shadow:
+      0 0 0 2px var(--sol),
+      0 0 calc(14px * var(--ui-halo)) var(--rouge);
+  }
+
+  25%,
+  75% {
+    background: color-mix(in srgb, var(--rouge) 24%, var(--sol));
   }
 }
 
@@ -4597,16 +5133,70 @@ svg.ui-title__lake {
   }
 }
 
-@keyframes ui-place-ghost {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: translateY(3px) scale(0.9);
+/* Eight beats: it lifts off the card on the first, lands on the third, stays, and leaves again. */
+@keyframes ui-place-flight {
+  0% {
+    opacity: 0;
+    transform: translate(var(--from-x), var(--from-y)) scale(2.4);
   }
 
-  50% {
+  6% {
+    opacity: 1;
+    transform: translate(var(--from-x), var(--from-y)) scale(2.4);
+    animation-timing-function: ease-in-out;
+  }
+
+  12.5% {
+    transform: translate(var(--from-x), calc(var(--from-y) - 14px)) scale(2.4);
+    animation-timing-function: ease-in;
+  }
+
+  25% {
+    transform: translate(var(--arc-x), var(--arc-y)) scale(1.6);
+  }
+
+  32% {
+    transform: translate(var(--near-x), -16px) scale(1.15);
+    animation-timing-function: ease-out;
+  }
+
+  37.5%,
+  75% {
     opacity: 1;
     transform: none;
+  }
+
+  92.5%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+@keyframes ui-place-cord {
+  0%,
+  37.5% {
+    opacity: 0;
+    transform: scale(1.35) rotate(-90deg);
+  }
+
+  46%,
+  75% {
+    opacity: 1;
+    transform: none;
+  }
+
+  92.5%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+@keyframes ui-band-sway {
+  50% {
+    translate: calc(2 * var(--card-unit)) 0;
+    transform: rotate(-8deg);
   }
 }
 
@@ -4619,6 +5209,27 @@ svg.ui-title__lake {
   50% {
     border-width: 1.5px;
     background: transparent;
+  }
+}
+
+@keyframes ui-end-deal {
+  from {
+    opacity: 0;
+    transform: translateY(48px) scale(0.94);
+  }
+}
+
+@keyframes ui-end-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@keyframes ui-end-record {
+  from {
+    opacity: 0;
+    transform: scale(1.5);
   }
 }
 
@@ -4849,18 +5460,8 @@ svg.ui-title__lake {
     gap: 8px;
   }
 
-  .ui-team__member {
-    flex-basis: 140px;
-    max-width: none;
-  }
-
   .ui-menu {
     width: min(100% - 2 * var(--ui-chevron), 420px);
-  }
-
-  .ui-stats,
-  .ui-end .ui-button {
-    width: calc(100% - 2 * var(--ui-chevron));
   }
 
   .ui-hud {
@@ -4971,9 +5572,9 @@ svg.ui-title__lake {
 
   .ui-card {
     --card-pad-x: 18px;
+    --card-gap: 8px;
 
     padding: 16px var(--card-pad-x);
-    gap: 8px;
   }
 
   .ui-card[aria-current] {
@@ -4981,11 +5582,7 @@ svg.ui-title__lake {
   }
 
   .ui-card__name {
-    font-size: 21px;
-  }
-
-  .ui-stats__value {
-    font-size: 28px;
+    --name-size: 21px;
   }
 }
 
@@ -5047,11 +5644,23 @@ svg.ui-title__lake {
   .ui-card__desc {
     text-wrap: pretty;
   }
+
+  .ui-card__band {
+    justify-items: start;
+    margin: 0;
+  }
+
+  .ui-card__tag {
+    --tag-room: calc(100cqi - 40px);
+    margin-inline-start: 12px;
+  }
 }
 
 @media (orientation: portrait) and (max-width: 1024px) {
+  /* Relative, not static: the weapon flying in from a card passes over the cards. */
   .ui-offers__panels:not([data-multi]) .ui-places {
-    position: static;
+    position: relative;
+    inset: auto;
     align-self: center;
     margin-top: 6px;
   }
@@ -5164,6 +5773,20 @@ svg.ui-title__lake {
     .ui-card__body
     > .ui-card__roles {
     grid-column: 2;
+  }
+
+  .ui-offers__panels:not([data-multi])
+    .ui-cards:not([data-count='5'], [data-count='6'])
+    .ui-card__band {
+    justify-items: start;
+    margin: 0;
+  }
+
+  .ui-offers__panels:not([data-multi])
+    .ui-cards:not([data-count='5'], [data-count='6'])
+    .ui-card__tag {
+    --tag-room: calc(100cqi - 40px);
+    margin-inline-start: 12px;
   }
 }
 
@@ -5398,7 +6021,7 @@ svg.ui-title__lake {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: var(--card-gap);
   }
 
   .ui-offers__panels:not([data-multi])
@@ -5415,9 +6038,9 @@ svg.ui-title__lake {
   .ui-card {
     --card-pad-x: 14px;
     --card-radius: 24px;
+    --card-gap: 4px;
 
     padding: 0 var(--card-pad-x) 10px;
-    gap: 4px;
   }
 
   .ui-card[aria-current] {
@@ -5430,7 +6053,7 @@ svg.ui-title__lake {
   }
 
   .ui-card__name {
-    font-size: 18px;
+    --name-size: 18px;
   }
 
   .ui-card__desc {
@@ -5442,63 +6065,202 @@ svg.ui-title__lake {
   }
 
   .ui-end__emblem,
+  .ui-end__text,
+  .ui-end-card__class,
+  .ui-end-card__build,
   .ui-action__hint {
     display: none;
   }
 
   .ui-end__title {
-    font-size: 36px;
+    font-size: 30px;
   }
 
-  .ui-end__text {
-    font-size: 15px;
+  .ui-end__score {
+    gap: 4px 10px;
   }
 
-  .ui-stats {
+  .ui-end__score-value {
+    font-size: 26px;
+  }
+
+  .ui-end__record {
     gap: 8px;
-    margin: 4px 0;
+    font-size: 12px;
   }
 
-  .ui-stats__item {
-    flex-basis: 0;
-    gap: 2px;
-    padding: 8px 10px;
+  .ui-end__record-new {
+    padding: 3px 10px;
   }
 
-  .ui-team {
+  .ui-end__cards {
+    grid-auto-columns: minmax(0, 150px);
     gap: 8px;
     margin: 0;
   }
 
-  .ui-team__member {
-    gap: 0;
-    padding: 6px 12px;
+  .ui-end-card__face {
+    padding: 8px 10px;
   }
 
-  .ui-stats__value {
-    font-size: 22px;
+  .ui-end-card__face--back {
+    gap: 4px;
   }
 
-  .ui-stats__label {
+  .ui-end-card__face--back .ui-end-card__name {
+    display: none;
+  }
+
+  .ui-end-card__turn {
+    inset-block-start: 8px;
+    inset-inline-start: 10px;
+    width: 12px;
+    height: 12px;
+  }
+
+  .ui-end-card__feats,
+  .ui-end-card__kit {
     font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .ui-end-card__feats {
+    row-gap: 0;
+  }
+
+  .ui-end-card__feat strong {
+    font-size: 12px;
+  }
+
+  .ui-end-card__kit {
+    gap: 2px;
+    padding-top: 4px;
+  }
+
+  .ui-end-card__line .ui-end-card__icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .ui-end-card__mark {
+    width: 36px;
+    height: 36px;
+    padding: 7px;
+  }
+
+  .ui-end-card__state {
+    position: static;
+    padding: 1px 6px;
+    font-size: 10px;
+  }
+
+  .ui-end-card__name {
+    margin-top: 2px;
+    font-size: 15px;
+  }
+
+  .ui-end-card__title {
+    margin-top: 4px;
+    padding-top: 4px;
+    font-size: 13px;
+  }
+
+  .ui-end-card__proof {
+    font-size: 14px;
+  }
+
+  .ui-end__stats {
+    gap: 2px 12px;
+    font-size: 12px;
   }
 
   .ui-end__actions {
-    flex-flow: row wrap;
-    justify-content: center;
-    gap: 8px 24px;
+    gap: 6px calc(var(--ui-chevron) + 6px);
+    margin-top: 2px;
   }
 
   .ui-end .ui-button {
-    width: auto;
-    min-width: 180px;
-    min-height: 48px;
+    min-height: 40px;
+    padding-inline: 14px;
+    font-size: 14px;
+  }
+
+  .ui-end .ui-button--primary {
+    min-width: 0;
+    font-size: 16px;
+    letter-spacing: 0.08em;
+  }
+
+  .ui-end .ui-action {
+    justify-content: center;
+    width: 40px;
+    padding: 0;
+  }
+
+  .ui-end .ui-action__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .ui-end .ui-action__icon {
+    width: 20px;
+    height: 20px;
   }
 }
 
 @media (max-height: 700px) and (min-height: 521px) {
   .ui-upgrade {
     padding-block: 16px;
+  }
+
+  .ui-end__body {
+    gap: 8px;
+  }
+
+  .ui-end__emblem {
+    display: none;
+  }
+
+  .ui-end__title {
+    font-size: 44px;
+  }
+
+  .ui-end__text {
+    font-size: 15px;
+  }
+
+  .ui-end__score-value {
+    font-size: 34px;
+  }
+
+  .ui-end-card__face {
+    padding-block: 10px 8px;
+  }
+
+  .ui-end-card__face--back {
+    gap: 4px;
+  }
+
+  .ui-end-card__feats,
+  .ui-end-card__kit {
+    line-height: 1.25;
+  }
+
+  .ui-end-card__feats {
+    row-gap: 0;
+  }
+
+  .ui-end-card__mark {
+    width: 44px;
+    height: 44px;
+    padding: 9px;
+  }
+
+  .ui-end .ui-button {
+    min-height: 46px;
   }
 }
 
@@ -5535,7 +6297,7 @@ svg.ui-title__lake {
 
   .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__name {
     grid-column: 1 / -1;
-    font-size: 16px;
+    --name-size: 16px;
   }
 
   .ui-cards:is([data-count='5'], [data-count='6']) .ui-card__foot {

@@ -216,6 +216,17 @@ function rankOf(model: UpgradeCard | FusionCard): HTMLElement {
   return rank;
 }
 
+// A new weapon is kept the whole run, as a festival bracelet: its card wears one, the name on its tag.
+function band(name: HTMLElement): HTMLElement {
+  const node = el('span', 'ui-card__band');
+  const tag = el('span', 'ui-card__tag');
+  // The tag sizes the name to its length, so that a long one stays on one line.
+  setVar(tag, '--name-length', String(name.textContent.length));
+  tag.append(name);
+  node.append(tag, el('span', 'ui-card__knot'));
+  return node;
+}
+
 function card(model: Card): HTMLButtonElement {
   const button = el('button', 'ui-card');
   button.type = 'button';
@@ -245,7 +256,13 @@ function card(model: Card): HTMLButtonElement {
   }
   head.append(icon('ui-card__medal', medallion(glyph), '0 0 84 84'));
   const body = el('span', 'ui-card__body');
-  body.append(familyRow, el('span', 'ui-card__name', model.name));
+  const name = el('span', 'ui-card__name', model.name);
+  if (model.kind === 'weapon' && model.adds) {
+    button.dataset.adds = '';
+    body.append(band(name));
+  } else {
+    body.append(familyRow, name);
+  }
   if (model.kind === 'weapon' && model.roles.length > 0) {
     body.append(roles(model));
   }
@@ -573,6 +590,31 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       t('Tes agrès : {places}', { places: views.map((view) => view.label).join(', ') }),
     );
     places.replaceChildren(...views.map(place));
+    aimFlight(focused);
+  }
+
+  // The new weapon of the focused card flies from its head to the place it would take.
+  function aimFlight(focused: Card | undefined): void {
+    const ring = places.querySelector('[data-state="ghost"] .ui-places__ring');
+    const head =
+      focused === undefined
+        ? null
+        : buttons[models.indexOf(focused)]?.querySelector('.ui-card__head');
+    if (!(ring instanceof HTMLElement) || !(head instanceof HTMLElement)) {
+      return;
+    }
+    const from = centerOf(head);
+    const to = centerOf(ring);
+    const x = from.x - to.x;
+    const y = from.y - to.y;
+    // It comes down on its place from beside the row of places, never across their labels.
+    const side = direction() === 'rtl' ? 1 : -1;
+    const arcX = side * Math.max(side * x * 0.5, 0) + side * 80;
+    setVar(ring, '--from-x', `${x.toFixed(1)}px`);
+    setVar(ring, '--from-y', `${y.toFixed(1)}px`);
+    setVar(ring, '--arc-x', `${arcX.toFixed(1)}px`);
+    setVar(ring, '--arc-y', `${(y * 0.3).toFixed(1)}px`);
+    setVar(ring, '--near-x', `${String(side * 36)}px`);
   }
 
   function celebrate(button: HTMLElement, rarity: Celebrated): void {

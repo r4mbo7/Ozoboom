@@ -83,7 +83,8 @@ export interface LobbyModel {
 
 export type Notice = 'desync' | 'hostLeft' | 'connectionLost';
 
-// Online, who ends the game: only the host restarts it. Absent, the game is local.
+// A team's game: its host, online or on one screen, restarts it or takes it back to the lobby.
+// Absent, the game is solo.
 export interface EndSession {
   role: 'host' | 'guest';
 }
@@ -102,6 +103,8 @@ export type UpgradeCue =
 export interface UiCallbacks {
   onStart(): void;
   onRestart(): void;
+  // A team's: the lobby shows again with the same players.
+  onBackToLobby(): void;
   onQuit(): void;
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
   // The variant is the turn of a dealt card, 0 for the other cues.
@@ -166,7 +169,8 @@ export interface Ui {
   updateLobby(model: LobbyModel): void;
   showNotice(notice: Notice, details: string): void;
   showGame(): void;
-  showEnd(state: SimState, session?: EndSession): void;
+  // `best`: this device's record for the night before the game, null for the first game.
+  showEnd(state: SimState, session: EndSession | undefined, best: number | null): void;
   update(state: SimState, frame: UiFrame, content: GameContent): void;
   destroy(): void;
 }

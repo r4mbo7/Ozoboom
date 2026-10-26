@@ -1,6 +1,7 @@
 import { lookup, type ResolvedContent } from '../content';
 import { touches } from '../effects';
 import type { PlayerState, SimState } from '../state';
+import { tallyOf } from '../tally';
 import type { StepContext } from './types';
 
 export function revive({ state, content, set, tempo }: StepContext): void {
@@ -26,6 +27,7 @@ export function revive({ state, content, set, tempo }: StepContext): void {
       player.hp = player.maxHp / 2;
       player.invulnerableTicks = invulnerableTicks;
       player.reviveTicks = 0;
+      tallyOf(helper.player).revives += 1;
       state.events.push({ type: 'playerRevived', playerId: player.id });
       continue;
     }

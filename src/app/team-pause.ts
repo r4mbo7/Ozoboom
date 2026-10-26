@@ -25,7 +25,10 @@ export interface PauseActions {
   readonly openControls: () => void;
   readonly openForm: () => void;
   readonly quit: () => void;
+  readonly backToLobby: () => void;
   readonly online: () => boolean;
+  // A team whose lobby this screen leads: on one screen, or the online host's.
+  readonly leadsTeam: () => boolean;
 }
 
 // The pause is the team's: any device pauses, navigates and resumes, through the merged view.
@@ -119,6 +122,12 @@ export function pauseItems(settings: Settings, actions: PauseActions): PauseItem
     { label: t('Contrôles'), element: createControlsButton(), activate: actions.openControls },
     { label: t('Ton avis'), element: createFeedbackButton(), activate: actions.openForm },
     {
+      label: t('Retour au salon'),
+      shown: actions.leadsTeam,
+      confirm: lobbyConfirm(),
+      activate: actions.backToLobby,
+    },
+    {
       label: t('Quitter la partie'),
       get confirm() {
         return actions.online() ? quitOnlineConfirm() : quitConfirm();
@@ -134,6 +143,14 @@ const quitConfirm = () =>
     text: t('Tu rentres avant le sunrise : la partie s’arrête ici, sans score.'),
     stay: t('Rester'),
     leave: t('Quitter'),
+  }) as const;
+
+const lobbyConfirm = () =>
+  ({
+    question: t('Retour au salon ?'),
+    text: t('Le set s’arrête pour toute l’équipe, sans score : chacun peut changer de perso.'),
+    stay: t('Rester'),
+    leave: t('Retour au salon'),
   }) as const;
 
 const quitOnlineConfirm = () =>

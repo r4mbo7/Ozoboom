@@ -62,6 +62,8 @@ export function advanceFrame(
   state: SimState,
   alpha: number,
   upcoming?: SetDefinition,
+  // An inset is lit at the hour of the game it is shown over.
+  fraction = setFraction(set, state),
 ) {
   frame.now = state.tick + alpha;
   frame.set = set;
@@ -69,7 +71,6 @@ export function advanceFrame(
   frame.tempo = playedTempo(set, state);
   frame.dropFilter = dropFilterIntensity(state, frame.now, frame.tempo);
   frame.groundFilter = state.set.tier >= 1 ? frame.dropFilter : 0;
-  const fraction = setFraction(set, state);
   if (fraction !== frame.fraction) {
     frame.fraction = fraction;
     writePixiPalette(frame.palette, paletteAt(fraction));

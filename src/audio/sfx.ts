@@ -72,7 +72,8 @@ export type SfxName =
   | 'launch'
   | 'dashed'
   | 'dashEmpty'
-  | 'dashBack';
+  | 'dashBack'
+  | 'trapRefused';
 
 export interface SfxLimit {
   perFrame: number;
@@ -229,6 +230,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     dashed: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     dashEmpty: { perFrame: 1, concurrent: 1, seconds: 0.15 },
     dashBack: { perFrame: 1, concurrent: 2, seconds: 0.25 },
+    trapRefused: { perFrame: 1, concurrent: 1, seconds: 0.2 },
   };
 }
 
@@ -268,6 +270,7 @@ export function sfxOf(
     case 'dashed':
     case 'dashEmpty':
     case 'dashBack':
+    case 'trapRefused':
       return event.type;
     case 'skillUsed': {
       const classId = players.find((player) => player.id === event.playerId)?.classId;
@@ -1157,6 +1160,20 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       attack: 0.002,
       hold: 0.01,
       release: 0.06,
+    });
+  },
+  // A dull knock under the music: the trap has nowhere to go.
+  trapRefused: (out, at, _variant, key) => {
+    playTone(out, at, {
+      wave: 'sine',
+      hz: keyHz(key, 0, 1),
+      toHz: keyHz(key, 0, 0),
+      glide: 0.08,
+      gain: 0.22,
+      attack: 0.003,
+      hold: 0.02,
+      release: 0.12,
+      filter: { type: 'lowpass', hz: 400, q: 0.7 },
     });
   },
   dashBack: (out, at, degree, key) => {

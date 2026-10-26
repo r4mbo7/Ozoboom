@@ -35,6 +35,8 @@ export interface OnlineEnv extends LobbyDefaults {
   trackId(): string;
   version(): string;
   onMatch(match: OnlineMatch): void;
+  // Before the lobby shows again, the host having taken the team back to it.
+  onLobby(): void;
   onInterruption(interruption: Interruption): void;
   onGuestLeft(playerId: PlayerId): void;
 }
@@ -60,6 +62,8 @@ export interface Online {
   matchEnded(): void;
   // Host only, from the end screen.
   relaunch(): void;
+  // Host only, from the end screen or the pause: the whole team goes back to the lobby.
+  backToLobby(): void;
   leave(): void;
 }
 
@@ -70,14 +74,6 @@ type Phase = 'idle' | 'lobby' | 'playing' | 'ended';
 
 function randomSeed(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
-}
-
-export function presentSeats(
-  seats: readonly Seat[],
-  localPeer: PeerId,
-  departed: ReadonlySet<PeerId>,
-): Seat[] {
-  return seats.filter((seat) => seat.peer === localPeer || !departed.has(seat.peer ?? ''));
 }
 
 export function createOnline(env: OnlineEnv): Online {
@@ -101,7 +97,6 @@ export function createOnline(env: OnlineEnv): Online {
     watching: () => phase === 'playing',
     silent: hostWentSilent,
   });
-  const departed = new Set<PeerId>();
   const lockstepHooks: LockstepHooks = {
     onDesync(tick) {
       if (phase === 'playing') {
@@ -151,7 +146,6 @@ export function createOnline(env: OnlineEnv): Online {
     players = 0;
     roundTrip.stop();
     connectMs = null;
-    departed.clear();
   }
 
   function failLobby(text: string): void {
@@ -236,7 +230,6 @@ export function createOnline(env: OnlineEnv): Online {
   }
 
   function peerLeft(peer: PeerId, as: Role, roomCode: string): void {
-    departed.add(peer);
     if (as === 'guest' && peer === hostPeerId(roomCode)) {
       if (phase === 'lobby') {
         failLobby(t('L’hôte a fermé le salon'));
@@ -261,7 +254,7 @@ export function createOnline(env: OnlineEnv): Online {
       festival: env.festival(),
     });
     room = joined;
-    joined.onChange(showLobby);
+    joined.onChange(roomChanged);
     joined.onStart(handleStart);
     joined.onRefused((reason) => {
       failLobby(refusalText(reason));
@@ -313,21 +306,39 @@ export function createOnline(env: OnlineEnv): Online {
     }
   }
 
+  // During a game, only the host taking the team back to the lobby changes the room.
+  function roomChanged(): void {
+    if (phase === 'lobby') {
+      showLobby();
+      return;
+    }
+    phase = 'lobby';
+    interrupted = false;
+    players = 0;
+    hostWatch.stop();
+    roundTrip.stop();
+    source?.close();
+    source = null;
+    env.onLobby();
+    lobbyShown = false;
+    showLobby();
+  }
+
   function relaunch(): void {
     if (room === null || transport === null || role !== 'host') {
       return;
     }
     source?.close();
-    const present = presentSeats(room.seats, transport.id, departed);
-    const start = startMessage(present, {
+    const { seats } = room;
+    const start = startMessage(seats, {
       seed: randomSeed(),
       setId: room.setId ?? env.stageId(),
       trackId: env.trackId(),
       endless: room.endless,
       festival: room.festival,
     });
-    sendToGuests(transport, present, start);
-    launched(start, hostSource(present), 0);
+    sendToGuests(transport, seats, start);
+    launched(start, hostSource(seats), 0);
   }
 
   return {
@@ -400,6 +411,11 @@ export function createOnline(env: OnlineEnv): Online {
       }
     },
     relaunch,
+    backToLobby() {
+      if (room !== null && role === 'host' && phase !== 'lobby') {
+        room.reopen();
+      }
+    },
     leave() {
       teardown();
       lobbyShown = false;

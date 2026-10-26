@@ -10,6 +10,7 @@ import {
   splinter,
 } from './boss-decor';
 import { createBossFarewells } from './boss-farewells';
+import { createBossSpotlight } from './boss-spotlight';
 import {
   type Drawn,
   Impact,
@@ -85,6 +86,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
   const waves = new Particles(layers.fx, decor.ring, 8);
   const farewells = createBossFarewells(ctx, decor);
   const dim = createDim(layers.dim);
+  const spotlight = createBossSpotlight(layers.glow, layers.core);
 
   function lookOf(kind: string, mask: Mask): BossLook {
     let look = looks.get(kind);
@@ -207,6 +209,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
     onEvent(event, state, frame, radius): void {
       if (event.type === 'enemySpawned' && ctx.behaviours.get(event.kind) === 'boss') {
         spawned.set(event.id, state.tick);
+        spotlight.land(event.id, { x: event.x, y: event.y }, state.tick);
         land(event.x, event.y, byId(state.enemies, event.id)?.radius ?? 0, frame, state.tick);
       } else if (event.type === 'relicOffered') {
         farewells.dropRelics(state.tick);
@@ -246,6 +249,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
         state.set.segment === 'drop' ? state.tick - state.set.segmentStartTick : null;
       const shade = breakDim(ticksToDrop(frame.set, state), intoDrop, frame.tempo, frame.calm);
       dim(shade, state.arena);
+      spotlight.update(state, frame);
       farewells.update(state, frame);
       splinters.update(frame.now);
       waves.update(frame.now);
@@ -256,6 +260,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
       splinters.clear();
       waves.clear();
       farewells.clear();
+      spotlight.reset();
       dim(0, { width: 0, height: 0 });
     },
     destroy(): void {
@@ -264,6 +269,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
       }
       looks.clear();
       destroyBossDecor(decor);
+      spotlight.destroy();
       for (const container of Object.values(flying)) {
         container.destroy({ children: true });
       }
