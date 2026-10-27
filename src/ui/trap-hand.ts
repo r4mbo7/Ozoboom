@@ -1,12 +1,13 @@
 import type { GameContent, SetDefinition, SummonLook, TrapDefinition } from '../data/types';
 import type { InputSnapshot } from '../input/intents';
 import { t } from '../shared/i18n';
-import type { PlayerState, SimState } from '../sim/state';
+import type { PlayerId, PlayerState, SimState } from '../sim/state';
 import { trapCapacity } from '../sim/stats';
 import { el, icon, keycap, setFlag, setText } from './dom';
 import { FULL_OFFERING_ICONS } from './full';
 import {
   type HandTile,
+  firstTrapCall,
   handTiles,
   trapCaption,
   trapSlotsFull,
@@ -54,12 +55,21 @@ function drawTile(
   tile.title = trapTileTitle(view, trap, look);
 }
 
-function flagTile(tile: HTMLElement, view: HandTile, selected: boolean): void {
+function flagTile(tile: HTMLElement, view: HandTile, selected: boolean, call: boolean): void {
   setFlag(tile, 'empty', view.trapId === null && view.offering !== true);
   setFlag(tile, 'offering', view.offering === true);
   setFlag(tile, 'selected', selected);
   setFlag(tile, 'blocked', view.trapId !== null && !view.available);
   setFlag(tile, 'full', view.full === true);
+  setFlag(tile, 'call', call);
+  if (!call) {
+    delete tile.dataset.kick;
+  }
+}
+
+// The calling tile kicks on every beat: the attribute alternates so the animation starts over.
+function kick(tile: HTMLElement): void {
+  tile.dataset.kick = tile.dataset.kick === 'a' ? 'b' : 'a';
 }
 
 // A place refused for want of a slot flashes the count, from the last frame's events.
@@ -90,6 +100,8 @@ export function createTrapHand(): TrapHand {
   let definitions: ReadonlyMap<string, TrapDefinition> = new Map();
   let selectedTrap = 0;
   let previousGameplay: InputSnapshot['gameplay'] | null = null;
+  const placed = new Set<PlayerId>();
+  let kickedBeat = -1;
 
   return {
     element,
@@ -106,6 +118,7 @@ export function createTrapHand(): TrapHand {
       const capacity = trapCapacity(set, state);
       const views = handTiles(definitions, state, player, tiles.length, capacity);
       const selected = heldSlot(selectedTrap, player.hand?.length ?? 0);
+      const call = firstTrapCall(views, state, player, placed);
       const look = content.summons?.find((summon) => summon.setId === state.setId)?.look;
       views.forEach((view, index) => {
         const tile = tiles[index];
@@ -118,8 +131,12 @@ export function createTrapHand(): TrapHand {
           const trap = view.trapId === null ? undefined : definitions.get(view.trapId);
           drawTile(tile, view, trap, look);
         }
-        flagTile(tile, view, index === selected);
+        flagTile(tile, view, index === selected, index === call);
+        if (index === call && state.set.beat !== kickedBeat) {
+          kick(tile);
+        }
       });
+      kickedBeat = state.set.beat;
       const taken = trapToTake(definitions, state, player, tiles.length);
       const full = trapsFull(state, capacity);
       const caption = trapCaption(definitions, taken, player.hand?.[selected], full);
@@ -133,6 +150,8 @@ export function createTrapHand(): TrapHand {
     reset() {
       selectedTrap = 0;
       previousGameplay = null;
+      placed.clear();
+      kickedBeat = -1;
     },
   };
 }

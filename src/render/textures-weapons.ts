@@ -12,6 +12,7 @@ import {
   type Ctx,
   type Shape,
 } from './paint';
+import { createDiaboloTexture } from './textures-diabolo';
 import { type PlateTextures, createPlateTextures } from './textures-plate';
 import { type TotemTextures, createTotemTextures } from './textures-totem';
 
@@ -87,20 +88,6 @@ function icon(kind: WeaponKind): Shape {
         ctx.ellipse(0, 0, 28, 22, -0.5, 0, TAU);
         doubleStroke(ctx, 9, 3.5);
         break;
-      case 'lob':
-        polygon(ctx, [
-          [-22, -27],
-          [22, -27],
-          [0, -1],
-        ]);
-        outlined(ctx);
-        polygon(ctx, [
-          [-22, 27],
-          [22, 27],
-          [0, 1],
-        ]);
-        outlined(ctx);
-        break;
       case 'boomerang':
         circle(ctx, 26);
         outlined(ctx);
@@ -158,11 +145,10 @@ function icon(kind: WeaponKind): Shape {
 }
 
 // The weapons drawn as one icon tinted with their class; the plate and the totem have their own drawing.
-export const ICON_KINDS: readonly Exclude<WeaponKind, 'plate' | 'totem'>[] = [
+export const ICON_KINDS: readonly Exclude<WeaponKind, 'plate' | 'totem' | 'lob'>[] = [
   'sweep',
   'spark',
   'hoop',
-  'lob',
   'boomerang',
   'orbit',
   'trail',
@@ -198,7 +184,12 @@ export function createWeaponTextures(): WeaponTextures {
   const plate = createPlateTextures();
   const totem = createTotemTextures();
   return {
-    icons: { ...recordOf(ICON_KINDS, icon), plate: plate.dish, totem: totem.body },
+    icons: {
+      ...recordOf(ICON_KINDS, icon),
+      lob: createDiaboloTexture(),
+      plate: plate.dish,
+      totem: totem.body,
+    },
     plate,
     totem,
     sparkShot: paint(32, 32, 12, (ctx) => {

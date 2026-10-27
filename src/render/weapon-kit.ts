@@ -14,6 +14,8 @@ export const SIZES: Partial<Record<WeaponKind, number>> = {
   orbit: 26,
 };
 
+const NO_TINT = 0xffffff;
+
 export interface Piece {
   readonly halo: Sprite;
   readonly outline: Sprite;
@@ -30,7 +32,16 @@ export interface WeaponKit {
   place(
     view: Piece,
     shape: Shape,
-    spot: { x: number; y: number; size: number; rotation?: number; alpha?: number; haloY?: number },
+    spot: {
+      x: number;
+      y: number;
+      size: number;
+      rotation?: number;
+      alpha?: number;
+      haloY?: number;
+      // Painted in its own colours: only its halo takes the class.
+      painted?: boolean;
+    },
     color: number,
     frame: Frame,
   ): void;
@@ -63,7 +74,7 @@ export function createKit(ctx: RenderContext): WeaponKit {
       const { body, halo, outline } = view;
       const alpha = spot.alpha ?? 1;
       body.texture = shape.texture;
-      setTint(body, color);
+      setTint(body, spot.painted === true ? NO_TINT : color);
       body.visible = true;
       body.position.set(spot.x, spot.y);
       body.rotation = spot.rotation ?? 0;

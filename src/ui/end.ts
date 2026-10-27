@@ -13,17 +13,20 @@ import { type Menu, createMenu } from './menu';
 import type { Prompts } from './prompts';
 import type { Ending } from './end-parts';
 import { FULL_END } from './full';
+import { createTrapLesson } from './trap-lesson';
 import type { EndSession } from './types';
 
 export interface EndScreen {
   readonly element: HTMLElement;
   readonly menu: Menu;
-  // `best`: the record of this device before the game, null for its first.
+  // `best`: the record of this device before the game, null for its first; `trapless`: no trap
+  // ever stood on the field.
   show(
     state: SimState,
     content: GameContent | null,
     session: EndSession | undefined,
     best: number | null,
+    trapless: boolean,
   ): void;
   setDevice(device: InputDevice): void;
 }
@@ -83,6 +86,10 @@ export function createEnd(
   score.append(el('span', 'ui-end__score-label', t('Score')), scoreValue, record);
   const cards = el('ul', 'ui-end__cards');
   cards.setAttribute('aria-label', t('L’équipe'));
+  const lesson = createTrapLesson();
+  // The lesson deals beside the cards: a phone has width to spare, not height.
+  const table = el('div', 'ui-end__table');
+  table.append(cards, lesson.element);
   const stats = el('dl', 'ui-end__stats');
   const restart = el('button', 'ui-button ui-button--primary', t('Rejouer'));
   restart.type = 'button';
@@ -100,7 +107,7 @@ export function createEnd(
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-end__body');
   const details = el('div', 'ui-end__details');
-  body.append(emblem, title, text, score, details, cards, stats, actions, hint);
+  body.append(emblem, title, text, score, details, table, stats, actions, hint);
   element.append(body);
 
   let items: HTMLElement[] = [];
@@ -127,6 +134,7 @@ export function createEnd(
 
   function fillHints(): void {
     const shown = prompts.for(device ?? 'none');
+    lesson.setDevice(shown);
     const confirm = { keys: [shown.confirm], label: t('valider') };
     fillHint(
       hint,
@@ -166,7 +174,7 @@ export function createEnd(
   return {
     element,
     menu,
-    show(state, content, session, best) {
+    show(state, content, session, best, trapless) {
       const won = state.status === 'won';
       element.dataset.outcome = won ? 'won' : 'lost';
       emblem.replaceChildren(icon('ui-end__icon', won ? SUN : FOG));
@@ -179,6 +187,10 @@ export function createEnd(
       details.replaceChildren(...(part === undefined ? [] : [part.details]));
       details.hidden = part === undefined;
       fillScore(scoreOf(state), best);
+      lesson.element.hidden = !trapless;
+      if (trapless) {
+        lesson.show(state, content);
+      }
       players = playerCards(state.players, content);
       cards.replaceChildren(...players.map((player) => player.seat));
       cards.style.setProperty('--count', String(state.players.length));

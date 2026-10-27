@@ -2875,6 +2875,39 @@ svg.ui-title__lake {
   animation: ui-traps-flash-b calc(var(--beat) * 0.6) linear;
 }
 
+/* Until the player's first trap is down, its tile plays the Caisson's music: a bounce and its bass
+   ring out into the arena on every kick. `data-kick` alternates on each beat to restart the animation. */
+.ui-trap[data-call] {
+  --kick: calc(var(--beat) * 0.5);
+}
+
+.ui-trap[data-call]::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -2px;
+  border: 2px solid var(--turquoise);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-trap[data-call][data-kick='a'] {
+  animation: ui-trap-kick-a var(--kick) ease-out;
+}
+
+.ui-trap[data-call][data-kick='b'] {
+  animation: ui-trap-kick-b var(--kick) ease-out;
+}
+
+.ui-trap[data-call][data-kick='a']::after {
+  animation: ui-trap-ring-a var(--kick) ease-out;
+}
+
+.ui-trap[data-call][data-kick='b']::after {
+  animation: ui-trap-ring-b var(--kick) ease-out;
+}
+
 .ui-trap[data-empty] {
   border-style: dashed;
   border-color: color-mix(in srgb, var(--texte) 26%, transparent);
@@ -3970,6 +4003,204 @@ svg.ui-title__lake {
   list-style: none;
 }
 
+.ui-end__table {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+  margin: 4px 0 0;
+}
+
+.ui-end__table .ui-end__cards {
+  width: auto;
+  margin: 0;
+}
+
+/* Three players or more fill the row: the lesson goes under their cards, in one line. */
+.ui-end__table:has(.ui-end__seat:nth-child(3)) {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ui-end__table:has(.ui-end__seat:nth-child(3)) .ui-end__lesson {
+  justify-content: center;
+  max-width: none;
+  padding: 6px 18px;
+  border-radius: 999px;
+}
+
+.ui-end__table:has(.ui-end__seat:nth-child(3)) .ui-lesson__scene {
+  display: none;
+}
+
+/* The strip says more than the stats line, which it replaces. */
+.ui-end__body:has(.ui-end__seat:nth-child(3)):has(.ui-end__lesson:not([hidden])) .ui-end__stats {
+  display: none;
+}
+
+.ui-end__table:has(.ui-end__seat:nth-child(3)) .ui-lesson__text {
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 14px;
+}
+
+/* A game lost with no trap ever placed: a loop shows the Caisson that slows the bad vibes. It
+   rests on its last moment, which reads alone when calm mode stops the animation. */
+.ui-end__lesson {
+  --loop: calc(var(--beat, 414ms) * 4);
+
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: 600px;
+  padding: 12px 22px 12px 12px;
+  border: 1px solid color-mix(in srgb, var(--turquoise) 55%, transparent);
+  border-radius: var(--ui-radius);
+  background: var(--ui-panel);
+  box-shadow: var(--ui-lift);
+  text-align: start;
+  animation: ui-end-deal 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 700ms backwards;
+}
+
+.ui-end__lesson[hidden] {
+  display: none;
+}
+
+.ui-lesson__scene {
+  position: relative;
+  flex: none;
+  width: 200px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      circle at 50% 62%,
+      color-mix(in srgb, var(--or) 10%, transparent),
+      transparent 60%
+    ),
+    var(--sol);
+}
+
+.ui-lesson__scene > *,
+.ui-lesson__zone > * {
+  position: absolute;
+  translate: -50% -50%;
+}
+
+.ui-lesson__zone {
+  position: absolute;
+  inset: 0;
+  translate: none;
+  transform-origin: 54% 66%;
+  animation: ui-lesson-land var(--loop) linear infinite;
+}
+
+.ui-lesson__ring {
+  top: 66%;
+  left: 54%;
+  width: 52%;
+  aspect-ratio: 1;
+  border: 2px solid var(--turquoise);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--turquoise) 8%, transparent);
+  opacity: 0.6;
+  scale: 0.85;
+  animation: ui-lesson-kick var(--beat, 414ms) ease-out infinite;
+}
+
+.ui-lesson__caisson {
+  top: 66%;
+  left: 54%;
+  width: 15%;
+  color: var(--texte);
+}
+
+.ui-lesson__goer {
+  top: 56%;
+  left: 40%;
+  width: 15%;
+  rotate: -20deg;
+}
+
+.ui-lesson__foe {
+  --from-x: 112%;
+  --from-y: 14%;
+  --to-x: 76%;
+  --to-y: 44%;
+
+  top: var(--to-y);
+  left: var(--to-x);
+  width: 13%;
+  animation: ui-lesson-walk var(--loop) linear infinite;
+}
+
+.ui-lesson__foe--b {
+  --from-x: 20%;
+  --from-y: -14%;
+  --to-x: 33%;
+  --to-y: 30%;
+}
+
+.ui-lesson__tile {
+  top: 80%;
+  left: 87%;
+  display: grid;
+  place-items: center;
+  width: 20%;
+  aspect-ratio: 1;
+  border: 1.5px solid var(--turquoise);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--sol) 60%, transparent);
+}
+
+.ui-lesson__tile-icon {
+  width: 62%;
+  color: var(--ui-turquoise);
+  animation: ui-lesson-empty var(--loop) linear infinite;
+}
+
+.ui-lesson__tap {
+  inset: 0;
+  border: 2px solid var(--texte);
+  border-radius: inherit;
+  opacity: 0;
+  translate: none;
+  animation: ui-lesson-tap var(--loop) ease-out infinite;
+}
+
+.ui-lesson__scene svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ui-lesson__text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 13em;
+}
+
+.ui-lesson__title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.ui-lesson__how {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--ui-muted);
+  font-size: 14px;
+  text-wrap: balance;
+}
+
 .ui-end__seat {
   display: grid;
   perspective: 1200px;
@@ -5032,6 +5263,149 @@ svg.ui-title__lake {
   }
 }
 
+@keyframes ui-trap-kick-a {
+  from {
+    scale: 1.15;
+  }
+
+  to {
+    scale: 1;
+  }
+}
+
+@keyframes ui-trap-ring-a {
+  from {
+    scale: 1;
+    opacity: 0.9;
+  }
+
+  to {
+    scale: 2.6;
+    opacity: 0;
+  }
+}
+
+@keyframes ui-trap-kick-b {
+  from {
+    scale: 1.15;
+  }
+
+  to {
+    scale: 1;
+  }
+}
+
+@keyframes ui-trap-ring-b {
+  from {
+    scale: 1;
+    opacity: 0.9;
+  }
+
+  to {
+    scale: 2.6;
+    opacity: 0;
+  }
+}
+
+@keyframes ui-lesson-tap {
+  0% {
+    opacity: 0;
+    scale: 0.6;
+  }
+
+  4% {
+    opacity: 0.9;
+  }
+
+  14%,
+  100% {
+    opacity: 0;
+    scale: 1.6;
+  }
+}
+
+@keyframes ui-lesson-empty {
+  0%,
+  10%,
+  96%,
+  100% {
+    opacity: 1;
+  }
+
+  14%,
+  90% {
+    opacity: 0.15;
+  }
+}
+
+@keyframes ui-lesson-land {
+  0%,
+  11% {
+    opacity: 0;
+    scale: 0;
+  }
+
+  16% {
+    opacity: 1;
+    scale: 1.12;
+  }
+
+  20%,
+  90% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  97%,
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+@keyframes ui-lesson-kick {
+  from {
+    opacity: 0.9;
+    scale: 0.4;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+/* Fast toward the player, then a crawl once inside the bass ring. */
+@keyframes ui-lesson-walk {
+  0% {
+    top: var(--from-y);
+    left: var(--from-x);
+    opacity: 0;
+  }
+
+  6% {
+    opacity: 1;
+  }
+
+  30% {
+    top: calc(var(--from-y) + (var(--to-y) - var(--from-y)) * 0.85);
+    left: calc(var(--from-x) + (var(--to-x) - var(--from-x)) * 0.85);
+  }
+
+  90% {
+    top: var(--to-y);
+    left: var(--to-x);
+    opacity: 1;
+  }
+
+  97%,
+  100% {
+    top: var(--to-y);
+    left: var(--to-x);
+    opacity: 0;
+  }
+}
+
 @keyframes ui-traps-flash-a {
   0%,
   50% {
@@ -5843,6 +6217,44 @@ svg.ui-title__lake {
 /* Short screens, a phone held sideways: a menu fits the screen, it never scrolls. */
 
 @media (max-height: 520px) and (min-width: 600px) {
+  .ui-end__table {
+    gap: 8px;
+    margin: 0;
+  }
+
+  .ui-end__lesson {
+    gap: 10px;
+    max-width: 300px;
+    padding: 8px 12px 8px 8px;
+    border-radius: 18px;
+  }
+
+  .ui-lesson__scene {
+    width: 124px;
+    border-radius: 12px;
+  }
+
+  .ui-lesson__text {
+    min-width: 0;
+  }
+
+  .ui-end__table:has(.ui-end__seat:nth-child(3)) {
+    gap: 6px;
+  }
+
+  .ui-end__table:has(.ui-end__seat:nth-child(3)) .ui-end__lesson {
+    padding: 3px 14px;
+  }
+
+  .ui-lesson__title {
+    font-size: 14px;
+  }
+
+  .ui-lesson__how {
+    gap: 4px;
+    font-size: 12px;
+  }
+
   .ui-overlay {
     padding-block: 12px;
   }

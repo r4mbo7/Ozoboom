@@ -232,7 +232,7 @@ export function weaponIcon(effect: WeaponEffect): string {
       );
     case 'lob':
       return (
-        '<path d="M4 7 10.6 10.8h2.8L20 7v10l-6.6-3.8h-2.8L4 17z" fill="currentColor" stroke="currentColor" stroke-linejoin="round" transform="rotate(-25 12 12)"/>' +
+        '<path d="M5 3.5C7.6 5 9.4 7.8 10.3 11h3.4C14.6 7.8 16.4 5 19 3.5zM5 20.5C7.6 19 9.4 16.2 10.3 13h3.4c.9 3.2 2.7 6 5.3 7.5zM10.3 11h3.4v2h-3.4z" fill="currentColor" transform="rotate(-25 12 12)"/>' +
         `<path d="M1.5 22c.8-3 2.2-5 4-6.5" ${STROKE} stroke-dasharray="1 3"/>`
       );
     case 'boomerang':

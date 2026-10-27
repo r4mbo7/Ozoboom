@@ -11,7 +11,7 @@ import { t, tn } from '../shared/i18n';
 import { NIGHT_END, NIGHT_START, type PaletteToken, isClassToken } from '../shared/palette';
 import { clamp01 } from '../shared/scalar';
 import { type LineupSlot, setTempo, ticksToDrop } from '../sim/lineup';
-import type { PlayerState, SimState } from '../sim/state';
+import type { PlayerState, SimState, PlayerId } from '../sim/state';
 import { gaugeValue } from '../sim/gauges';
 import { skillCooldownTicks } from '../sim/stats';
 import { trapAt } from '../sim/systems/traps';
@@ -209,6 +209,24 @@ export function handTiles(
     }
     return { trapId, available: trapId !== null && free };
   });
+}
+
+// The tile that calls for the player's first trap: the first one held, until one of theirs stands
+// on the field; `placed` remembers who did, a trap taken back or a new scene notwithstanding.
+export function firstTrapCall(
+  tiles: readonly HandTile[],
+  state: Pick<SimState, 'traps'>,
+  player: Pick<PlayerState, 'id'>,
+  placed: Set<PlayerId>,
+): number | null {
+  if (state.traps.some((trap) => trap.ownerId === player.id)) {
+    placed.add(player.id);
+  }
+  if (placed.has(player.id)) {
+    return null;
+  }
+  const index = tiles.findIndex((tile) => tile.trapId !== null && tile.available);
+  return index < 0 ? null : index;
 }
 
 export function trapTileTitle(

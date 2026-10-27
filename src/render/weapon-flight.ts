@@ -159,7 +159,13 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
       x,
       y,
     );
-    kit.place(view.piece, shape, { x, y: y - body.lift, size, rotation }, color, frame);
+    kit.place(
+      view.piece,
+      shape,
+      { x, y: y - body.lift, size, rotation, painted: look.kind === 'lob' },
+      color,
+      frame,
+    );
 
     if (look.kind === 'boomerang') {
       streak(view, x, y, size, color, frame);

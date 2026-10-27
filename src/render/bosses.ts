@@ -219,6 +219,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
     },
     farewell(event, drawn, state, frame): void {
       spawned.delete(event.id);
+      spotlight.chased(event.id, frame.show);
       const mask = textures.masks.masks.get(event.kind);
       if (mask === undefined) {
         return;

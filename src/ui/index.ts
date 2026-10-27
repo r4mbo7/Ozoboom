@@ -31,6 +31,7 @@ import type {
   UiFrame,
 } from './types';
 import { type UpgradeOverlay, createUpgradeOverlay } from './upgrade';
+import { lostWithoutTrap } from './trap-lesson';
 
 export type {
   ClassPickerModel,
@@ -161,6 +162,8 @@ export function createUi(
   let device: InputDevice = 'none';
   let keysShown = prompts.version();
   let lastContent: GameContent | null = null;
+  // A trap stood on the field during this game: its end screen needs no lesson.
+  let trapStood = false;
 
   const feedback =
     callbacks.onFeedback === undefined
@@ -309,12 +312,13 @@ export function createUi(
       menuInput.open();
     },
     showGame() {
+      trapStood = false;
       hud.reset();
       sun.fix('nuit');
       show('game');
     },
     showEnd(state, session, best) {
-      end.show(state, lastContent, session, best);
+      end.show(state, lastContent, session, best, lostWithoutTrap(state, trapStood));
       sun.fix(state.status === 'won' ? 'jour' : 'nuit');
       show('end');
       grace.start();
@@ -332,6 +336,7 @@ export function createUi(
         menus[screen](edges, frame);
         return;
       }
+      trapStood ||= state.traps.length > 0;
       hud.update(state, frame, content);
       sun.follow(setFraction(setOf(content, state.setId), state));
       upgrade.update(state, frame, content, performance.now());

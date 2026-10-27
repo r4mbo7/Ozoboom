@@ -70,6 +70,11 @@ body {
   min-height: 100%;
 }
 
+/* A double tap on a phone zooms the page, and over the stage no pinch can zoom it back out. */
+html {
+  touch-action: manipulation;
+}
+
 body {
   display: grid;
   place-items: center;
