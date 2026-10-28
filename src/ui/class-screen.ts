@@ -3,7 +3,7 @@ import { t } from '../shared/i18n';
 import { attackReach } from '../sim/attacks';
 import { type ClassInfo, ROW_CARDS, classColor, landscapeNotice } from './class-picker';
 import { CLASS_TEASERS, classTeaser } from './teaser';
-import { el, fillHint, goMark, setText } from './dom';
+import { el, fillHint, goMark, setText, setVar } from './dom';
 import { PLAY } from './icons';
 import { createEndlessRow } from './endless';
 import { formatNumber, formatSeconds, formatTenth } from './format';
@@ -61,6 +61,12 @@ export function gridStep(
   return Math.min(index + side * columns, count - 1);
 }
 
+// As few rows as when each holds all it fits, the cards shared evenly between them.
+export function evenColumns(count: number, fit: number): number {
+  const rows = Math.ceil(count / Math.max(1, fit));
+  return Math.ceil(count / Math.max(1, rows));
+}
+
 export interface ClassPickerActions {
   choose(classId: string): void;
   toggleEndless(enabled: boolean): void;
@@ -75,6 +81,26 @@ export interface ClassPickerScreen {
   setModel(model: ClassPickerModel): void;
   setDevice(device: InputDevice): void;
   update(edges: MenuIntents): void;
+}
+
+// The cards keep the width the row fits them at; its padding narrows it to even rows, centred.
+function spreadCards(row: HTMLElement): void {
+  const width = row.clientWidth;
+  if (width === 0) {
+    return;
+  }
+  const style = getComputedStyle(row);
+  const gap = parseFloat(style.columnGap);
+  const least = parseFloat(style.getPropertyValue('--card-least'));
+  const fit = Math.max(1, Math.floor((width + gap) / (least + gap)));
+  const card = (width - (fit - 1) * gap) / fit;
+  const columns = evenColumns(row.children.length, fit);
+  setVar(row, '--card-width', `${String(card)}px`);
+  setVar(
+    row,
+    '--cards-inset',
+    `${String(Math.floor((width - columns * card - (columns - 1) * gap) / 2))}px`,
+  );
 }
 
 function statRow(stat: ClassStat): HTMLElement {
@@ -169,6 +195,15 @@ export function createClassPicker(
     return card;
   });
   row.append(...cards, ...CLASS_TEASERS.map(classTeaser));
+  // Its border box, which the padding leaves alone. On the next frame: taller cards can bring the
+  // scrollbar in, which narrows the row again.
+  if (element.hasAttribute('data-many') && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => {
+      requestAnimationFrame(() => {
+        spreadCards(row);
+      });
+    }).observe(row, { box: 'border-box' });
+  }
 
   const confirm = el('button', 'ui-button ui-button--primary');
   confirm.type = 'button';

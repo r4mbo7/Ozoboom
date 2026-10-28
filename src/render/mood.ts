@@ -33,6 +33,7 @@ const OLA_FADE_BEATS = 0.6;
 const CHEVRON = { above: 14, bob: 2, size: 0.55 };
 const SLOW_REACH = 40;
 const CHEER = { grow: 1.45, swell: 0.12, alpha: 0.75 };
+const SPILL = { duration: 6, grow: 2.2, peak: 0.8 };
 
 function chevrons(ctx: Ctx): void {
   ctx.lineCap = 'round';
@@ -219,8 +220,32 @@ export function createMood(ctx: RenderContext): Family {
     return false;
   }
 
+  // The good mood spilled past the rim of an aura rings around the bad vibe it reaches.
+  function spill(
+    event: Extract<SimEvent, { type: 'moodSpilled' }>,
+    state: SimState,
+    frame: Frame,
+  ): void {
+    const player = byId(state.players, event.playerId);
+    const radius = byId(state.enemies, event.id)?.radius ?? REFERENCE_RADIUS;
+    burster.spawn(frame, {
+      shape: textures.ring,
+      now: frame.now,
+      duration: SPILL.duration,
+      x: event.x,
+      y: event.y,
+      fromRadius: radius,
+      toRadius: radius * SPILL.grow,
+      tint: frame.palette[burster.tokenOf(player)],
+      peak: SPILL.peak,
+    });
+  }
+
   return {
     onEvent(event: SimEvent, state: SimState, frame: Frame): void {
+      if (event.type === 'moodSpilled') {
+        spill(event, state, frame);
+      }
       if (
         olas.size > 0 &&
         event.type === 'enemyStatusStarted' &&

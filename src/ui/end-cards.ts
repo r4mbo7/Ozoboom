@@ -1,11 +1,12 @@
 import type { GameContent, WeaponEffect } from '../data/types';
+import { weaponGlyph } from '../data/weapon-glyphs';
 import { t, tn } from '../shared/i18n';
 import type { PlayerState } from '../sim/state';
 import { el, icon } from './dom';
 import { titlesOf } from './end-titles';
 import { formatNumber } from './format';
 import { gearSlots, playerLabel } from './hud-model';
-import { CARDS, TURN, classMark, familyIcon, weaponIcon } from './icons';
+import { CARDS, TURN, classMark, familyIcon } from './icons';
 import { whoColor } from './who';
 
 export interface PlayerCard {
@@ -108,7 +109,7 @@ function backOf(player: PlayerState, build: Build | null, team: boolean): HTMLEl
   kit.append(
     ...build.weapons.map((weapon) =>
       line(
-        weaponIcon(weapon.effect),
+        weaponGlyph(weapon.effect),
         weapon.name,
         t('niv. {level}', { level: formatNumber(weapon.level) }),
       ),
@@ -168,7 +169,7 @@ function iconsOf(build: Build): HTMLElement {
   if (build.weapons.length > 0) {
     const group = el('span', 'ui-end-card__gear');
     group.append(
-      ...build.weapons.map((weapon) => icon('ui-end-card__icon', weaponIcon(weapon.effect))),
+      ...build.weapons.map((weapon) => icon('ui-end-card__icon', weaponGlyph(weapon.effect))),
     );
     row.append(group);
   }

@@ -27,7 +27,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       id: 'dome-chill',
       name: 'Le Dôme chill',
-      description: 'Une brume qui soigne tout ce qui danse autour.',
+      description: 'Une brume qui te soigne',
       x: 800,
       y: 120,
       radius: 40,
@@ -38,7 +38,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       id: 'foret',
       name: 'La Forêt',
-      description: 'Frappes boisées et oiseaux : les bad vibes y ralentissent.',
+      description: 'Les bad vibes y ralentissent',
       x: 1430,
       y: 500,
       radius: 40,
@@ -49,7 +49,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       id: 'sub',
       name: 'Le Sub',
-      description: 'Une onde de choc sur chaque kick.',
+      description: 'Une onde de choc par kick',
       x: 420,
       y: 500,
       radius: 40,
@@ -60,7 +60,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       id: 'cercle-acid',
       name: 'Le Cercle acid',
-      description: 'Il marque les bad vibes qui viennent y danser.',
+      description: 'Les bad vibes y sont marquées',
       x: 800,
       y: 880,
       radius: 40,

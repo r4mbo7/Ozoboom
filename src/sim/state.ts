@@ -331,7 +331,7 @@ export interface PropState extends Positioned {
   damage: number;
   // In its phase: before it falls, or flies back on its own.
   ticksLeft: number;
-  // In its phase, each bad vibe once.
+  // In its phase, each bad vibe once; a dragon, the obstacles it still flies through.
   hitsLeft: number;
   hitIds?: EntityId[];
   targetId?: EntityId;
@@ -500,6 +500,8 @@ export type SimEvent =
       byPlayer: PlayerId | null;
     }
   | { type: 'playerFired'; playerId: PlayerId; x: number; y: number; angle: number }
+  // The Kiffeur's good mood reached a bad vibe past the rim of his aura.
+  | { type: 'moodSpilled'; playerId: PlayerId; id: EntityId; x: number; y: number }
   | { type: 'playerHit'; playerId: PlayerId; damage: number }
   | { type: 'playerDowned'; playerId: PlayerId }
   | { type: 'playerRevived'; playerId: PlayerId }

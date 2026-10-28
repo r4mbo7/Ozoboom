@@ -1,91 +1,41 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
-import type { SpeakerDefinition } from '../data/types';
-import { t, tn } from '../shared/i18n';
-import type { Tempo } from '../shared/tempo';
+import type { SpeakerDefinition, WeaponEffect } from '../data/types';
+import { weaponGlyph } from '../data/weapon-glyphs';
+import { t } from '../shared/i18n';
 import type { Vec2 } from '../shared/vec';
-import type { SimState, SpeakerState } from '../sim/state';
+import type { SimState } from '../sim/state';
 import { worldToScreen } from './camera';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
+import { paintGlyph } from './glyph';
+import type { Shape } from './paint';
+import { CORNER, TAIL, TAIL_HALF, bubble, paintVolume } from './speaker-bubble';
 import { speakerToken } from './speaker-kit';
 import { LABEL_FONT_PX, LABEL_PAD, NAME_TEXTURE_SCALE, createLineTextures } from './textures-names';
 import { lookup, setTint } from './util';
 import { ViewPool } from './views';
+import { styleOf } from './weapon-looks';
 
 const NEAR = 170;
-const PLUGGED = -1;
-const IDLE = 0;
 const MARGIN = 12;
-const PAD = 10;
-const LINE_HEIGHT = LABEL_FONT_PX * 1.35;
-const CORNER = 12;
-const RIM_WIDTH = 1.5;
+const PAD = 9;
+const RIM_WIDTH = 1.8;
 const LIFT = 1.9;
 const DROP = 1.6;
-const LINES = [
-  { weight: 700, alpha: 1 },
-  { weight: 500, alpha: 0.8 },
-  { weight: 500, alpha: 1 },
-  { weight: 400, alpha: 0.8 },
-] as const;
+const ICON = 36;
+const VOLUME = 24;
+const GAP = 10;
+const NAME_GAP = 6;
+const ROW_GAP = 4;
+const WASH = 0.14;
+const DIVIDER = 0.25;
+const PHRASE_WEIGHT = 600;
+const VOLUME_WEIGHT = 700;
+const GAIN_SCALE = 1.3;
+const VOLUME_TEXT = '+1';
+const GLYPH_DENSITY = 2;
 
-type CardDefinition = Pick<SpeakerDefinition, 'name' | 'description' | 'plugBars'>;
-
-export function plugStep(
-  speaker: Pick<SpeakerState, 'plugTicks' | 'plugged'>,
-  plugBars: number,
-  tempo: Tempo,
-) {
-  if (speaker.plugged) {
-    return PLUGGED;
-  }
-  if (speaker.plugTicks <= 0) {
-    return IDLE;
-  }
-  const left = plugBars * tempo.ticksPerBar - speaker.plugTicks;
-  return Math.max(1, Math.ceil(left / tempo.ticksPerBeat));
-}
-
-function barsLeft(bars: number): string {
-  switch (bars) {
-    case 1:
-      return t('reste une mesure dedans');
-    case 2:
-      return t('reste deux mesures dedans');
-    case 3:
-      return t('reste trois mesures dedans');
-    case 4:
-      return t('reste quatre mesures dedans');
-    default:
-      return tn(bars, 'reste {bars} mesure dedans', 'reste {bars} mesures dedans', { bars });
-  }
-}
-
-function stateLine(step: number, plugBars: number): string {
-  if (step === PLUGGED) {
-    return t('branchée');
-  }
-  if (step === IDLE) {
-    return barsLeft(plugBars);
-  }
-  return tn(step, 'branchement : encore {beats} temps', 'branchement : encore {beats} temps', {
-    beats: step,
-  });
-}
-
-export function cardLines(
-  definition: CardDefinition,
-  weaponName: string | null,
-  step: number,
-  plugBars: number,
-): readonly string[] {
-  return [
-    t(definition.name),
-    stateLine(step, plugBars),
-    weaponName === null ? 'Volume +1' : t('Volume +1 · ouvre {weapon}', { weapon: t(weaponName) }),
-    t(definition.description),
-  ];
-}
+type CardDefinition = Pick<SpeakerDefinition, 'description' | 'unlocksWeaponId'>;
 
 export function isNear(speaker: Vec2, players: readonly Vec2[]): boolean {
   return players.some(
@@ -121,66 +71,146 @@ export function cardOrigin(
 interface CardView {
   readonly root: Container;
   readonly panel: Graphics;
+  readonly wash: Graphics;
   readonly rim: Graphics;
-  readonly lines: readonly Sprite[];
+  readonly divider: Graphics;
+  readonly volume: Sprite;
+  readonly gain: Sprite;
+  readonly weapon: Sprite;
+  readonly name: Sprite;
+  readonly phrase: Sprite;
   id: string;
-  step: number;
   width: number;
   height: number;
+  tipX: number;
+  below: boolean;
+}
+
+// A line texture carries its edge and pad around the text: this is the width the text takes.
+function textWidth(texture: Texture): number {
+  return texture.width / NAME_TEXTURE_SCALE - 2 * LABEL_PAD;
 }
 
 export function createSpeakerCards(ctx: RenderContext): Family {
   const root = ctx.layers.screen.addChild(new Container());
   const texts = createLineTextures();
+  const volumeShape = paintVolume();
+  // The interface's picto of each weapon kind, painted the first time a bubble opens it.
+  const glyphs = new Map<WeaponEffect['kind'], Shape>();
+  const glyphOf = (effect: WeaponEffect): Shape => {
+    let glyph = glyphs.get(effect.kind);
+    if (glyph === undefined) {
+      glyph = paintGlyph(weaponGlyph(effect), ICON, GLYPH_DENSITY);
+      glyphs.set(effect.kind, glyph);
+    }
+    return glyph;
+  };
   const views = new ViewPool<CardView>(
     () => {
       const card = root.addChild(new Container());
       const panel = card.addChild(new Graphics());
+      const wash = card.addChild(new Graphics());
       const rim = card.addChild(new Graphics());
-      const lines = LINES.map(() => {
-        const line = card.addChild(new Sprite(Texture.EMPTY));
-        line.scale.set(1 / NAME_TEXTURE_SCALE);
-        return line;
-      });
-      return { root: card, panel, rim, lines, id: '', step: Number.NaN, width: 0, height: 0 };
+      const divider = card.addChild(new Graphics());
+      const sprite = (texture: Texture) => {
+        const made = card.addChild(new Sprite(texture));
+        made.anchor.set(0.5);
+        return made;
+      };
+      const volume = sprite(volumeShape.texture);
+      volume.scale.set(VOLUME / (2 * volumeShape.radius));
+      const text = (texture: Texture) => {
+        const made = sprite(texture);
+        made.scale.set(1 / NAME_TEXTURE_SCALE);
+        return made;
+      };
+      const big = (texture: Texture) => {
+        const made = text(texture);
+        made.scale.set(GAIN_SCALE / NAME_TEXTURE_SCALE);
+        return made;
+      };
+      const gain = big(texts.get(VOLUME_TEXT, VOLUME_WEIGHT));
+      return {
+        root: card,
+        panel,
+        wash,
+        rim,
+        divider,
+        volume,
+        gain,
+        weapon: sprite(Texture.EMPTY),
+        name: big(Texture.EMPTY),
+        phrase: text(Texture.EMPTY),
+        id: '',
+        width: 0,
+        height: 0,
+        tipX: Number.NaN,
+        below: false,
+      };
     },
     (view) => {
       view.root.visible = false;
     },
   );
 
-  function layOut(
-    view: CardView,
-    definition: CardDefinition & Pick<SpeakerDefinition, 'unlocksWeaponId'>,
-  ) {
-    const weapon =
-      definition.unlocksWeaponId === undefined
-        ? null
-        : lookup(ctx.weaponLooks, definition.unlocksWeaponId, 'weapon').name;
-    const lines = cardLines(definition, weapon, view.step, definition.plugBars);
-    let widest = 0;
-    for (const [index, sprite] of view.lines.entries()) {
-      const texture = texts.get(lines[index] ?? '', LINES[index]?.weight ?? 400);
-      sprite.texture = texture;
-      widest = Math.max(widest, texture.width / NAME_TEXTURE_SCALE - 2 * LABEL_PAD);
-      sprite.position.set(
-        PAD - LABEL_PAD,
-        Math.round(
-          PAD + LABEL_FONT_PX / 2 + index * LINE_HEIGHT - texture.height / NAME_TEXTURE_SCALE / 2,
-        ),
-      );
+  // The pictos on top, the gain then the weapon it opens and its name, and the phrase of the aura
+  // under them.
+  function layOut(view: CardView, definition: CardDefinition) {
+    const phrase = texts.get(t(definition.description), PHRASE_WEIGHT);
+    view.phrase.texture = phrase;
+    const gainWidth = textWidth(view.gain.texture) * GAIN_SCALE;
+    const style =
+      definition.unlocksWeaponId === undefined ? null : styleOf(ctx, definition.unlocksWeaponId);
+    view.name.texture =
+      style === null ? Texture.EMPTY : texts.get(t(style.look.name), VOLUME_WEIGHT);
+    const nameWidth = style === null ? 0 : textWidth(view.name.texture) * GAIN_SCALE;
+    const row =
+      VOLUME + ROW_GAP + gainWidth + (style === null ? 0 : 2 * GAP + ICON + NAME_GAP + nameWidth);
+    const width = Math.ceil(Math.max(row, textWidth(phrase))) + 2 * PAD;
+    const height = PAD + ICON + ROW_GAP + LABEL_FONT_PX + PAD;
+    const rowY = PAD + ICON / 2;
+    let x = (width - row) / 2;
+    view.volume.position.set(x + VOLUME / 2, rowY);
+    x += VOLUME + ROW_GAP;
+    view.gain.position.set(Math.round(x + gainWidth / 2), rowY);
+    x += gainWidth + GAP;
+    view.divider.clear();
+    view.weapon.visible = view.name.visible = style !== null;
+    if (style !== null) {
+      view.divider
+        .moveTo(x, rowY - ICON * 0.35)
+        .lineTo(x, rowY + ICON * 0.35)
+        .stroke({ width: 1.2, color: 0xffffff });
+      const shape = glyphOf(style.look.effect);
+      view.weapon.texture = shape.texture;
+      view.weapon.scale.set(ICON / (2 * shape.radius));
+      x += GAP;
+      view.weapon.position.set(x + ICON / 2, rowY);
+      x += ICON + NAME_GAP;
+      view.name.position.set(Math.round(x + nameWidth / 2), rowY);
     }
-    const width = Math.ceil(widest) + 2 * PAD;
-    const height = Math.round(LINES.length * LINE_HEIGHT - (LINE_HEIGHT - LABEL_FONT_PX) + 2 * PAD);
-    if (width !== view.width || height !== view.height) {
-      view.width = width;
-      view.height = height;
-      view.panel.clear().roundRect(0, 0, width, height, CORNER).fill(0xffffff);
-      view.rim
-        .clear()
-        .roundRect(0, 0, width, height, CORNER)
-        .stroke({ width: RIM_WIDTH, color: 0xffffff });
+    view.phrase.position.set(
+      Math.round(width / 2),
+      Math.round(PAD + ICON + ROW_GAP + LABEL_FONT_PX / 2),
+    );
+    view.width = width;
+    view.height = height;
+    view.tipX = Number.NaN;
+  }
+
+  function shape(view: CardView, tipX: number, below: boolean) {
+    if (tipX === view.tipX && below === view.below) {
+      return;
     }
+    view.tipX = tipX;
+    view.below = below;
+    const { width, height } = view;
+    bubble(view.panel.clear(), width, height, tipX, below);
+    view.panel.fill(0xffffff);
+    bubble(view.wash.clear(), width, height, tipX, below);
+    view.wash.fill(0xffffff);
+    bubble(view.rim.clear(), width, height, tipX, below);
+    view.rim.stroke({ width: RIM_WIDTH, color: 0xffffff });
   }
 
   return {
@@ -190,39 +220,49 @@ export function createSpeakerCards(ctx: RenderContext): Family {
       const looks = speakers.length > 0 ? lookup(ctx.speakerLooks, state.setId, 'set') : null;
       const { camera, palette, light } = frame;
       for (const [index, speaker] of speakers.entries()) {
-        if (looks === null || !isNear(speaker, state.players)) {
+        // Once plugged, the gain is had and the weapon open: the bubble has nothing left to offer.
+        if (looks === null || speaker.plugged || !isNear(speaker, state.players)) {
           continue;
         }
         const definition = lookup(looks, speaker.id, 'speaker');
         const view = views.acquire(index);
-        const step = plugStep(speaker, definition.plugBars, frame.tempo);
-        if (view.id !== speaker.id || view.step !== step) {
+        if (view.id !== speaker.id) {
           view.id = speaker.id;
-          view.step = step;
           layOut(view, definition);
         }
         const color = palette[speakerToken(speaker.id)];
         setTint(view.panel, palette.solClair);
         view.panel.alpha = light.additive ? 0.88 : 0.94;
+        setTint(view.wash, color);
+        view.wash.alpha = WASH;
         setTint(view.rim, color);
-        view.rim.alpha = 0.7;
-        for (const [line, sprite] of view.lines.entries()) {
-          setTint(sprite, line === 0 ? color : palette.texte);
-          sprite.alpha = LINES[line]?.alpha ?? 1;
-        }
+        setTint(view.divider, color);
+        view.divider.alpha = DIVIDER;
+        setTint(view.volume, color);
+        setTint(view.gain, color);
+        setTint(view.name, color);
+        setTint(view.phrase, palette.texte);
+        setTint(view.weapon, color);
         const below = opensBelow(speaker.y, state.arena.height);
         const anchor = worldToScreen(camera, {
           x: speaker.x,
           y: speaker.y + speaker.radius * (below ? DROP : -LIFT),
         });
         const scale = cardScale(view.width, camera.screenWidth);
+        const tail = TAIL * scale;
         const origin = cardOrigin(
           anchor.x,
-          anchor.y,
+          anchor.y + (below ? tail : -tail),
           view.width * scale,
           view.height * scale,
           camera.screenWidth,
           camera.screenHeight,
+          below,
+        );
+        const reach = CORNER + TAIL_HALF;
+        shape(
+          view,
+          Math.round(Math.max(reach, Math.min(view.width - reach, (anchor.x - origin.x) / scale))),
           below,
         );
         view.root.visible = true;
@@ -234,6 +274,10 @@ export function createSpeakerCards(ctx: RenderContext): Family {
     destroy(): void {
       root.destroy({ children: true });
       texts.destroy();
+      volumeShape.texture.destroy(true);
+      for (const glyph of glyphs.values()) {
+        glyph.texture.destroy(true);
+      }
     },
   };
 }

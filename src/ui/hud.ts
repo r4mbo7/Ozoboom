@@ -2,6 +2,7 @@ import type { ClassDefinition, GameContent, SetDefinition } from '../data/types'
 import type { InputDevice } from '../input/intents';
 import { t } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
+import { weaponSlotCount } from '../sim/draw';
 import { playedTempo, setOf, setTempo } from '../sim/lineup';
 import type { PlayerId, PlayerState, SimState } from '../sim/state';
 import { createBossBanner } from './boss-banner';
@@ -10,7 +11,8 @@ import { createDashTile } from './dash-tile';
 import { el, icon, setFlag, setText, setVar } from './dom';
 import { FULL_HUD } from './full';
 import { createGaugeTile } from './gauge-tile';
-import { createGearChips } from './gear-chips';
+import { createGearPlaces } from './gear-places';
+import type { WeaponPlace } from './cards';
 import { type Roster, allDown, classToken, inDanger, rosterOf } from './hud-model';
 import { PAUSE } from './icons';
 import { createLevelRing } from './level-ring';
@@ -27,6 +29,8 @@ export interface Hud {
   update(state: SimState, frame: UiFrame, content: GameContent): void;
   // A bracelet on a shared screen, else the circus weapon slot or the level ring; null for a player the HUD does not show.
   landing(playerId: PlayerId, weaponId: string | null): HTMLElement | null;
+  // The bar shows the places of an offer while its player chooses; null when it does not show that player.
+  offerPlaces(playerId: PlayerId, places: readonly WeaponPlace[] | null): HTMLElement | null;
   reset(): void;
 }
 
@@ -51,7 +55,7 @@ export function createHud(prompts: Prompts): Hud {
   const plugs = createSpeakerPlugs();
   ribbon.element.append(plugs.row, pauseButton());
   const level = createLevelRing();
-  const gear = createGearChips();
+  const gear = createGearPlaces();
   const hand = createTrapHand();
   const skill = createSkillTile(prompts);
   const dashTile = createDashTile();
@@ -128,7 +132,7 @@ export function createHud(prompts: Prompts): Hud {
       dress(definition, snapshot.device);
     }
     level.update(player);
-    gear.update(player, state, content);
+    gear.update(player, state, content, weaponSlotCount(set));
     hand.update(player, state, content, set, snapshot.gameplay);
     if (definition !== null) {
       skill.update(player, definition.skill);
@@ -169,8 +173,12 @@ export function createHud(prompts: Prompts): Hud {
       if (playerId !== shownId) {
         return null;
       }
-      // A short screen hides the gear: the card then lands on the level ring.
       return gear.landing(weaponId) ?? level.element;
+    },
+    offerPlaces(playerId, places) {
+      const shows = element.dataset.multi === undefined && playerId === shownId;
+      gear.offer(shows ? places : null);
+      return shows && places !== null ? gear.element : null;
     },
     reset() {
       hand.reset();

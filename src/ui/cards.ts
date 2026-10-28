@@ -1,13 +1,14 @@
 import type {
   GameContent,
   Rarity,
+  StatKey,
   UpgradeFamily,
   WeaponDefinition,
   WeaponRole,
 } from '../data/types';
 import type { PlayerId, PlayerState, SimEvent, UpgradeOffer } from '../sim/state';
 import { t } from '../shared/i18n';
-import { growsSkillAlone, upgradeForm } from '../sim/stats';
+import { growsSkillAlone, leadStat, upgradeForm } from '../sim/stats';
 import { formatNumber } from './format';
 
 export const SIXTEENTHS_PER_BAR = 16;
@@ -55,6 +56,8 @@ interface CardBase {
 export interface UpgradeCard extends CardBase {
   kind: 'upgrade';
   family: UpgradeFamily;
+  // What the card changes first, which draws a class card's picto.
+  stat: StatKey | null;
   label: string;
   rank: string;
   // A relic comes once, from a boss: it has no rank to tell.
@@ -151,6 +154,7 @@ export function cardFor(
       name: t(upgrade.name),
       description: t(form.description),
       family: upgrade.family,
+      stat: leadStat(upgrade),
       label:
         className === undefined
           ? familyLabels()[upgrade.family]
@@ -232,6 +236,7 @@ export interface WeaponPlace {
   // `ghost`: the free place the new weapon of the focused card would take.
   state: 'held' | 'ghost' | 'free';
   weapon: WeaponDefinition | null;
+  level: number;
   label: string;
   // The focused card levels up or fuses the weapon held here.
   lit: boolean;
@@ -253,7 +258,15 @@ export function weaponPlaces(
     const weapon = content.weapons?.find((entry) => entry.id === slot.id);
     return weapon === undefined
       ? []
-      : [{ state: 'held', weapon, label: t(weapon.name), lit: slot.id === touched }];
+      : [
+          {
+            state: 'held',
+            weapon,
+            level: slot.level,
+            label: t(weapon.name),
+            lit: slot.id === touched,
+          },
+        ];
   });
   const adds = focused?.kind === 'weapon' && focused.adds;
   const free = Array.from({ length: Math.max(slots - held.length, 0) }, (_, index): WeaponPlace =>
@@ -261,13 +274,14 @@ export function weaponPlaces(
       ? {
           state: 'ghost',
           weapon: focused.weapon,
+          level: 0,
           label: t('Place {place} sur {slots}', {
             place: formatNumber(held.length + 1),
             slots: formatNumber(slots),
           }),
           lit: false,
         }
-      : { state: 'free', weapon: null, label: t('Libre'), lit: false },
+      : { state: 'free', weapon: null, level: 0, label: t('Libre'), lit: false },
   );
   return [...held, ...free];
 }

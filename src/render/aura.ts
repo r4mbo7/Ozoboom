@@ -1,8 +1,8 @@
 import { Graphics, type Sprite } from 'pixi.js';
 import { lerp, smoothstep } from '../shared/scalar';
-import { ticksIntoBeat } from '../shared/tempo';
+import { beatOfTick, ticksIntoBeat } from '../shared/tempo';
 import type { AuraAttack } from '../data/kiffeur';
-import { auraRadius } from '../sim/attacks/aura';
+import { auraRadius, pulsesOffbeat } from '../sim/attacks/aura';
 import type { PlayerState } from '../sim/state';
 import type { Burster } from './class-bursts';
 import type { RenderContext } from './context';
@@ -103,12 +103,19 @@ export function createAuras(ctx: RenderContext, burster: Burster): Auras {
     }
     lines.stroke({ width: DASH.width, color: WHITE, alpha: ringAlpha, cap: 'round' });
     if (!calm && player.dash === undefined) {
-      const filled = Math.min(1, beat * BEAT_WAVE.fill);
-      const eased = smoothstep(filled);
-      lines
-        .circle(0, 0, Math.max(1, radius * eased))
-        .stroke({ width: BEAT_WAVE.width, color: WHITE, alpha: BEAT_WAVE.alpha * (1 - beat) });
+      drawWave(lines, radius, beat);
+      const offbeat = Math.floor(tempo.ticksPerBeat / 2) / tempo.ticksPerBeat;
+      if (beat >= offbeat && pulsesOffbeat(player, beatOfTick(now, tempo))) {
+        drawWave(lines, radius, (beat - offbeat) / (1 - offbeat));
+      }
     }
+  }
+
+  function drawWave(lines: Graphics, radius: number, beat: number): void {
+    const eased = smoothstep(Math.min(1, beat * BEAT_WAVE.fill));
+    lines
+      .circle(0, 0, Math.max(1, radius * eased))
+      .stroke({ width: BEAT_WAVE.width, color: WHITE, alpha: BEAT_WAVE.alpha * (1 - beat) });
   }
 
   return { views, draw };

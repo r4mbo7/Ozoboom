@@ -209,6 +209,7 @@ export function createUi(
         callbacks.onUpgradeCue?.(cue, variant);
       },
       landing: (playerId, weaponId) => hud.landing(playerId, weaponId),
+      offerPlaces: (playerId, places) => hud.offerPlaces(playerId, places),
       showWeapon: (canvas, weaponId, playerId) =>
         callbacks.onShowWeapon?.(canvas, weaponId, playerId) ?? null,
     });

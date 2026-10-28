@@ -12,10 +12,12 @@ export interface Layers {
   readonly speakers: Container;
   readonly glow: Container;
   readonly dim: Container;
+  readonly core: Container;
   readonly enemies: Container;
   readonly enemyShots: Container;
   readonly traps: Container;
-  readonly core: Container;
+  // The stage's life in percent, kept readable over the bad vibes crowding its rim.
+  readonly coreLabel: Container;
   readonly sky: Container;
   readonly pickups: Container;
   readonly zones: Container;
@@ -50,10 +52,11 @@ export function createLayers(stage: Container): Layers {
     speakers: layer(setting),
     glow: layer(setting),
     dim: layer(setting),
+    core: layer(setting),
     enemies: layer(setting),
     enemyShots: layer(setting),
     traps: layer(setting),
-    core: layer(setting),
+    coreLabel: layer(setting),
     sky: layer(setting),
     pickups: layer(setting),
     zones: layer(setting),

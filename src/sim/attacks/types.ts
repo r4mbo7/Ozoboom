@@ -1,4 +1,4 @@
-import type { AttackDefinition } from '../../data/types';
+import type { AttackDefinition, StatKey } from '../../data/types';
 import type { PlayerInput } from '../commands';
 import type { PlayerState, SimState, Vec2 } from '../state';
 import type { StepContext } from '../systems/types';
@@ -6,6 +6,8 @@ import type { StepContext } from '../systems/types';
 export type Upgraded = Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts'>;
 
 export interface AttackModule<A extends AttackDefinition> {
+  // The stats the module reads: every attack stat a shared card or a relic gives must be among them.
+  readonly reads: readonly StatKey[];
   // Every tick, for each standing player of a class with this attack.
   step(ctx: StepContext, player: PlayerState, attack: A, input: PlayerInput): void;
   // The bot keeps to it; the aim and the class screen show it.

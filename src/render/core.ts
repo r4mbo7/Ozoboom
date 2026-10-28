@@ -85,7 +85,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
   const lost = new Graphics();
   layers.core.addChild(track, rim, lit, lost);
   const rings = [track, rim, lit, lost];
-  const percent = { edge: add(layers.core, t.halo), fill: add(layers.core, t.halo) };
+  const percent = { edge: add(layers.coreLabel, t.halo), fill: add(layers.coreLabel, t.halo) };
   const flash = add(layers.fx, t.ring);
   flash.visible = false;
   outline.visible = false;
@@ -113,7 +113,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
     },
     update(state: SimState, _alpha: number, frame: Frame): void {
       const { core } = state;
-      layers.core.visible = core.radius > 0;
+      layers.core.visible = layers.coreLabel.visible = core.radius > 0;
       if (!layers.core.visible) {
         flash.visible = false;
         return;
@@ -196,6 +196,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
     },
     destroy(): void {
       layers.core.destroy({ children: true });
+      layers.coreLabel.destroy({ children: true });
     },
   };
 }

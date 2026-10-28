@@ -7,6 +7,14 @@ import { pullTrigger } from './trigger';
 import type { AttackModule } from './types';
 
 export const straight: AttackModule<StraightAttack> = {
+  reads: [
+    'attackCooldownMul',
+    'damageMul',
+    'pierceAdd',
+    'projectileCountAdd',
+    'projectileSpeedMul',
+  ],
+
   step({ state }, player, attack, input) {
     if (!pullTrigger(player, input.fire, attack.cooldownTicks)) {
       return;

@@ -1207,13 +1207,20 @@ svg.ui-title__lake {
   text-wrap: pretty;
 }
 
+/* The script sets the width of a card and the inset that wraps the cards in even rows. */
 .ui-classpicker[data-many] .ui-classcards {
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-  gap: 10px;
+  --card-least: 84px;
+  display: flex;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 10px;
   width: min(100%, 1080px);
+  padding-inline: var(--cards-inset, 0);
 }
 
 .ui-classpicker[data-many] .ui-classcard {
+  flex: 0 0 var(--card-width, var(--card-least));
   flex-direction: column;
   gap: 2px;
   padding: 6px 2px 8px;
@@ -2744,53 +2751,182 @@ svg.ui-title__lake {
   gap: 8px;
 }
 
-.ui-gear {
+/* A circus weapon's place, the same in the HUD and on the level screen: a medallion with its
+   rank pearls set on its lower edge, round where the traps beside it are square. */
+.ui-place {
+  --ring: 40px;
+  --pearl: 7px;
+
   display: flex;
+  position: relative;
   flex: none;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  width: 46px;
-  height: 52px;
-  border: 1.5px solid color-mix(in srgb, var(--or) 55%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--sol) 60%, transparent);
-  color: var(--ui-or);
+  gap: 6px;
 }
 
-.ui-gear[data-continuous] {
-  border-color: var(--or);
-}
-
-.ui-gear__icon {
-  width: 24px;
-  height: 24px;
-}
-
-.ui-gear__dots {
-  display: flex;
-  gap: 3px;
-}
-
-.ui-gear__dot {
-  width: 5px;
-  height: 5px;
-  border: 1px solid color-mix(in srgb, var(--or) 70%, transparent);
+.ui-place__ring {
+  display: grid;
+  position: relative;
+  place-items: center;
+  width: var(--ring);
+  height: var(--ring);
+  border: 2px dashed color-mix(in srgb, var(--texte) 30%, transparent);
   border-radius: 50%;
+  color: var(--turquoise);
 }
 
-.ui-gear__dot[data-on] {
-  background: var(--or);
-  box-shadow: 0 0 calc(4px * var(--ui-halo)) var(--or);
+.ui-place__icon {
+  width: calc(var(--ring) * 0.52);
+  height: calc(var(--ring) * 0.52);
 }
 
-.ui-gear[data-pulse='a'] {
-  animation: ui-gear-a 260ms ease-out;
+.ui-place[data-state='held'] .ui-place__ring {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--turquoise) 60%, transparent);
+  background: color-mix(in srgb, var(--turquoise) 12%, var(--sol));
 }
 
-.ui-gear[data-pulse='b'] {
-  animation: ui-gear-b 260ms ease-out;
+.ui-place[data-state='ghost'] .ui-place__ring {
+  border-color: var(--turquoise);
+}
+
+.ui-place:is([data-state='ghost'], [data-lit], [data-landed]) .ui-place__ring {
+  border-color: var(--turquoise);
+  box-shadow: 0 0 calc(18px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 45%, transparent);
+}
+
+.ui-place__pearl {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--pearl);
+  height: var(--pearl);
+  margin: calc(var(--pearl) / -2);
+  border: 1px solid color-mix(in srgb, var(--turquoise) 55%, transparent);
+  border-radius: 50%;
+  background: var(--sol);
+  box-shadow: 0 0 0 1.5px var(--sol);
+  transform: rotate(var(--turn)) translateY(calc(var(--ring) / 2 - 1px));
+}
+
+.ui-place__pearl[data-on] {
+  border-color: var(--turquoise);
+  background: radial-gradient(circle at 35% 35%, var(--texte) 0 18%, var(--turquoise) 34%);
+}
+
+.ui-place__pearl[data-next] {
+  animation: ui-pearl-next var(--beat) ease-in-out infinite alternate;
+}
+
+.ui-place[data-pulse='a'] .ui-place__ring {
+  animation: ui-place-pulse-a 260ms ease-out;
+}
+
+.ui-place[data-pulse='b'] .ui-place__ring {
+  animation: ui-place-pulse-b 260ms ease-out;
+}
+
+/* A name stays on one line, its place growing for it: two lines would push the places over the cards. */
+.ui-place__label {
+  color: var(--ui-muted);
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.ui-place:is([data-state='ghost'], [data-lit]) .ui-place__label {
+  color: color-mix(in srgb, var(--turquoise) 45%, var(--texte));
+}
+
+/* The HUD names only the place the focused card aims at, above it: a name never widens the bar. */
+.ui-hud__gear .ui-place__label {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  translate: -50%;
+}
+
+/* The new weapon flies from the focused card to its place, where a friendship cord knots around it. */
+.ui-place[data-state='ghost'] .ui-place__ring {
+  --from-x: 0px;
+  --from-y: 0px;
+  --arc-x: 0px;
+  --arc-y: 0px;
+  --near-x: 0px;
+}
+
+.ui-place[data-state='ghost'] .ui-place__icon {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--turquoise) 70%, transparent));
+  animation: ui-place-flight calc(var(--beat) * 8) linear infinite;
+}
+
+.ui-place[data-state='ghost'] .ui-place__ring::after {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    var(--mage) 0 9deg,
+    var(--or) 0 18deg,
+    var(--enracine) 0 27deg,
+    var(--turquoise) 0 36deg,
+    var(--superfan) 0 45deg
+  );
+  mask: radial-gradient(closest-side, transparent calc(100% - 5px), #000 calc(100% - 4.5px));
+  content: '';
+  animation: ui-place-cord calc(var(--beat) * 8) linear infinite;
+}
+
+.ui-place[data-state='ghost'] .ui-place__ring::before {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -5px;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--or), var(--mage) 60%, var(--sol));
+  content: '';
+  animation: ui-place-cord calc(var(--beat) * 8) linear infinite;
+}
+
+/* While its player chooses, the bar shows the offer's places over the veil: the card lands there.
+   The actions stay behind, dimmed and out of reach. */
+.ui:has(> .ui-upgrade:not([hidden], [data-leaving]) .ui-offer[data-bar]) .ui-hud__bar {
+  position: relative;
+  z-index: 1;
+}
+
+.ui:has(> .ui-upgrade:not([hidden], [data-leaving]) .ui-offer[data-bar]) .ui-hud__actions > * {
+  opacity: 0.3;
+}
+
+.ui:has(> .ui-upgrade:not([hidden], [data-leaving]) .ui-offer[data-bar]) .ui-traps__name {
+  visibility: hidden;
+}
+
+.ui:has(> .ui-upgrade:not([hidden], [data-leaving]) .ui-offer[data-bar]) .ui-hud__bar * {
+  pointer-events: none;
+}
+
+/* A short screen has no room for it: the focused card and its ghost say it. */
+@media (min-height: 701px) {
+  .ui:has(> .ui-upgrade:not([hidden], [data-leaving]) .ui-offer[data-bar])
+    .ui-hud__gear
+    .ui-place:is([data-state='ghost'], [data-lit])
+    .ui-place__label {
+    display: block;
+  }
+}
+
+/* The offer keeps clear of the bar it shows its places in, its cards' heads giving up the room. */
+.ui-upgrade:has(.ui-offer[data-bar]) {
+  --bar-room: 116px;
+
+  padding-bottom: var(--bar-room);
 }
 
 .ui-hud__traps {
@@ -3261,7 +3397,11 @@ svg.ui-title__lake {
   --cols: 3;
   --card-width: clamp(200px, (100vw - 120px - (var(--cols) - 1) * 24px) / var(--cols), 420px);
   --card-unit: clamp(1px, var(--card-width) / 340, 1.25px);
-  --card-head: clamp(72px, min(var(--card-width) * 0.6, 100vh - 590px), 252px);
+  --card-head: clamp(
+    72px,
+    min(var(--card-width) * 0.6, 100vh - 590px - var(--bar-room, 0px)),
+    252px
+  );
 
   display: grid;
   grid-template-columns: repeat(var(--cols), var(--card-width));
@@ -3901,12 +4041,13 @@ svg.ui-title__lake {
   --end-tint: color-mix(in srgb, var(--bad-vibe) 35%, transparent);
 }
 
+/* Wide enough for the row of five buttons in a language longer than the French. */
 .ui-end__body {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  width: min(100%, 1000px);
+  width: min(100%, 1200px);
   text-align: center;
 }
 
@@ -3943,7 +4084,7 @@ svg.ui-title__lake {
 }
 
 .ui-end__text {
-  max-width: 40em;
+  max-width: 44em;
   text-wrap: balance;
   color: var(--ui-muted);
   font-size: 17px;
@@ -4801,101 +4942,8 @@ svg.ui-title__lake {
   display: none;
 }
 
-.ui-places__place {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+.ui-places .ui-place {
   min-width: 76px;
-}
-
-.ui-places__ring {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--ui-line);
-  border-radius: 50%;
-  color: var(--turquoise);
-}
-
-.ui-places__icon {
-  width: 21px;
-  height: 21px;
-}
-
-.ui-places__place[data-state='held'] .ui-places__ring {
-  border-color: color-mix(in srgb, var(--turquoise) 60%, transparent);
-  background: color-mix(in srgb, var(--turquoise) 12%, transparent);
-}
-
-.ui-places__place:is([data-state='free'], [data-state='ghost']) .ui-places__ring {
-  border-style: dashed;
-}
-
-.ui-places__place[data-state='ghost'] .ui-places__ring,
-.ui-places__place[data-lit] .ui-places__ring {
-  border-color: var(--turquoise);
-  box-shadow: 0 0 calc(18px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 45%, transparent);
-}
-
-/* The new weapon flies from the focused card to its place, where a friendship cord knots around it. */
-.ui-places__place[data-state='ghost'] .ui-places__ring {
-  --from-x: 0px;
-  --from-y: 0px;
-  --arc-x: 0px;
-  --arc-y: 0px;
-  --near-x: 0px;
-
-  position: relative;
-}
-
-.ui-places__place[data-state='ghost'] .ui-places__icon {
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--turquoise) 70%, transparent));
-  animation: ui-place-flight calc(var(--beat) * 8) linear infinite;
-}
-
-.ui-places__place[data-state='ghost'] .ui-places__ring::after {
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  background: repeating-conic-gradient(
-    var(--mage) 0 9deg,
-    var(--or) 0 18deg,
-    var(--enracine) 0 27deg,
-    var(--turquoise) 0 36deg,
-    var(--superfan) 0 45deg
-  );
-  mask: radial-gradient(closest-side, transparent calc(100% - 5px), #000 calc(100% - 4.5px));
-  content: '';
-  animation: ui-place-cord calc(var(--beat) * 8) linear infinite;
-}
-
-.ui-places__place[data-state='ghost'] .ui-places__ring::before {
-  position: absolute;
-  top: -5px;
-  inset-inline-end: -5px;
-  z-index: 1;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--or), var(--mage) 60%, var(--sol));
-  content: '';
-  animation: ui-place-cord calc(var(--beat) * 8) linear infinite;
-}
-
-/* A name stays on one line, its place growing for it: two lines would push the places over the cards. */
-.ui-places__label {
-  color: var(--ui-muted);
-  white-space: nowrap;
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 1.15;
-  text-align: center;
-}
-
-.ui-places__place:is([data-state='ghost'], [data-lit]) .ui-places__label {
-  color: color-mix(in srgb, var(--turquoise) 45%, var(--texte));
 }
 
 @media (max-width: 1179px) {
@@ -4917,21 +4965,14 @@ svg.ui-title__lake {
   padding: 4px 8px;
 }
 
-.ui-offers__panels[data-multi] .ui-places__place {
-  width: auto;
+.ui-offers__panels[data-multi] .ui-place {
+  --ring: 28px;
+  --pearl: 5px;
+
+  min-width: 0;
 }
 
-.ui-offers__panels[data-multi] .ui-places__ring {
-  width: 28px;
-  height: 28px;
-}
-
-.ui-offers__panels[data-multi] .ui-places__icon {
-  width: 16px;
-  height: 16px;
-}
-
-.ui-offers__panels[data-multi] .ui-places__label {
+.ui-offers__panels[data-multi] .ui-place__label {
   display: none;
 }
 
@@ -5090,11 +5131,11 @@ svg.ui-title__lake {
   box-shadow: none;
 }
 
-:is(.ui-hud__level, .ui-gear, .ui-bracelet)[data-landed] {
+:is(.ui-hud__level, .ui-place, .ui-bracelet)[data-landed] {
   animation: ui-land var(--beat) cubic-bezier(0.2, 1.5, 0.4, 1);
 }
 
-:is(.ui-gear, .ui-bracelet)[data-landed] {
+.ui-bracelet[data-landed] {
   border-color: var(--or);
   box-shadow: 0 0 calc(22px * var(--ui-halo)) color-mix(in srgb, var(--or) 60%, transparent);
 }
@@ -5436,17 +5477,32 @@ svg.ui-title__lake {
   }
 }
 
-@keyframes ui-gear-a {
+@keyframes ui-place-pulse-a {
   from {
-    border-color: var(--or);
-    transform: scale(1.06);
+    border-color: var(--turquoise);
+    transform: scale(1.08);
   }
 }
 
-@keyframes ui-gear-b {
+@keyframes ui-place-pulse-b {
   from {
-    border-color: var(--or);
-    transform: scale(1.06);
+    border-color: var(--turquoise);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes ui-pearl-next {
+  from {
+    border-color: var(--turquoise);
+    background: var(--sol);
+  }
+
+  to {
+    border-color: var(--turquoise);
+    background: var(--turquoise);
+    box-shadow:
+      0 0 0 1.5px var(--sol),
+      0 0 calc(10px * var(--ui-halo)) var(--turquoise);
   }
 }
 
@@ -5751,6 +5807,33 @@ svg.ui-title__lake {
 }
 
 /* Narrow screens */
+
+/* Narrower than the 1280 reference, the end row keeps its five buttons on one line in every language. */
+@media (max-width: 1279px) {
+  .ui-end__actions {
+    gap: 12px calc(var(--ui-chevron) + 4px);
+  }
+
+  .ui-end .ui-button {
+    padding-inline: 16px;
+    font-size: 16px;
+  }
+
+  .ui-end .ui-button--primary {
+    min-width: 160px;
+    font-size: 18px;
+    letter-spacing: 0.1em;
+  }
+
+  .ui-end .ui-action {
+    gap: 10px;
+  }
+
+  .ui-end .ui-action__icon {
+    width: 22px;
+    height: 22px;
+  }
+}
 
 @media (max-width: 1200px) {
   .ui-cards[data-count='4'] {
@@ -6278,22 +6361,15 @@ svg.ui-title__lake {
     padding: 4px 10px 3px;
   }
 
-  .ui-places__place {
+  .ui-places .ui-place {
+    --ring: 28px;
+    --pearl: 5px;
+
     min-width: 60px;
     gap: 2px;
   }
 
-  .ui-places__ring {
-    width: 28px;
-    height: 28px;
-  }
-
-  .ui-places__icon {
-    width: 15px;
-    height: 15px;
-  }
-
-  .ui-places__label {
+  .ui-place__label {
     font-size: 10px;
   }
 
@@ -6359,10 +6435,9 @@ svg.ui-title__lake {
     flex: 1;
   }
 
+  /* The cards say it: a phone keeps the room for them. */
   .ui-offer > :is(.ui-kicker, .ui-heading) {
-    align-self: stretch;
-    padding-inline: 12px;
-    text-align: start;
+    display: none;
   }
 
   .ui-hint {
@@ -6382,7 +6457,7 @@ svg.ui-title__lake {
   .ui-cards,
   .ui-cards[data-count] {
     --card-unit: 1px;
-    --card-head: clamp(48px, 100vh - 315px, 96px);
+    --card-head: clamp(48px, 100vh - 265px - var(--bar-room, 0px), 96px);
 
     grid-template-columns: none;
     grid-auto-columns: minmax(0, 262px);
@@ -6628,6 +6703,19 @@ svg.ui-title__lake {
     padding-block: 16px;
   }
 
+  /* No room left for the hints: the focused card says what a press does. */
+  .ui-upgrade:has(.ui-offer[data-bar]) {
+    --bar-room: 88px;
+  }
+
+  .ui-upgrade:has(.ui-offer[data-bar]) .ui-upgrade__body {
+    gap: 6px;
+  }
+
+  .ui-offer[data-bar] .ui-hint {
+    display: none;
+  }
+
   .ui-end__body {
     gap: 8px;
   }
@@ -6850,10 +6938,32 @@ svg.ui-title__lake {
     padding: 6px;
   }
 
+  .ui-hud__gear .ui-place {
+    --ring: 34px;
+    --pearl: 6px;
+  }
+
+  /* The status panel alone stays over the veil: the bar is no panel here. */
+  .ui:has(> .ui-upgrade:not([hidden], [data-leaving]) .ui-offer[data-bar]) .ui-hud__bar {
+    z-index: auto;
+  }
+
+  .ui:has(> .ui-upgrade:not([hidden], [data-leaving]) .ui-offer[data-bar]) .ui-hud__status {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ui-upgrade:has(.ui-offer[data-bar]) {
+    --bar-room: 72px;
+  }
+
+  .ui-offer[data-bar] .ui-hint {
+    display: none;
+  }
+
   .ui-hud[data-multi] .ui-hud__status,
   .ui-drop,
   .ui-plugs,
-  .ui-hud__bar .ui-hud__gear,
   .ui-traps__name,
   .ui-hud__skills .ui-skill__text,
   .ui-gauge__text {

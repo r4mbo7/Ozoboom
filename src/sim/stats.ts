@@ -152,6 +152,11 @@ export function onlyGrowsDash(content: Pick<GameContent, 'upgrades'>, id: string
   return upgrade?.modifiers.every((modifier) => modifier.stat.startsWith('dash')) === true;
 }
 
+// The stat a card changes first, which names it.
+export function leadStat(form: Pick<RarityForm, 'modifiers'>): StatKey | null {
+  return form.modifiers[0]?.stat ?? null;
+}
+
 export function growsSkillAlone(form: Pick<RarityForm, 'modifiers'>): boolean {
   return (
     form.modifiers.length > 0 &&

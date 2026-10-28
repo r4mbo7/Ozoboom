@@ -5,6 +5,8 @@ export interface AuraAttack {
   kind: 'aura';
   damage: number;
   radius: number;
+  // How far past its rim the good mood spills onto the bad vibes that extra shots or pierce add.
+  overflow: number;
   kiff: { perChase: number; perHp: number; radiusPerNotch: number; ratePerNotch: number };
 }
 
@@ -32,6 +34,7 @@ export const KIFFEUR: ClassDefinition = {
     kind: 'aura',
     damage: 16,
     radius: 90,
+    overflow: 60,
     kiff: { perChase: 0.125, perHp: 0.02, radiusPerNotch: 15, ratePerNotch: 0.1 },
   },
   skill: {

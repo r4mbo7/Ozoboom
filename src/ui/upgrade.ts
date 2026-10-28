@@ -1,4 +1,5 @@
 import type { GameContent } from '../data/types';
+import { weaponGlyph } from '../data/weapon-glyphs';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import { direction, t, tn } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
@@ -27,11 +28,12 @@ import {
 } from './cards';
 import { formatNumber } from './format';
 import { playerLabel } from './hud-model';
-import { STAR, classMark, medallion, roleIcon, upgradeIcon, weaponIcon } from './icons';
+import { STAR, classMark, medallion, roleIcon, upgradeIcon } from './icons';
 import { type Menu, createMenu } from './menu';
 import { type MenuInput, createMenuInput } from './navigation';
 import type { Prompts } from './prompts';
 import type { UiFrame, UpgradeCue } from './types';
+import { placesKey, createPlaceRow } from './weapon-place';
 import { createWho, fillWho, whoColor } from './who';
 
 export interface UpgradeOverlay {
@@ -49,6 +51,8 @@ export interface UpgradeHost {
   cue(cue: UpgradeCue, variant: number): void;
   // null when the HUD does not show that player.
   landing(playerId: PlayerId, weaponId: string | null): HTMLElement | null;
+  // The HUD's own places, showing these; null when the HUD does not show that player.
+  offerPlaces(playerId: PlayerId, places: readonly WeaponPlace[] | null): HTMLElement | null;
   // null when nothing can draw the weapon: the card keeps its medallion.
   showWeapon(canvas: HTMLCanvasElement, weaponId: string, playerId: PlayerId): (() => void) | null;
   readonly prompts: Prompts;
@@ -194,7 +198,7 @@ function levelsAndFusions(model: WeaponCard): HTMLElement {
     row.append(el('span', 'ui-path__plus', '+'));
   }
   for (const fusion of model.fusions) {
-    row.append(icon('ui-path__fusion', medallion(weaponIcon(fusion.weapon.effect)), '0 0 84 84'));
+    row.append(icon('ui-path__fusion', medallion(weaponGlyph(fusion.weapon.effect)), '0 0 84 84'));
   }
   return row;
 }
@@ -238,8 +242,8 @@ function card(model: Card): HTMLButtonElement {
   }
   const glyph =
     model.kind === 'upgrade'
-      ? upgradeIcon(model.id, model.family)
-      : weaponIcon(model.weapon.effect);
+      ? upgradeIcon(model.id, model.family, model.stat)
+      : weaponGlyph(model.weapon.effect);
   const familyRow = el('span', 'ui-card__family');
   familyRow.append(el('span', 'ui-card__label', model.label));
   if (model.rarityLabel !== null) {
@@ -283,18 +287,6 @@ function card(model: Card): HTMLButtonElement {
     button.append(strip(model));
   }
   return button;
-}
-
-function place(model: WeaponPlace): HTMLElement {
-  const node = el('span', 'ui-places__place');
-  node.dataset.state = model.state;
-  setFlag(node, 'lit', model.lit);
-  const ring = el('span', 'ui-places__ring');
-  if (model.weapon !== null) {
-    ring.append(icon('ui-places__icon', weaponIcon(model.weapon.effect)));
-  }
-  node.append(ring, el('span', 'ui-places__label', model.label));
-  return node;
 }
 
 function centerOf(node: Element): { x: number; y: number } {
@@ -402,12 +394,11 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   const who = createWho();
   const kicker = el('p', 'ui-kicker');
   const heading = el('h2', 'ui-heading', t('Choisis ton amélioration'));
-  const places = el('div', 'ui-places');
-  places.setAttribute('role', 'img');
-  places.hidden = true;
+  const places = createPlaceRow('ui-places');
+  places.element.hidden = true;
   const cards = el('div', 'ui-cards');
   const hint = el('p', 'ui-hint');
-  element.append(who, kicker, heading, places, cards, hint);
+  element.append(who, kicker, heading, places.element, cards, hint);
 
   const input = createMenuInput();
   let current: UpgradeOffer | null = null;
@@ -420,7 +411,8 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   let beatMs = 0;
   let team = false;
   let clock = 0;
-  let shownPlaces = '';
+  // The places last shown, null once given back to the HUD.
+  let shownPlaces: string | null = null;
   let playing = -1;
   let stops: (() => void)[] = [];
   // The offer plays its weapons wherever the screen leaves them room: a phone turned changes that.
@@ -571,31 +563,37 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     slots: number,
     focused: Card | undefined,
   ): void {
-    const shows = models.some((model) => model.kind !== 'upgrade');
-    places.hidden = !shows;
-    setFlag(element, 'places', shows);
-    if (!shows) {
-      return;
-    }
-    const views = weaponPlaces(player, content, slots, focused);
-    const key = views
-      .map((view) => `${view.state}:${view.weapon?.id ?? ''}:${String(view.lit)}`)
-      .join(',');
+    const views = models.some((model) => model.kind !== 'upgrade')
+      ? weaponPlaces(player, content, slots, focused)
+      : null;
+    const key = views === null ? '' : placesKey(views);
     if (key === shownPlaces) {
       return;
     }
     shownPlaces = key;
-    places.setAttribute(
-      'aria-label',
-      t('Tes agrès : {places}', { places: views.map((view) => view.label).join(', ') }),
-    );
-    places.replaceChildren(...views.map(place));
-    aimFlight(focused);
+    // The HUD's bar shows them over the veil, where the chosen card lands; else the offer's own row.
+    const bar = host.offerPlaces(playerId, views);
+    const own = views !== null && bar === null;
+    setFlag(element, 'bar', bar !== null);
+    setFlag(element, 'places', own);
+    places.element.hidden = !own;
+    if (own) {
+      places.show(views);
+    }
+    aimFlight(bar ?? places.element, focused);
+  }
+
+  function givePlacesBack(): void {
+    if (shownPlaces !== null) {
+      shownPlaces = null;
+      host.offerPlaces(playerId, null);
+      delete element.dataset.bar;
+    }
   }
 
   // The new weapon of the focused card flies from its head to the place it would take.
-  function aimFlight(focused: Card | undefined): void {
-    const ring = places.querySelector('[data-state="ghost"] .ui-places__ring');
+  function aimFlight(row: HTMLElement, focused: Card | undefined): void {
+    const ring = row.querySelector('[data-state="ghost"] .ui-place__ring');
     const head =
       focused === undefined
         ? null
@@ -663,6 +661,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   }
 
   function reset(): void {
+    givePlacesBack();
     stopScenes();
     scenes = false;
     current = null;
@@ -697,6 +696,8 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       const edges = input.edges(snapshot.menu, snapshot.gameplay.move);
       later = runDue(later, now);
       if (offer === undefined) {
+        // Before the chosen card flies: it lands on the HUD's place of its weapon.
+        givePlacesBack();
         if (chosen === null) {
           reset();
         }
@@ -706,7 +707,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       if (offer !== current) {
         current = offer;
         chosen = null;
-        shownPlaces = '';
+        shownPlaces = null;
         playing = -1;
         input.open();
         setText(kicker, offerKicker(offer, player));
