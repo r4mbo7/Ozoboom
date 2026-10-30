@@ -292,6 +292,8 @@ export type WeaponEffect =
       kind: 'ribbon';
       length: number;
       markedTicks: number;
+      // Multiplies the damage a bad vibe it marks takes, times the lure's mark if both hold.
+      markedDamageMul: number;
       // On the drop, the ribbon crosses the whole arena instead of `length`.
       dropCrossesArena?: boolean;
     };
@@ -398,6 +400,12 @@ export interface LootRules {
   radius: number;
   // The trap of the game's first loot.
   first: string;
+}
+
+// Replaces a stage's loot draw: its first loot, then the odds of each trap, none for a trap it leaves out.
+export interface LootDraw {
+  first: string;
+  weights: Readonly<Record<string, number>>;
 }
 
 // As a loot; a player stepping on the bomb clears every bad vibe but the bosses.
@@ -522,6 +530,8 @@ export interface GameContent {
   dash?: DashDefinition;
   // The sets a game walks through between two stages (ADR 0018), never offered at the stage choice.
   paths?: readonly SetDefinition[];
+  // The short set that teaches the game, never offered at the stage choice.
+  tutorial?: SetDefinition;
   // One per set.
   summons?: readonly SummonDefinition[];
 }

@@ -4,6 +4,7 @@ import { TRACKS } from '../data/tracks';
 import type { GameContent, SetDefinition } from '../data/types';
 import type { SimState } from '../sim/state';
 import { drawTrack, seededRandom, stageTracks } from './track';
+import { playedSets } from '../data/played-sets';
 
 const DEFAULT_BREAK_BARS = 4;
 
@@ -11,15 +12,14 @@ export interface PlayedGame {
   state(): SimState;
   lastTrackId(): string;
   setNamed(id: string): SetDefinition;
-  // Absent, the speakers of the machine.
-  createContext?: () => BaseAudioContext;
+  // Absent, the speakers of the machine. A film renders into its own context, music and effects apart.
+  film?: () => BaseAudioContext;
 }
 
 export function createGameAudio(content: GameContent, game: PlayedGame): AudioEngine {
   return createAudioEngine({
-    ...(game.createContext === undefined ? {} : { createContext: game.createContext }),
-    setOf: (setId) =>
-      [...content.sets, ...(content.paths ?? [])].find((candidate) => candidate.id === setId),
+    ...(game.film === undefined ? {} : { createContext: game.film, stems: true }),
+    setOf: (setId) => playedSets(content).find((candidate) => candidate.id === setId),
     // Every peer of a festival walks into the same track of the stage ahead.
     trackFor: (set) =>
       drawTrack(

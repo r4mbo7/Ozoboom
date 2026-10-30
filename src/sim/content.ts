@@ -20,6 +20,7 @@ import { SKILLS } from './skills';
 import { SPECIALS } from './specials';
 import { WEAPONS } from './systems/weapons';
 import { lookup } from './lookup';
+import { playedSets } from '../data/played-sets';
 
 export { lookup };
 
@@ -43,7 +44,7 @@ export function resolveContent(content: GameContent): ResolvedContent {
     enemies: indexById(content.enemies, 'enemy'),
     traps: indexById(content.traps, 'trap'),
     upgrades: indexById(content.upgrades, 'upgrade'),
-    sets: indexById([...content.sets, ...(content.paths ?? [])], 'set'),
+    sets: indexById(playedSets(content), 'set'),
     bystanders: indexById(content.bystanders ?? [], 'bystander'),
     weapons: indexById(content.weapons ?? [], 'weapon'),
     fusions: content.fusions ?? [],

@@ -1,13 +1,12 @@
 import type { TrapCadence, TrapEffect } from '../../data/types';
-import { markedDamageMul, touches } from '../effects';
+import { touches } from '../effects';
 import type { SimState, SpeakerState } from '../state';
 import { fire } from './traps';
 import type { StepContext } from './types';
 
-export function speakers({ state, content, set, tempo }: StepContext): void {
+export function speakers({ state, set, tempo, enemyObstacles }: StepContext): void {
   const definitions = set.speakers ?? [];
   const beat = state.events.some((event) => event.type === 'beat');
-  const markedMul = markedDamageMul(content);
 
   for (const speaker of state.speakers ?? []) {
     const definition = definitions.find((candidate) => candidate.id === speaker.id);
@@ -26,7 +25,7 @@ export function speakers({ state, content, set, tempo }: StepContext): void {
           power: 1,
           damageMul: 1,
           radiusMul: 1,
-          markedMul,
+          obstacles: enemyObstacles,
         });
       }
       continue;

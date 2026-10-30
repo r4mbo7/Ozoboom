@@ -18,6 +18,8 @@ export interface AudioEngineOptions {
   readonly trapEffectOf?: TrapEffectOf;
   readonly sfxLookups?: SfxLookups;
   readonly createContext?: () => BaseAudioContext;
+  // A film's four-channel context: music and effects on two stereo pairs (createMasterChain).
+  readonly stems?: boolean;
   readonly onKickScheduled?: (tick: number, time: number) => void;
   // The offline bench drives it from the audio clock.
   readonly repeat?: (callback: () => void) => () => void;
@@ -135,7 +137,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
   const open = (): Running => {
     const context = (options.createContext ?? (() => new AudioContext()))();
-    const master = createMasterChain(context, muted, volume);
+    const master = createMasterChain(context, muted, volume, options.stems === true);
     const sfx = createSfx(master.sfx, trapEffectOf, options.sfxLookups, track);
     sfx.setHitSound(hitSound);
     return {

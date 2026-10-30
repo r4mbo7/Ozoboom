@@ -20,6 +20,9 @@ export interface DevicePrompts {
   confirm: string;
   back: string;
   skill: string;
+  move: readonly string[];
+  fire: readonly string[];
+  dash: string;
   // The key that places the held trap at the feet; none on a touch screen, which touches its tile.
   placeTrap: string;
   controls: readonly Control[];
@@ -42,6 +45,9 @@ const keyboard = (profile: KeyProfile, name: Name): DevicePrompts => ({
   confirm: t('Entrée'),
   back: t('Échap'),
   skill: keyNames(profile, 'skill', name)[0] ?? '',
+  move: moveKeys(profile, name),
+  fire: keyNames(profile, 'fire', name),
+  dash: keyNames(profile, 'dash', name)[0] ?? '',
   placeTrap: keyNames(profile, 'placeTrap', name)[0] ?? '',
   controls: [
     { action: t('Se déplacer'), keys: moveKeys(profile, name) },
@@ -64,6 +70,9 @@ const gamepad = (profile: KeyProfile): DevicePrompts => ({
   confirm: 'A',
   back: 'B',
   skill: buttonNames(profile, 'skill')[0] ?? '',
+  move: [sticks(profile).move],
+  fire: buttonNames(profile, 'fire'),
+  dash: buttonNames(profile, 'dash')[0] ?? '',
   placeTrap: buttonNames(profile, 'placeTrap')[0] ?? '',
   controls: [
     { action: t('Se déplacer'), keys: [sticks(profile).move] },
@@ -90,14 +99,17 @@ const touch = (): DevicePrompts => ({
   confirm: t('Toucher'),
   back: t('Retour'),
   skill: '',
+  move: [],
+  fire: [],
+  dash: '',
   placeTrap: '',
   controls: [
     { action: t('Se déplacer'), keys: [t('Glisser sur l’arène')] },
     { action: t('Viser et tirer'), keys: [t('Automatique')] },
-    { action: t('Poser un piège à ses pieds'), keys: [t('Toucher sa tuile')] },
-    { action: t('Le poser ailleurs'), keys: [t('Glisser sa tuile')] },
-    { action: t('Spéciale'), keys: [t('Toucher sa tuile')] },
-    { action: t('Dash'), keys: [t('Toucher sa tuile')] },
+    { action: t('Poser un piège à ses pieds'), keys: [t('Toucher son bouton')] },
+    { action: t('Le poser ailleurs'), keys: [t('Glisser son bouton')] },
+    { action: t('Spéciale'), keys: [t('Toucher son bouton')] },
+    { action: t('Dash'), keys: [t('Toucher son bouton')] },
     { action: t('Pause'), keys: ['❚❚'] },
   ],
 });
@@ -163,13 +175,4 @@ export function createPrompts(
     },
     version: () => keys.version() + names.version(),
   };
-}
-
-// None when they are the keys that choose a card, or on a touch screen.
-export function endlessHint(
-  prompts: DevicePrompts,
-  night = false,
-): { keys: readonly string[]; label: string }[] {
-  const same = prompts.navigate.join() === prompts.navigateRow.join();
-  return same ? [] : [{ keys: prompts.navigate, label: night ? t('la nuit') : t('sans fin') }];
 }

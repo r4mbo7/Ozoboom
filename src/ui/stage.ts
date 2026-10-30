@@ -12,6 +12,7 @@ import {
   stageQuestion,
 } from './night';
 import { formatTempo } from './format';
+import { createButtonRow } from './button-row';
 import { stepClass } from './lobby-model';
 import type { Prompts } from './prompts';
 import { stagePreview } from './stage-preview';
@@ -139,6 +140,7 @@ export interface StagePickerActions {
   choose(setId: string): void;
   chooseNight(night: Night): void;
   confirm(): void;
+  learn(): void;
   leave(): void;
 }
 
@@ -179,23 +181,38 @@ export function createStagePicker(
   const launchText = el('span', 'ui-launch__label');
   const launchMore = el('span', 'ui-launch__detail');
   launch.append(launchText, launchMore);
+  const learn = el('button', 'ui-button', t('Apprendre à jouer'));
+  learn.type = 'button';
+  learn.tabIndex = -1;
   const back = el('button', 'ui-button', t('Retour au perso'));
   back.type = 'button';
   back.tabIndex = -1;
   launch.addEventListener('click', () => {
     actions.confirm();
   });
+  learn.addEventListener('click', () => {
+    actions.learn();
+  });
   back.addEventListener('click', () => {
     actions.leave();
   });
+  const buttons = createButtonRow(cards.element, [launch, learn, back]);
   const footer = el('div', 'ui-lobby__actions');
-  footer.append(launch, back);
+  footer.append(launch, learn, back);
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-lobby__body');
   body.append(header, nights.element, cards.element, note, footer, hint);
   element.append(body);
 
   let device: InputDevice | null = null;
+
+  // What a validation does on the button in focus: the cards launch the set.
+  function confirmLabel(focused: HTMLButtonElement | null): string {
+    if (focused === back) {
+      return t('valider');
+    }
+    return focused === learn ? t('apprendre') : t('lancer');
+  }
 
   function paintHint(): void {
     if (device === null) {
@@ -208,7 +225,7 @@ export function createStagePicker(
       [
         ...(shown.tabs.length === 0 ? [] : [{ keys: shown.tabs, label: t('mode') }]),
         { keys: shown.navigateRow, label: t('scène') },
-        { keys: [shown.confirm], label: t('lancer') },
+        { keys: [shown.confirm], label: confirmLabel(buttons.focused) },
         { keys: [shown.back], label: t('retour') },
       ],
       shown.style,
@@ -218,6 +235,7 @@ export function createStagePicker(
   return {
     element,
     open() {
+      buttons.reset();
       paintHint();
     },
     setModel(next) {
@@ -240,6 +258,14 @@ export function createStagePicker(
     },
     update(edges) {
       if (nights.handle(edges)) {
+        return;
+      }
+      const focused = buttons.focused;
+      const taken = buttons.handle(edges);
+      if (buttons.focused !== focused) {
+        paintHint();
+      }
+      if (taken) {
         return;
       }
       const delta = (edges.right ? 1 : 0) - (edges.left ? 1 : 0);

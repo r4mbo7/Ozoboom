@@ -6,7 +6,6 @@ import {
   drawTo,
   healPlayersOnBar,
   keepWhere,
-  markedDamageMul,
   shockwave,
   slowEnemies,
   touches,
@@ -37,8 +36,7 @@ export function placedZones(ctx: StepContext): void {
 
 // After the steering: the totem replaces the step the enemies just took, as a lure does.
 export function placedTotems(ctx: StepContext): void {
-  const { state, content } = ctx;
-  const markedMul = markedDamageMul(content);
+  const { state } = ctx;
   for (const zone of state.placed ?? []) {
     const { effect } = definitionOf(ctx, zone);
     if (effect.kind !== 'totem') {
@@ -46,7 +44,7 @@ export function placedTotems(ctx: StepContext): void {
     }
     for (const enemy of state.enemies) {
       if (enemy.hp > 0 && touches(enemy, zone, zone.radius)) {
-        drawTo(enemy, zone, TOTEM_BODY_RADIUS + enemy.radius);
+        drawTo(enemy, zone, TOTEM_BODY_RADIUS + enemy.radius, ctx.enemyObstacles);
       }
     }
     if (isBarTick(state.tick, ctx.tempo)) {
@@ -56,8 +54,8 @@ export function placedTotems(ctx: StepContext): void {
         zone.radius,
         effect.damage * powerOf(ctx, zone),
         effect.knockback,
-        markedMul,
         zone.playerId,
+        ctx.enemyObstacles,
       );
     }
   }

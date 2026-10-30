@@ -7,12 +7,12 @@ export const shove: SpecialModule = (ctx, enemy, effect) => {
   if (effect.kind !== 'shove' || enemy.target === 'core') {
     return;
   }
-  const { state } = ctx;
+  const { state, set } = ctx;
   const player = playerById(state, enemy.target);
   if (player === undefined || player.downed || !touches(player, enemy, enemy.radius)) {
     return;
   }
-  pushAway(player, enemy, effect.knockback);
+  pushAway(player, enemy, effect.knockback, set.obstacles ?? []);
   const { width, height } = state.arena;
   player.x = clamp(player.x, player.radius, width - player.radius);
   player.y = clamp(player.y, player.radius, height - player.radius);

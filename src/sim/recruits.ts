@@ -3,7 +3,7 @@ import { clamp } from '../shared/scalar';
 import { isBeatTick } from '../shared/tempo';
 import { lookup } from './content';
 import { playerById } from './damage';
-import { hurtEnemy, knockBack, markedDamageMul, touches } from './effects';
+import { hurtEnemy, knockBack, touches } from './effects';
 import { resolveObstacles } from './obstacles';
 import type { EnemyState, PlayerState, RecruitState, SimState } from './state';
 import type { StepContext } from './systems/types';
@@ -78,7 +78,6 @@ export function recruits(ctx: StepContext): void {
     return;
   }
   const beat = isBeatTick(state.tick, tempo);
-  const markedMul = markedDamageMul(content);
   for (const recruit of list) {
     const player = playerById(state, recruit.playerId);
     if (player === undefined) {
@@ -94,8 +93,8 @@ export function recruits(ctx: StepContext): void {
     } else {
       approach(recruit, target.x, target.y, recruit.radius + target.radius, definition.speed);
       if (beat && touches(target, recruit, recruit.radius + CONTACT_SLACK)) {
-        hurtEnemy(state, target, definition.damage, markedMul, recruit.playerId, recruit);
-        knockBack(target, recruit, definition.knockback);
+        hurtEnemy(state, target, definition.damage, recruit.playerId, recruit);
+        knockBack(target, recruit, definition.knockback, ctx.enemyObstacles);
       }
     }
     recruit.ticksLeft -= 1;

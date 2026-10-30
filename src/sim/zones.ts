@@ -2,15 +2,7 @@ import type { ZoneCadence, ZoneDefinition } from '../data/types';
 import { clamp } from '../shared/scalar';
 import { isBeatTick, isOffbeatTick, type Tempo } from '../shared/tempo';
 import { normalize, type Vec2 } from '../shared/vec';
-import {
-  drawTo,
-  healPlayer,
-  hurtEnemy,
-  keepWhere,
-  knockBack,
-  markedDamageMul,
-  touches,
-} from './effects';
+import { drawTo, healPlayer, hurtEnemy, keepWhere, knockBack, touches } from './effects';
 import type { PlayerState, SimState, ZoneState } from './state';
 import { statValue } from './stats';
 import type { StepContext } from './systems/types';
@@ -59,12 +51,11 @@ export function layZone(
 }
 
 // After `traps`, which resets the slow of the bad vibes: this slow rules their next step.
-export function zones({ state, content, tempo }: StepContext): void {
+export function zones({ state, tempo, enemyObstacles }: StepContext): void {
   const laid = state.zones;
   if (laid === undefined) {
     return;
   }
-  const markedMul = markedDamageMul(content);
   for (const zone of laid) {
     const { definition, power, playerId } = zone;
     const strikes = strikesOn(definition.cadence, state.tick, tempo);
@@ -79,16 +70,16 @@ export function zones({ state, content, tempo }: StepContext): void {
         enemy.slowFactor = Math.min(enemy.slowFactor, definition.slowFactor);
       }
       if (definition.pull === true) {
-        drawTo(enemy, zone, enemy.radius);
+        drawTo(enemy, zone, enemy.radius, enemyObstacles);
       }
       if (strikes && definition.damage !== undefined) {
-        hurtEnemy(state, enemy, definition.damage * power, markedMul, playerId, at);
+        hurtEnemy(state, enemy, definition.damage * power, playerId, at);
       }
       if (strikes && definition.knockback !== undefined) {
-        knockBack(enemy, at, definition.knockback);
+        knockBack(enemy, at, definition.knockback, enemyObstacles);
       }
       if (closing) {
-        hurtEnemy(state, enemy, (definition.closeDamage ?? 0) * power, markedMul, playerId, at);
+        hurtEnemy(state, enemy, (definition.closeDamage ?? 0) * power, playerId, at);
       }
     }
     if (strikes && definition.heal !== undefined) {

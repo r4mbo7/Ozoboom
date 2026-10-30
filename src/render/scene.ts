@@ -26,6 +26,7 @@ import { FlashLimiter, beatEnvelope } from './motion';
 import { createTextures, destroyTextures } from './textures';
 import type { CameraFocus, Inset, RenderOptions, Renderer } from './types';
 import { byId, lookup } from './util';
+import { playedSets } from '../data/played-sets';
 
 export type { RenderContent } from './context';
 
@@ -82,7 +83,7 @@ export class Scene implements Renderer, InsetScene {
         new Scene(pixi, this.options, content, inWidth, inHeight, this.textures),
     );
     checkDrawings(content.classes, this.textures.players.drawings);
-    this.sets = new Map([...content.sets, ...(content.paths ?? [])].map((set) => [set.id, set]));
+    this.sets = new Map(playedSets(content).map((set) => [set.id, set]));
     this.camera = frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, width, height);
     this.layers = createLayers(this.stage);
     this.frame.resolution = pixi.resolution;
@@ -182,6 +183,7 @@ export class Scene implements Renderer, InsetScene {
 
   setOptions(options: Partial<RenderOptions>): void {
     Object.assign(this.options, options);
+    this.viewHeight = options.viewHeight ?? this.viewHeight;
     this.insets.setOptions(options);
   }
 

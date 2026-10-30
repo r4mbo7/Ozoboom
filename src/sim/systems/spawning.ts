@@ -73,7 +73,6 @@ export function spawnEnemy(
     attackCooldown: 0,
     slowFactor: 1,
     stunTicks: 0,
-    marked: false,
     isBoss,
   };
   state.nextEntityId += 1;

@@ -1,51 +1,15 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
-import { attackReach } from '../sim/attacks';
 import { type ClassInfo, ROW_CARDS, classColor, landscapeNotice } from './class-picker';
 import { CLASS_TEASERS, classTeaser } from './teaser';
 import { el, fillHint, goMark, setText, setVar } from './dom';
 import { PLAY } from './icons';
-import { createEndlessRow } from './endless';
-import { formatNumber, formatSeconds, formatTenth } from './format';
+import { createEndlessToggle } from './endless';
+import { createButtonRow } from './button-row';
+import { createClassSheet } from './class-sheet';
 import { stepClass } from './lobby-model';
-import { type Prompts, endlessHint } from './prompts';
+import type { Prompts } from './prompts';
 import type { ClassPickerModel, CreatePortrait } from './types';
-
-const STAT_STEPS = 5;
-
-export interface ClassStat {
-  readonly label: string;
-  readonly value: string;
-  // From 1 to STAT_STEPS, against the other classes.
-  readonly steps: number;
-}
-
-function reach(info: ClassInfo): number {
-  return attackReach(info.attack);
-}
-
-function stepsAmong(classes: readonly ClassInfo[], of: (info: ClassInfo) => number, value: number) {
-  const values = classes.map(of);
-  const low = Math.min(...values);
-  const high = Math.max(...values);
-  if (!(high > low)) {
-    return Math.ceil(STAT_STEPS / 2);
-  }
-  return 1 + Math.round(((STAT_STEPS - 1) * (value - low)) / (high - low));
-}
-
-export function classStats(classes: readonly ClassInfo[], info: ClassInfo): readonly ClassStat[] {
-  const rows: readonly [string, (entry: ClassInfo) => number, (value: number) => string][] = [
-    [t('Vie'), (entry) => entry.maxHp, formatNumber],
-    [t('Vitesse'), (entry) => entry.speed, formatTenth],
-    [t('Portée'), reach, formatNumber],
-  ];
-  return rows.map(([label, of, format]) => ({
-    label,
-    value: format(of(info)),
-    steps: stepsAmong(classes, of, of(info)),
-  }));
-}
 
 // The last card when the row below is shorter; null past the first or the last row.
 export function gridStep(
@@ -103,23 +67,6 @@ function spreadCards(row: HTMLElement): void {
   );
 }
 
-function statRow(stat: ClassStat): HTMLElement {
-  const row = el('div', 'ui-hero__stat');
-  const steps = el('span', 'ui-hero__steps');
-  steps.setAttribute('aria-hidden', 'true');
-  for (let index = 1; index <= STAT_STEPS; index += 1) {
-    const step = el('i', 'ui-hero__step');
-    step.toggleAttribute('data-on', index <= stat.steps);
-    steps.append(step);
-  }
-  row.append(
-    el('span', 'ui-hero__label', stat.label),
-    steps,
-    el('span', 'ui-hero__value', stat.value),
-  );
-  return row;
-}
-
 export function createClassPicker(
   prompts: Prompts,
   classes: readonly ClassInfo[],
@@ -147,25 +94,17 @@ export function createClassPicker(
   const stage = el('div', 'ui-hero__stage');
   stage.append(big.element);
   const name = el('h3', 'ui-hero__name');
-  const role = el('p', 'ui-hero__role');
-  const skill = el('div', 'ui-hero__skill');
-  const skillRecharge = el('span', 'ui-hero__recharge');
-  const skillHead = el('p', 'ui-hero__skillhead');
-  skillHead.append(el('span', 'ui-hero__skilllabel', t('Spéciale')), skillRecharge);
-  const skillName = el('p', 'ui-hero__skillname');
-  const skillText = el('p', 'ui-hero__skilltext');
-  skill.append(skillHead, skillName, skillText);
-  const stats = el('div', 'ui-hero__stats');
+  const sheet = createClassSheet(classes);
   const info = el('div', 'ui-hero__info');
   info.setAttribute('aria-live', 'polite');
-  info.append(name, role, skill, stats);
+  info.append(name, ...sheet.parts);
   const hero = el('div', 'ui-hero');
   hero.append(stage, info);
 
   const row = el('div', 'ui-classcards');
   row.setAttribute('role', 'radiogroup');
   row.setAttribute('aria-label', t('Classes'));
-  const endless = createEndlessRow(row, (enabled) => {
+  const endless = createEndlessToggle((enabled) => {
     actions.toggleEndless(enabled);
   });
   const goes = classes.map(() => goMark(PLAY));
@@ -217,6 +156,7 @@ export function createClassPicker(
   back.addEventListener('click', () => {
     actions.leave();
   });
+  const buttons = createButtonRow(row, [endless.toggle.button, confirm, back]);
   const footer = el('div', 'ui-lobby__actions');
   // In the row of the buttons: the picker already fills the height of a laptop screen.
   footer.append(endless.toggle.button, confirm, back);
@@ -232,10 +172,10 @@ export function createClassPicker(
     return Math.max(1, cards.filter((card) => card.offsetTop === top).length);
   }
 
-  // Past the last row, down goes on to the endless switch when there is one. True when the press was for the grid.
+  // Past the last row, down goes on to the buttons. True when the press was for the grid.
   function stepRows(edges: MenuIntents): boolean {
     const side = edges.down ? 1 : edges.up ? -1 : 0;
-    if (endless.row !== 'cards' || side === 0 || edges.back || edges.confirm) {
+    if (buttons.focused !== null || side === 0 || edges.back || edges.confirm) {
       return false;
     }
     const count = columns();
@@ -248,7 +188,7 @@ export function createClassPicker(
       reveal(next);
       return true;
     }
-    return side < 0 || !model.launches;
+    return side < 0;
   }
 
   function reveal(index: number): void {
@@ -271,16 +211,22 @@ export function createClassPicker(
           keys: grid ? [...new Set([...shown.navigateRow, ...shown.navigate])] : shown.navigateRow,
           label: t('choisir'),
         },
-        ...(model.launches && !grid ? endlessHint(shown) : []),
         {
           keys: [shown.confirm],
-          label:
-            endless.row === 'endless' ? t('changer') : model.launches ? t('lancer') : t('valider'),
+          label: confirmLabel(),
         },
         { keys: [shown.back], label: t('retour') },
       ],
       shown.style,
     );
+  }
+
+  function confirmLabel(): string {
+    const focused = buttons.focused;
+    if (focused === endless.toggle.button) {
+      return t('changer');
+    }
+    return focused === null && model.launches ? t('lancer') : t('valider');
   }
 
   function paint(): void {
@@ -291,14 +237,7 @@ export function createClassPicker(
     big.setClass(chosen.id);
     element.style.setProperty('--class-color', classColor(chosen));
     setText(name, t(chosen.name));
-    setText(role, t(chosen.role));
-    setText(skillName, t(chosen.skill.name));
-    setText(
-      skillRecharge,
-      t('recharge {duration}', { duration: formatSeconds(chosen.skill.cooldownTicks) }),
-    );
-    setText(skillText, t(chosen.skill.description));
-    stats.replaceChildren(...classStats(classes, chosen).map(statRow));
+    sheet.set(chosen);
     classes.forEach((entry, index) => {
       cards[index]?.setAttribute('aria-checked', String(entry.id === chosen.id));
     });
@@ -316,7 +255,7 @@ export function createClassPicker(
   return {
     element,
     open() {
-      endless.reset();
+      buttons.reset();
       paintHint();
     },
     setModel(next) {
@@ -333,15 +272,15 @@ export function createClassPicker(
       if (stepRows(edges)) {
         return;
       }
-      const focused = endless.row;
-      const taken = endless.handle(edges);
-      if (endless.row !== focused) {
+      const focused = buttons.focused;
+      const taken = buttons.handle(edges);
+      if (buttons.focused !== focused) {
         paintHint();
       }
       if (taken) {
         return;
       }
-      const delta = (edges.right || edges.down ? 1 : 0) - (edges.left || edges.up ? 1 : 0);
+      const delta = (edges.right ? 1 : 0) - (edges.left ? 1 : 0);
       const next = delta === 0 ? null : stepClass(classes, model.classId, delta);
       if (edges.back) {
         actions.leave();

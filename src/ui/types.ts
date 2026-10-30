@@ -2,6 +2,7 @@ import type { DecorId, GameContent } from '../data/types';
 import type { Locale } from '../shared/i18n';
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
 import type { PlayerId, SimState } from '../sim/state';
+import type { TutorialStep } from './tutorial';
 
 export interface LocalPlayer {
   playerId: PlayerId;
@@ -103,6 +104,8 @@ export type UpgradeCue =
 export interface UiCallbacks {
   onStart(): void;
   onRestart(): void;
+  // Solo: a short set that asks the gestures of the game one by one.
+  onLearn(): void;
   // A team's: the lobby shows again with the same players.
   onBackToLobby(): void;
   onQuit(): void;
@@ -168,7 +171,11 @@ export interface Ui {
   showLobby(model: LobbyModel): void;
   updateLobby(model: LobbyModel): void;
   showNotice(notice: Notice, details: string): void;
-  showGame(): void;
+  // A tutorial game asks the player its gestures one by one.
+  showGame(tutorial: boolean): void;
+  // Once per step of the sim, which only shows its events during that step; the gesture the tutorial
+  // asks now, null outside it.
+  observeStep(state: SimState): TutorialStep | null;
   // `best`: this device's record for the night before the game, null for the first game.
   showEnd(state: SimState, session: EndSession | undefined, best: number | null): void;
   update(state: SimState, frame: UiFrame, content: GameContent): void;

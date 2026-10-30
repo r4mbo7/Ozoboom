@@ -1,6 +1,7 @@
 import { t } from '../shared/i18n';
 import type { PlayerId } from '../sim/state';
-import { type ClassInfo, type ClassStepper, createClassStepper } from './class-picker';
+import { type ClassInfo, type ClassStepper, classColor, createClassStepper } from './class-picker';
+import { type ClassSheet, createClassSheet } from './class-sheet';
 import { openDiscord } from './discord';
 import { button, copyText, el, onPointerClick, setFlag, setText } from './dom';
 import { createActionButton } from './feedback-button';
@@ -174,7 +175,7 @@ export interface SeatCard {
   readonly tag: HTMLElement;
   readonly host: HTMLElement;
   readonly name: HTMLElement;
-  readonly role: HTMLElement;
+  readonly sheet: ClassSheet;
   readonly join: HTMLButtonElement;
   readonly wait: HTMLElement;
 }
@@ -216,13 +217,13 @@ export function createSeatCard(
   const name = el('p', 'ui-seat__name');
 
   const stepper = createClassStepper(classes, handlers.stepClass);
-  const role = el('p', 'ui-seat__role');
+  const sheet = createClassSheet(classes);
   const join = button('ui-seat__join', t('Appuie sur Entrée ou sur A pour rejoindre'));
   const wait = el('p', 'ui-seat__wait', t('En attente d’un joueur'));
   const drawn = portrait();
   const frame = el('div', 'ui-seat__portrait');
   frame.append(drawn.element);
-  item.append(head, frame, join, wait, field, name, stepper.element, role);
+  item.append(head, frame, join, wait, field, name, stepper.element, ...sheet.parts);
 
   input.addEventListener('input', () => {
     handlers.rename(seatName(input.value));
@@ -239,7 +240,7 @@ export function createSeatCard(
     tag,
     host,
     name,
-    role,
+    sheet,
     join,
     wait,
   };
@@ -260,7 +261,9 @@ export function paintSeatCard(
   card.field.hidden = !editable;
   card.name.hidden = seat === null || editable;
   card.stepper.element.hidden = seat === null;
-  card.role.hidden = seat === null;
+  for (const part of card.sheet.parts) {
+    part.hidden = seat === null;
+  }
   card.tag.hidden = seat === null;
   card.host.hidden = seat === null || !seat.host || view !== 'local';
   card.stepper.element.toggleAttribute('data-readonly', !editable);
@@ -275,8 +278,11 @@ export function paintSeatCard(
     card.input.value = name;
   }
   card.stepper.set(seat.classId);
-  const role = classes.find((info) => info.id === seat.classId)?.role;
-  setText(card.role, role === undefined ? '' : t(role));
+  const chosen = classes.find((info) => info.id === seat.classId);
+  if (chosen !== undefined) {
+    card.element.style.setProperty('--class-color', classColor(chosen));
+    card.sheet.set(chosen);
+  }
 }
 
 export interface StagePanel {

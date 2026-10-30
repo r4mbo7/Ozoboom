@@ -23,6 +23,7 @@ import { createSpeakerPlugs } from './speaker-plugs';
 import { cssName } from './sun';
 import { createTrapHand } from './trap-hand';
 import type { UiFrame } from './types';
+import { type TutorialBanner, createTutorialBanner } from './tutorial';
 
 export interface Hud {
   readonly element: HTMLElement;
@@ -32,6 +33,7 @@ export interface Hud {
   // The bar shows the places of an offer while its player chooses; null when it does not show that player.
   offerPlaces(playerId: PlayerId, places: readonly WeaponPlace[] | null): HTMLElement | null;
   reset(): void;
+  readonly tutorial: TutorialBanner;
 }
 
 function pauseButton(): HTMLButtonElement {
@@ -68,7 +70,8 @@ export function createHud(prompts: Prompts): Hud {
   bar.append(status, actions);
   const bracelets = createBraceletRow(prompts);
   const top = el('div', 'ui-hud__top');
-  top.append(ribbon.element, plugs.help);
+  const tutorial = createTutorialBanner();
+  top.append(ribbon.element, tutorial.element, plugs.help);
   const banner = createBossBanner();
   const danger = el('div', 'ui-hud__danger');
   danger.setAttribute('aria-hidden', 'true');
@@ -103,6 +106,7 @@ export function createHud(prompts: Prompts): Hud {
       return;
     }
     dressed = { definition, device, keys: prompts.version() };
+    tutorial.setDevice(prompts.for(device), device === 'touch');
     skill.build(definition.skill, device);
     setFlag(hand.element, 'gamepad', device === 'gamepad');
     setVar(element, '--who', `var(${cssName(classToken(definition.id))})`);
@@ -180,6 +184,7 @@ export function createHud(prompts: Prompts): Hud {
       gear.offer(shows ? places : null);
       return shows && places !== null ? gear.element : null;
     },
+    tutorial,
     reset() {
       hand.reset();
       level.reset();

@@ -1,8 +1,9 @@
+import type { ObstacleDefinition } from '../data/types';
 import { clamp } from '../shared/scalar';
 import { isBarTick, type Tempo } from '../shared/tempo';
-import type { ResolvedContent } from './content';
 import { hasStatus, isRooted, walkingSpeed } from './enemy-status';
-import type { EnemyState, PlayerId, PlayerState, SimEvent, SimState } from './state';
+import { moveUntilBlocked, resolveObstacles } from './obstacles';
+import type { EnemyState, MarkSource, PlayerId, PlayerState, SimEvent, SimState } from './state';
 
 interface Point {
   x: number;
@@ -20,52 +21,83 @@ export function touches(body: Circle, center: Point, radius: number): boolean {
   return dx * dx + dy * dy <= reach * reach;
 }
 
-export function pushAway(body: Point, from: Point, distance: number): void {
+export function pushAway(
+  body: Circle,
+  from: Point,
+  distance: number,
+  obstacles: readonly ObstacleDefinition[],
+): void {
   const dx = body.x - from.x;
   const dy = body.y - from.y;
   const length = Math.sqrt(dx * dx + dy * dy);
   if (length === 0) {
-    body.x += distance;
+    moveUntilBlocked(body, distance, 0, obstacles);
     return;
   }
-  body.x += (dx / length) * distance;
-  body.y += (dy / length) * distance;
+  moveUntilBlocked(body, (dx / length) * distance, (dy / length) * distance, obstacles);
 }
 
 // A boss always makes its way to the stage: effects may slow it, never push it back nor hold it.
-export function knockBack(enemy: EnemyState, from: Point, distance: number): void {
+export function knockBack(
+  enemy: EnemyState,
+  from: Point,
+  distance: number,
+  obstacles: readonly ObstacleDefinition[],
+): void {
   if (!enemy.isBoss) {
-    pushAway(enemy, from, distance);
+    pushAway(enemy, from, distance, obstacles);
   }
 }
 
-export function markEnemy(state: SimState, enemy: EnemyState, ticks: number): void {
-  enemy.marked = true;
-  enemy.markedUntilTick = Math.max(enemy.markedUntilTick ?? 0, state.tick + ticks);
+export function markEnemy(
+  state: SimState,
+  enemy: EnemyState,
+  source: MarkSource,
+  damageMul: number,
+  ticks: number,
+): void {
+  enemy.marks ??= {};
+  const held = enemy.marks[source];
+  enemy.marks[source] = {
+    damageMul: Math.max(held?.damageMul ?? 1, damageMul),
+    untilTick: Math.max(held?.untilTick ?? 0, state.tick + ticks),
+  };
 }
 
-export function markedDamageMul(content: ResolvedContent): number {
-  let mul = 1;
-  for (const trap of content.traps.values()) {
-    if (trap.effect.kind === 'lure') {
-      mul = Math.max(mul, trap.effect.markedDamageMul);
-    }
+export function lapseMarks(enemy: EnemyState, tick: number): void {
+  const { marks } = enemy;
+  if (marks === undefined) {
+    return;
   }
-  return mul;
+  if (marks.lure !== undefined && marks.lure.untilTick <= tick) {
+    delete marks.lure;
+  }
+  if (marks.ribbon !== undefined && marks.ribbon.untilTick <= tick) {
+    delete marks.ribbon;
+  }
+  if (marks.lure === undefined && marks.ribbon === undefined) {
+    delete enemy.marks;
+  }
+}
+
+function markDamageMul({ marks }: EnemyState): number {
+  if (marks === undefined) {
+    return 1;
+  }
+  return (marks.lure?.damageMul ?? 1) * (marks.ribbon?.damageMul ?? 1);
 }
 
 export function hurtEnemy(
   state: SimState,
   enemy: EnemyState,
   damage: number,
-  markedMul: number,
   by: PlayerId | null,
   from: Point | null,
 ): void {
   if (enemy.hp <= 0) {
     return;
   }
-  const marked = enemy.marked ? damage * markedMul : damage;
+  const marked = damage * markDamageMul(enemy);
   const frontMul = from === null ? 1 : frontDamageMul(enemy, from);
   const armorMul = enemy.armor === undefined || enemy.armor.open ? 1 : enemy.armor.damageMul;
   const dealt = marked * frontMul * armorMul;
@@ -177,22 +209,27 @@ export function shockwave(
   radius: number,
   damage: number,
   knockback: number,
-  markedMul: number,
   by: PlayerId | null,
+  obstacles: readonly ObstacleDefinition[],
 ): boolean {
   let reached = false;
   for (const enemy of state.enemies) {
     if (enemy.hp > 0 && touches(enemy, at, radius)) {
-      hurtEnemy(state, enemy, damage, markedMul, by, at);
-      knockBack(enemy, at, knockback);
+      hurtEnemy(state, enemy, damage, by, at);
+      knockBack(enemy, at, knockback, obstacles);
       reached = true;
     }
   }
   return reached;
 }
 
-// Replaces the step the steering just gave: same speed, slows and statuses, new goal.
-export function drawTo(enemy: EnemyState, at: Point, contact: number): void {
+// Replaces the step the steering just gave: same speed, slows, statuses and obstacles, new goal.
+export function drawTo(
+  enemy: EnemyState,
+  at: Point,
+  contact: number,
+  obstacles: readonly ObstacleDefinition[],
+): void {
   if (enemy.isBoss || hasStatus(enemy, 'bubbled')) {
     return;
   }
@@ -203,4 +240,5 @@ export function drawTo(enemy: EnemyState, at: Point, contact: number): void {
   const travel = clamp(distance - contact, 0, step);
   enemy.x = distance === 0 ? enemy.prevX : enemy.prevX + (dx / distance) * travel;
   enemy.y = distance === 0 ? enemy.prevY : enemy.prevY + (dy / distance) * travel;
+  resolveObstacles(enemy, enemy.prevX, enemy.prevY, obstacles);
 }

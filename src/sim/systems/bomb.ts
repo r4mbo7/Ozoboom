@@ -60,7 +60,7 @@ export function bombs({ state, content, set }: StepContext): void {
           enemy.revivesLeft = 0;
         }
         if (enemy.downTicks === undefined) {
-          hurtEnemy(state, enemy, enemy.hp, 1, trigger.id, null);
+          hurtEnemy(state, enemy, enemy.hp, trigger.id, null);
         } else {
           delete enemy.downTicks;
           enemy.lastHitBy = trigger.id;

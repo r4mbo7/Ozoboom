@@ -1,7 +1,7 @@
 import { clamp } from '../../shared/scalar';
 import { normalize } from '../../shared/vec';
 import { touches } from '../effects';
-import { freeShare } from '../obstacles';
+import { moveUntilBlocked } from '../obstacles';
 import type { PlayerState, SimState } from '../state';
 import type { SkillModule, SkillOf } from './types';
 
@@ -13,10 +13,7 @@ export const dash: SkillModule<SkillOf<'dash'>> = {
     const { width, height } = state.arena;
     const x = clamp(player.x + direction.x * distance, player.radius, width - player.radius);
     const y = clamp(player.y + direction.y * distance, player.radius, height - player.radius);
-    // The charge stops at the first obstacle in its way rather than leaping it.
-    const share = freeShare(player.x, player.y, x, y, player.radius, set.obstacles ?? []);
-    player.x += (x - player.x) * share;
-    player.y += (y - player.y) * share;
+    moveUntilBlocked(player, x - player.x, y - player.y, set.obstacles ?? []);
     player.invulnerableTicks = Math.max(player.invulnerableTicks ?? 0, effect.invulnerableTicks);
     if (effect.tauntRadius !== undefined) {
       taunt(state, player, effect.tauntRadius);

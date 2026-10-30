@@ -84,6 +84,7 @@ import { createStillness } from './stillness';
 import { createWeaponScenes } from './weapon-scenes';
 import { downloadJson } from './download';
 import { type RecordedGame, type Recorder, type Recording, createRecorder } from './recording';
+import { TUTORIAL } from '../data/tutorial';
 
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
 const TOGETHER_FOCUS: CameraFocus = { kind: 'everyone' };
@@ -97,6 +98,11 @@ export interface Replay {
   readonly source: CommandSource;
   // A film renders the game's sound offline, in step with the page clock.
   readonly audio?: () => BaseAudioContext;
+  // A film's own camera; absent, the one of a watched game.
+  readonly camera?: { readonly focus?: CameraFocus; readonly viewHeight?: number };
+  // While a film runs to its next shot, the steps each tick plays at once, unheard and undrawn; 0
+  // the rest of the time.
+  readonly rush?: () => number;
 }
 
 type MatchStart = Omit<RecordedGame, 'version' | 'query'>;
@@ -154,11 +160,13 @@ export async function startGame(
     state: () => match.session.state,
     lastTrackId: () => prefs.trackId,
     setNamed,
-    ...(replay?.audio === undefined ? {} : { createContext: replay.audio }),
+    ...(replay?.audio === undefined ? {} : { film: replay.audio }),
   });
 
   let stageId = prefs.stageId;
   let frozenAlpha = 0;
+  // The tutorial asks to plug a speaker: the scene shows the way.
+  let guidingToSpeaker = false;
   let endingLeft = 0;
   let recorder: Recorder | null = null;
   let match = soloMatch();
@@ -320,6 +328,7 @@ export async function startGame(
       onConfirmClass: openStagePicker,
       onLeaveClassPicker: toTitle,
       onConfirmStage: play,
+      onLearn: learn,
       onLeaveStagePicker: openClassPicker,
       onPlayTogether: openLobby,
       onPlayOnline: openOnline,
@@ -352,16 +361,18 @@ export async function startGame(
     audio.setMood(sound.mood);
   }
 
+  // The tutorial is one set, never endless nor a festival.
   function newMatch(
     slots: readonly PlayerSlot[],
     locals: ReadonlyMap<PlayerId, DeviceId | null>,
     focus: CameraFocus,
+    tutorial = false,
   ): Match {
     const start: MatchStart = {
       seed: dev.seed ?? crypto.getRandomValues(new Uint32Array(1))[0] ?? 0,
-      setId: stageId,
-      endless: prefs.endless,
-      festival: prefs.festival,
+      setId: tutorial ? TUTORIAL.id : stageId,
+      endless: !tutorial && prefs.endless,
+      festival: !tutorial && prefs.festival,
       players: slots,
     };
     return createMatch({
@@ -399,7 +410,7 @@ export async function startGame(
     recorder = null;
   }
 
-  function watch({ recording, source }: Replay): void {
+  function watch({ recording, source, camera }: Replay): void {
     setMatch(
       createMatch({
         seed: recording.seed,
@@ -410,19 +421,27 @@ export async function startGame(
         slots: recording.players,
         locals: new Map(),
         source,
-        focus: recording.players.length > 1 ? TOGETHER_FOCUS : SOLO_FOCUS,
+        focus: camera?.focus ?? (recording.players.length > 1 ? TOGETHER_FOCUS : SOLO_FOCUS),
       }),
     );
+    if (camera?.viewHeight !== undefined) {
+      renderer.setOptions({ viewHeight: camera.viewHeight });
+    }
     beginGame(recording.trackId, null);
   }
 
   // Alone, the one player reads the merged view: keyboard, mouse and gamepad as one.
-  function soloMatch(): Match {
-    if (dev.players > 1) {
+  function soloMatch(tutorial = false): Match {
+    if (dev.players > 1 && !tutorial) {
       const slots = benchSlots(content, dev.players);
       return newMatch(slots, new Map(slots.map((slot) => [slot.id, null])), TOGETHER_FOCUS);
     }
-    return newMatch([{ id: 0, classId: prefs.classId }], new Map([[0, null]]), SOLO_FOCUS);
+    return newMatch(
+      [{ id: 0, classId: prefs.classId }],
+      new Map([[0, null]]),
+      SOLO_FOCUS,
+      tutorial,
+    );
   }
 
   function setMatch(next: Match): void {
@@ -467,9 +486,8 @@ export async function startGame(
     return content.sets.find((definition) => definition.id === id) ?? defaultSet;
   }
 
-  function nextTrackId(): string {
-    return drawTrack(stageTracks(TRACKS, setNamed(stageId).trackIds), prefs.trackId, Math.random)
-      .id;
+  function nextTrackId(setId = stageId): string {
+    return drawTrack(stageTracks(TRACKS, setNamed(setId).trackIds), prefs.trackId, Math.random).id;
   }
 
   function localLobby(): LobbyModel {
@@ -521,7 +539,7 @@ export async function startGame(
     gameMode = mode ?? 'online';
     // An online guest may still be fading out when the host plays again.
     fade.lift();
-    ui.showGame();
+    ui.showGame(match.session.state.setId === TUTORIAL.id);
     applySound();
     if (mode !== null) {
       stats.start(match.session.state, {
@@ -542,6 +560,12 @@ export async function startGame(
     lobbySeats = null;
     setMatch(soloMatch());
     beginGame(nextTrackId(), 'solo');
+  }
+
+  function learn(): void {
+    lobbySeats = null;
+    setMatch(soloMatch(true));
+    beginGame(nextTrackId(TUTORIAL.id), 'solo');
   }
 
   function launch(seated: LaunchedSeats): void {
@@ -712,6 +736,15 @@ export async function startGame(
       ) {
         return;
       }
+      const rush = replay?.rush?.() ?? 0;
+      for (let rushed = 0; rushed < rush && playing(); rushed++) {
+        if (!stepOnce(false)) {
+          return;
+        }
+      }
+      if (rush > 0) {
+        return;
+      }
       stepOnce();
       if (probe?.afterStep() === true) {
         match.frame({ devices: hub.poll(), merged: hub.merged() });
@@ -739,13 +772,20 @@ export async function startGame(
     return screen === 'game';
   }
 
-  function stepOnce(): boolean {
+  function stepOnce(heard = true): boolean {
     const start = performance.now();
     if (!match.step((point) => renderer.screenToWorld(point))) {
       return false;
     }
     const { session } = match;
-    audio.update(session.state);
+    if (heard) {
+      audio.update(session.state);
+    }
+    const guided = ui.observeStep(session.state) === 'speaker';
+    if (guided !== guidingToSpeaker) {
+      guidingToSpeaker = guided;
+      renderer.setOptions({ guideToSpeaker: guided });
+    }
     const { status } = session.state;
     if (screen === 'game' && (status === 'won' || status === 'lost')) {
       beginEnding(session.state, status);
@@ -782,6 +822,10 @@ export async function startGame(
       frozenAlpha = alpha;
     }
     const { session } = match;
+    if ((replay?.rush?.() ?? 0) > 0) {
+      session.endFrame();
+      return;
+    }
     const start = performance.now();
     weaponScenes.frame(start, prefs.calmMode || prefersCalmMode(), session.frame);
     renderer.render(

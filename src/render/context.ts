@@ -20,6 +20,7 @@ import { classTokens } from './palette';
 import type { Layers } from './layers';
 import type { Textures } from './textures';
 import type { RenderOptions } from './types';
+import { playedSets } from '../data/played-sets';
 
 export type WeaponLook = Pick<
   WeaponDefinition,
@@ -93,9 +94,9 @@ export function createRenderContext(
       ),
     ),
     helpTicks: new Map((content.bystanders ?? []).map((def) => [def.id, def.helpTicks])),
-    stages: new Map([...content.sets, ...(content.paths ?? [])].map((set) => [set.id, set])),
+    stages: new Map(playedSets(content).map((set) => [set.id, set])),
     speakerLooks: new Map(
-      content.sets.map((set) => [
+      playedSets(content).map((set) => [
         set.id,
         new Map((set.speakers ?? []).map((def) => [def.id, def])),
       ]),

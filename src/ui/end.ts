@@ -1,8 +1,9 @@
+import { TUTORIAL } from '../data/tutorial';
 import type { GameContent } from '../data/types';
 import type { InputDevice } from '../input/intents';
 import { t } from '../shared/i18n';
 import { scoreOf } from '../sim/score';
-import type { SimState } from '../sim/state';
+import type { FestivalState, SimState } from '../sim/state';
 import { el, fillHint, icon, setText } from './dom';
 import { createActionButton, createFeedbackButton } from './feedback-button';
 import { openDiscord } from './discord';
@@ -68,11 +69,29 @@ export function endingOf(state: SimState): Ending {
   return state.core.hp <= 0 ? silence() : emptyFloor();
 }
 
+// A player alone who fell before the first boss of the night is offered the tutorial.
+export function offersTutorial(state: {
+  readonly status: SimState['status'];
+  readonly players: readonly unknown[];
+  readonly set: Pick<SimState['set'], 'tier'>;
+  readonly setId: string;
+  readonly festival?: Pick<FestivalState, 'scenes'>;
+}): boolean {
+  return (
+    state.status === 'lost' &&
+    state.players.length === 1 &&
+    state.set.tier === 0 &&
+    (state.festival?.scenes.length ?? 1) === 1 &&
+    state.setId !== TUTORIAL.id
+  );
+}
+
 export function createEnd(
   prompts: Prompts,
   onRestart: () => void,
   onBackToLobby: () => void,
   onQuit: () => void,
+  onLearn: () => void,
   onFeedback?: () => void,
 ): EndScreen {
   const element = el('section', 'ui-screen ui-overlay ui-end');
@@ -91,8 +110,10 @@ export function createEnd(
   const table = el('div', 'ui-end__table');
   table.append(cards, lesson.element);
   const stats = el('dl', 'ui-end__stats');
-  const restart = el('button', 'ui-button ui-button--primary', t('Rejouer'));
+  const restart = el('button', 'ui-button ui-button--primary');
   restart.type = 'button';
+  const learn = el('button', 'ui-button', t('Apprendre à jouer'));
+  learn.type = 'button';
   const lobby = el('button', 'ui-button', t('Retour au salon'));
   lobby.type = 'button';
   const quit = el('button', 'ui-button', t('Retour au titre'));
@@ -103,7 +124,15 @@ export function createEnd(
   wait.setAttribute('role', 'status');
   wait.hidden = true;
   const actions = el('div', 'ui-end__actions');
-  actions.append(restart, wait, lobby, quit, ...(feedback === null ? [] : [feedback]), discord);
+  actions.append(
+    restart,
+    wait,
+    learn,
+    lobby,
+    quit,
+    ...(feedback === null ? [] : [feedback]),
+    discord,
+  );
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-end__body');
   const details = el('div', 'ui-end__details');
@@ -119,6 +148,8 @@ export function createEnd(
       turnCard(turned.card);
     } else if (item === restart) {
       onRestart();
+    } else if (item === learn) {
+      onLearn();
     } else if (item === lobby) {
       onBackToLobby();
     } else if (item === quit) {
@@ -203,13 +234,18 @@ export function createEnd(
       );
       const guest = session?.role === 'guest';
       const leads = session?.role === 'host';
+      const learns = offersTutorial(state);
+      // After the tutorial, the button plays a set of the night.
+      setText(restart, state.setId === TUTORIAL.id ? t('Jouer') : t('Rejouer'));
       restart.hidden = guest;
+      learn.hidden = !learns;
       lobby.hidden = !leads;
       wait.hidden = !guest;
       // The cards come before the buttons, as they read; the screen opens on the first button.
       items = [
         ...players.map((player) => player.card),
         ...(guest ? [] : [restart]),
+        ...(learns ? [learn] : []),
         ...(leads ? [lobby] : []),
         quit,
         ...(feedback === null ? [] : [feedback]),

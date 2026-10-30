@@ -5,6 +5,10 @@ export type CameraFocus = { kind: 'player'; playerId: PlayerId } | { kind: 'ever
 export interface RenderOptions {
   calmMode: boolean;
   focus?: CameraFocus;
+  // The tutorial asks to plug a speaker: the way to the nearest one shows.
+  guideToSpeaker?: boolean;
+  // World units from top to bottom of the screen; absent, the camera's own for the screen's height.
+  viewHeight?: number;
 }
 
 // The scene of a weapon on its card, painted before each image; `viewHeight` is in world units.

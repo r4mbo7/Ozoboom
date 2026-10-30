@@ -6,6 +6,7 @@ import { FULL_PATHS, FULL_SUMMONS } from './full';
 import { FUSIONS } from './fusions';
 import { SETS } from './sets';
 import { TRAPS } from './traps';
+import { TUTORIAL } from './tutorial';
 import type { GameContent } from './types';
 import { RARITY_WEIGHTS, UPGRADES } from './upgrades';
 import { WEAPONS } from './weapons';
@@ -23,4 +24,5 @@ export const CONTENT: GameContent = {
   dash: DASH,
   paths: FULL_PATHS,
   summons: FULL_SUMMONS,
+  tutorial: TUTORIAL,
 };

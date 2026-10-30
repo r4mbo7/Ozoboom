@@ -22,6 +22,7 @@ import { createProjectiles } from './projectiles';
 import { createRecruits } from './recruits';
 import { createSpecials } from './specials';
 import { createSpeakerCards } from './speaker-card';
+import { createSpeakerGuide } from './speaker-guide';
 import { createSpeakers } from './speakers';
 import { createTraps } from './traps';
 import { createWeapons } from './weapons';
@@ -65,6 +66,7 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
     createDownedScreen(ctx),
     createSpeakerCards(ctx),
     createMarkers(ctx),
+    createSpeakerGuide(ctx),
     createStageMarker(ctx),
     createEffects(ctx, (id) => traps.reachOf(id)),
     createHits(ctx, enemies),

@@ -1,6 +1,7 @@
 import type { EntityId } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import { createCarried } from './weapon-carried';
+import { createDevilStick } from './weapon-devil-stick';
 import { createFlight } from './weapon-flight';
 import { createGround } from './weapon-ground';
 import { createKit } from './weapon-kit';
@@ -16,6 +17,7 @@ export interface WeaponsFamily extends Family {
 export function createWeapons(ctx: RenderContext): WeaponsFamily {
   const kit = createKit(ctx);
   const carried = createCarried(ctx, kit);
+  const devilStick = createDevilStick(ctx, kit);
   const flight = createFlight(ctx, kit);
   const ground = createGround(ctx, kit);
 
@@ -37,6 +39,7 @@ export function createWeapons(ctx: RenderContext): WeaponsFamily {
     shadowOf: (id) => flight.shadowOf(id),
     update(state, alpha, frame) {
       carried.update(state, alpha, frame);
+      devilStick.update(state, alpha, frame);
       flight.update(state, alpha, frame);
       ground.update(state, alpha, frame);
       kit.transients.update(frame.now);
@@ -44,6 +47,7 @@ export function createWeapons(ctx: RenderContext): WeaponsFamily {
     },
     onEvent(event, state, frame) {
       drawFiring(ctx, kit, event, state, frame);
+      devilStick.onEvent(event, state, frame);
     },
     reset() {
       clear();

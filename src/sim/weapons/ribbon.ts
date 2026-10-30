@@ -26,7 +26,7 @@ export const ribbon: WeaponModule = {
         along <= length + enemy.radius &&
         across <= RIBBON_HALF_WIDTH + enemy.radius
       ) {
-        markEnemy(state, enemy, effect.markedTicks);
+        markEnemy(state, enemy, 'ribbon', effect.markedDamageMul, effect.markedTicks);
       }
     }
     return true;

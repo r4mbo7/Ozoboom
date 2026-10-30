@@ -1,4 +1,10 @@
-import type { TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
+import type {
+  ObstacleDefinition,
+  SetDefinition,
+  TrapCadence,
+  TrapDefinition,
+  TrapEffect,
+} from '../../data/types';
 import { isBeatTick, type Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
 import { blackedOut } from '../blackout';
@@ -11,7 +17,6 @@ import {
   healPlayersOnBar,
   hurtEnemy,
   markEnemy,
-  markedDamageMul,
   shockwave,
   slowEnemies,
   touches,
@@ -44,7 +49,7 @@ export interface Firing {
   power: number;
   damageMul: number;
   radiusMul: number;
-  markedMul: number;
+  obstacles: readonly ObstacleDefinition[];
 }
 
 export function traps(ctx: StepContext): void {
@@ -60,7 +65,6 @@ export function traps(ctx: StepContext): void {
 
   const firing = cadencesFiring(state);
   const silent = blackedOut(state);
-  const markedMul = markedDamageMul(content);
   const fireAll = (lures: boolean) => {
     for (const trap of state.traps) {
       const definition = trapDefinition(content, trap);
@@ -78,7 +82,7 @@ export function traps(ctx: StepContext): void {
           power: 1,
           damageMul: statValue(owner, 'trapDamageMul', 1),
           radiusMul: statValue(owner, 'trapRadiusMul', 1),
-          markedMul,
+          obstacles: ctx.enemyObstacles,
         });
         if (reached || definition.cadence !== 'continuous') {
           const { id, kind, x, y } = trap;
@@ -137,18 +141,8 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
 
   const { x, y } = action;
 
-  const { radius } = definition;
-  const { arena, core } = state;
-  const footprint = { x, y, radius };
-  const fits =
-    x >= radius &&
-    x <= arena.width - radius &&
-    y >= radius &&
-    y <= arena.height - radius &&
-    !overlaps(footprint, core, core.radius) &&
-    !touchesObstacle(footprint, set.obstacles ?? []) &&
-    !state.traps.some((trap) => overlaps(footprint, trap, trapDefinition(content, trap).radius));
-  if (!fits) {
+  const footprint = { x, y, radius: definition.radius };
+  if (!trapFits(state, set, footprint, (trap) => trapDefinition(content, trap).radius)) {
     return;
   }
 
@@ -166,6 +160,26 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
   });
   player.hand?.splice(held, 1);
   state.events.push({ type: 'trapPlaced', id, kind: definition.id, x, y });
+}
+
+// Where a trap may stand: inside the arena, off the core, the obstacles and the other traps.
+export function trapFits(
+  state: Pick<SimState, 'arena' | 'core' | 'traps'>,
+  set: Pick<SetDefinition, 'obstacles'>,
+  footprint: { x: number; y: number; radius: number },
+  radiusOf: (trap: TrapState) => number,
+): boolean {
+  const { x, y, radius } = footprint;
+  const { arena, core } = state;
+  return (
+    x >= radius &&
+    x <= arena.width - radius &&
+    y >= radius &&
+    y <= arena.height - radius &&
+    !overlaps(footprint, core, core.radius) &&
+    !touchesObstacle(footprint, set.obstacles ?? []) &&
+    !state.traps.some((trap) => overlaps(footprint, trap, radiusOf(trap)))
+  );
 }
 
 export function trapAt(
@@ -207,7 +221,7 @@ function cadencesFiring(state: SimState): Readonly<Record<TrapCadence, boolean>>
 }
 
 export function fire(firing: Firing): boolean {
-  const { state, tempo, at, effect, contact, by, power, damageMul, radiusMul, markedMul } = firing;
+  const { state, tempo, at, effect, contact, by, power, damageMul, radiusMul, obstacles } = firing;
   let reached = false;
   switch (effect.kind) {
     case 'shockwave':
@@ -217,8 +231,8 @@ export function fire(firing: Firing): boolean {
         effect.radius * radiusMul,
         effect.damage * damageMul,
         effect.knockback,
-        markedMul,
         by,
+        obstacles,
       );
     case 'beam': {
       const direction = trapPointing(effect, at.direction, state.tick, tempo);
@@ -230,7 +244,7 @@ export function fire(firing: Firing): boolean {
           (inBeam(enemy, at, direction, length, effect.width / 2) ||
             sweptOver(enemy, at, before, direction, length))
         ) {
-          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, markedMul, by, at);
+          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, by, at);
           reached = true;
         }
       }
@@ -244,8 +258,8 @@ export function fire(firing: Firing): boolean {
     case 'lure':
       for (const enemy of state.enemies) {
         if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
-          markEnemy(state, enemy, LURE_MARK_TICKS);
-          drawTo(enemy, at, contact + enemy.radius);
+          markEnemy(state, enemy, 'lure', effect.markedDamageMul, LURE_MARK_TICKS);
+          drawTo(enemy, at, contact + enemy.radius, obstacles);
           reached = true;
         }
       }

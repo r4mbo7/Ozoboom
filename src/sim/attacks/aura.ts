@@ -3,7 +3,7 @@ import { angleOf } from '../../shared/angle';
 import { beatOfTick, isBeatTick, isOffbeatTick, type Tempo } from '../../shared/tempo';
 import { distanceSquared } from '../../shared/vec';
 import type { AttackModule, Upgraded } from './types';
-import { hurtEnemy, markedDamageMul, touches } from '../effects';
+import { hurtEnemy, touches } from '../effects';
 import { gaugeValue } from '../gauges';
 import type { EnemyState, PlayerState } from '../state';
 import { statValue } from '../stats';
@@ -29,17 +29,16 @@ export const aura: AttackModule<AuraAttack> = {
     const damage =
       statValue(player, 'damageMul', attack.damage) *
       (1 + notches * statValue(player, 'kiffDamageAdd', 0));
-    const markedMul = markedDamageMul(ctx.content);
     const from = { x: player.x, y: player.y };
     let hit = false;
     for (const enemy of state.enemies) {
       if (enemy.hp > 0 && touches(enemy, player, radius)) {
-        hurtEnemy(state, enemy, damage, markedMul, player.id, from);
+        hurtEnemy(state, enemy, damage, player.id, from);
         hit = true;
       }
     }
     for (const enemy of spilledOn(state.enemies, player, attack, radius)) {
-      hurtEnemy(state, enemy, damage, markedMul, player.id, from);
+      hurtEnemy(state, enemy, damage, player.id, from);
       state.events.push({
         type: 'moodSpilled',
         playerId: player.id,

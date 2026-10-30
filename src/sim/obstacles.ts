@@ -106,8 +106,20 @@ export function lineBlocked(
   return false;
 }
 
-// An obstacle it already overlaps does not hold it, so that it can get out.
-export function freeShare(
+// A charge, a push or a pull stops at the first obstacle in its way rather than leaping it.
+export function moveUntilBlocked(
+  body: Circle,
+  dx: number,
+  dy: number,
+  obstacles: readonly ObstacleDefinition[],
+): void {
+  const share = freeShare(body.x, body.y, body.x + dx, body.y + dy, body.radius, obstacles);
+  body.x += dx * share;
+  body.y += dy * share;
+}
+
+// An obstacle it already overlaps does not hold it, so that it can get out; one it only touches does.
+function freeShare(
   x0: number,
   y0: number,
   x1: number,
@@ -126,13 +138,14 @@ export function freeShare(
     const ox = x0 - obstacle.x;
     const oy = y0 - obstacle.y;
     const touch = radius + obstacle.radius;
-    const outside = ox * ox + oy * oy - touch * touch;
+    const squared = ox * ox + oy * oy;
     const toward = ox * lx + oy * ly;
-    const discriminant = toward * toward - lengthSquared * outside;
-    if (outside <= 0 || toward >= 0 || discriminant < 0) {
+    const discriminant = toward * toward - lengthSquared * (squared - touch * touch);
+    const overlapping = squared < (touch - TOLERANCE) * (touch - TOLERANCE);
+    if (overlapping || toward >= 0 || discriminant < 0) {
       continue;
     }
-    share = Math.min(share, (-toward - Math.sqrt(discriminant)) / lengthSquared);
+    share = Math.min(share, Math.max(0, (-toward - Math.sqrt(discriminant)) / lengthSquared));
   }
   return share;
 }

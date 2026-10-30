@@ -1,3 +1,4 @@
+import { lapseMarks } from '../effects';
 import type { Positioned } from '../state';
 import type { StepContext } from './types';
 
@@ -17,10 +18,7 @@ export function beginStep({ state }: StepContext): void {
     state.tick += 1;
   }
   for (const enemy of state.enemies) {
-    if (enemy.markedUntilTick !== undefined && enemy.markedUntilTick <= state.tick) {
-      enemy.marked = false;
-      delete enemy.markedUntilTick;
-    }
+    lapseMarks(enemy, state.tick);
   }
 }
 

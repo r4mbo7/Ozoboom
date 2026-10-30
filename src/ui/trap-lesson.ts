@@ -73,7 +73,7 @@ export function createTrapLesson(): TrapLesson {
     },
     setDevice(shown) {
       if (shown.placeTrap === '') {
-        how.replaceChildren(t('Touche la tuile d’un piège pour le poser à tes pieds'));
+        how.replaceChildren(t('Touche le bouton d’un piège pour le poser à tes pieds'));
       } else {
         fillHint(
           how,

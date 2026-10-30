@@ -1,10 +1,25 @@
-import type { EdgeSide, Rarity, StatKey, SummonLook, ZoneDefinition } from '../data/types';
+import type {
+  EdgeSide,
+  LootDraw,
+  Rarity,
+  StatKey,
+  SummonLook,
+  ZoneDefinition,
+} from '../data/types';
 import type { Emote } from './commands';
 
 export type { EdgeSide };
 
 export type EntityId = number;
 export const PLAYER_IDS = [0, 1, 2, 3] as const;
+
+// Marks of different sources multiply the damage a bad vibe takes; one source keeps its strongest.
+export type MarkSource = 'lure' | 'ribbon';
+
+export interface EnemyMark {
+  damageMul: number;
+  untilTick: number;
+}
 export type PlayerId = (typeof PLAYER_IDS)[number];
 
 export function playerIdAt(index: number): PlayerId {
@@ -172,9 +187,8 @@ export interface EnemyState extends Positioned {
   stunTicks: number;
   // Ticks left of each.
   statuses?: Partial<Record<EnemyStatusKind, number>>;
-  marked: boolean;
-  // Whatever put the mark there (lure, ribbon), the longest wins.
-  markedUntilTick?: number;
+  // Absent unmarked.
+  marks?: Partial<Record<MarkSource, EnemyMark>>;
   isBoss: boolean;
   // Credited with the kill.
   lastHitBy?: PlayerId;
@@ -619,6 +633,8 @@ export interface SimState {
   nextLootBar?: number;
   // Due, and no bad vibe carries it yet.
   lootDue?: boolean;
+  // Set by the festival on its last stage only, so other games keep their replay fingerprint.
+  lootDraw?: LootDraw;
   // Optional like `loots`, and created with the first bomb dropped.
   bombs?: BombState[];
   nextBombBar?: number;

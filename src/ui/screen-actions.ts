@@ -67,7 +67,7 @@ export function classActions(
 export function stageActions(
   callbacks: Pick<
     UiCallbacks,
-    'onChooseStage' | 'onChooseNight' | 'onConfirmStage' | 'onLeaveStagePicker'
+    'onChooseStage' | 'onChooseNight' | 'onConfirmStage' | 'onLearn' | 'onLeaveStagePicker'
   >,
   shown: Once,
 ): StagePickerActions {
@@ -80,6 +80,9 @@ export function stageActions(
     },
     confirm: shown.once(() => {
       callbacks.onConfirmStage();
+    }),
+    learn: shown.once(() => {
+      callbacks.onLearn();
     }),
     leave: shown.once(() => {
       callbacks.onLeaveStagePicker();

@@ -61,15 +61,20 @@ export function createRecorder(source: CommandSource, game: RecordedGame): Recor
       },
     },
     save(state, trackId) {
-      const head = JSON.stringify({
-        format: RECORDING_FORMAT,
-        ...game,
-        trackId,
-        hash: hashState(state),
-      });
-      return `${head.slice(0, -1)},"steps":[\n${steps.join(',\n')}\n]}\n`;
+      return recordingText(game, trackId, hashState(state), steps);
     },
   };
+}
+
+// A recording as text: its head on the first line, then each step, as JSON, on a line of its own.
+export function recordingText(
+  game: RecordedGame,
+  trackId: string,
+  hash: string,
+  steps: readonly string[],
+): string {
+  const head = JSON.stringify({ format: RECORDING_FORMAT, ...game, trackId, hash });
+  return `${head.slice(0, -1)},"steps":[\n${steps.join(',\n')}\n]}\n`;
 }
 
 // Plays the recorded steps one by one, then waits; `ended` hears the state after the last one.

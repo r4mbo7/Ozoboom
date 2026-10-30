@@ -1,6 +1,7 @@
 import type { GameContent, SetDefinition, TierDefinition } from '../data/types';
 import { TICKS_PER_BEAT, TICK_RATE_HZ, tempoOf, type Tempo } from '../shared/tempo';
 import type { GameStatus, SetProgress } from './state';
+import { playedSets } from '../data/played-sets';
 
 export type LineupSlotKind = 'phrase' | 'break' | 'drop' | 'sunrise';
 
@@ -22,9 +23,7 @@ export interface LineupInput {
 }
 
 export function setOf(content: GameContent, setId: string): SetDefinition {
-  const set = [...content.sets, ...(content.paths ?? [])].find(
-    (candidate) => candidate.id === setId,
-  );
+  const set = playedSets(content).find((candidate) => candidate.id === setId);
   if (set === undefined) {
     throw new Error(`unknown set "${setId}"`);
   }

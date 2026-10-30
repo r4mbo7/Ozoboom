@@ -7,6 +7,7 @@ import type { Frame } from './frame';
 import { FRISBEE_STREAK_LENGTH } from './textures-weapons';
 import { type Piece, SIZES, type WeaponKit } from './weapon-kit';
 import { type WeaponStyle, arcLook, arcProgress } from './weapon-looks';
+import { createSparks } from './weapon-spark';
 import { add, byId, hide, setTint } from './util';
 import { ViewPool } from './views';
 
@@ -96,6 +97,7 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
       hide(view.shadow, view.reticle, ...view.ghosts);
     },
   );
+  const sparks = createSparks(ctx);
   const landings = new Map<EntityId, Landing>();
   let frameNo = 0;
 
@@ -144,7 +146,8 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
     const view = views.acquire(projectile.id);
     const returning = projectile.returning === true;
     const color = frame.palette[returning ? look.token : look.outToken];
-    const shape = look.kind === 'spark' ? w.sparkShot : w.icons[look.kind];
+    const spark = look.kind === 'spark';
+    const shape = spark ? w.devilStick.sparkHead : w.icons[look.kind];
     const x = lerp(projectile.prevX, projectile.x, alpha);
     const y = lerp(projectile.prevY, projectile.y, alpha);
     const newTick = view.tick !== state.tick;
@@ -162,12 +165,14 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
     kit.place(
       view.piece,
       shape,
-      { x, y: y - body.lift, size, rotation, painted: look.kind === 'lob' },
+      { x, y: y - body.lift, size, rotation, painted: spark || look.kind === 'lob' },
       color,
       frame,
     );
 
-    if (look.kind === 'boomerang') {
+    if (spark) {
+      sparks.draw(projectile, { x, y, rotation, size }, color);
+    } else if (look.kind === 'boomerang') {
       streak(view, x, y, size, color, frame);
       if (returning && newTick && state.tick % TWINKLE_EVERY === 0) {
         kit.transients.spawn({
@@ -261,10 +266,12 @@ export function createFlight(ctx: RenderContext, kit: WeaponKit): FlightFamily {
     update(state, alpha, frame) {
       frameNo += 1;
       views.begin();
+      sparks.begin();
       for (const projectile of state.projectiles) {
         draw(projectile, state, alpha, frame);
       }
       views.end();
+      sparks.end();
       land(frame);
     },
     reset() {

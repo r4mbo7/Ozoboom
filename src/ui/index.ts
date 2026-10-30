@@ -224,6 +224,9 @@ export function createUi(
       shown.once(() => {
         callbacks.onQuit();
       }),
+      shown.once(() => {
+        callbacks.onLearn();
+      }),
       feedback,
     );
     const lobby = createLobby(prompts, lobbyActions(callbacks, shown), classes, portrait);
@@ -312,9 +315,10 @@ export function createUi(
       grace.start();
       menuInput.open();
     },
-    showGame() {
+    showGame(tutorial) {
       trapStood = false;
       hud.reset();
+      hud.tutorial.reset(tutorial);
       sun.fix('nuit');
       show('game');
     },
@@ -324,6 +328,9 @@ export function createUi(
       show('end');
       grace.start();
       menuInput.open();
+    },
+    observeStep(state) {
+      return hud.tutorial.observe(state);
     },
     update(state, frame, content) {
       lastContent = content;

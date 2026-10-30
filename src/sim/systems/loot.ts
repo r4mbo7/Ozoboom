@@ -1,4 +1,4 @@
-import type { TrapDefinition } from '../../data/types';
+import type { LootDraw, TrapDefinition } from '../../data/types';
 import { type RngState, nextFloat } from '../../shared/prng';
 import { barOfTick, isBarTick } from '../../shared/tempo';
 import { touches } from '../effects';
@@ -45,7 +45,11 @@ export function dropLoot({ state, content, set, tempo }: StepContext, x: number,
     return;
   }
   const dropped = state.lootsDropped ?? 0;
-  const trapId = dropped === 0 ? rules.first : drawLootTrap(state.rng, [...content.traps.values()]);
+  const draw = state.lootDraw;
+  const trapId =
+    dropped === 0
+      ? (draw?.first ?? rules.first)
+      : drawLootTrap(state.rng, lootOdds([...content.traps.values()], draw));
   const id = state.nextEntityId;
   state.nextEntityId += 1;
   const ticksLeft = rules.lifetimeBars * tempo.ticksPerBar;
@@ -66,6 +70,16 @@ export function layDownTrap(state: SimState, player: PlayerState): boolean {
   (state.loots ??= []).push({ id, trapId, x, y, prevX: x, prevY: y });
   state.events.push({ type: 'lootDropped', id, trapId, x, y });
   return true;
+}
+
+function lootOdds(
+  traps: readonly TrapDefinition[],
+  draw: LootDraw | undefined,
+): readonly Pick<TrapDefinition, 'id' | 'lootWeight'>[] {
+  if (draw === undefined) {
+    return traps;
+  }
+  return traps.map(({ id }) => ({ id, lootWeight: draw.weights[id] ?? 0 }));
 }
 
 export function drawLootTrap(

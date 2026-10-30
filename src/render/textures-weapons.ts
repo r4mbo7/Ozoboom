@@ -8,10 +8,10 @@ import {
   doubleStroke,
   glow,
   paint,
-  polygon,
   type Ctx,
   type Shape,
 } from './paint';
+import { type DevilStickTextures, createDevilStickTextures } from './textures-devil-stick';
 import { createDiaboloTexture } from './textures-diabolo';
 import { type PlateTextures, createPlateTextures } from './textures-plate';
 import { type TotemTextures, createTotemTextures } from './textures-totem';
@@ -22,12 +22,14 @@ export interface WeaponTextures {
   readonly icons: Readonly<Record<WeaponKind, Shape>>;
   readonly plate: PlateTextures;
   readonly totem: TotemTextures;
-  readonly sparkShot: Shape;
+  readonly devilStick: DevilStickTextures;
   readonly frisbeeStreak: Shape;
   readonly swing: Shape;
   readonly swingFull: Shape;
   readonly hoopRing: Shape;
   readonly dash: Shape;
+  // The ribbon's mark: every set holds every n-th dash of one ring, each set tinted its colour.
+  readonly markDashes: readonly Shape[];
   readonly zone: Shape;
   readonly shadow: Shape;
 }
@@ -38,15 +40,38 @@ const SWING_RADIUS = 64;
 const OUTER = 8;
 const GAP = 3;
 
-function outlined(ctx: Ctx, outer = OUTER, gap = GAP): void {
+function outlined(ctx: Ctx): void {
   ctx.fill();
-  doubleStroke(ctx, outer, gap);
+  doubleStroke(ctx, OUTER, GAP);
 }
 
 function line(ctx: Ctx, x1: number, y1: number, x2: number, y2: number): void {
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
+}
+
+const MARK_RADIUS = 54;
+const MARK_DASHES = 16;
+const MARK_SETS = 4;
+
+function markDashes(set: number): Shape {
+  return paint(128, 128, MARK_RADIUS, (ctx) => {
+    ctx.lineCap = 'round';
+    const step = TAU / MARK_DASHES;
+    for (const [style, width] of [
+      [SHADE_DEEP, 8],
+      [WHITE, 5],
+    ] as const) {
+      ctx.strokeStyle = style;
+      ctx.lineWidth = width;
+      for (let index = set; index < MARK_DASHES; index += MARK_SETS) {
+        ctx.beginPath();
+        ctx.arc(0, 0, MARK_RADIUS, index * step, index * step + step * 0.5);
+        ctx.stroke();
+      }
+    }
+  });
 }
 
 function icon(kind: WeaponKind): Shape {
@@ -192,19 +217,7 @@ export function createWeaponTextures(): WeaponTextures {
     },
     plate,
     totem,
-    sparkShot: paint(32, 32, 12, (ctx) => {
-      glow(ctx, WHITE, 6);
-      ctx.fillStyle = SHADE_DEEP;
-      ctx.strokeStyle = WHITE;
-      ctx.lineJoin = 'round';
-      polygon(ctx, [
-        [12, 0],
-        [0, -6],
-        [-12, 0],
-        [0, 6],
-      ]);
-      outlined(ctx, 4.5, 1.6);
-    }),
+    devilStick: createDevilStickTextures(),
     frisbeeStreak: paint(FRISBEE_STREAK_LENGTH, 72, 26, (ctx) => {
       ctx.fillStyle = 'rgb(255 255 255 / 0.08)';
       ctx.fillRect(-FRISBEE_STREAK_LENGTH / 2, -23, FRISBEE_STREAK_LENGTH, 46);
@@ -232,6 +245,7 @@ export function createWeaponTextures(): WeaponTextures {
       circle(ctx, 54);
       ctx.stroke();
     }),
+    markDashes: Array.from({ length: MARK_SETS }, (_, set) => markDashes(set)),
     zone: paint(256, 256, 120, (ctx) => {
       ctx.strokeStyle = WHITE;
       ctx.lineCap = 'round';
@@ -253,9 +267,15 @@ export function createWeaponTextures(): WeaponTextures {
 export function destroyWeaponTextures(textures: WeaponTextures): void {
   const { glint, rim, gilt } = textures.plate;
   const { eye, cone, bass, pull, dissolve } = textures.totem;
+  const { stick, sparkHead, sparkTrail, nick } = textures.devilStick;
   for (const shape of [
     ...Object.values(textures.icons),
     ...singles(textures),
+    ...textures.markDashes,
+    stick,
+    sparkHead,
+    sparkTrail,
+    nick,
     glint,
     rim,
     gilt,
@@ -270,15 +290,6 @@ export function destroyWeaponTextures(textures: WeaponTextures): void {
 }
 
 function singles(textures: WeaponTextures): Shape[] {
-  const {
-    sparkShot,
-    frisbeeStreak,
-    swing: arc,
-    swingFull,
-    hoopRing,
-    dash,
-    zone,
-    shadow,
-  } = textures;
-  return [sparkShot, frisbeeStreak, arc, swingFull, hoopRing, dash, zone, shadow];
+  const { frisbeeStreak, swing: arc, swingFull, hoopRing, dash, zone, shadow } = textures;
+  return [frisbeeStreak, arc, swingFull, hoopRing, dash, zone, shadow];
 }

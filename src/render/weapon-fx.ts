@@ -116,7 +116,7 @@ export class Transients {
   }
 }
 
-const RIBBON_TOKENS = ['mage', 'tank', 'healer', 'turquoise'] as const;
+export const RIBBON_TOKENS = ['mage', 'tank', 'healer', 'turquoise'] as const;
 const SEGMENTS = 44;
 const WAVES = 2.2;
 const WAVE_SPEED = 0.55;

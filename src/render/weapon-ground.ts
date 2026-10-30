@@ -4,6 +4,7 @@ import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import type { WeaponKit } from './weapon-kit';
+import { RIBBON_TOKENS } from './weapon-fx';
 import { createPlates } from './weapon-plate';
 import { createTotems } from './weapon-totem';
 import { add, hide, setTint } from './util';
@@ -27,10 +28,14 @@ export function createGround(ctx: RenderContext, kit: WeaponKit): GroundFamily {
   );
   const plates = createPlates(ctx, kit, ground);
   const totems = createTotems(ctx, kit);
-  const marks = new ViewPool<Sprite>(
-    () => add(layers.fx, w.dash),
-    (sprite) => {
-      hide(sprite);
+  // Only the ribbon's mark is drawn: a lure marks only what stands in its aura, which shows it.
+  const marks = new ViewPool<{ ring: Container; dashes: Sprite[] }>(
+    () => {
+      const ring = layers.fx.addChild(new Container());
+      return { ring, dashes: w.markDashes.map((shape) => add(ring, shape)) };
+    },
+    ({ ring }) => {
+      ring.visible = false;
     },
   );
   let marked = 0;
@@ -65,17 +70,19 @@ export function createGround(ctx: RenderContext, kit: WeaponKit): GroundFamily {
     marks.begin();
     marked = 0;
     for (const enemy of state.enemies) {
-      if (!enemy.marked) {
+      if (enemy.marks?.ribbon === undefined) {
         continue;
       }
       marked += 1;
-      const sprite = marks.acquire(enemy.id);
-      sprite.visible = true;
-      setTint(sprite, frame.palette.or);
-      sprite.position.set(lerp(enemy.prevX, enemy.x, alpha), lerp(enemy.prevY, enemy.y, alpha));
-      sprite.rotation = frame.calm ? 0 : frame.now * 0.05 + enemy.id;
-      sprite.scale.set((enemy.radius * 1.5 + 5) / w.dash.radius);
-      sprite.alpha = 0.9 * frame.light.haloAlpha + 0.1;
+      const { ring, dashes } = marks.acquire(enemy.id);
+      ring.visible = true;
+      for (const [index, sprite] of dashes.entries()) {
+        setTint(sprite, frame.palette[RIBBON_TOKENS[index % RIBBON_TOKENS.length] ?? 'or']);
+      }
+      ring.position.set(lerp(enemy.prevX, enemy.x, alpha), lerp(enemy.prevY, enemy.y, alpha));
+      ring.rotation = frame.calm ? 0 : frame.now * 0.05 + enemy.id;
+      ring.scale.set((enemy.radius * 1.5 + 5) / w.dash.radius);
+      ring.alpha = 0.9 * frame.light.haloAlpha + 0.1;
     }
     marks.end();
   }

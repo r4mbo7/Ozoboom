@@ -987,12 +987,12 @@ svg.ui-title__lake {
     color-mix(in srgb, var(--class-color) 45%, transparent);
 }
 
-.ui-hero__role {
+.ui-sheet__role {
   font-size: 18px;
   text-wrap: balance;
 }
 
-.ui-hero__skill {
+.ui-sheet__skill {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1002,7 +1002,7 @@ svg.ui-title__lake {
   background: color-mix(in srgb, var(--class-color) 9%, var(--ui-panel));
 }
 
-.ui-hero__skillhead {
+.ui-sheet__skillhead {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -1012,66 +1012,66 @@ svg.ui-title__lake {
   line-height: 1.2;
 }
 
-.ui-hero__skilllabel {
+.ui-sheet__skilllabel {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.ui-hero__recharge::before {
+.ui-sheet__recharge::before {
   content: '·';
   margin-inline-end: 8px;
   font-weight: 800;
 }
 
-.ui-hero__skillname {
+.ui-sheet__skillname {
   color: var(--class-color);
   font-size: 18px;
   font-weight: 800;
   line-height: 1.15;
 }
 
-.ui-hero__skilltext {
+.ui-sheet__skilltext {
   color: var(--ui-muted);
   font-size: 14px;
 }
 
-.ui-hero__stats {
+.ui-sheet__stats {
   display: grid;
   gap: 8px;
 }
 
-.ui-hero__stat {
+.ui-sheet__stat {
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr) 56px;
   gap: 12px;
   align-items: center;
 }
 
-.ui-hero__label {
+.ui-sheet__label {
   color: var(--ui-muted);
   font-size: 14px;
   font-weight: 700;
 }
 
-.ui-hero__steps {
+.ui-sheet__steps {
   display: flex;
   gap: 5px;
 }
 
-.ui-hero__step {
+.ui-sheet__step {
   flex: 1;
   height: 8px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--texte) 14%, transparent);
 }
 
-.ui-hero__step[data-on] {
+.ui-sheet__step[data-on] {
   background: var(--class-color);
   box-shadow: 0 0 calc(8px * var(--ui-halo)) color-mix(in srgb, var(--class-color) 50%, transparent);
 }
 
-.ui-hero__value {
+.ui-sheet__value {
   font-size: 15px;
   font-weight: 700;
   text-align: end;
@@ -1203,7 +1203,7 @@ svg.ui-title__lake {
   gap: 10px;
 }
 
-.ui-classpicker[data-many] :is(.ui-hero__role, .ui-hero__skilltext) {
+.ui-classpicker[data-many] :is(.ui-sheet__role, .ui-sheet__skilltext) {
   text-wrap: pretty;
 }
 
@@ -1517,10 +1517,12 @@ svg.ui-title__lake {
   list-style: none;
 }
 
+/* A taken seat lays its seven parts on the rows its neighbours share: names, specials and stats line up. */
 .ui-seat {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-row: span 7;
+  grid-template-rows: subgrid;
   gap: 12px;
   min-height: 250px;
   padding: 18px;
@@ -1535,6 +1537,8 @@ svg.ui-title__lake {
 }
 
 .ui-seat[data-state='empty'] {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   border-style: dashed;
@@ -1589,16 +1593,60 @@ svg.ui-title__lake {
 }
 
 .ui-seat__name {
+  align-self: center;
   padding-block: 8px;
   font-size: 22px;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
 
-.ui-seat__role {
+.ui-seat .ui-sheet__role {
   color: var(--ui-muted);
   font-size: 14px;
-  text-wrap: balance;
+}
+
+.ui-seat .ui-sheet__skill {
+  padding: 8px 12px;
+  border-radius: 14px;
+}
+
+.ui-seat .ui-sheet__skillhead {
+  font-size: 11px;
+}
+
+.ui-seat .ui-sheet__skillname {
+  font-size: 16px;
+}
+
+.ui-seat .ui-sheet__skilltext {
+  font-size: 13px;
+}
+
+/* Every label of the seat takes the width of the longest, whatever the language. */
+.ui-seat .ui-sheet__stats {
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 6px 10px;
+}
+
+.ui-seat .ui-sheet__stat {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+.ui-seat .ui-sheet__label {
+  font-size: 13px;
+}
+
+.ui-seat .ui-sheet__steps {
+  gap: 4px;
+}
+
+.ui-seat .ui-sheet__step {
+  height: 6px;
+}
+
+.ui-seat .ui-sheet__value {
+  font-size: 14px;
 }
 
 .ui-seat__join {
@@ -1789,29 +1837,6 @@ svg.ui-title__lake {
   .ui-lobby__actions .ui-button:not(.ui-button--primary) {
     width: calc(100% - 2 * var(--ui-chevron));
   }
-}
-
-/* The lobby scrolls under its buttons: « Lancer le set » stays in sight. */
-.ui-lobby {
-  scroll-padding-bottom: 120px;
-}
-
-.ui-lobby .ui-lobby__actions:has(> .ui-launch:not([hidden])) {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  align-self: stretch;
-  margin-inline: calc(-1 * var(--ui-gap));
-  padding: 28px var(--ui-gap) 14px;
-}
-
-.ui-lobby .ui-lobby__actions:has(> .ui-launch:not([hidden]))::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(transparent, var(--sol) 32px);
-  pointer-events: none;
 }
 
 @media (max-width: 720px) {
@@ -2089,6 +2114,11 @@ svg.ui-title__lake {
 
 .ui-stagecards[data-festival] .ui-stage:not([aria-checked='true']) .ui-stage__preview {
   opacity: 0.6;
+}
+
+/* Three buttons in a row: the chevron of the middle one keeps clear of the launch button. */
+.ui-stagepicker .ui-lobby__actions {
+  column-gap: calc(var(--ui-chevron) + 8px);
 }
 
 .ui-stagepicker__note {
@@ -2608,6 +2638,143 @@ svg.ui-title__lake {
   font-weight: 700;
   text-align: center;
   text-wrap: balance;
+}
+
+/* One gesture of the tutorial at a time: its line and its keys; a tick once done. */
+.ui-tutorial {
+  display: flex;
+  max-width: calc(100% - 32px);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  border: 2px solid var(--turquoise);
+  border-radius: 999px;
+  background: var(--ui-panel);
+  box-shadow:
+    var(--ui-lift),
+    0 0 calc(18px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 35%, transparent);
+  font-size: 18px;
+  font-weight: 800;
+  text-wrap: balance;
+  transition: border-color 160ms ease-out;
+}
+
+.ui-tutorial[hidden] {
+  display: none;
+}
+
+.ui-tutorial__keys {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.ui-tutorial__keys:empty,
+.ui-tutorial__sign:empty,
+.ui-tutorial__tick {
+  display: none;
+}
+
+.ui-tutorial__sign {
+  display: inline-flex;
+}
+
+/* The level ring of the bar, small: a gauge half full of vibes. */
+.ui-tutorial__gauge {
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--or),
+    var(--turquoise) 65%,
+    color-mix(in srgb, var(--texte) 14%, transparent) 65%
+  );
+  mask: radial-gradient(circle, transparent 52%, #000 55%);
+}
+
+.ui-tutorial__plug,
+.ui-tutorial__plug svg {
+  display: block;
+  width: 1.3em;
+  height: 1.3em;
+  color: var(--turquoise);
+}
+
+/* While the banner speaks of it, the level ring of the bar calls on two beats. */
+.ui-hud:has(.ui-tutorial[data-step='upgrade']:not([hidden], [data-done='true'])) .ui-hud__level {
+  animation: ui-tutorial-call calc(var(--beat) * 2) ease-in-out infinite;
+}
+
+.calm
+  > .ui
+  .ui-hud:has(.ui-tutorial[data-step='upgrade']:not([hidden], [data-done='true']))
+  .ui-hud__level {
+  filter: drop-shadow(0 0 8px var(--turquoise));
+  animation: none;
+}
+
+@keyframes ui-tutorial-call {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px var(--turquoise));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 10px var(--turquoise)) drop-shadow(0 0 18px var(--turquoise));
+  }
+}
+
+.ui-tutorial[data-done='true'] {
+  border-color: var(--healer);
+}
+
+.ui-tutorial[data-done='true'] .ui-tutorial__tick {
+  display: block;
+  width: 22px;
+  height: 22px;
+  color: var(--healer);
+}
+
+.ui-tutorial__tick svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* A large screen leaves the top row to the ribbon: the gesture comes down toward the eyes, larger. */
+@media (min-width: 1100px) and (min-height: 701px) {
+  .ui-tutorial {
+    position: fixed;
+    top: 15%;
+    left: 50%;
+    gap: 0.7em;
+    padding: 0.45em 1.3em;
+    font-size: clamp(20px, 2.5vh, 32px);
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  .ui-tutorial__keys {
+    font-size: 0.6em;
+  }
+
+  .ui-tutorial .ui-key {
+    min-width: 2.2em;
+    height: 2.2em;
+    padding: 0 0.6em;
+    border-radius: 0.55em;
+    font-size: 1em;
+  }
+
+  .ui-tutorial .ui-key__arrow,
+  .ui-tutorial .ui-key__arrow svg {
+    width: 1.1em;
+    height: 1.1em;
+  }
+
+  .ui-tutorial[data-done='true'] .ui-tutorial__tick {
+    width: 1.2em;
+    height: 1.2em;
+  }
 }
 
 .ui-hud__bar {

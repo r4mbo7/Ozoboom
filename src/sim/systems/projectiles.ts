@@ -1,6 +1,7 @@
+import type { ObstacleDefinition } from '../../data/types';
 import { clamp } from '../../shared/scalar';
 import { damageCore, damagePlayer, playerById } from '../damage';
-import { healPlayer, hurtEnemy, markedDamageMul, knockBack } from '../effects';
+import { healPlayer, hurtEnemy, knockBack } from '../effects';
 import { touchesObstacle } from '../obstacles';
 import type { PlayerId, PlayerState, ProjectileState, SimState } from '../state';
 import type { StepContext } from './types';
@@ -8,8 +9,7 @@ import type { StepContext } from './types';
 const LANDING_KNOCKBACK_PER_RADIUS = 0.25;
 const RETURN_TICKS = 600;
 
-export function projectiles({ state, set, content, enemyGrid }: StepContext): void {
-  const markedMul = markedDamageMul(content);
+export function projectiles({ state, set, content, enemyGrid, enemyObstacles }: StepContext): void {
   enemyGrid.rebuild(state.enemies);
   const { width, height } = state.arena;
   const obstacles = set.obstacles ?? [];
@@ -25,7 +25,7 @@ export function projectiles({ state, set, content, enemyGrid }: StepContext): vo
     if (projectile.owner.kind === 'enemy') {
       spent = hitPlayerOrCore(state, projectile);
     } else if (projectile.returning !== true && projectile.arc === undefined) {
-      spent = hitEnemies(state, enemyGrid, projectile, markedMul);
+      spent = hitEnemies(state, enemyGrid, projectile, enemyObstacles);
     }
     const held = turnsAround(projectile, content);
     const blocked =
@@ -38,7 +38,7 @@ export function projectiles({ state, set, content, enemyGrid }: StepContext): vo
       held ||
       (projectile.x >= 0 && projectile.x <= width && projectile.y >= 0 && projectile.y <= height);
     if (!spent && (blocked || projectile.ticksLeft <= 0 || !inArena)) {
-      spent = !fliesOn(state, enemyGrid, projectile, markedMul);
+      spent = !fliesOn(state, enemyGrid, projectile, enemyObstacles);
     }
     if (!spent) {
       state.projectiles[kept] = projectile;
@@ -59,10 +59,10 @@ function fliesOn(
   state: SimState,
   grid: StepContext['enemyGrid'],
   projectile: ProjectileState,
-  markedMul: number,
+  obstacles: readonly ObstacleDefinition[],
 ): boolean {
   if (projectile.arc !== undefined) {
-    land(state, grid, projectile, markedMul);
+    land(state, grid, projectile, obstacles);
     return false;
   }
   if (projectile.returnTo === undefined || projectile.returning === true) {
@@ -84,7 +84,7 @@ function land(
   state: SimState,
   grid: StepContext['enemyGrid'],
   projectile: ProjectileState,
-  markedMul: number,
+  obstacles: readonly ObstacleDefinition[],
 ): void {
   const byPlayer = creditedPlayer(state, projectile);
   const found = grid.query(projectile.x, projectile.y, projectile.radius);
@@ -93,8 +93,8 @@ function land(
     if (enemy === undefined || enemy.hp <= 0) {
       continue;
     }
-    hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer, projectile);
-    knockBack(enemy, projectile, projectile.radius * LANDING_KNOCKBACK_PER_RADIUS);
+    hurtEnemy(state, enemy, projectile.damage, byPlayer, projectile);
+    knockBack(enemy, projectile, projectile.radius * LANDING_KNOCKBACK_PER_RADIUS, obstacles);
   }
 }
 
@@ -143,7 +143,7 @@ function hitEnemies(
   state: SimState,
   grid: StepContext['enemyGrid'],
   projectile: ProjectileState,
-  markedMul: number,
+  obstacles: readonly ObstacleDefinition[],
 ): boolean {
   const byPlayer = creditedPlayer(state, projectile);
   const found = grid.query(projectile.x, projectile.y, projectile.radius);
@@ -152,7 +152,7 @@ function hitEnemies(
     if (enemy === undefined || enemy.hp <= 0 || projectile.hitIds?.includes(enemy.id) === true) {
       continue;
     }
-    hurtEnemy(state, enemy, projectile.damage, markedMul, byPlayer, {
+    hurtEnemy(state, enemy, projectile.damage, byPlayer, {
       x: projectile.prevX,
       y: projectile.prevY,
     });
@@ -168,7 +168,7 @@ function hitEnemies(
       });
     }
     if (projectile.knockback !== undefined) {
-      knockBack(enemy, projectile, projectile.knockback);
+      knockBack(enemy, projectile, projectile.knockback, obstacles);
     }
     if (projectile.pierceLeft <= 0) {
       return true;

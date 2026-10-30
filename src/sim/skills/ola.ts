@@ -1,6 +1,6 @@
 import type { OlaEffect } from '../../data/kiffeur';
 import { distanceSquared } from '../../shared/vec';
-import { hurtEnemy, keepWhere, markedDamageMul } from '../effects';
+import { hurtEnemy, keepWhere } from '../effects';
 import { applyEnemyStatus } from '../enemy-status';
 import { applyPlayerBoost } from '../player-boosts';
 import type { SkillModule } from './types';
@@ -75,7 +75,6 @@ function spread(ctx: StepContext, wave: PropState): void {
   wave.ticksLeft -= 1;
   const front = olaFront(effect, tempo.ticksPerBeat, wave.ticksLeft);
   const hitIds = (wave.hitIds ??= []);
-  const markedMul = markedDamageMul(ctx.content);
   for (const enemy of state.enemies) {
     const reach = front + enemy.radius;
     if (
@@ -85,7 +84,7 @@ function spread(ctx: StepContext, wave: PropState): void {
     ) {
       hitIds.push(enemy.id);
       if (front <= effect.damageReach + enemy.radius) {
-        hurtEnemy(state, enemy, wave.damage, markedMul, wave.playerId, wave);
+        hurtEnemy(state, enemy, wave.damage, wave.playerId, wave);
       }
       applyEnemyStatus(state, enemy, 'slowed', effect.slowBeats * tempo.ticksPerBeat);
     }

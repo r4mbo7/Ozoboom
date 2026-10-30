@@ -1,4 +1,4 @@
-import { hurtEnemy, markedDamageMul, touches } from './effects';
+import { hurtEnemy, touches } from './effects';
 import { touchesObstacle } from './obstacles';
 import type { PlayerState, PropState, SimState, Vec2 } from './state';
 import type { StepContext } from './systems/types';
@@ -55,10 +55,9 @@ export function flyThrough(
   prop.x += prop.vx;
   prop.y += prop.vy;
   prop.ticksLeft -= 1;
-  const markedMul = markedDamageMul(ctx.content);
   for (const enemy of state.enemies) {
     if (enemy.hp > 0 && prop.hitIds?.includes(enemy.id) !== true && touches(enemy, prop, radius)) {
-      hurtEnemy(state, enemy, prop.damage, markedMul, owner.id, { x: prop.prevX, y: prop.prevY });
+      hurtEnemy(state, enemy, prop.damage, owner.id, { x: prop.prevX, y: prop.prevY });
       (prop.hitIds ??= []).push(enemy.id);
       prop.hitsLeft -= 1;
       if (prop.hitsLeft <= 0) {

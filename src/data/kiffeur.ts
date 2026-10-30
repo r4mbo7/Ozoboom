@@ -35,7 +35,7 @@ export const KIFFEUR: ClassDefinition = {
     damage: 16,
     radius: 90,
     overflow: 60,
-    kiff: { perChase: 0.125, perHp: 0.02, radiusPerNotch: 15, ratePerNotch: 0.1 },
+    kiff: { perChase: 0.07, perHp: 0.02, radiusPerNotch: 15, ratePerNotch: 0.1 },
   },
   skill: {
     id: 'ola',
@@ -45,12 +45,12 @@ export const KIFFEUR: ClassDefinition = {
     cooldownTicks: 4 * TICKS_PER_BAR,
     effect: {
       kind: 'ola',
-      damage: 25,
+      damage: 20,
       damageReach: 240,
       reach: 720,
       beats: 4,
       slowBeats: 2,
-      boostMul: 1.5,
+      boostMul: 1.25,
       boostBars: 1,
     },
   },
