@@ -1,9 +1,10 @@
-import type { ObstacleDefinition, SetDefinition } from '../../data/types';
+import type { SetDefinition } from '../../data/types';
 import type { Tempo } from '../../shared/tempo';
 import type { PlayerCommand } from '../commands';
 import type { ResolvedContent } from '../content';
 import type { FlowFields } from '../flow-field';
 import type { GameMode } from '../mode';
+import type { Obstacles } from '../obstacles';
 import type { SpatialHash } from '../spatial-hash';
 import type { PlayerId, SimState } from '../state';
 
@@ -14,8 +15,10 @@ export interface StepContext {
   tempo: Tempo;
   commands: ReadonlyMap<PlayerId, PlayerCommand>;
   enemyGrid: SpatialHash;
+  // The set's obstacles, that block players, shots and what they throw.
+  obstacles: Obstacles;
   // The set's obstacles, and the summon sites that block only bad vibes.
-  enemyObstacles: readonly ObstacleDefinition[];
+  enemyObstacles: Obstacles;
   // Absent on a set without obstacles or without bad vibes.
   flowFields: FlowFields | undefined;
   // Absent in a game of one set.

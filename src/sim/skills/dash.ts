@@ -6,14 +6,14 @@ import type { PlayerState, SimState } from '../state';
 import type { SkillModule, SkillOf } from './types';
 
 export const dash: SkillModule<SkillOf<'dash'>> = {
-  cast({ state, set }, player, effect, input, power) {
+  cast({ state, obstacles }, player, effect, input, power) {
     const move = normalize(input.move);
     const direction = move.x === 0 && move.y === 0 ? player.aim : move;
     const distance = effect.distance * power;
     const { width, height } = state.arena;
     const x = clamp(player.x + direction.x * distance, player.radius, width - player.radius);
     const y = clamp(player.y + direction.y * distance, player.radius, height - player.radius);
-    moveUntilBlocked(player, x - player.x, y - player.y, set.obstacles ?? []);
+    moveUntilBlocked(player, x - player.x, y - player.y, obstacles);
     player.invulnerableTicks = Math.max(player.invulnerableTicks ?? 0, effect.invulnerableTicks);
     if (effect.tauntRadius !== undefined) {
       taunt(state, player, effect.tauntRadius);

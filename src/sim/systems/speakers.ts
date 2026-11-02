@@ -4,9 +4,12 @@ import type { SimState, SpeakerState } from '../state';
 import { fire } from './traps';
 import type { StepContext } from './types';
 
-export function speakers({ state, set, tempo, enemyObstacles }: StepContext): void {
+export function speakers({ state, set, tempo, enemyObstacles, enemyGrid }: StepContext): void {
   const definitions = set.speakers ?? [];
   const beat = state.events.some((event) => event.type === 'beat');
+  if (state.speakers?.some((speaker) => speaker.plugged) === true) {
+    enemyGrid.rebuild(state.enemies);
+  }
 
   for (const speaker of state.speakers ?? []) {
     const definition = definitions.find((candidate) => candidate.id === speaker.id);
@@ -26,6 +29,7 @@ export function speakers({ state, set, tempo, enemyObstacles }: StepContext): vo
           damageMul: 1,
           radiusMul: 1,
           obstacles: enemyObstacles,
+          enemyGrid,
         });
       }
       continue;

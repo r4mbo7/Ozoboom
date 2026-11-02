@@ -1,8 +1,8 @@
-import type { ObstacleDefinition } from '../data/types';
 import { clamp } from '../shared/scalar';
 import { isBarTick, type Tempo } from '../shared/tempo';
 import { hasStatus, isRooted, walkingSpeed } from './enemy-status';
-import { moveUntilBlocked, resolveObstacles } from './obstacles';
+import { moveUntilBlocked, type Obstacles, resolveObstacles } from './obstacles';
+import type { SpatialHash } from './spatial-hash';
 import type { EnemyState, MarkSource, PlayerId, PlayerState, SimEvent, SimState } from './state';
 
 interface Point {
@@ -21,12 +21,7 @@ export function touches(body: Circle, center: Point, radius: number): boolean {
   return dx * dx + dy * dy <= reach * reach;
 }
 
-export function pushAway(
-  body: Circle,
-  from: Point,
-  distance: number,
-  obstacles: readonly ObstacleDefinition[],
-): void {
+export function pushAway(body: Circle, from: Point, distance: number, obstacles: Obstacles): void {
   const dx = body.x - from.x;
   const dy = body.y - from.y;
   const length = Math.sqrt(dx * dx + dy * dy);
@@ -42,7 +37,7 @@ export function knockBack(
   enemy: EnemyState,
   from: Point,
   distance: number,
-  obstacles: readonly ObstacleDefinition[],
+  obstacles: Obstacles,
 ): void {
   if (!enemy.isBoss) {
     pushAway(enemy, from, distance, obstacles);
@@ -161,15 +156,19 @@ export function keepWhere<T>(items: T[], keep: (item: T) => boolean): void {
   items.length = kept;
 }
 
+// The grid holds the bad vibes where they stand. The strongest slow wins, in any order.
 export function slowEnemies(
   state: SimState,
+  grid: SpatialHash,
   at: Point,
   radius: number,
   slowFactor: number,
 ): boolean {
   let reached = false;
-  for (const enemy of state.enemies) {
-    if (enemy.hp > 0 && touches(enemy, at, radius)) {
+  const found = grid.query(at.x, at.y, radius);
+  for (let i = 0; i < found; i++) {
+    const enemy = state.enemies[grid.result(i)];
+    if (enemy !== undefined && enemy.hp > 0) {
       enemy.slowFactor = Math.min(enemy.slowFactor, slowFactor);
       reached = true;
     }
@@ -203,33 +202,35 @@ export function healPlayersOnBar(
   }
 }
 
+// The grid holds the bad vibes where they stand, and is rebuilt where the wave knocked them.
 export function shockwave(
   state: SimState,
+  grid: SpatialHash,
   at: Point,
   radius: number,
   damage: number,
   knockback: number,
   by: PlayerId | null,
-  obstacles: readonly ObstacleDefinition[],
+  obstacles: Obstacles,
 ): boolean {
   let reached = false;
-  for (const enemy of state.enemies) {
-    if (enemy.hp > 0 && touches(enemy, at, radius)) {
+  const found = grid.queryInListOrder(at.x, at.y, radius);
+  for (let i = 0; i < found; i++) {
+    const enemy = state.enemies[grid.result(i)];
+    if (enemy !== undefined && enemy.hp > 0) {
       hurtEnemy(state, enemy, damage, by, at);
       knockBack(enemy, at, knockback, obstacles);
       reached = true;
     }
   }
+  if (reached) {
+    grid.rebuild(state.enemies);
+  }
   return reached;
 }
 
 // Replaces the step the steering just gave: same speed, slows, statuses and obstacles, new goal.
-export function drawTo(
-  enemy: EnemyState,
-  at: Point,
-  contact: number,
-  obstacles: readonly ObstacleDefinition[],
-): void {
+export function drawTo(enemy: EnemyState, at: Point, contact: number, obstacles: Obstacles): void {
   if (enemy.isBoss || hasStatus(enemy, 'bubbled')) {
     return;
   }

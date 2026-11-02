@@ -51,21 +51,31 @@ export function layZone(
 }
 
 // After `traps`, which resets the slow of the bad vibes: this slow rules their next step.
-export function zones({ state, tempo, enemyObstacles }: StepContext): void {
+export function zones({ state, tempo, enemyObstacles, enemyGrid }: StepContext): void {
   const laid = state.zones;
   if (laid === undefined) {
     return;
   }
+  enemyGrid.rebuild(state.enemies);
   for (const zone of laid) {
     const { definition, power, playerId } = zone;
     const strikes = strikesOn(definition.cadence, state.tick, tempo);
     zone.ticksLeft -= 1;
     const closing = zone.ticksLeft <= 0 && definition.closeDamage !== undefined;
-    for (const enemy of state.enemies) {
-      const at = nearestOnAxis(zone, enemy);
-      if (enemy.hp <= 0 || !touches(enemy, at, zone.radius)) {
+    const moves = definition.pull === true || (strikes && definition.knockback !== undefined);
+    let moved = false;
+    const reach = zone.radius + (definition.length ?? 0) / 2;
+    const found = enemyGrid.queryInListOrder(zone.x, zone.y, reach);
+    for (let i = 0; i < found; i++) {
+      const enemy = state.enemies[enemyGrid.result(i)];
+      if (enemy === undefined || enemy.hp <= 0) {
         continue;
       }
+      const at = nearestOnAxis(zone, enemy);
+      if (!touches(enemy, at, zone.radius)) {
+        continue;
+      }
+      moved ||= moves;
       if (definition.slowFactor !== undefined) {
         enemy.slowFactor = Math.min(enemy.slowFactor, definition.slowFactor);
       }
@@ -81,6 +91,9 @@ export function zones({ state, tempo, enemyObstacles }: StepContext): void {
       if (closing) {
         hurtEnemy(state, enemy, (definition.closeDamage ?? 0) * power, playerId, at);
       }
+    }
+    if (moved) {
+      enemyGrid.rebuild(state.enemies);
     }
     if (strikes && definition.heal !== undefined) {
       for (const player of state.players) {

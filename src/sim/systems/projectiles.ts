@@ -1,18 +1,22 @@
-import type { ObstacleDefinition } from '../../data/types';
 import { clamp } from '../../shared/scalar';
 import { damageCore, damagePlayer, playerById } from '../damage';
 import { healPlayer, hurtEnemy, knockBack } from '../effects';
-import { touchesObstacle } from '../obstacles';
+import { type Obstacles, touchesObstacle } from '../obstacles';
 import type { PlayerId, PlayerState, ProjectileState, SimState } from '../state';
 import type { StepContext } from './types';
 
 const LANDING_KNOCKBACK_PER_RADIUS = 0.25;
 const RETURN_TICKS = 600;
 
-export function projectiles({ state, set, content, enemyGrid, enemyObstacles }: StepContext): void {
+export function projectiles({
+  state,
+  content,
+  enemyGrid,
+  obstacles,
+  enemyObstacles,
+}: StepContext): void {
   enemyGrid.rebuild(state.enemies);
   const { width, height } = state.arena;
-  const obstacles = set.obstacles ?? [];
   let kept = 0;
   for (const projectile of state.projectiles) {
     if (projectile.returning === true && flewHome(state, projectile)) {
@@ -59,7 +63,7 @@ function fliesOn(
   state: SimState,
   grid: StepContext['enemyGrid'],
   projectile: ProjectileState,
-  obstacles: readonly ObstacleDefinition[],
+  obstacles: Obstacles,
 ): boolean {
   if (projectile.arc !== undefined) {
     land(state, grid, projectile, obstacles);
@@ -84,7 +88,7 @@ function land(
   state: SimState,
   grid: StepContext['enemyGrid'],
   projectile: ProjectileState,
-  obstacles: readonly ObstacleDefinition[],
+  obstacles: Obstacles,
 ): void {
   const byPlayer = creditedPlayer(state, projectile);
   const found = grid.query(projectile.x, projectile.y, projectile.radius);
@@ -143,7 +147,7 @@ function hitEnemies(
   state: SimState,
   grid: StepContext['enemyGrid'],
   projectile: ProjectileState,
-  obstacles: readonly ObstacleDefinition[],
+  obstacles: Obstacles,
 ): boolean {
   const byPlayer = creditedPlayer(state, projectile);
   const found = grid.query(projectile.x, projectile.y, projectile.radius);

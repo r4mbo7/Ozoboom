@@ -350,9 +350,9 @@ export function createLobby(
         }
         break;
       case 'class':
-      case 'stage':
         controls.stepChoice(seat, row, 1);
         break;
+      case 'stage':
       case 'launch':
         launchNow();
         break;

@@ -3,6 +3,7 @@ import type { ResolvedContent } from './content';
 import { createFlowFields } from './flow-field';
 import { createCore, createSpeakers } from './initial-state';
 import { setTempo } from './lineup';
+import { Obstacles } from './obstacles';
 import { SpatialHash } from './spatial-hash';
 import type { PlayerState, SimEvent, SimState, Vec2 } from './state';
 import { tempo } from './systems/tempo';
@@ -14,17 +15,27 @@ export function setBindings(
   set: SetDefinition,
   content: ResolvedContent,
   startTick: number,
-): Pick<StepContext, 'set' | 'tempo' | 'enemyGrid' | 'enemyObstacles' | 'flowFields'> {
-  const enemyObstacles = [
-    ...(set.obstacles ?? []),
-    ...(content.summons.get(set.id)?.sites ?? []).flatMap(({ x, y, badVibeRadius }) =>
-      badVibeRadius === undefined ? [] : [{ x, y, radius: badVibeRadius }],
-    ),
-  ];
+): Pick<
+  StepContext,
+  'set' | 'tempo' | 'enemyGrid' | 'obstacles' | 'enemyObstacles' | 'flowFields'
+> {
+  const { width, height } = set.arena;
+  const obstacles = set.obstacles ?? [];
+  const enemyObstacles = new Obstacles(
+    [
+      ...obstacles,
+      ...(content.summons.get(set.id)?.sites ?? []).flatMap(({ x, y, badVibeRadius }) =>
+        badVibeRadius === undefined ? [] : [{ x, y, radius: badVibeRadius }],
+      ),
+    ],
+    width,
+    height,
+  );
   return {
     set,
     tempo: setTempo(set, startTick),
-    enemyGrid: new SpatialHash(set.arena.width, set.arena.height, ENEMY_GRID_CELL_SIZE),
+    enemyGrid: new SpatialHash(width, height, ENEMY_GRID_CELL_SIZE),
+    obstacles: new Obstacles(obstacles, width, height),
     enemyObstacles,
     flowFields: createFlowFields(
       set,

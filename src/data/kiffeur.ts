@@ -26,7 +26,7 @@ export const KIFFEUR: ClassDefinition = {
   name: 'Le Kiffeur',
   role: 'Ne vise pas, il danse : sa bonne humeur frappe tout autour de lui et fait tirer plus vite.',
   color: '#f5e663',
-  maxHp: 140,
+  maxHp: 150,
   speed: 7.2,
   radius: 14,
   pickupRadius: 160,

@@ -1,6 +1,6 @@
-import type { ObstacleDefinition, SetDefinition } from '../data/types';
+import type { SetDefinition } from '../data/types';
 import { clamp } from '../shared/scalar';
-import { touchesObstacle } from './obstacles';
+import { type Obstacles, touchesObstacle } from './obstacles';
 
 const CELL = 16;
 const UNREACHED = 0x7fffffff;
@@ -23,10 +23,10 @@ export interface FlowFields {
 // Integers and + - * / only, so every engine builds the same field.
 export function createFlowFields(
   set: SetDefinition,
-  obstacles: readonly ObstacleDefinition[],
+  obstacles: Obstacles,
   radii: readonly number[],
 ): FlowFields | undefined {
-  if (obstacles.length === 0 || set.tiers.length === 0) {
+  if (obstacles.list.length === 0 || set.tiers.length === 0) {
     return undefined;
   }
   const cols = Math.ceil(set.arena.width / CELL);
@@ -44,7 +44,7 @@ export function createFlowFields(
 
 function buildClass(
   set: SetDefinition,
-  obstacles: readonly ObstacleDefinition[],
+  obstacles: Obstacles,
   cols: number,
   rows: number,
   radius: number,

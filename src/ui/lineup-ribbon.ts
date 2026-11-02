@@ -1,152 +1,136 @@
-import type { GameContent, SetDefinition } from '../data/types';
-import { direction, t } from '../shared/i18n';
-import { lineupCursor, lineupSlots, setFraction } from '../sim/lineup';
+import type { SetDefinition } from '../data/types';
+import { t } from '../shared/i18n';
+import { setFraction } from '../sim/lineup';
 import type { SimState } from '../sim/state';
 import { el, icon, setFlag, setText, setVar } from './dom';
-import { type SlotEdges, dropReading, isNight, slotLabel, sunPosition } from './hud-model';
-import { INFINITY, MOON, SUN } from './icons';
+import { formatNumber } from './format';
+import { type TierReading, isNight, momentReading, tierReadings } from './hud-model';
+import { BOSS_MASK, INFINITY, MOON, SUN } from './icons';
 
 export interface LineupRibbon {
   readonly element: HTMLElement;
   build(set: SetDefinition): void;
-  update(set: SetDefinition, state: SimState, content: GameContent): void;
+  update(set: SetDefinition, state: SimState): void;
+}
+
+interface TierNodes {
+  bar: HTMLElement;
+  drop: HTMLElement;
 }
 
 function endlessMark(from: number | null | undefined): string | undefined {
   return from === undefined ? undefined : from === null ? 'ahead' : 'on';
 }
 
-function slotNodes(set: SetDefinition): { slots: HTMLElement[]; groups: HTMLElement[] } {
-  const slots: HTMLElement[] = [];
-  const groups: HTMLElement[] = [];
-  let group: HTMLElement | null = null;
-  for (const slot of lineupSlots(set)) {
-    if (slot.kind === 'sunrise') {
-      group = null;
-    } else if (group === null || (slot.kind === 'phrase' && slot.phrase === 0)) {
-      group = el('div', 'ui-lineup__tier');
-      groups.push(group);
-    }
-    const node = el('span', `ui-slot ui-slot--${slot.kind}`);
-    node.title = slotLabel(slot);
-    if (slot.kind === 'sunrise') {
-      node.append(icon('ui-slot__sun', SUN), icon('ui-slot__endless', INFINITY));
-      groups.push(node);
-    } else {
-      group?.append(node);
-    }
-    slots.push(node);
-  }
-  return { slots, groups };
-}
-
-function slotEdgesOf(track: HTMLElement, slots: readonly HTMLElement[]): SlotEdges[] {
-  const width = track.clientWidth;
-  const rtl = direction() === 'rtl';
-  return width === 0
-    ? []
-    : slots.map((slot) => {
-        const start = rtl ? width - slot.offsetLeft - slot.offsetWidth : slot.offsetLeft;
-        return { start: start / width, width: slot.offsetWidth / width };
-      });
-}
-
-function paintSlots(slots: readonly HTMLElement[], set: SetDefinition, state: SimState): void {
-  const cursor = lineupCursor(set, state);
-  slots.forEach((slot, index) => {
-    const status = index < cursor.slot ? 'done' : index === cursor.slot ? 'current' : 'next';
-    if (slot.dataset.state !== status) {
-      slot.dataset.state = status;
-    }
-    if (index === cursor.slot) {
-      setVar(slot, '--fill', String(cursor.fraction ?? 1));
-      setFlag(slot, 'open', cursor.fraction === null);
-    }
+function tierNodes(set: SetDefinition): { tiers: TierNodes[]; groups: HTMLElement[] } {
+  const tiers = set.tiers.map((_, index) => {
+    const bar = el('span', 'ui-lineup__bar');
+    // The drop keeps its slot class: the full game hangs the campfire's extra bosses on it.
+    const drop = el('span', 'ui-slot ui-slot--drop');
+    drop.title = t('Palier {tier}, drop', { tier: formatNumber(index + 1) });
+    drop.append(icon('ui-slot__mask', BOSS_MASK));
+    return { bar, drop };
   });
+  const groups = tiers.map(({ bar, drop }) => {
+    const group = el('div', 'ui-lineup__tier');
+    group.append(bar, drop);
+    return group;
+  });
+  return { tiers, groups };
+}
+
+function sunriseNode(): HTMLElement {
+  const node = el('span', 'ui-slot ui-slot--sunrise');
+  node.title = t('Sunrise');
+  node.append(icon('ui-slot__sun', SUN), icon('ui-slot__endless', INFINITY));
+  return node;
+}
+
+function paintTier({ bar, drop }: TierNodes, { stage, fill }: TierReading): void {
+  if (bar.dataset.state !== stage) {
+    bar.dataset.state = stage;
+    drop.dataset.state = stage === 'dropping' ? 'current' : stage === 'done' ? 'done' : 'next';
+    setFlag(drop, 'open', stage === 'dropping');
+  }
+  setVar(bar, '--fill', fill.toFixed(3));
 }
 
 // An endless game has no sunrise: its last slot says so, lit once the last boss fell.
-function paintEndless(last: HTMLElement | undefined, from: number | null | undefined): void {
-  if (last === undefined || last.dataset.endless === endlessMark(from)) {
+function paintEndless(sunrise: HTMLElement, from: number | null | undefined): void {
+  if (sunrise.dataset.endless === endlessMark(from)) {
     return;
   }
   if (from === undefined) {
-    delete last.dataset.endless;
+    delete sunrise.dataset.endless;
   } else {
-    last.dataset.endless = endlessMark(from);
+    sunrise.dataset.endless = endlessMark(from);
   }
-  last.title = from === undefined ? t('Sunrise') : t('Sans fin');
+  sunrise.title = from === undefined ? t('Sunrise') : t('Sans fin');
 }
 
 export function createLineupRibbon(): LineupRibbon {
   const element = el('section', 'ui-panel ui-hud__ribbon');
   element.setAttribute('aria-label', t('Line-up'));
-  const drop = el('div', 'ui-drop');
-  const dropLabel = el('span', 'ui-drop__label', t('Drop'));
-  const dropValue = el('span', 'ui-drop__value');
-  dropValue.setAttribute('role', 'timer');
-  dropValue.setAttribute('aria-label', t('Drop'));
-  drop.append(dropLabel, dropValue);
+  const moment = el('div', 'ui-moment');
+  const sky = el('span', 'ui-moment__sky');
+  const tier = el('span', 'ui-moment__tier');
+  const word = el('span', 'ui-moment__word');
+  const countdown = el('span', 'ui-moment__countdown');
+  countdown.setAttribute('role', 'timer');
+  countdown.setAttribute('aria-label', t('Drop'));
+  const now = el('span', 'ui-moment__now');
+  now.append(word, countdown);
+  const text = el('span', 'ui-moment__text');
+  text.append(tier, now);
+  moment.append(sky, text);
   const track = el('div', 'ui-lineup');
-  const sky = el('div', 'ui-lineup__sky');
-  sky.setAttribute('aria-hidden', 'true');
-  const sun = el('span', 'ui-lineup__sun');
-  sky.append(sun);
   const timeline = el('div', 'ui-panel ui-hud__timeline');
   timeline.append(track);
-  element.append(drop, timeline);
+  element.append(moment, timeline);
 
-  let slots: HTMLElement[] = [];
-  let slotEdges: SlotEdges[] = [];
-  let sunNight: boolean | null = null;
-  let sunAt = -1;
+  let tiers: TierNodes[] = [];
+  const sunrise = sunriseNode();
+  let night: boolean | null = null;
 
-  function measureSlots(): void {
-    slotEdges = slotEdgesOf(track, slots);
-  }
-
-  function paintSun(fraction: number): void {
-    const edges =
-      slotEdges.length === slots.length
-        ? slotEdges
-        : slots.map((_, index) => ({ start: index / slots.length, width: 1 / slots.length }));
-    const at = sunPosition(fraction, edges);
-    if (Math.abs(at - sunAt) > 0.0005) {
-      sunAt = at;
-      setVar(sky, '--sun', String(at));
+  function paintMoment(set: SetDefinition, state: SimState): void {
+    const reading = momentReading(set, state);
+    setText(tier, reading.tier);
+    tier.hidden = reading.tier === '';
+    setText(word, reading.word);
+    setText(countdown, reading.countdown);
+    countdown.hidden = reading.countdown === '';
+    if (moment.dataset.moment !== reading.moment) {
+      moment.dataset.moment = reading.moment;
     }
-    const night = isNight(fraction);
-    if (night !== sunNight) {
-      sunNight = night;
-      sun.replaceChildren(icon('ui-lineup__glyph', night ? MOON : SUN));
+    setFlag(element, 'drop', reading.moment === 'drop');
+  }
+
+  function paintSky(fraction: number): void {
+    const isNightNow = isNight(fraction);
+    if (isNightNow !== night) {
+      night = isNightNow;
+      sky.replaceChildren(icon('ui-moment__glyph', isNightNow ? MOON : SUN));
     }
-  }
-
-  function paintDrop(set: SetDefinition, state: SimState, content: GameContent): void {
-    const reading = dropReading(set, state, content);
-    setText(dropLabel, reading.label);
-    setText(dropValue, reading.value);
-    dropValue.hidden = reading.value === '';
-    setFlag(element, 'drop', reading.dropping);
-  }
-
-  if (typeof ResizeObserver !== 'undefined') {
-    new ResizeObserver(measureSlots).observe(track);
   }
 
   return {
     element,
     build(set) {
-      const nodes = slotNodes(set);
-      slots = nodes.slots;
-      track.replaceChildren(sky, ...nodes.groups);
-      measureSlots();
+      const nodes = tierNodes(set);
+      tiers = nodes.tiers;
+      track.replaceChildren(...nodes.groups, sunrise);
     },
-    update(set, state, content) {
-      paintSlots(slots, set, state);
-      paintEndless(slots.at(-1), state.set.endlessFromTick);
-      paintDrop(set, state, content);
-      paintSun(setFraction(set, state));
+    update(set, state) {
+      tierReadings(set, state).forEach((reading, index) => {
+        const nodes = tiers[index];
+        if (nodes !== undefined) {
+          paintTier(nodes, reading);
+        }
+      });
+      sunrise.dataset.state = state.status === 'won' ? 'current' : 'next';
+      paintEndless(sunrise, state.set.endlessFromTick);
+      paintMoment(set, state);
+      paintSky(setFraction(set, state));
     },
   };
 }

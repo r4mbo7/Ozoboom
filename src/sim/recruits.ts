@@ -72,7 +72,7 @@ function recruit(
 
 // After what moves or hurts bad vibes, before `walls` (holds the shoved) and `deaths` (recruits).
 export function recruits(ctx: StepContext): void {
-  const { state, content, set, tempo } = ctx;
+  const { state, content, tempo } = ctx;
   const list = state.recruits;
   if (list === undefined) {
     return;
@@ -101,7 +101,7 @@ export function recruits(ctx: StepContext): void {
   }
   spreadRecruits(list);
   for (const recruit of list) {
-    resolveObstacles(recruit, recruit.prevX, recruit.prevY, set.obstacles ?? []);
+    resolveObstacles(recruit, recruit.prevX, recruit.prevY, ctx.obstacles);
   }
   let kept = 0;
   for (const recruit of list) {

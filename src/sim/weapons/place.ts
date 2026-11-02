@@ -1,6 +1,5 @@
-import { clearOfObstacles } from '../obstacles';
+import { clearOfObstacles, type Obstacles } from '../obstacles';
 import type { PlayerState, SimState } from '../state';
-import type { ObstacleDefinition } from '../../data/types';
 
 export function place(
   state: SimState,
@@ -10,9 +9,9 @@ export function place(
   radius: number,
   ticksLeft: number,
   limit: number,
-  obstacles: readonly ObstacleDefinition[] = [],
+  obstacles?: Obstacles,
 ): void {
-  const spot = clearOfObstacles(at, 0, obstacles);
+  const spot = obstacles === undefined ? { x: at.x, y: at.y } : clearOfObstacles(at, 0, obstacles);
   const placed = (state.placed ??= []);
   let mine = 0;
   for (const other of placed) {

@@ -8,6 +8,17 @@ export const PLUG =
   '<path d="M9 2.5v4.5M15 2.5v4.5M12 17v4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
   '<path d="M6 7h12v3.5a6 6 0 0 1-12 0z" fill="currentColor"/>';
 
+// A boss of the line-up: the bad vibes' mask, frowning.
+export const BOSS_MASK =
+  '<path d="M3 6.5Q12 1 21 6.5Q22 16 12 22Q2 16 3 6.5z" fill="currentColor"/>' +
+  '<path d="M6.8 9.6l3.4 1.5M17.2 9.6l-3.4 1.5M8.8 17q3.2-2.4 6.4 0" fill="none" stroke="var(--sol)" stroke-width="1.9" stroke-linecap="round"/>';
+
+// The front of a speaker stack, in a 22 by 28 box: its cabinet is the element around it.
+export const SPEAKER =
+  '<circle cx="11" cy="7.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8"/>' +
+  '<circle cx="11" cy="18" r="6" fill="none" stroke="currentColor" stroke-width="2"/>' +
+  '<circle cx="11" cy="18" r="2.2" fill="currentColor"/>';
+
 export const PAUSE =
   '<rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/>';
 

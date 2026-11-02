@@ -43,7 +43,11 @@ export function vibeRain(ctx: StepContext): void {
   }
 }
 
-function lob({ state, set, tempo }: StepContext, rules: VibeRainRules, from: SpeakerState): void {
+function lob(
+  { state, set, tempo, obstacles }: StepContext,
+  rules: VibeRainRules,
+  from: SpeakerState,
+): void {
   const { core } = state;
   const dx = from.x - core.x;
   const dy = from.y - core.y;
@@ -57,7 +61,7 @@ function lob({ state, set, tempo }: StepContext, rules: VibeRainRules, from: Spe
   const { x, y } = clearOfObstacles(
     { x: core.x + side.x * reach, y: core.y + side.y * reach },
     LANDING_GAP,
-    set.obstacles ?? [],
+    obstacles,
   );
   const ticks = rules.flightBeats * tempo.ticksPerBeat;
   state.pickups.push({

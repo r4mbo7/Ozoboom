@@ -9,7 +9,8 @@ import type { Arena, EdgeSide, EnemyState, SimState, Vec2 } from '../state';
 import { endlessMinutes } from './set-progress';
 import type { StepContext } from './types';
 
-export function spawning({ state, content, set, tempo }: StepContext): void {
+export function spawning(ctx: StepContext): void {
+  const { state, content, set, tempo } = ctx;
   for (const event of state.events) {
     if (event.type === 'segment' && event.segment === 'drop') {
       const tier = set.tiers[event.tier];
@@ -19,7 +20,7 @@ export function spawning({ state, content, set, tempo }: StepContext): void {
           throw new Error('a drop starts with no boss drawn');
         }
         const boss = { ...lookup(content.enemies, bossId, 'enemy'), ...tier.boss };
-        spawnAtEdge(state, set, tempo, boss, true);
+        spawnAtEdge(ctx, boss, true);
       }
     }
   }
@@ -40,7 +41,7 @@ export function spawning({ state, content, set, tempo }: StepContext): void {
     const definition = lookup(content.enemies, rule.enemyId, 'enemy');
     const count = Math.ceil(scaledCount(state, set, rule.count) * volumeMul(state));
     for (let i = 0; i < count; i++) {
-      spawnAtEdge(state, set, tempo, definition, false);
+      spawnAtEdge(ctx, definition, false);
     }
   }
 }
@@ -81,38 +82,29 @@ export function spawnEnemy(
   return enemy;
 }
 
+type SpawnContext = Pick<StepContext, 'state' | 'set' | 'obstacles'>;
+
 const NO_SCALE = { hp: 1, damage: 1 };
 
-function spawnAtEdge(
-  state: SimState,
-  set: SetDefinition,
-  tempo: Tempo,
-  definition: EnemyDefinition,
-  isBoss: boolean,
-): void {
+function spawnAtEdge(ctx: StepContext, definition: EnemyDefinition, isBoss: boolean): void {
+  const { state, set, tempo } = ctx;
   const edge = isBoss
     ? edgePosition(state.rng, state.arena, definition.radius)
     : ruleSpawnPosition(state, set, tempo, definition.radius);
-  spawnScaled(state, set, definition, edge, isBoss);
+  spawnScaled(ctx, definition, edge, isBoss);
 }
 
-export function spawnBossAt(
-  state: SimState,
-  set: SetDefinition,
-  definition: EnemyDefinition,
-  at: Vec2,
-): EnemyState {
-  return spawnScaled(state, set, definition, at, true);
+export function spawnBossAt(ctx: SpawnContext, definition: EnemyDefinition, at: Vec2): EnemyState {
+  return spawnScaled(ctx, definition, at, true);
 }
 
 function spawnScaled(
-  state: SimState,
-  set: SetDefinition,
+  { state, set, obstacles }: SpawnContext,
   definition: EnemyDefinition,
   at: Vec2,
   isBoss: boolean,
 ): EnemyState {
-  const { x, y } = clearOfObstacles(at, definition.radius, set.obstacles ?? []);
+  const { x, y } = clearOfObstacles(at, definition.radius, obstacles);
   const minutes = endlessMinutes(state);
   const scale = state.enemyScale ?? NO_SCALE;
   return spawnEnemy(

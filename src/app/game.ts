@@ -64,7 +64,7 @@ import { openAudioOnGesture } from './gesture';
 import { enterLandscapeFullscreen, fullscreenOnFirstTouch } from './fullscreen';
 import { createPauseScreen } from './pause';
 import { loadPlayerPrefs } from './prefs';
-import { createSeats, type LaunchedSeats } from './seats';
+import { createSeats, openerOf, type LaunchedSeats } from './seats';
 import { type Settings, createSettings } from './settings';
 import { soundOf, type Screen } from './sound';
 import { createCrashReport } from './crash';
@@ -613,6 +613,10 @@ export async function startGame(
   function openLobby(): void {
     void audio.start();
     seats.clear();
+    const opener = openerOf(view.devices, view.merged.device);
+    if (opener !== null) {
+      seats.join(opener);
+    }
     screen = 'lobby';
     applySound();
     ui.showLobby(localLobby());

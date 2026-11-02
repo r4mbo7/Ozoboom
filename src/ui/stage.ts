@@ -21,7 +21,7 @@ import type { Night, StageCard, StagePickerModel } from './types';
 
 export interface StageCards {
   readonly element: HTMLElement;
-  // In a festival the stage picked is where it starts, the others follow.
+  // In a festival the stage picked is where it starts, and only it says so.
   set(stages: readonly StageCard[], stageId: string, festival?: boolean): void;
   // A guest sees the host's pick and cannot change it.
   setReadonly(readonly: boolean): void;
@@ -57,7 +57,7 @@ function card(
     el('span', 'ui-stage__chip', t(stage.style)),
     el('span', 'ui-stage__chip', formatTempo(stage.bpm)),
   );
-  const tag = el('span', 'ui-stage__tag');
+  const tag = el('span', 'ui-stage__tag', t('Départ'));
   tag.hidden = true;
   node.append(tag, stagePreview(stage.decor), el('span', 'ui-stage__name', t(stage.name)), meta);
   if (go !== null) {
@@ -116,9 +116,7 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
         node?.setAttribute('aria-checked', String(picked));
         const [tag] = node === undefined ? [] : findAll(node, '.ui-stage__tag', HTMLElement);
         if (tag) {
-          tag.hidden = !festival;
-          tag.toggleAttribute('data-start', picked);
-          setText(tag, picked ? t('Départ') : t('Ensuite'));
+          tag.hidden = !(festival && picked);
         }
       });
     },

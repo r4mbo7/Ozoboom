@@ -1,10 +1,10 @@
-import type { BystanderDefinition, ObstacleDefinition } from '../../data/types';
+import type { BystanderDefinition } from '../../data/types';
 import { nextFloat } from '../../shared/prng';
 import { BARS_PER_PHRASE, isBarTick, type Tempo } from '../../shared/tempo';
 import { playerById } from '../damage';
 import { lookup, type ResolvedContent } from '../content';
 import { touches } from '../effects';
-import { clearOfObstacles } from '../obstacles';
+import { clearOfObstacles, type Obstacles } from '../obstacles';
 import type { BystanderState, SimState } from '../state';
 import { reviveMulOf } from './revive';
 import { edgePosition } from './spawning';
@@ -18,7 +18,7 @@ export function bystanders(ctx: StepContext): void {
   updateBystanders(ctx);
 }
 
-function spawnBystanders({ state, content, set, tempo }: StepContext): void {
+function spawnBystanders({ state, content, set, tempo, obstacles }: StepContext): void {
   const tier = set.tiers[state.set.tier];
   if (tier === undefined || state.set.segment !== 'buildup' || !isBarTick(state.tick, tempo)) {
     return;
@@ -33,7 +33,7 @@ function spawnBystanders({ state, content, set, tempo }: StepContext): void {
     }
     const definition = lookup(content.bystanders, rule.bystanderId, 'bystander');
     for (let i = 0; i < rule.count; i++) {
-      spawnBystander(state, definition, tempo, set.obstacles ?? []);
+      spawnBystander(state, definition, tempo, obstacles);
     }
   }
 }
@@ -42,7 +42,7 @@ function spawnBystander(
   state: SimState,
   definition: BystanderDefinition,
   tempo: Tempo,
-  obstacles: readonly ObstacleDefinition[],
+  obstacles: Obstacles,
 ): void {
   const edge = edgePosition(state.rng, state.arena, definition.radius);
   const { x, y } = clearOfObstacles(edge, definition.radius, obstacles);

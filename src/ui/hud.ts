@@ -152,7 +152,7 @@ export function createHud(prompts: Prompts): Hud {
       built?.content === content && built.set.id === state.setId
         ? built.set
         : build(content, state.setId);
-    ribbon.update(set, state, content);
+    ribbon.update(set, state);
     plugs.update(set, state);
     banner.update(state, content);
     for (const part of parts) {

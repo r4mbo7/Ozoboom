@@ -1,10 +1,4 @@
-import type {
-  ObstacleDefinition,
-  SetDefinition,
-  TrapCadence,
-  TrapDefinition,
-  TrapEffect,
-} from '../../data/types';
+import type { SetDefinition, TrapCadence, TrapDefinition, TrapEffect } from '../../data/types';
 import { isBeatTick, type Tempo } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
 import { blackedOut } from '../blackout';
@@ -22,8 +16,9 @@ import {
   touches,
   wholeTicks,
 } from '../effects';
-import { touchesObstacle } from '../obstacles';
+import type { Obstacles } from '../obstacles';
 import { trapPointing } from '../pointing';
+import type { SpatialHash } from '../spatial-hash';
 import type { EnemyState, PlayerId, PlayerState, SimState, TrapState, Vec2 } from '../state';
 import { FULL_STEPS } from '../full';
 import { handFree, statValue, trapCapacity } from '../stats';
@@ -49,7 +44,9 @@ export interface Firing {
   power: number;
   damageMul: number;
   radiusMul: number;
-  obstacles: readonly ObstacleDefinition[];
+  obstacles: Obstacles;
+  // Holds the bad vibes where they stand: `fire` rebuilds it after an effect that moves them.
+  enemyGrid: SpatialHash;
 }
 
 export function traps(ctx: StepContext): void {
@@ -63,6 +60,9 @@ export function traps(ctx: StepContext): void {
     }
   }
 
+  if (state.traps.length > 0) {
+    ctx.enemyGrid.rebuild(state.enemies);
+  }
   const firing = cadencesFiring(state);
   const silent = blackedOut(state);
   const fireAll = (lures: boolean) => {
@@ -83,6 +83,7 @@ export function traps(ctx: StepContext): void {
           damageMul: statValue(owner, 'trapDamageMul', 1),
           radiusMul: statValue(owner, 'trapRadiusMul', 1),
           obstacles: ctx.enemyObstacles,
+          enemyGrid: ctx.enemyGrid,
         });
         if (reached || definition.cadence !== 'continuous') {
           const { id, kind, x, y } = trap;
@@ -163,6 +164,7 @@ function placeTrap({ state, content, set }: StepContext, player: PlayerState, ac
 }
 
 // Where a trap may stand: inside the arena, off the core, the obstacles and the other traps.
+// The bot asks too, with no step context: it reads the set's obstacles one by one.
 export function trapFits(
   state: Pick<SimState, 'arena' | 'core' | 'traps'>,
   set: Pick<SetDefinition, 'obstacles'>,
@@ -177,7 +179,7 @@ export function trapFits(
     y >= radius &&
     y <= arena.height - radius &&
     !overlaps(footprint, core, core.radius) &&
-    !touchesObstacle(footprint, set.obstacles ?? []) &&
+    !(set.obstacles ?? []).some((obstacle) => overlaps(footprint, obstacle, obstacle.radius)) &&
     !state.traps.some((trap) => overlaps(footprint, trap, radiusOf(trap)))
   );
 }
@@ -222,11 +224,13 @@ function cadencesFiring(state: SimState): Readonly<Record<TrapCadence, boolean>>
 
 export function fire(firing: Firing): boolean {
   const { state, tempo, at, effect, contact, by, power, damageMul, radiusMul, obstacles } = firing;
+  const grid = firing.enemyGrid;
   let reached = false;
   switch (effect.kind) {
     case 'shockwave':
       return shockwave(
         state,
+        grid,
         at,
         effect.radius * radiusMul,
         effect.damage * damageMul,
@@ -238,8 +242,23 @@ export function fire(firing: Firing): boolean {
       const direction = trapPointing(effect, at.direction, state.tick, tempo);
       const before = trapPointing(effect, at.direction, state.tick - 1, tempo);
       const length = effect.length * radiusMul;
-      for (const enemy of state.enemies) {
+      // Around the beam, wide enough for a bad vibe at its far corner and for the arc its far
+      // end swept since the last tick.
+      const turnX = direction.x - before.x;
+      const turnY = direction.y - before.y;
+      const widest = grid.widestRadius();
+      const swept = (length + widest) * Math.sqrt(turnX * turnX + turnY * turnY);
+      const found = grid.querySegmentInListOrder(
+        at.x,
+        at.y,
+        at.x + direction.x * length,
+        at.y + direction.y * length,
+        effect.width / 2 + swept + widest,
+      );
+      for (let i = 0; i < found; i++) {
+        const enemy = state.enemies[grid.result(i)];
         if (
+          enemy !== undefined &&
           enemy.hp > 0 &&
           (inBeam(enemy, at, direction, length, effect.width / 2) ||
             sweptOver(enemy, at, before, direction, length))
@@ -253,21 +272,30 @@ export function fire(firing: Firing): boolean {
     case 'mist': {
       const radius = effect.radius * radiusMul;
       healPlayersOnBar(state, tempo, at, radius, effect.healPerBar * power);
-      return slowEnemies(state, at, radius, effect.slowFactor);
+      return slowEnemies(state, grid, at, radius, effect.slowFactor);
     }
-    case 'lure':
-      for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
+    case 'lure': {
+      const found = grid.queryInListOrder(at.x, at.y, effect.radius * radiusMul);
+      for (let i = 0; i < found; i++) {
+        const enemy = state.enemies[grid.result(i)];
+        if (enemy !== undefined && enemy.hp > 0) {
           markEnemy(state, enemy, 'lure', effect.markedDamageMul, LURE_MARK_TICKS);
           drawTo(enemy, at, contact + enemy.radius, obstacles);
           reached = true;
         }
       }
+      if (reached) {
+        grid.rebuild(state.enemies);
+      }
       return reached;
+    }
     case 'strobe': {
+      // The longest stun wins, in any order.
       const stun = wholeTicks(effect.stunTicks * power);
-      for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && touches(enemy, at, effect.radius * radiusMul)) {
+      const found = grid.query(at.x, at.y, effect.radius * radiusMul);
+      for (let i = 0; i < found; i++) {
+        const enemy = state.enemies[grid.result(i)];
+        if (enemy !== undefined && enemy.hp > 0) {
           enemy.stunTicks = Math.max(enemy.stunTicks, stun);
           reached = true;
         }
@@ -286,8 +314,11 @@ export function fire(firing: Firing): boolean {
           }
         }
       }
-      for (const enemy of state.enemies) {
-        if (enemy.hp > 0 && blows(enemy)) {
+      // The strongest slow wins, in any order.
+      const found = grid.query(at.x, at.y, length);
+      for (let i = 0; i < found; i++) {
+        const enemy = state.enemies[grid.result(i)];
+        if (enemy !== undefined && enemy.hp > 0 && blows(enemy)) {
           enemy.slowFactor = Math.min(enemy.slowFactor, effect.slowFactor);
           reached = true;
         }

@@ -1,4 +1,4 @@
-import type { DeviceId } from '../input/intents';
+import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
 import { trimPlayerName } from '../shared/player-name';
 import type { PlayerSlot } from '../sim/initial-state';
 import { PLAYER_IDS, type PlayerId } from '../sim/state';
@@ -112,4 +112,19 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
       return { slots, locals };
     },
   };
+}
+
+// Who opens the lobby takes the first place: the device that confirms on this frame, else a click,
+// which the frame does not see: the keyboard and mouse, unless the screen is played by touch, which
+// has no place of its own.
+export function openerOf(
+  devices: ReadonlyMap<DeviceId, InputSnapshot>,
+  merged: InputDevice,
+): DeviceId | null {
+  for (const [device, snapshot] of devices) {
+    if (snapshot.menu.confirm) {
+      return device;
+    }
+  }
+  return merged === 'touch' ? null : 'keyboardMouse';
 }

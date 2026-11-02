@@ -79,8 +79,9 @@ function attract(pickup: PickupState, player: PlayerState, speed: number): boole
 
 function collect(state: SimState, pickup: PickupState, player: PlayerState): void {
   const amount = pickup.amount * volumeMul(state);
+  // Downed players too, so that the whole team levels up together.
   for (const member of state.players) {
-    if (!member.downed) {
+    if (member.gone !== true) {
       member.vibes += amount;
     }
   }

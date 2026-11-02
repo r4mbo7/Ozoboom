@@ -4,7 +4,7 @@ import type { SimState } from '../sim/state';
 import { el, icon, setText, setVar } from './dom';
 import { formatNumber } from './format';
 import { NO_PLUG_HELP, nextPlugHelp, volumeCrans } from './hud-model';
-import { PLUG } from './icons';
+import { SPEAKER } from './icons';
 import { cssName } from './sun';
 
 export interface SpeakerPlugs {
@@ -17,13 +17,14 @@ export interface SpeakerPlugs {
 function plugNode(name: string): HTMLElement {
   const plug = el('span', 'ui-plug');
   plug.title = t(name);
-  plug.append(icon('ui-plug__icon', PLUG));
+  plug.append(icon('ui-plug__icon', SPEAKER, '0 0 22 28'));
   return plug;
 }
 
-function paintPlugged(row: HTMLElement, plugged: number, total: number): void {
+function paintPlugged(row: HTMLElement, value: HTMLElement, plugged: number, total: number): void {
   row.setAttribute('aria-valuenow', String(plugged));
   const counts = { plugged: formatNumber(plugged), total: formatNumber(total) };
+  setText(value, counts.plugged);
   row.setAttribute(
     'aria-valuetext',
     tn(
@@ -40,6 +41,13 @@ export function createSpeakerPlugs(): SpeakerPlugs {
   row.setAttribute('role', 'meter');
   row.setAttribute('aria-label', t('Enceintes branchées'));
   row.setAttribute('aria-valuemin', '0');
+  const count = el('span', 'ui-plugs__count');
+  count.setAttribute('aria-hidden', 'true');
+  const value = el('b', 'ui-plugs__value');
+  const total = el('span', 'ui-plugs__total');
+  const figure = el('span', 'ui-plugs__figure');
+  figure.append(value, total);
+  count.append(el('span', 'ui-plugs__label', t('Enceintes')), figure);
   const help = el('p', 'ui-hud__help');
   help.setAttribute('role', 'status');
   help.hidden = true;
@@ -52,7 +60,8 @@ export function createSpeakerPlugs(): SpeakerPlugs {
     help,
     build(set) {
       plugs = (set.speakers ?? []).map((speaker) => plugNode(speaker.name));
-      row.replaceChildren(...plugs);
+      setText(total, `/${formatNumber(plugs.length)}`);
+      row.replaceChildren(count, ...plugs);
       row.setAttribute('aria-valuemax', String(plugs.length));
       row.hidden = plugs.length === 0;
     },
@@ -67,7 +76,7 @@ export function createSpeakerPlugs(): SpeakerPlugs {
         setVar(plug, '--fill', String(speaker.fill));
         plug.dataset.state = speaker.state;
       });
-      paintPlugged(row, state.volume ?? 0, levels.length);
+      paintPlugged(row, value, state.volume ?? 0, levels.length);
       if (state.events.some((event) => event.type === 'volumeChanged')) {
         row.dataset.bump = row.dataset.bump === 'a' ? 'b' : 'a';
       }

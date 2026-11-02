@@ -1,4 +1,4 @@
-import { hurtEnemy, touches } from './effects';
+import { hurtEnemy } from './effects';
 import { touchesObstacle } from './obstacles';
 import type { PlayerState, PropState, SimState, Vec2 } from './state';
 import type { StepContext } from './systems/types';
@@ -44,19 +44,21 @@ export function closeIn(prop: PropState, to: Vec2, reach: number, speed: number)
   return false;
 }
 
-// True once the prop has spent its hits on the bad vibes it touched on the way.
+// True once the prop has spent its hits on the bad vibes it touched on the way. The caller rebuilt
+// the grid on this tick's bad vibes.
 export function flyThrough(
-  ctx: Pick<StepContext, 'state' | 'content'>,
+  { state, enemyGrid }: Pick<StepContext, 'state' | 'enemyGrid'>,
   prop: PropState,
   owner: PlayerState,
   radius: number,
 ): boolean {
-  const { state } = ctx;
   prop.x += prop.vx;
   prop.y += prop.vy;
   prop.ticksLeft -= 1;
-  for (const enemy of state.enemies) {
-    if (enemy.hp > 0 && prop.hitIds?.includes(enemy.id) !== true && touches(enemy, prop, radius)) {
+  const found = enemyGrid.queryInListOrder(prop.x, prop.y, radius);
+  for (let i = 0; i < found; i++) {
+    const enemy = state.enemies[enemyGrid.result(i)];
+    if (enemy !== undefined && enemy.hp > 0 && prop.hitIds?.includes(enemy.id) !== true) {
       hurtEnemy(state, enemy, prop.damage, owner.id, { x: prop.prevX, y: prop.prevY });
       (prop.hitIds ??= []).push(enemy.id);
       prop.hitsLeft -= 1;
@@ -69,15 +71,11 @@ export function flyThrough(
 }
 
 export function flightOver(
-  { state, set }: Pick<StepContext, 'state' | 'set'>,
+  { state, obstacles }: Pick<StepContext, 'state' | 'obstacles'>,
   prop: PropState,
   radius: number,
 ): boolean {
   const { width, height } = state.arena;
   const out = prop.x < 0 || prop.x > width || prop.y < 0 || prop.y > height;
-  return (
-    out ||
-    prop.ticksLeft <= 0 ||
-    touchesObstacle({ x: prop.x, y: prop.y, radius }, set.obstacles ?? [])
-  );
+  return out || prop.ticksLeft <= 0 || touchesObstacle({ x: prop.x, y: prop.y, radius }, obstacles);
 }

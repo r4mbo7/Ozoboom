@@ -22,11 +22,16 @@ export function placedZones(ctx: StepContext): void {
   if (placed === undefined || placed.length === 0) {
     return;
   }
+  let built = false;
   for (const zone of placed) {
     const { effect } = definitionOf(ctx, zone);
     const power = powerOf(ctx, zone);
     if (effect.kind === 'plate') {
-      slowEnemies(state, zone, zone.radius, effect.slowFactor);
+      if (!built) {
+        ctx.enemyGrid.rebuild(state.enemies);
+        built = true;
+      }
+      slowEnemies(state, ctx.enemyGrid, zone, zone.radius, effect.slowFactor);
       healPlayersOnBar(state, ctx.tempo, zone, zone.radius, effect.healPerBar * power);
     }
     zone.ticksLeft -= 1;
@@ -34,7 +39,9 @@ export function placedZones(ctx: StepContext): void {
   removeExpired(state);
 }
 
-// After the steering: the totem replaces the step the enemies just took, as a lure does.
+// After the steering: the totem replaces the step the enemies just took, as a lure does. Its draw
+// moves the bad vibes every tick, so it reads them in a loop: the grid is only worth rebuilding
+// for the wave on the bar.
 export function placedTotems(ctx: StepContext): void {
   const { state } = ctx;
   for (const zone of state.placed ?? []) {
@@ -48,8 +55,10 @@ export function placedTotems(ctx: StepContext): void {
       }
     }
     if (isBarTick(state.tick, ctx.tempo)) {
+      ctx.enemyGrid.rebuild(state.enemies);
       shockwave(
         state,
+        ctx.enemyGrid,
         zone,
         zone.radius,
         effect.damage * powerOf(ctx, zone),

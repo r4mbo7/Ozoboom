@@ -6,9 +6,8 @@ import { resolveObstacles } from '../obstacles';
 import type { Vec2 } from '../state';
 import type { StepContext } from './types';
 
-export function playerMovement({ state, set, content, commands }: StepContext): void {
+export function playerMovement({ state, content, commands, obstacles }: StepContext): void {
   const { arena } = state;
-  const obstacles = set.obstacles ?? [];
   const drift = gustDrift(state) ?? { x: 0, y: 0 };
   for (const player of state.players) {
     if (player.downed) {

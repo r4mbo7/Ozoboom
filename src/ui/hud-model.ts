@@ -9,8 +9,7 @@ import type {
 } from '../data/types';
 import { t, tn } from '../shared/i18n';
 import { NIGHT_END, NIGHT_START, type PaletteToken, isClassToken } from '../shared/palette';
-import { clamp01 } from '../shared/scalar';
-import { type LineupSlot, setTempo, ticksToDrop } from '../sim/lineup';
+import { setTempo, ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState, PlayerId } from '../sim/state';
 import { gaugeValue } from '../sim/gauges';
 import { skillCooldownTicks } from '../sim/stats';
@@ -345,67 +344,56 @@ export function gearSlots(
   });
 }
 
-export function slotLabel(slot: LineupSlot): string {
-  switch (slot.kind) {
-    case 'phrase':
-      return t('Palier {tier}, phrase {phrase}', {
-        tier: formatNumber(slot.tier + 1),
-        phrase: formatNumber(slot.phrase + 1),
-      });
-    case 'break':
-      return t('Palier {tier}, break', { tier: formatNumber(slot.tier + 1) });
-    case 'drop':
-      return t('Palier {tier}, drop', { tier: formatNumber(slot.tier + 1) });
-    case 'sunrise':
-      return t('Sunrise');
-  }
-}
-
 export function isNight(fraction: number): boolean {
   return fraction >= NIGHT_START && fraction < NIGHT_END;
 }
 
-// Along the reading direction: `start` is from the line-up's start, its right edge in Arabic.
-export interface SlotEdges {
-  start: number;
-  width: number;
+export type SetMoment = 'buildup' | 'break' | 'drop' | 'sunrise';
+
+// The moment of the set in one word, and the countdown to the drop while it is coming.
+export interface MomentReading {
+  moment: SetMoment;
+  tier: string;
+  word: string;
+  countdown: string;
 }
 
-// The set fraction is the slot the sun is in plus how far through it, so the sun crosses each slot as the slot fills.
-export function sunPosition(fraction: number, slots: readonly SlotEdges[]): number {
-  const count = slots.length;
-  if (count === 0) {
-    return 0;
+export function momentReading(set: SetDefinition, state: SimState): MomentReading {
+  if (state.status === 'won' || set.tiers[state.set.tier] === undefined) {
+    return { moment: 'sunrise', tier: '', word: t('Sunrise'), countdown: '' };
   }
-  const at = clamp01(fraction) * count;
-  const index = Math.min(Math.floor(at), count - 1);
-  const slot = slots[index];
-  return slot === undefined ? 0 : slot.start + (at - index) * slot.width;
+  const tier = t('Palier {tier} / {count}', {
+    tier: formatNumber(state.set.tier + 1),
+    count: formatNumber(set.tiers.length),
+  });
+  const moment = state.set.segment;
+  const word = { buildup: t('Montée'), break: t('Break'), drop: t('Drop') }[moment];
+  const countdown = moment === 'drop' ? '' : formatDuration(ticksToDrop(set, state) ?? 0);
+  return { moment, tier, word, countdown };
 }
 
-export interface DropReading {
-  label: string;
-  value: string;
-  dropping: boolean;
+export type TierStage = 'done' | 'current' | 'dropping' | 'next';
+
+export interface TierReading {
+  stage: TierStage;
+  // How far the tier has gone towards its drop.
+  fill: number;
 }
 
-export function dropReading(
-  set: SetDefinition,
-  state: SimState,
-  content: GameContent,
-): DropReading {
-  const tier = set.tiers[state.set.tier];
-  if (state.status === 'won' || tier === undefined) {
-    return { label: t('Sunrise'), value: '', dropping: false };
-  }
-  if (state.set.segment === 'drop') {
-    const bossId = state.bosses?.at(-1);
-    const boss = content.enemies.find((enemy) => enemy.id === bossId);
-    return {
-      label: t('Drop'),
-      value: boss === undefined ? t('Le boss') : t(boss.name),
-      dropping: true,
-    };
-  }
-  return { label: t('Drop'), value: formatDuration(ticksToDrop(set, state) ?? 0), dropping: false };
+export function tierReadings(set: SetDefinition, state: SimState): TierReading[] {
+  const { ticksPerBar, ticksPerPhrase } = setTempo(set);
+  const won = state.status === 'won';
+  return set.tiers.map((tier, index) => {
+    if (won || index < state.set.tier) {
+      return { stage: 'done', fill: 1 };
+    }
+    if (index > state.set.tier) {
+      return { stage: 'next', fill: 0 };
+    }
+    if (state.set.segment === 'drop') {
+      return { stage: 'dropping', fill: 1 };
+    }
+    const length = tier.buildupPhrases * ticksPerPhrase + tier.breakBars * ticksPerBar;
+    return { stage: 'current', fill: 1 - ratio(ticksToDrop(set, state) ?? 0, length) };
+  });
 }
