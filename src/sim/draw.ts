@@ -122,6 +122,7 @@ function candidates(
   content: ResolvedContent,
   set: SetDefinition,
   player: PlayerState,
+  replaced: readonly string[],
 ): Candidate[] {
   const pool: Candidate[] = [];
   for (const upgrade of content.upgrades.values()) {
@@ -141,7 +142,7 @@ function candidates(
       pool.push({ id: weapon.id, weight, weapon: true });
     }
   }
-  return pool;
+  return pool.filter((candidate) => !replaced.includes(candidate.id));
 }
 
 // Unit weights consume the generator as a uniform draw would; rarity right after its upgrade (ADR 0010).
@@ -151,8 +152,10 @@ export function drawOffer(
   content: ResolvedContent,
   set: SetDefinition,
   player: PlayerState,
+  // A reroll leaves out the cards it replaces.
+  replaced: readonly string[] = [],
 ): Pick<UpgradeOffer, 'options' | 'rarities'> {
-  const pool = candidates(state, content, set, player);
+  const pool = candidates(state, content, set, player, replaced);
   const { rarityWeights } = content;
   const weights = rarityWeights[Math.min(state.volume ?? 0, rarityWeights.length - 1)];
   let total = pool.reduce((sum, candidate) => sum + candidate.weight, 0);
@@ -197,9 +200,11 @@ export function drawRelics(
   state: SimState,
   content: ResolvedContent,
   player: PlayerState,
+  replaced: readonly string[] = [],
 ): string[] {
   const pool = [...content.upgrades.values()].filter(
-    (upgrade) => upgrade.family === 'relic' && isEligible(upgrade, player),
+    (upgrade) =>
+      upgrade.family === 'relic' && isEligible(upgrade, player) && !replaced.includes(upgrade.id),
   );
   const offer: string[] = [];
   while (offer.length < relicOfferSize(state) && pool.length > 0) {

@@ -142,7 +142,6 @@ function readCommand(value: unknown): PlayerCommand {
       move: readVector(input.move),
       aim: readVector(input.aim),
       fire: flag(input.fire),
-      ...(input.fireTicks === undefined ? {} : { fireTicks: finite(input.fireTicks) }),
       skill: flag(input.skill),
     },
     actions: list(command.actions, readAction),
@@ -157,23 +156,14 @@ function readVector(value: unknown): { x: number; y: number } {
 function readAction(value: unknown): PlayerAction {
   const action = record(value);
   switch (action.type) {
-    case 'placeTrap':
-      return {
-        type: 'placeTrap',
-        trapId: text(action.trapId),
-        x: finite(action.x),
-        y: finite(action.y),
-        dx: finite(action.dx),
-        dy: finite(action.dy),
-      };
-    case 'takeTrap':
-      return { type: 'takeTrap', x: finite(action.x), y: finite(action.y) };
     case 'chooseUpgrade':
       return { type: 'chooseUpgrade', upgradeId: text(action.upgradeId) };
     case 'emote':
       return { type: 'emote', emote: oneOf(action.emote, EMOTES) };
+    case 'moveTrap':
     case 'dash':
     case 'leave':
+    case 'rerollOffer':
       return { type: action.type };
     default:
       throw new TypeError(`unknown action ${String(action.type)}`);

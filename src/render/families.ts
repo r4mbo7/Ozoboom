@@ -10,7 +10,8 @@ import { FULL_FAMILIES, FULL_LOOKS } from './full';
 import { createGround } from './ground';
 import { createGroundWaves } from './ground-waves';
 import { createBombs } from './bombs';
-import { createLoots } from './loots';
+import { createDice } from './dice';
+import { createCarriers } from './carried-traps';
 import { createMood } from './mood';
 import { createPickupBursts } from './pickup-bursts';
 import { createPickups } from './pickups';
@@ -19,6 +20,7 @@ import { createMarkers } from './markers';
 import { createStageMarker } from './stage-marker';
 import { createPlayers } from './players';
 import { createProjectiles } from './projectiles';
+import { createRechargeCords } from './recharge-cords';
 import { createRecruits } from './recruits';
 import { createSpecials } from './specials';
 import { createSpeakerCards } from './speaker-card';
@@ -47,11 +49,14 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
     createGroundWaves(ctx),
     createSpeakers(ctx),
     createCore(ctx),
+    // Before the traps, whose destruction takes this layer's children with it.
+    createRechargeCords(ctx),
     traps,
     createPickups(ctx),
     createPickupBursts(ctx),
-    createLoots(ctx),
+    createCarriers(ctx),
     createBombs(ctx),
+    createDice(ctx),
     createBystanders(ctx),
     enemies,
     createRecruits(ctx, enemies.burst.bind(enemies)),

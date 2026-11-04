@@ -7,13 +7,6 @@ export type Control =
   | 'moveRight'
   | 'fire'
   | 'placeTrap'
-  | 'nextTrap'
-  | 'previousTrap'
-  | 'selectTrap1'
-  | 'selectTrap2'
-  | 'selectTrap3'
-  | 'selectTrap4'
-  | 'selectTrap5'
   | 'skill'
   | 'dash'
   | 'emoteUp'
@@ -30,14 +23,6 @@ export type Control =
   | 'confirm'
   | 'back';
 
-export const TRAP_SLOT_CONTROLS = [
-  'selectTrap1',
-  'selectTrap2',
-  'selectTrap3',
-  'selectTrap4',
-  'selectTrap5',
-] as const satisfies readonly Control[];
-
 export type Bindings<K extends string | number> = Readonly<Partial<Record<K, readonly Control[]>>>;
 
 // KeyboardEvent.code is the physical position on a US layout: KeyW is the Z of an AZERTY keyboard.
@@ -47,18 +32,13 @@ export const FIXED_KEY_BINDINGS: Bindings<string> = {
   ArrowDown: ['menuDown'],
   ArrowRight: ['menuRight'],
   Tab: ['menuNext'],
-  Digit1: ['selectTrap1'],
-  Digit2: ['selectTrap2'],
-  Digit3: ['selectTrap3'],
-  Digit4: ['selectTrap4'],
-  Digit5: ['selectTrap5'],
   Escape: ['pause', 'back'],
   Enter: ['confirm'],
   NumpadEnter: ['confirm'],
 };
 
 export const SHIFTED_KEY_BINDINGS: Bindings<string> = {
-  Tab: ['previousTrap', 'menuPrevious'],
+  Tab: ['menuPrevious'],
 };
 
 export const SHIFT_KEYS: readonly string[] = ['ShiftLeft', 'ShiftRight'];
@@ -141,4 +121,3 @@ export const MENU_REPEAT_INTERVAL_MS = 120;
 
 // In CSS pixels.
 export const TOUCH_STICK_RADIUS = 56;
-export const TOUCH_DRAG_THRESHOLD = 16;

@@ -4,7 +4,7 @@ import { weaponGlyph } from '../data/weapon-glyphs';
 import { t } from '../shared/i18n';
 import type { Vec2 } from '../shared/vec';
 import type { SimState } from '../sim/state';
-import { worldToScreen } from './camera';
+import { baseScale, worldToScreen } from './camera';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { paintGlyph } from './glyph';
@@ -43,8 +43,9 @@ export function isNear(speaker: Vec2, players: readonly Vec2[]): boolean {
   );
 }
 
-export function cardScale(width: number, screenWidth: number): number {
-  return Math.min(1, (screenWidth - 2 * MARGIN) / width);
+// Grows with the arena on a screen taller than the reference one, never past the screen's width.
+export function cardScale(width: number, screenWidth: number, screenHeight: number): number {
+  return Math.min(Math.max(1, baseScale(screenHeight)), (screenWidth - 2 * MARGIN) / width);
 }
 
 // Above the top speaker, the card would hide under the HUD's top bar.
@@ -248,7 +249,7 @@ export function createSpeakerCards(ctx: RenderContext): Family {
           x: speaker.x,
           y: speaker.y + speaker.radius * (below ? DROP : -LIFT),
         });
-        const scale = cardScale(view.width, camera.screenWidth);
+        const scale = cardScale(view.width, camera.screenWidth, camera.screenHeight);
         const tail = TAIL * scale;
         const origin = cardOrigin(
           anchor.x,

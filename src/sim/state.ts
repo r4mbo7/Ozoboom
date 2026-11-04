@@ -1,6 +1,6 @@
 import type {
   EdgeSide,
-  LootDraw,
+  TrapDraw,
   Rarity,
   StatKey,
   SummonLook,
@@ -129,8 +129,10 @@ export interface PlayerState extends Positioned {
   sunTicks?: number;
   boosts?: PlayerBoost[];
   weapons?: WeaponSlot[];
-  // Oldest first, at most `SetDefinition.handSize`.
-  hand?: string[];
+  // Above the head, where it does not act.
+  carriedTrap?: CarriedTrap;
+  // The Rallonge plugged into one trap, from `tick` on, until it has let go.
+  rechargePlug?: { trapId: EntityId; tick: number };
   // A recipe serves once per player.
   fused?: string[];
   name?: string;
@@ -146,10 +148,12 @@ export interface PlayerState extends Positioned {
   dashBeats?: number;
   // The move of each tick of a dash under way.
   dash?: { dx: number; dy: number; ticksLeft: number };
-  // The source of the light offering held in a trap hand.
+  // The source of the light offering held.
   offering?: number;
   // Absent until their first feat.
   tally?: PlayerTally;
+  // Rerolls of an offer in reserve, one per die picked up; absent, none.
+  rerolls?: number;
   carrying?: { logId: EntityId; end: 0 | 1 };
   // x, y pairs from the newest, as long as the Poussin's band in file behind him.
   steps?: number[];
@@ -202,7 +206,7 @@ export interface EnemyState extends Positioned {
   carrying?: number;
   // Arnaqueur: running from players while carrying stolen vibes.
   fleeing?: boolean;
-  // Arnaqueur: reached the edge with its loot; `deaths` removes it without a kill or a drop.
+  // Arnaqueur: reached the edge with what it stole; `deaths` removes it without a kill or a drop.
   escaped?: boolean;
   // Collant: the player it holds on to.
   clingingTo?: PlayerId;
@@ -210,7 +214,8 @@ export interface EnemyState extends Positioned {
   clingCooldown?: number;
   // Collant: hp at the previous tick's check, to size the latest hit for detaching.
   hpWatermark?: number;
-  carriesLoot?: boolean;
+  // The trap drawn when it entered, dropped already placed where it dies.
+  carriesTrap?: string;
   carriesBomb?: boolean;
   // Called into the drop by a fire or a giant.
   called?: true;
@@ -261,9 +266,18 @@ export interface ProjectileState extends Positioned {
   heal?: number;
 }
 
-export interface TrapState extends Positioned {
+// What a trap keeps from the ground to above a player's head and back.
+export interface CarriedTrap {
   id: EntityId;
   kind: string;
+  // From 1 fresh down to 0, where it goes out (src/sim/trap-wear.ts).
+  intensity: number;
+  // When a Rallonge last recharged it: once every `TrapWear.rechargeEveryBars` at most.
+  rechargedTick?: number;
+}
+
+export interface TrapState extends Positioned, CarriedTrap {
+  // The last player who put it down, whose cards it fires with; the killer of its carrier before.
   ownerId: PlayerId;
   direction: Vec2;
   // Shorted by a puddle: it fires no more meanwhile.
@@ -383,14 +397,12 @@ export interface GustState {
   push: number;
 }
 
-export interface LootState extends Positioned {
+export interface BombState extends Positioned {
   id: EntityId;
-  trapId: string;
-  // Absent from a trap a player laid down: it waits for a free hand.
-  ticksLeft?: number;
+  ticksLeft: number;
 }
 
-export interface BombState extends Positioned {
+export interface DieState extends Positioned {
   id: EntityId;
   ticksLeft: number;
 }
@@ -406,6 +418,17 @@ export interface BystanderState extends Positioned {
   ticksLeft: number;
 }
 
+// Compounded on the bad vibes spawned from then on; the optional factors are 1 when missing.
+export interface EnemyScale {
+  hp: number;
+  damage: number;
+  // Every bad vibe but the bosses.
+  speed?: number;
+  count?: number;
+  bossHp?: number;
+  bossDamage?: number;
+}
+
 export type FestivalPhase = 'scene' | 'sunrise' | 'path';
 
 export interface FestivalExit {
@@ -416,10 +439,37 @@ export interface FestivalExit {
   radius: number;
 }
 
+// A board of the path: each player lights their pastille by shooting it, and once all are lit
+// the stage ahead is harder, and earns more. A new shot at it puts the pastille out.
+export interface FestivalChallenge {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  // In `players` order.
+  lit: boolean[];
+  // In `players` order: the player has let go of the fire since their last shot switched it.
+  armed: boolean[];
+  // In `players` order: the player has switched their pastille at least once.
+  switched: boolean[];
+  takenTick?: number;
+  // Once a pastille went out on the board taken, until it is taken again.
+  droppedTick?: number;
+}
+
+export interface FestivalScene {
+  setId: string;
+  fromTick: number;
+  // Once held, the tick of its sunrise.
+  toTick?: number;
+  // The challenges taken on the way to it, with the `stageGains` at its start and, once over, what it earned.
+  challenges?: { ids: string[]; scoreMul: number; scoreFrom: number; earned?: number };
+}
+
 export interface FestivalState {
   phase: FestivalPhase;
-  // In order, with the tick it started at and, once held, the tick of its sunrise.
-  scenes: { setId: string; fromTick: number; toTick?: number }[];
+  // In order.
+  scenes: FestivalScene[];
   // At sunrise, one per stage still to play.
   exits: FestivalExit[];
   // The index in `exits` each player stands in, in `players` order; null outside any.
@@ -428,6 +478,8 @@ export interface FestivalState {
   departTicks: number;
   // From leaving until the next stage starts.
   taken?: FestivalExit;
+  // On a path, one per challenge.
+  challenges?: FestivalChallenge[];
 }
 
 export interface UpgradeOffer {
@@ -530,22 +582,25 @@ export type SimEvent =
   | { type: 'emoted'; playerId: PlayerId; emote: Emote }
   | { type: 'coreHit'; damage: number }
   | { type: 'coreRepaired'; amount: number }
-  | { type: 'trapPlaced'; id: EntityId; kind: string; x: number; y: number }
+  // Put down by a player.
+  | { type: 'trapPlaced'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
+  // Dropped already placed by its dying carrier.
+  | { type: 'trapDropped'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapFired'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'trapTaken'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
-  // A trap the player tried to place while every trap slot was taken.
-  | { type: 'trapRefused'; playerId: PlayerId }
+  // A trap still placed when a festival stage holds: it leaves as vibes.
+  | { type: 'trapBurst'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
+  // Worn out where it stood, or above a player's head.
+  | { type: 'trapWornOut'; id: EntityId; kind: string; x: number; y: number }
+  | { type: 'carriedTrapWornOut'; id: EntityId; kind: string; playerId: PlayerId }
+  // A player with the Rallonge walked by it.
+  | { type: 'trapRecharged'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'pickupCollected'; playerId: PlayerId; kind: PickupKind; amount: number }
-  | { type: 'lootDropped'; id: EntityId; trapId: string; x: number; y: number }
-  | {
-      type: 'lootCollected';
-      id: EntityId;
-      playerId: PlayerId;
-      trapId: string;
-      x: number;
-      y: number;
-    }
   | { type: 'bombDropped'; id: EntityId; x: number; y: number }
+  // From where it was thrown: the render flies it from there.
+  | { type: 'dieDropped'; id: EntityId; x: number; y: number; fromX: number; fromY: number }
+  | { type: 'dieCollected'; id: EntityId; playerId: PlayerId; x: number; y: number }
+  | { type: 'offerRerolled'; playerId: PlayerId }
   | { type: 'bombExploded'; id: EntityId; playerId: PlayerId; x: number; y: number }
   | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyStatusStarted'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
@@ -607,6 +662,10 @@ export type SimEvent =
   | { type: 'festivalSceneHeld'; setId: string }
   | { type: 'festivalLeft'; setId: string; side: EdgeSide }
   | { type: 'festivalArrived'; setId: string }
+  | { type: 'festivalChallengeLit'; index: number; playerId: PlayerId }
+  | { type: 'festivalChallengeTaken'; index: number }
+  | { type: 'festivalChallengeUnlit'; index: number; playerId: PlayerId }
+  | { type: 'festivalChallengeDropped'; index: number }
   | { type: 'gameWon' }
   | { type: 'gameLost' };
 
@@ -626,20 +685,20 @@ export interface SimState {
   pickups: PickupState[];
   // Created with the first Festivalier, so a game without one keeps its replay fingerprint.
   bystanders?: BystanderState[];
-  // Optional like `bystanders`: created with the first loot carrier.
-  loots?: LootState[];
-  // The first loot holds `LootRules.first`.
-  lootsDropped?: number;
-  nextLootBar?: number;
+  // The first trap drawn is `CarrierRules.first`.
+  trapsDrawn?: number;
+  nextCarrierBar?: number;
   // Due, and no bad vibe carries it yet.
-  lootDue?: boolean;
+  carrierDue?: boolean;
   // Set by the festival on its last stage only, so other games keep their replay fingerprint.
-  lootDraw?: LootDraw;
-  // Optional like `loots`, and created with the first bomb dropped.
+  trapDraw?: TrapDraw;
+  // Optional like `bystanders`, and created with the first bomb dropped.
   bombs?: BombState[];
   nextBombBar?: number;
   // Due, and no bad vibe carries it yet.
   bombDue?: boolean;
+  // Optional like `bombs`, and created with the first die dropped.
+  dice?: DieState[];
   volume?: number;
   speakers?: SpeakerState[];
   vibeRainTicks?: number;
@@ -667,7 +726,7 @@ export interface SimState {
   // The drop goes on until none is left.
   bossesDue?: number;
   // What the bad vibes gain at spawn on top of their own scaling.
-  enemyScale?: { hp: number; damage: number };
+  enemyScale?: EnemyScale;
   festival?: FestivalState;
   pendingUpgrades: UpgradeOffer[];
   nextEntityId: EntityId;

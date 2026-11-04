@@ -2,6 +2,7 @@ import './ui.css';
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { CLASSES } from '../data/classes';
 import { setFraction, setOf } from '../sim/lineup';
+import type { PlayerId } from '../sim/state';
 import { type ClassInfo, swatchPortrait } from './class-picker';
 import { type ClassPickerScreen, createClassPicker } from './class-screen';
 import { el, setFlag } from './dom';
@@ -31,7 +32,7 @@ import type {
   UiFrame,
 } from './types';
 import { type UpgradeOverlay, createUpgradeOverlay } from './upgrade';
-import { lostWithoutTrap } from './trap-lesson';
+import { lostWithoutMove, stillToMove } from './trap-lesson';
 
 export type {
   ClassPickerModel,
@@ -51,8 +52,9 @@ export { createControlsButton, createFeedbackButton } from './feedback-button';
 export { type RemapScreen, openRemap } from './remap';
 export { createAutoAimToggle, createAutoFireToggle, createHitSoundToggle } from './toggle';
 export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './volume';
-export { heldSlot, selectTrap } from './navigation';
 export { defaultName } from './lobby-model';
+
+const NO_CALLERS: readonly PlayerId[] = [];
 
 const notices = (): Readonly<Record<Notice, { title: string; text: string; glyph: string }>> => ({
   desync: {
@@ -162,8 +164,9 @@ export function createUi(
   let device: InputDevice = 'none';
   let keysShown = prompts.version();
   let lastContent: GameContent | null = null;
-  // A trap stood on the field during this game: its end screen needs no lesson.
-  let trapStood = false;
+  // The players of this game who never lifted a trap, null before its first step.
+  let unmoved: readonly PlayerId[] | null = null;
+  let tutorialGame = false;
 
   const feedback =
     callbacks.onFeedback === undefined
@@ -204,6 +207,9 @@ export function createUi(
       calm: isCalm,
       choose(playerId, upgradeId) {
         callbacks.onChooseUpgrade(playerId, upgradeId);
+      },
+      reroll(playerId) {
+        callbacks.onRerollOffer(playerId);
       },
       cue(cue, variant) {
         callbacks.onUpgradeCue?.(cue, variant);
@@ -316,21 +322,26 @@ export function createUi(
       menuInput.open();
     },
     showGame(tutorial) {
-      trapStood = false;
+      unmoved = null;
+      tutorialGame = tutorial;
       hud.reset();
       hud.tutorial.reset(tutorial);
       sun.fix('nuit');
       show('game');
     },
     showEnd(state, session, best) {
-      end.show(state, lastContent, session, best, lostWithoutTrap(state, trapStood));
+      end.show(state, lastContent, session, best, lostWithoutMove(state, unmoved));
       sun.fix(state.status === 'won' ? 'jour' : 'nuit');
       show('end');
       grace.start();
       menuInput.open();
     },
     observeStep(state) {
-      return hud.tutorial.observe(state);
+      const tutorial = hud.tutorial.observe(state);
+      unmoved = stillToMove(unmoved, state.players);
+      // The tutorial asks one gesture at a time: the trap calls only when it is asked.
+      const calling = !tutorialGame || tutorial === 'trap';
+      return { tutorial, trapCallers: calling ? unmoved : NO_CALLERS };
     },
     update(state, frame, content) {
       lastContent = content;
@@ -344,7 +355,6 @@ export function createUi(
         menus[screen](edges, frame);
         return;
       }
-      trapStood ||= state.traps.length > 0;
       hud.update(state, frame, content);
       sun.follow(setFraction(setOf(content, state.setId), state));
       upgrade.update(state, frame, content, performance.now());

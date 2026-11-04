@@ -5,7 +5,7 @@ import { lookup } from '../lookup';
 import { compound } from '../effects';
 import { clearOfObstacles } from '../obstacles';
 import { volumeMul } from '../volume';
-import type { Arena, EdgeSide, EnemyState, SimState, Vec2 } from '../state';
+import type { Arena, EdgeSide, EnemyScale, EnemyState, SimState, Vec2 } from '../state';
 import { endlessMinutes } from './set-progress';
 import type { StepContext } from './types';
 
@@ -39,7 +39,9 @@ export function spawning(ctx: StepContext): void {
       continue;
     }
     const definition = lookup(content.enemies, rule.enemyId, 'enemy');
-    const count = Math.ceil(scaledCount(state, set, rule.count) * volumeMul(state));
+    const count = Math.ceil(
+      scaledCount(state, set, rule.count) * volumeMul(state) * (state.enemyScale?.count ?? 1),
+    );
     for (let i = 0; i < count; i++) {
       spawnAtEdge(ctx, definition, false);
     }
@@ -54,6 +56,7 @@ export function spawnEnemy(
   isBoss: boolean,
   hpMul = 1,
   damageMul = 1,
+  speedMul = 1,
 ): EnemyState {
   const phrase = state.set.phrase;
   const maxHp =
@@ -68,7 +71,7 @@ export function spawnEnemy(
     radius: definition.radius,
     hp: maxHp,
     maxHp,
-    speed: definition.speed * compound(definition.scalingPerPhrase.speed, phrase),
+    speed: definition.speed * compound(definition.scalingPerPhrase.speed, phrase) * speedMul,
     damage: definition.damage * damageMul,
     target: 'core',
     attackCooldown: 0,
@@ -84,7 +87,7 @@ export function spawnEnemy(
 
 type SpawnContext = Pick<StepContext, 'state' | 'set' | 'obstacles'>;
 
-const NO_SCALE = { hp: 1, damage: 1 };
+const NO_SCALE: EnemyScale = { hp: 1, damage: 1 };
 
 function spawnAtEdge(ctx: StepContext, definition: EnemyDefinition, isBoss: boolean): void {
   const { state, set, tempo } = ctx;
@@ -115,8 +118,12 @@ function spawnScaled(
     isBoss,
     perPlayerMul(state, set.perPlayer?.enemyHpMul) *
       compound(set.endlessPerMinute?.hp ?? 1, minutes) *
-      scale.hp,
-    compound(set.endlessPerMinute?.damage ?? 1, minutes) * scale.damage,
+      scale.hp *
+      (isBoss ? (scale.bossHp ?? 1) : 1),
+    compound(set.endlessPerMinute?.damage ?? 1, minutes) *
+      scale.damage *
+      (isBoss ? (scale.bossDamage ?? 1) : 1),
+    isBoss ? 1 : (scale.speed ?? 1),
   );
 }
 

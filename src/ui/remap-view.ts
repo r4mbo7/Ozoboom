@@ -11,19 +11,15 @@ import { type Toggle, createToggle } from './toggle';
 interface Group<A extends Action> {
   readonly name: () => string;
   readonly actions: readonly A[];
-  // Across both columns, its rows side by side.
-  readonly wide?: true;
 }
 
 const KEYBOARD_GROUPS: readonly Group<KeyboardAction>[] = [
   { name: () => t('Se déplacer'), actions: ['moveUp', 'moveDown', 'moveLeft', 'moveRight'] },
   { name: () => t('Agir'), actions: ['fire', 'placeTrap', 'skill', 'dash'] },
-  { name: () => t('Pièges'), actions: ['previousTrap', 'nextTrap'], wide: true },
 ];
 
 const GAMEPAD_GROUPS: readonly Group<GamepadAction>[] = [
   { name: () => t('Agir'), actions: ['fire', 'placeTrap', 'skill', 'dash'] },
-  { name: () => t('Pièges'), actions: ['previousTrap', 'nextTrap'] },
 ];
 
 export interface SlotButton {
@@ -178,7 +174,6 @@ function panel(on: Tab, groups: readonly Group<Action>[], slots: SlotButton[]): 
   node.setAttribute('role', 'tabpanel');
   for (const group of groups) {
     const section = el('section', 'ui-remap__group');
-    section.toggleAttribute('data-wide', group.wide === true);
     section.append(el('h3', 'ui-remap__group-name', group.name()));
     for (const action of group.actions) {
       const row = el('div', 'ui-remap__row');

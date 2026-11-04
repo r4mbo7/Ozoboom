@@ -96,39 +96,27 @@ export function trap(look: TrapLook): Shape {
   });
 }
 
-export function crate(): Shape {
-  return paint(48, 44, 16, (ctx) => {
+export const BOMB_FUSE_TIP = { x: 16, y: -23 } as const;
+
+// Shows three: tinted gold, it is told apart from the traps and the bomb at a glance.
+export function die(): Shape {
+  return paint(48, 48, 16, (ctx) => {
     glow(ctx, WHITE, 6);
     ctx.fillStyle = SHADE_DEEP;
     ctx.beginPath();
-    ctx.roundRect(-16, -11, 32, 24, 5);
+    ctx.roundRect(-13, -13, 26, 26, 6);
     ctx.fill();
     ctx.shadowBlur = 0;
     ctx.lineWidth = 2.4;
     ctx.strokeStyle = WHITE;
     ctx.stroke();
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(-6, -16, 12, 5, 2.5);
-    ctx.stroke();
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    for (const [x, y] of [
-      [-16, -11],
-      [16, -11],
-      [-16, 13],
-      [16, 13],
-    ] as const) {
-      ctx.moveTo(x, y + Math.sign(-y) * 6);
-      ctx.lineTo(x, y);
-      ctx.lineTo(x - Math.sign(x) * 6, y);
+    ctx.fillStyle = WHITE;
+    for (const at of [-6.5, 0, 6.5]) {
+      circle(ctx, 2.6, at, at);
+      ctx.fill();
     }
-    ctx.stroke();
   });
 }
-
-export const BOMB_FUSE_TIP = { x: 16, y: -23 } as const;
 
 export function bomb(): Shape {
   return paint(64, 64, 20, (ctx) => {

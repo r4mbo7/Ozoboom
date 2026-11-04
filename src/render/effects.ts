@@ -1,7 +1,8 @@
 import { Sprite, type Container } from 'pixi.js';
-import type { TrapEffect } from '../data/types';
+import type { TrapEffect, TrapWear } from '../data/types';
 import type { EntityId, SimEvent, SimState } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
+import { trapPower } from '../sim/trap-wear';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { easeOutQuad } from './motion';
@@ -115,6 +116,11 @@ export class Particles {
   }
 }
 
+interface Wave {
+  reach: number;
+  power: number;
+}
+
 export function createEffects(
   ctx: RenderContext,
   reachOf: (id: EntityId) => number | undefined,
@@ -122,14 +128,22 @@ export function createEffects(
   const { textures: t, layers } = ctx;
   const rings = new Particles(layers.fx, t.ring, 48);
 
-  function firedReach(state: SimState, trapId: EntityId, effect: TrapEffect): number {
+  // How far and how bright a trap's wave goes, from its owner's cards and its wear.
+  function fired(
+    state: SimState,
+    trapId: EntityId,
+    effect: TrapEffect,
+    wear: TrapWear | undefined,
+  ): Wave {
     const trap = byId(state.traps, trapId);
     const owner = trap === undefined ? undefined : byId(state.players, trap.ownerId);
-    if (owner !== undefined) {
-      return trapReach(effect, owner);
+    if (trap !== undefined && owner !== undefined) {
+      const power = trapPower(trap, wear);
+      return { reach: trapReach(effect, owner, power), power };
     }
-    // A trap broken in the tick it fired has left the state: keep the reach it was drawn with.
-    return reachOf(trapId) ?? trapReach(effect, { modifiers: {} });
+    // A trap worn out in the tick it fired has left the state: keep the reach it was drawn with.
+    const power = trapPower({ intensity: 0 }, wear);
+    return { reach: reachOf(trapId) ?? trapReach(effect, { modifiers: {} }, power), power };
   }
 
   function reset(): void {
@@ -142,7 +156,7 @@ export function createEffects(
       if (event.type === 'trapFired') {
         const { effect } = lookup(ctx.trapLooks, event.kind, 'trap kind');
         if (effect.kind === 'shockwave') {
-          const reach = firedReach(state, event.id, effect);
+          const { reach, power } = fired(state, event.id, effect, frame.set.trapWear);
           rings.spawn({
             now: tick,
             duration: TICKS_PER_BEAT / 2,
@@ -151,7 +165,7 @@ export function createEffects(
             fromRadius: reach * 0.2,
             toRadius: reach,
             tint: frame.palette[TRAP_TOKENS.shockwave],
-            peak: ctx.options.calmMode ? 0.5 : 0.9,
+            peak: (ctx.options.calmMode ? 0.5 : 0.9) * power,
           });
         }
       }

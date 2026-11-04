@@ -1,7 +1,7 @@
 import type { WeaponDefinition } from '../../data/types';
 import { lookup } from '../content';
-import { isEligible, isWeaponOffered, openFusion } from '../draw';
-import type { PlayerState } from '../state';
+import { drawOffer, drawRelics, isEligible, isWeaponOffered, openFusion } from '../draw';
+import type { PlayerState, UpgradeOffer } from '../state';
 import { applyModifiers, refreshDerivedStats, upgradeForm } from '../stats';
 import { presentNextOffer } from './progression';
 import type { StepContext } from './types';
@@ -10,6 +10,10 @@ export function upgradeChoice(ctx: StepContext): void {
   const { state, content, set, commands } = ctx;
   for (const player of state.players) {
     for (const action of commands.get(player.id)?.actions ?? []) {
+      if (action.type === 'rerollOffer') {
+        reroll(ctx, player);
+        continue;
+      }
       if (action.type !== 'chooseUpgrade') {
         continue;
       }
@@ -48,6 +52,29 @@ export function upgradeChoice(ctx: StepContext): void {
       presentNextOffer(ctx, player);
     }
   }
+}
+
+// Other cards in a new offer, so that the screen deals them; none left to draw, the reroll is kept.
+function reroll(ctx: StepContext, player: PlayerState): void {
+  const { state, content, set } = ctx;
+  const index = state.pendingUpgrades.findIndex((offer) => offer.playerId === player.id);
+  const offer = state.pendingUpgrades[index];
+  if (offer === undefined || (player.rerolls ?? 0) < 1) {
+    return;
+  }
+  let next: UpgradeOffer;
+  if (offer.kind === 'relic') {
+    const options = drawRelics(state.rng, state, content, player, offer.options);
+    next = { ...offer, options, rarities: options.map(() => 'common' as const) };
+  } else {
+    next = { ...offer, ...drawOffer(state.rng, state, content, set, player, offer.options) };
+  }
+  if (next.options.length === 0) {
+    return;
+  }
+  player.rerolls = (player.rerolls ?? 0) - 1;
+  state.pendingUpgrades[index] = next;
+  state.events.push({ type: 'offerRerolled', playerId: player.id });
 }
 
 function gainWeapon(player: PlayerState, weapon: WeaponDefinition): void {

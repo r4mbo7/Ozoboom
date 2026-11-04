@@ -127,7 +127,6 @@ function createPlayer(
     downed: false,
     invulnerableTicks: 0,
     weapons: [],
-    hand: [...set.startingHand],
     ...(slot.name === undefined ? {} : { name: slot.name }),
     ...(definition.gauge === undefined ? {} : { gauge: definition.gauge.start ?? 0 }),
   };

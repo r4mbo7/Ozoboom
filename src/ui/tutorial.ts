@@ -31,7 +31,7 @@ export interface TutorialProgress {
 export interface TutorialSight {
   readonly tick: number;
   readonly events: readonly SimEvent[];
-  readonly players: readonly Pick<PlayerState, 'id' | 'x' | 'y'>[];
+  readonly players: readonly Pick<PlayerState, 'id' | 'x' | 'y' | 'carriedTrap'>[];
 }
 
 // Arena units the player walks before the first step counts.
@@ -55,8 +55,9 @@ function gestureOf(event: SimEvent, playerId: number): TutorialStep | null {
     case 'weaponGained':
     case 'weaponEvolved':
       return event.playerId === playerId ? 'upgrade' : null;
+    // Put down: only a lifted trap is, so the trap was moved.
     case 'trapPlaced':
-      return 'trap';
+      return event.playerId === playerId ? 'trap' : null;
     case 'dashed':
       return event.playerId === playerId ? 'dash' : null;
     case 'skillUsed':
@@ -124,7 +125,8 @@ export function tutorialOver(progress: TutorialProgress, tick: number): boolean 
   );
 }
 
-function lineOf(step: TutorialStep, touch: boolean): string {
+// `carrying`: the player holds a trap above the head, so the line asks to put it down.
+function lineOf(step: TutorialStep, touch: boolean, carrying: boolean): string {
   switch (step) {
     case 'move':
       return touch ? t('Glisse sur l’arène pour te déplacer') : t('Déplace-toi');
@@ -135,7 +137,14 @@ function lineOf(step: TutorialStep, touch: boolean): string {
     case 'upgrade':
       return t('Remplis ta jauge de vibes, puis choisis une amélioration');
     case 'trap':
-      return touch ? t('Touche le bouton du piège pour le poser') : t('Pose un piège');
+      if (carrying) {
+        return touch
+          ? t('Va plus loin et touche encore le bouton')
+          : t('Va plus loin et repose-le');
+      }
+      return touch
+        ? t('Près d’un piège, touche le bouton du piège pour le prendre')
+        : t('Prends un piège pour le déplacer');
     case 'dash':
       return touch ? t('Touche le bouton du dash') : t('Fais un dash');
     case 'skill':
@@ -198,8 +207,9 @@ export function createTutorialBanner(): TutorialBanner {
   let progress = TUTORIAL_START;
   let device: { shown: DevicePrompts; touch: boolean } | null = null;
   // What the banner shows, so that a step of the sim that changes nothing touches no node.
-  let drawn: { step: number; done: boolean } | null = null;
+  let drawn: { step: number; done: boolean; carrying: boolean } | null = null;
   let now = 0;
+  let carrying = false;
 
   function draw(): void {
     const over = !active || tutorialOver(progress, now);
@@ -209,10 +219,10 @@ export function createTutorialBanner(): TutorialBanner {
       drawn = null;
       return;
     }
-    if (drawn?.step === progress.step && drawn.done === done) {
+    if (drawn?.step === progress.step && drawn.done === done && drawn.carrying === carrying) {
       return;
     }
-    drawn = { step: progress.step, done };
+    drawn = { step: progress.step, done, carrying };
     element.hidden = false;
     element.dataset.done = String(done);
     const step = TUTORIAL_STEPS[progress.step];
@@ -221,7 +231,9 @@ export function createTutorialBanner(): TutorialBanner {
     const touch = device?.touch ?? false;
     setText(
       line,
-      step === undefined ? t('Tu sais jouer. Tiens jusqu’au sunrise\u202f!') : lineOf(step, touch),
+      step === undefined
+        ? t('Tu sais jouer. Tiens jusqu’au sunrise\u202f!')
+        : lineOf(step, touch, carrying),
     );
     const shown = step === undefined || device === null || touch ? [] : keysOf(step, device.shown);
     keys.replaceChildren(
@@ -238,6 +250,7 @@ export function createTutorialBanner(): TutorialBanner {
       progress = TUTORIAL_START;
       drawn = null;
       now = 0;
+      carrying = false;
       draw();
     },
     observe(sight) {
@@ -246,6 +259,7 @@ export function createTutorialBanner(): TutorialBanner {
       }
       progress = advanceTutorial(progress, sight);
       now = sight.tick;
+      carrying = sight.players[0]?.carriedTrap !== undefined;
       draw();
       return progress.doneAt === null ? (TUTORIAL_STEPS[progress.step] ?? null) : null;
     },

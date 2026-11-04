@@ -19,7 +19,7 @@ export function bombCarriers({ state, set, tempo }: StepContext): void {
   for (const event of state.events) {
     const enemy =
       event.type === 'enemySpawned' ? state.enemies.find(({ id }) => id === event.id) : undefined;
-    if (enemy !== undefined && !enemy.isBoss && enemy.carriesLoot !== true) {
+    if (enemy !== undefined && !enemy.isBoss && enemy.carriesTrap === undefined) {
       enemy.carriesBomb = true;
       state.bombDue = false;
       return;

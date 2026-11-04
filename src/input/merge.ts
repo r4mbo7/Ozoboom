@@ -5,7 +5,6 @@ import {
   MENU_DIRECTION_CONTROLS,
   MENU_REPEAT_DELAY_MS,
   MENU_REPEAT_INTERVAL_MS,
-  TRAP_SLOT_CONTROLS,
   type Control,
   type MenuDirection,
 } from './bindings';
@@ -28,10 +27,7 @@ export interface GamepadFrame extends DeviceFrame {
   readonly disconnected: boolean;
 }
 
-// `drop`: where on the screen a trap dragged from the HUD left the finger this frame.
-export interface TouchFrame extends DeviceFrame {
-  readonly drop: Vec2 | null;
-}
+export type TouchFrame = DeviceFrame;
 
 export const IDLE_TOUCH_FRAME: TouchFrame = {
   held: new Set(),
@@ -39,7 +35,6 @@ export const IDLE_TOUCH_FRAME: TouchFrame = {
   move: IDLE_INPUT.move,
   aim: null,
   active: false,
-  drop: null,
 };
 
 export interface MergeState {
@@ -105,14 +100,11 @@ export function mergeFrames(
         placeTrap: pressed('placeTrap'),
         dash: pressed('dash'),
         emote: EMOTES.find((emote) => pressed(EMOTE_CONTROLS[emote])) ?? null,
-        nextTrap: pressed('nextTrap'),
-        previousTrap: pressed('previousTrap'),
-        selectTrap: selectedTrap(keyboardMouse.presses, gamepad.presses, touch.presses),
         pause: pressed('pause'),
       },
       menu,
-      // A finger has no pointer to aim with: it only points where it drops a trap.
-      pointerScreen: touch.active ? touch.drop : keyboardMouse.pointer,
+      // A finger has no pointer to aim with.
+      pointerScreen: touch.active ? null : keyboardMouse.pointer,
       aimFromPointer,
     },
     state: { device, aim, aimFromPointer, nextRepeatAt },
@@ -143,17 +135,6 @@ function stepRepeat(
   if (now < nextAt) return { fire: false, nextAt };
   const following = nextAt + MENU_REPEAT_INTERVAL_MS;
   return { fire: true, nextAt: following > now ? following : now + MENU_REPEAT_INTERVAL_MS };
-}
-
-function selectedTrap(...pressLists: readonly (readonly Control[])[]): number | null {
-  let slot: number | null = null;
-  for (const presses of pressLists) {
-    for (const control of presses) {
-      const index = TRAP_SLOT_CONTROLS.findIndex((slotControl) => slotControl === control);
-      if (index !== -1) slot = index;
-    }
-  }
-  return slot;
 }
 
 export function clampLength(x: number, y: number): Vec2 {

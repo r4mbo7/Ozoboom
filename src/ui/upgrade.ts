@@ -28,7 +28,7 @@ import {
 } from './cards';
 import { formatNumber } from './format';
 import { playerLabel } from './hud-model';
-import { STAR, classMark, medallion, roleIcon, upgradeIcon } from './icons';
+import { DIE, STAR, classMark, medallion, roleIcon, upgradeIcon } from './icons';
 import { type Menu, createMenu } from './menu';
 import { type MenuInput, createMenuInput } from './navigation';
 import type { Prompts } from './prompts';
@@ -48,6 +48,8 @@ export interface UpgradeHost {
   // Calm mode: no choice is held for a motion nobody sees.
   calm(): boolean;
   choose(playerId: PlayerId, upgradeId: string): void;
+  // Spends one of the player's rerolls on other cards for the offer shown.
+  reroll(playerId: PlayerId): void;
   cue(cue: UpgradeCue, variant: number): void;
   // null when the HUD does not show that player.
   landing(playerId: PlayerId, weaponId: string | null): HTMLElement | null;
@@ -398,7 +400,19 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   places.element.hidden = true;
   const cards = el('div', 'ui-cards');
   const hint = el('p', 'ui-hint');
-  element.append(who, kicker, heading, places.element, cards, hint);
+  const reroll = el('button', 'ui-reroll');
+  reroll.type = 'button';
+  reroll.hidden = true;
+  const rerollCount = el('span', 'ui-reroll__count');
+  reroll.append(
+    icon('ui-reroll__die', DIE),
+    el('span', 'ui-reroll__label', t('Relancer')),
+    rerollCount,
+  );
+  // The reroll shares the row of the hints: a phone has no height to spare for it.
+  const foot = el('div', 'ui-offer__foot');
+  foot.append(hint, reroll);
+  element.append(who, kicker, heading, places.element, cards, foot);
 
   const input = createMenuInput();
   let current: UpgradeOffer | null = null;
@@ -415,6 +429,9 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   let shownPlaces: string | null = null;
   let playing = -1;
   let stops: (() => void)[] = [];
+  let rerolls = 0;
+  // Asked, until the sim deals the new offer.
+  let rerolling = false;
   // The offer plays its weapons wherever the screen leaves them room: a phone turned changes that.
   let scenes = false;
   const tiles = window.matchMedia(TILE_HEADS);
@@ -425,11 +442,44 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   });
 
   const menu: Menu = createMenu((index) => {
+    if (index === buttons.length) {
+      askReroll();
+      return;
+    }
     const upgradeId = current?.options[index];
     if (current !== null && upgradeId !== undefined && chosen === null) {
       choose(upgradeId);
     }
   });
+
+  function askReroll(): void {
+    if (current === null || chosen !== null || rerolling || rerolls < 1 || clock < opensAt) {
+      return;
+    }
+    rerolling = true;
+    host.reroll(playerId);
+    mark();
+  }
+
+  function showRerolls(): void {
+    reroll.hidden = rerolls < 1;
+    setText(rerollCount, formatNumber(rerolls));
+    reroll.setAttribute(
+      'aria-label',
+      tn(
+        rerolls,
+        'Relancer les cartes, {count} relance en réserve',
+        'Relancer les cartes, {count} relances en réserve',
+        {
+          count: formatNumber(rerolls),
+        },
+      ),
+    );
+  }
+
+  function menuItems(): readonly HTMLElement[] {
+    return reroll.hidden ? buttons : [...buttons, reroll];
+  }
 
   function chosenButton(): HTMLButtonElement | undefined {
     return buttons.find((button) => button.dataset.id === chosen);
@@ -480,6 +530,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
 
   function mark(): void {
     element.dataset.state = chosen !== null ? 'chosen' : clock < opensAt ? 'dealing' : 'choosing';
+    setFlag(reroll, 'asked', rerolling);
     for (const button of buttons) {
       const picked = button.dataset.id === chosen;
       setFlag(button, 'chosen', picked);
@@ -653,7 +704,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     later.push({
       at: opensAt,
       run() {
-        menu.setItems(buttons);
+        menu.setItems(menuItems());
         mark();
         host.cue('cardsReady', 0);
       },
@@ -666,6 +717,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     scenes = false;
     current = null;
     chosen = null;
+    rerolling = false;
     later = [];
     element.hidden = true;
   }
@@ -707,6 +759,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       if (offer !== current) {
         current = offer;
         chosen = null;
+        rerolling = false;
         shownPlaces = null;
         playing = -1;
         input.open();
@@ -723,6 +776,13 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         }
         deal();
         mark();
+      }
+      if ((player?.rerolls ?? 0) !== rerolls) {
+        rerolls = player?.rerolls ?? 0;
+        showRerolls();
+        if (now >= opensAt) {
+          menu.setItems(menuItems());
+        }
       }
       element.hidden = false;
       who.hidden = !team;

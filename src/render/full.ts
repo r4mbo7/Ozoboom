@@ -10,3 +10,4 @@ export const FULL_FACES: Readonly<Record<string, Face>> = {};
 export const FULL_DRAWINGS: readonly ClassDrawing[] = [];
 export const FULL_FAMILIES: readonly ((ctx: RenderContext, poseOf: PoseOf) => Family)[] = [];
 export const FULL_CLEARINGS: Readonly<Record<string, readonly Tree[]>> = {};
+export const FULL_OWN_SHOTS: readonly string[] = [];

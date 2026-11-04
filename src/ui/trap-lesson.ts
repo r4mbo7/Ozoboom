@@ -2,7 +2,7 @@ import type { GameContent } from '../data/types';
 import { t } from '../shared/i18n';
 import { beatPeriodMs } from '../shared/tempo';
 import { setTempo } from '../sim/lineup';
-import type { SimState } from '../sim/state';
+import type { PlayerId, PlayerState, SimState } from '../sim/state';
 import { el, fillHint, icon, setVar } from './dom';
 import { classToken } from './hud-model';
 import { trapIcon } from './icons';
@@ -15,12 +15,29 @@ export interface TrapLesson {
   setDevice(shown: DevicePrompts): void;
 }
 
-// A game lost while no trap ever stood on the field: the end screen shows what a trap does.
-export function lostWithoutTrap(
-  state: Pick<SimState, 'status' | 'traps'>,
-  stood: boolean,
+// The players of a game who have not lifted a trap yet, from the first step on (`waiting` null
+// before it): the same list while nobody lifts one.
+export function stillToMove(
+  waiting: readonly PlayerId[] | null,
+  players: readonly Pick<PlayerState, 'id' | 'carriedTrap'>[],
+): readonly PlayerId[] {
+  const before = waiting ?? players.map((player) => player.id);
+  const left = before.filter(
+    (id) => players.find((player) => player.id === id)?.carriedTrap === undefined,
+  );
+  return left.length === before.length ? before : left;
+}
+
+// A game lost while nobody ever moved a trap: the end screen shows what moving one does.
+export function lostWithoutMove(
+  state: Pick<SimState, 'status'> & { readonly players: readonly Pick<PlayerState, 'id'>[] },
+  waiting: readonly PlayerId[] | null,
 ): boolean {
-  return state.status === 'lost' && !stood && state.traps.length === 0;
+  return (
+    state.status === 'lost' &&
+    waiting !== null &&
+    state.players.every((player) => waiting.includes(player.id))
+  );
 }
 
 const CAISSON = trapIcon({ kind: 'shockwave', damage: 0, radius: 0, knockback: 0 });
@@ -44,6 +61,7 @@ function scene(): HTMLElement {
   window.append(
     zone,
     icon('ui-lesson__goer', GOER),
+    icon('ui-lesson__held', CAISSON),
     icon('ui-lesson__foe ui-lesson__foe--a', FOE),
     icon('ui-lesson__foe ui-lesson__foe--b', FOE),
     tile,
@@ -73,11 +91,11 @@ export function createTrapLesson(): TrapLesson {
     },
     setDevice(shown) {
       if (shown.placeTrap === '') {
-        how.replaceChildren(t('Touche le bouton d’un piège pour le poser à tes pieds'));
+        how.replaceChildren(t('Près d’un piège, touche le bouton du piège pour le déplacer'));
       } else {
         fillHint(
           how,
-          [{ keys: [shown.placeTrap], label: t('pose le piège à tes pieds') }],
+          [{ keys: [shown.placeTrap], label: t('déplace un piège vers les bad vibes') }],
           shown.style,
         );
       }

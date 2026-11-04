@@ -16,12 +16,12 @@ import { FACE_RADIUS, MASK_BODY } from './face-kit';
 import { recruit } from './faces';
 import { type MaskSet, createMasks } from './textures-enemies';
 import { type SpecialTextures, createSpecialTextures, specialShapes } from './textures-specials';
-import { type PlayerTextures, playerTextures } from './textures-players';
+import { type PlayerTextures, destroyPlayerTextures, playerTextures } from './textures-players';
 import { type ClassFxTextures, createClassFxTextures } from './textures-class';
 import { type NameTextures, createNameTextures } from './textures-names';
 import { createSpeakerShapes } from './textures-speakers';
 import { comet } from './textures-pickups';
-import { bomb, cone, crate, droplet, trap } from './textures-traps';
+import { bomb, cone, die, droplet, trap } from './textures-traps';
 import {
   type WeaponTextures,
   createWeaponTextures,
@@ -43,8 +43,8 @@ export interface Textures {
   readonly vibes: Shape;
   readonly cometHead: Shape;
   readonly cometTail: Shape;
-  readonly crate: Shape;
   readonly bomb: Shape;
+  readonly die: Shape;
   readonly players: PlayerTextures;
   readonly names: NameTextures;
   readonly arrow: Shape;
@@ -67,7 +67,6 @@ export interface Textures {
   readonly classFx: ClassFxTextures;
 }
 
-export const STREAK_HEAD = 40 / 48;
 export const BEAM_LENGTH = 64;
 
 export const TRAP_TOKENS: Readonly<Record<TrapLook, PaletteToken>> = {
@@ -163,8 +162,8 @@ export function createTextures(): Textures {
     }),
     cometHead: comet('head'),
     cometTail: comet('tail'),
-    crate: crate(),
     bomb: bomb(),
+    die: die(),
     players: playerTextures(),
     recruit: paint(144, 144, FACE_RADIUS, recruit),
     core: paint(256, 256, 96, (ctx) => {
@@ -287,10 +286,7 @@ export function destroyTextures(textures: Textures): void {
   for (const shape of shapes) {
     shape.texture.destroy(true);
   }
-  textures.players.source.destroy();
-  for (const drawing of textures.players.drawings.values()) {
-    drawing.painted?.source.destroy();
-  }
+  destroyPlayerTextures(textures.players);
   textures.masks.destroy();
   textures.names.destroy();
   destroyWeaponTextures(textures.weapons);

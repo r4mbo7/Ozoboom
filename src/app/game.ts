@@ -167,6 +167,8 @@ export async function startGame(
   let frozenAlpha = 0;
   // The tutorial asks to plug a speaker: the scene shows the way.
   let guidingToSpeaker = false;
+  // The players whose first trap calls them in the arena.
+  let trapCallers: readonly PlayerId[] = [];
   let endingLeft = 0;
   let recorder: Recorder | null = null;
   let match = soloMatch();
@@ -298,6 +300,9 @@ export async function startGame(
       onQuit: quit,
       onChooseUpgrade(playerId: PlayerId, upgradeId: string) {
         match.chooseUpgrade(playerId, upgradeId);
+      },
+      onRerollOffer(playerId: PlayerId) {
+        match.rerollOffer(playerId);
       },
       onUpgradeCue(cue: UpgradeCue, variant: number) {
         audio.cue(cue, variant);
@@ -720,6 +725,7 @@ export async function startGame(
       players: uiPlayers,
       devices: [...view.devices].map(([device, own]) => ({ device, snapshot: own })),
       menuPosition: screen === 'title' ? (audio.menuPosition() ?? silentMenuPosition()) : null,
+      toScreen: (point) => renderer.worldToScreen(point),
     };
   }
 
@@ -785,10 +791,15 @@ export async function startGame(
     if (heard) {
       audio.update(session.state);
     }
-    const guided = ui.observeStep(session.state) === 'speaker';
+    const guide = ui.observeStep(session.state);
+    const guided = guide.tutorial === 'speaker';
     if (guided !== guidingToSpeaker) {
       guidingToSpeaker = guided;
       renderer.setOptions({ guideToSpeaker: guided });
+    }
+    if (guide.trapCallers !== trapCallers) {
+      trapCallers = guide.trapCallers;
+      renderer.setOptions({ trapCallers });
     }
     const { status } = session.state;
     if (screen === 'game' && (status === 'won' || status === 'lost')) {

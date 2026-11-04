@@ -4,10 +4,10 @@ import type { CommandSource } from '../net/types';
 import type { CameraFocus } from '../render/types';
 import { length, normalize } from '../shared/vec';
 import { IDLE_INPUT } from '../sim/commands';
-import { setOf } from '../sim/lineup';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId, PlayerState } from '../sim/state';
-import { attackChargeTicks, attackReach } from '../sim/attacks';
+import { attackReach } from '../sim/attacks';
+import { FULL_AIM } from '../sim/full';
 import type { LocalPlayer } from '../ui';
 import { type Assist, Controls, type ScreenToWorld } from './controls';
 import { createSession, type Session } from './session';
@@ -51,6 +51,7 @@ export interface Match {
   // Once per rendered frame, before its steps.
   frame(view: InputView): void;
   chooseUpgrade(playerId: PlayerId, upgradeId: string): void;
+  rerollOffer(playerId: PlayerId): void;
   // False when the source has nothing yet and the sim must wait.
   step(toWorld: ScreenToWorld): boolean;
   close(): void;
@@ -61,9 +62,6 @@ const IDLE_GAMEPLAY = {
   placeTrap: false,
   dash: false,
   emote: null,
-  nextTrap: false,
-  previousTrap: false,
-  selectTrap: null,
   pause: false,
 } as const;
 
@@ -97,9 +95,6 @@ export function withoutPresses(snapshot: InputSnapshot): InputSnapshot {
       placeTrap: false,
       dash: false,
       emote: null,
-      nextTrap: false,
-      previousTrap: false,
-      selectTrap: null,
       pause: false,
     },
     menu: NO_MENU,
@@ -126,9 +121,8 @@ export function createMatch(options: MatchOptions): Match {
     ...(options.festival === true ? { festival: true } : {}),
   });
   const controls = new Map<PlayerId, Controls>();
-  const { handSize } = setOf(content, options.setId);
   for (const playerId of locals.keys()) {
-    controls.set(playerId, new Controls(handSize, outwardAim(session, playerId)));
+    controls.set(playerId, new Controls(outwardAim(session, playerId)));
   }
   const seats: MatchSeat[] = slots.map((slot) => ({
     playerId: slot.id,
@@ -160,6 +154,9 @@ export function createMatch(options: MatchOptions): Match {
     chooseUpgrade(playerId, upgradeId) {
       controls.get(playerId)?.chooseUpgrade(upgradeId);
     },
+    rerollOffer(playerId) {
+      controls.get(playerId)?.rerollOffer();
+    },
     step(toWorld) {
       const commands = source.next(
         [...controls].map(([playerId, own]) => {
@@ -171,10 +168,9 @@ export function createMatch(options: MatchOptions): Match {
           return own.command(
             player,
             toWorld,
-            session.state.enemies,
+            [...session.state.enemies, ...(FULL_AIM.targets?.(session.state, playerId) ?? [])],
             attackReach(attack, player),
             options.assist?.(),
-            attackChargeTicks(attack),
           );
         }),
       );

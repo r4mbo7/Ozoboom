@@ -8,11 +8,10 @@ import { DOME_FACETS, type Facet } from './textures';
 import { add, placeOutline, setTint } from './util';
 import {
   SEGMENTS,
+  createLifePill,
   drawSegments,
   litSegments,
   litShare,
-  percentText,
-  placeLabel,
   stageColor,
 } from './vu-meter';
 
@@ -25,7 +24,7 @@ const SEGMENT_WIDTH = 6;
 const RIM_GROW = 2;
 const LABEL_GAP = 4;
 const MAX_SWELL = 1.05;
-const PERCENT_SIZE = 1.3;
+const PERCENT_SIZE = 1.6;
 const BLINK_TICKS = 2 * TICKS_PER_BEAT;
 const BLINK_PERIOD = TICKS_PER_BEAT / 2;
 const RAYS = 8;
@@ -85,7 +84,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
   const lost = new Graphics();
   layers.core.addChild(track, rim, lit, lost);
   const rings = [track, rim, lit, lost];
-  const percent = { edge: add(layers.coreLabel, t.halo), fill: add(layers.coreLabel, t.halo) };
+  const percent = createLifePill(layers.coreLabel);
   const flash = add(layers.fx, t.ring);
   flash.visible = false;
   outline.visible = false;
@@ -150,16 +149,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
 
       const below = core.y + ringRadius * MAX_SWELL + (SEGMENT_WIDTH + RIM_GROW) / 2;
       const size = 1 / frame.camera.scale;
-      placeLabel(
-        t,
-        percent,
-        percentText(core),
-        palette.texte,
-        core.x,
-        below + LABEL_GAP * size,
-        PERCENT_SIZE * size,
-        frame,
-      );
+      percent.place(t, core, core.x, below + LABEL_GAP * size, PERCENT_SIZE * size, frame);
 
       body.position.set(core.x, core.y);
       body.scale.set((core.radius / t.core.radius) * swell);

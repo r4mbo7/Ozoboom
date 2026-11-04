@@ -11,14 +11,13 @@ const FRAME = 2;
 const FIRE = 1;
 const SKILL = 2;
 const ACTIONS = 4;
-const FIRE_TICKS = 8;
-const MAX_FIRE_TICKS = 0xffff;
-const PLACE_TRAP = 0;
+// 0 and 2 placed and took a trap before a trap could only be moved: an older peer's are refused.
 const CHOOSE_UPGRADE = 1;
-const TAKE_TRAP = 2;
 const DASH = 3;
 const EMOTE = 4;
 const LEAVE = 5;
+const REROLL_OFFER = 6;
+const MOVE_TRAP = 7;
 const AXIS_SCALE = 32767;
 const MAX_COUNT = 255;
 const REFUSALS = ['version', 'full', 'started'] as const satisfies readonly Extract<
@@ -62,12 +61,6 @@ class Writer {
     this.reserve(2);
     this.view.setInt16(this.length, value);
     this.length += 2;
-  }
-
-  f32(value: number): void {
-    this.reserve(4);
-    this.view.setFloat32(this.length, value);
-    this.length += 4;
   }
 
   id(value: string): void {
@@ -127,10 +120,6 @@ class Reader {
     return this.view.getInt16(this.take(2));
   }
 
-  f32(): number {
-    return this.view.getFloat32(this.take(4));
-  }
-
   id(): string {
     const length = this.u8();
     const start = this.take(length);
@@ -153,17 +142,8 @@ function unaxis(value: number): number {
 }
 
 function writeAction(writer: Writer, action: PlayerAction): void {
-  if (action.type === 'placeTrap') {
-    writer.u8(PLACE_TRAP);
-    writer.id(action.trapId);
-    writer.f32(action.x);
-    writer.f32(action.y);
-    writer.f32(action.dx);
-    writer.f32(action.dy);
-  } else if (action.type === 'takeTrap') {
-    writer.u8(TAKE_TRAP);
-    writer.f32(action.x);
-    writer.f32(action.y);
+  if (action.type === 'moveTrap') {
+    writer.u8(MOVE_TRAP);
   } else if (action.type === 'dash') {
     writer.u8(DASH);
   } else if (action.type === 'emote') {
@@ -171,6 +151,8 @@ function writeAction(writer: Writer, action: PlayerAction): void {
     writer.u8(EMOTES.indexOf(action.emote));
   } else if (action.type === 'leave') {
     writer.u8(LEAVE);
+  } else if (action.type === 'rerollOffer') {
+    writer.u8(REROLL_OFFER);
   } else {
     writer.u8(CHOOSE_UPGRADE);
     writer.id(action.upgradeId);
@@ -179,28 +161,20 @@ function writeAction(writer: Writer, action: PlayerAction): void {
 
 function readAction(reader: Reader): PlayerAction {
   const type = reader.u8();
-  if (type === PLACE_TRAP) {
-    const trapId = reader.id();
-    return {
-      type: 'placeTrap',
-      trapId,
-      x: reader.f32(),
-      y: reader.f32(),
-      dx: reader.f32(),
-      dy: reader.f32(),
-    };
+  if (type === MOVE_TRAP) {
+    return { type: 'moveTrap' };
   }
   if (type === CHOOSE_UPGRADE) {
     return { type: 'chooseUpgrade', upgradeId: reader.id() };
-  }
-  if (type === TAKE_TRAP) {
-    return { type: 'takeTrap', x: reader.f32(), y: reader.f32() };
   }
   if (type === DASH) {
     return { type: 'dash' };
   }
   if (type === LEAVE) {
     return { type: 'leave' };
+  }
+  if (type === REROLL_OFFER) {
+    return { type: 'rerollOffer' };
   }
   if (type === EMOTE) {
     const index = reader.u8();
@@ -218,21 +192,14 @@ function writeCommand(writer: Writer, command: PlayerCommand): void {
   if (actions.length > MAX_COUNT) {
     throw new RangeError(`too many actions in one command: ${String(actions.length)}`);
   }
-  const fireTicks = input.fire ? input.fireTicks : undefined;
   writer.u8(command.playerId);
   writer.u8(
-    (input.fire ? FIRE : 0) |
-      (input.skill ? SKILL : 0) |
-      (actions.length > 0 ? ACTIONS : 0) |
-      (fireTicks === undefined ? 0 : FIRE_TICKS),
+    (input.fire ? FIRE : 0) | (input.skill ? SKILL : 0) | (actions.length > 0 ? ACTIONS : 0),
   );
   writer.i16(axis(input.move.x));
   writer.i16(axis(input.move.y));
   writer.i16(axis(input.aim.x));
   writer.i16(axis(input.aim.y));
-  if (fireTicks !== undefined) {
-    writer.varint(clamp(Math.round(fireTicks), 1, MAX_FIRE_TICKS));
-  }
   if (actions.length > 0) {
     writer.u8(actions.length);
     actions.forEach((action) => {
@@ -249,7 +216,6 @@ function readCommand(reader: Reader): PlayerCommand {
   const flags = reader.u8();
   const move = { x: unaxis(reader.i16()), y: unaxis(reader.i16()) };
   const aim = { x: unaxis(reader.i16()), y: unaxis(reader.i16()) };
-  const fireTicks = (flags & FIRE_TICKS) === 0 ? undefined : reader.varint();
   const actions: PlayerAction[] = [];
   if ((flags & ACTIONS) !== 0) {
     for (let count = reader.u8(); count > 0; count--) {
@@ -262,7 +228,6 @@ function readCommand(reader: Reader): PlayerCommand {
       move,
       aim,
       fire: (flags & FIRE) !== 0,
-      ...(fireTicks === undefined ? {} : { fireTicks }),
       skill: (flags & SKILL) !== 0,
     },
     actions,

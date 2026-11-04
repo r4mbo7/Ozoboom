@@ -1,16 +1,10 @@
-import { distance } from '../shared/vec';
 import type { Vec2 } from '../sim/state';
-import {
-  TOUCH_DRAG_THRESHOLD,
-  TOUCH_STICK_RADIUS,
-  TRAP_SLOT_CONTROLS,
-  type Control,
-} from './bindings';
+import { TOUCH_STICK_RADIUS, type Control } from './bindings';
 import { applyRadialDeadzone } from './gamepad';
 import type { TouchFrame } from './merge';
 import './touch.css';
 
-export type TouchControl = 'stick' | 'skill' | 'dash' | 'pause' | `trap:${number}`;
+export type TouchControl = 'stick' | 'skill' | 'dash' | 'pause' | 'trap';
 
 interface Stick {
   readonly id: number;
@@ -18,22 +12,12 @@ interface Stick {
   readonly at: Vec2;
 }
 
-interface Drag {
-  readonly slot: number;
-  readonly origin: Vec2;
-  readonly at: Vec2;
-  readonly moved: boolean;
-  readonly onArena: boolean;
-}
-
 export interface TouchState {
   readonly stick: Stick | null;
   readonly skill: ReadonlySet<number>;
   // A finger lands on the skill this frame: a tap shorter than a frame still casts it.
   readonly skillTapped: boolean;
-  readonly drags: ReadonlyMap<number, Drag>;
   readonly presses: readonly Control[];
-  readonly drop: Vec2 | null;
   readonly active: boolean;
 }
 
@@ -51,7 +35,6 @@ export type TouchEventLike =
       readonly id: number;
       readonly x: number;
       readonly y: number;
-      readonly onArena: boolean;
     }
   | { readonly type: 'cancel'; readonly id: number };
 
@@ -59,25 +42,14 @@ export const INITIAL_TOUCH_STATE: TouchState = {
   stick: null,
   skill: new Set(),
   skillTapped: false,
-  drags: new Map(),
   presses: [],
-  drop: null,
   active: false,
 };
 
+const TOUCH_CONTROLS: readonly TouchControl[] = ['stick', 'skill', 'dash', 'pause', 'trap'];
+
 export function parseTouchControl(value: string | undefined): TouchControl | null {
-  if (value === 'stick' || value === 'skill' || value === 'dash' || value === 'pause') return value;
-  return value !== undefined && isTrapControl(value) ? value : null;
-}
-
-function isTrapControl(value: string): value is `trap:${number}` {
-  return trapSlot(value) !== null;
-}
-
-function trapSlot(value: string | undefined): number | null {
-  const match = /^trap:(\d+)$/.exec(value ?? '');
-  const slot = match === null ? NaN : Number(match[1]);
-  return slot < TRAP_SLOT_CONTROLS.length ? slot : null;
+  return TOUCH_CONTROLS.find((control) => control === value) ?? null;
 }
 
 export function reduceTouch(state: TouchState, event: TouchEventLike): TouchState {
@@ -85,20 +57,16 @@ export function reduceTouch(state: TouchState, event: TouchEventLike): TouchStat
     case 'down':
       return press(state, event.id, event.control, { x: event.x, y: event.y });
     case 'move':
-      return slide(state, event.id, { x: event.x, y: event.y }, event.onArena);
+      return slide(state, event.id, { x: event.x, y: event.y });
     case 'up':
-      return lift(
-        slide(state, event.id, { x: event.x, y: event.y }, event.onArena),
-        event.id,
-        true,
-      );
+      return lift(slide(state, event.id, { x: event.x, y: event.y }), event.id);
     case 'cancel':
-      return lift(state, event.id, false);
+      return lift(state, event.id);
   }
 }
 
 export function releaseTouches(state: TouchState): TouchState {
-  return { ...state, stick: null, skill: new Set(), skillTapped: false, drags: new Map() };
+  return { ...state, stick: null, skill: new Set(), skillTapped: false };
 }
 
 function press(state: TouchState, id: number, control: TouchControl | null, at: Vec2): TouchState {
@@ -110,52 +78,19 @@ function press(state: TouchState, id: number, control: TouchControl | null, at: 
   if (control === 'skill') {
     return { ...touched, skill: new Set(state.skill).add(id), skillTapped: true };
   }
-  if (control === 'pause' || control === 'dash') {
-    return { ...touched, presses: [...state.presses, control] };
-  }
-  const slot = trapSlot(control);
-  const select = slot === null ? undefined : TRAP_SLOT_CONTROLS[slot];
-  if (slot === null || select === undefined) return touched;
-  return {
-    ...touched,
-    drags: new Map(state.drags).set(id, { slot, origin: at, at, moved: false, onArena: false }),
-    presses: [...state.presses, select],
-  };
+  const pressed: Control = control === 'trap' ? 'placeTrap' : control;
+  return { ...touched, presses: [...state.presses, pressed] };
 }
 
-function slide(state: TouchState, id: number, at: Vec2, onArena: boolean): TouchState {
-  if (state.stick?.id === id) {
-    return { ...state, stick: follow(state.stick, at), active: true };
-  }
-  const drag = state.drags.get(id);
-  if (drag === undefined) return state;
-  const moved = drag.moved || distance(drag.origin, at) > TOUCH_DRAG_THRESHOLD;
-  return {
-    ...state,
-    drags: new Map(state.drags).set(id, { ...drag, at, moved, onArena }),
-    active: true,
-  };
+function slide(state: TouchState, id: number, at: Vec2): TouchState {
+  if (state.stick?.id !== id) return state;
+  return { ...state, stick: follow(state.stick, at), active: true };
 }
 
-function lift(state: TouchState, id: number, placing: boolean): TouchState {
+function lift(state: TouchState, id: number): TouchState {
   const skill = new Set(state.skill);
   skill.delete(id);
-  const drags = new Map(state.drags);
-  const drag = drags.get(id);
-  drags.delete(id);
-  const next = {
-    ...state,
-    stick: state.stick?.id === id ? null : state.stick,
-    skill,
-    drags,
-    active: true,
-  };
-  if (!placing || drag === undefined || (drag.moved && !drag.onArena)) return next;
-  return {
-    ...next,
-    presses: [...state.presses, 'placeTrap'],
-    drop: drag.moved ? drag.at : null,
-  };
+  return { ...state, stick: state.stick?.id === id ? null : state.stick, skill, active: true };
 }
 
 function follow(stick: Stick, at: Vec2): Stick {
@@ -182,9 +117,8 @@ export function takeTouchFrame(state: TouchState): { frame: TouchFrame; state: T
             ),
       aim: null,
       active: state.active,
-      drop: state.drop,
     },
-    state: { ...state, skillTapped: false, presses: [], drop: null, active: false },
+    state: { ...state, skillTapped: false, presses: [], active: false },
   };
 }
 
@@ -206,11 +140,8 @@ export function attachTouch(target: HTMLElement): TouchAdapter {
   const knob = document.createElement('div');
   knob.className = 'touch-stick__knob';
   stick.append(knob);
-  const drop = document.createElement('div');
-  drop.className = 'touch-drop';
   stick.hidden = true;
-  drop.hidden = true;
-  target.append(stick, drop);
+  target.append(stick);
 
   const local = (event: PointerEvent): Vec2 => {
     const rect = target.getBoundingClientRect();
@@ -237,7 +168,6 @@ export function attachTouch(target: HTMLElement): TouchAdapter {
     }
     return found;
   };
-  const onArena = (event: PointerEvent) => controlAt(event) === 'stick';
 
   const draw = () => {
     stick.hidden = state.stick === null;
@@ -245,11 +175,6 @@ export function attachTouch(target: HTMLElement): TouchAdapter {
       const { origin, at } = state.stick;
       stick.style.translate = `${String(origin.x)}px ${String(origin.y)}px`;
       knob.style.translate = `${String(at.x - origin.x)}px ${String(at.y - origin.y)}px`;
-    }
-    const dragged = [...state.drags.values()].find((drag) => drag.moved && drag.onArena);
-    drop.hidden = dragged === undefined;
-    if (dragged !== undefined) {
-      drop.style.translate = `${String(dragged.at.x)}px ${String(dragged.at.y)}px`;
     }
   };
   const apply = (event: TouchEventLike) => {
@@ -266,11 +191,11 @@ export function attachTouch(target: HTMLElement): TouchAdapter {
   };
   const onMove = (event: PointerEvent) => {
     if (event.pointerType !== 'touch') return;
-    apply({ type: 'move', id: event.pointerId, onArena: onArena(event), ...local(event) });
+    apply({ type: 'move', id: event.pointerId, ...local(event) });
   };
   const onUp = (event: PointerEvent) => {
     if (event.pointerType !== 'touch') return;
-    apply({ type: 'up', id: event.pointerId, onArena: onArena(event), ...local(event) });
+    apply({ type: 'up', id: event.pointerId, ...local(event) });
   };
   const onCancel = (event: PointerEvent) => {
     if (event.pointerType !== 'touch') return;
@@ -300,7 +225,6 @@ export function attachTouch(target: HTMLElement): TouchAdapter {
       view.removeEventListener('pointercancel', onCancel);
       view.removeEventListener('blur', onBlur);
       stick.remove();
-      drop.remove();
       delete target.dataset.touchControl;
     },
   };

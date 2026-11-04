@@ -1,16 +1,18 @@
+import { clamp } from '../../shared/scalar';
 import { lookup } from '../content';
 import { playerById } from '../damage';
 import { drawRelics } from '../draw';
 import { recruitFallen } from '../recruits';
 import { SPECIALS } from '../specials';
-import type { PickupKind, SimState } from '../state';
+import type { EnemyState, PickupKind, SimState } from '../state';
 import { dropBomb } from './bomb';
-import { dropLoot } from './loot';
+import { dropDie } from './dice';
+import { dropBossTrap, dropCarriedTrap } from './carriers';
 import { tallyOf } from '../tally';
 import { isLastTier } from './set-progress';
 import type { StepContext } from './types';
 
-const LOOT_SPACING = 40;
+const DROP_SPACING = 40;
 
 export function deaths(ctx: StepContext): void {
   const { state, content, set } = ctx;
@@ -66,22 +68,34 @@ export function deaths(ctx: StepContext): void {
     if (enemy.isBoss && !isLastTier(state.set, set)) {
       offerRelics(ctx);
     }
-    if (enemy.carriesLoot === true) {
-      dropLoot(ctx, enemy.x, enemy.y);
-    }
+    dropCarriedTrap(ctx, enemy);
     if (enemy.carriesBomb === true) {
       dropBomb(ctx, enemy.x, enemy.y);
     }
     if (enemy.isBoss) {
-      state.players.forEach((_, index) => {
-        dropLoot(ctx, enemy.x + (index - (state.players.length - 1) / 2) * LOOT_SPACING, enemy.y);
-      });
+      dropBossRows(ctx, enemy);
     }
     if (vibesDrop > 0) {
       drop(state, 'vibes', vibesDrop, enemy.x, enemy.y, set.pickups.lifetimeTicks);
     }
   }
   state.enemies.length = kept;
+}
+
+// A placed trap and a die per player, in two rows under the boss, kept whole inside the arena.
+function dropBossRows(ctx: StepContext, boss: EnemyState): void {
+  const { width, height } = ctx.state.arena;
+  const players = ctx.state.players;
+  const half = ((players.length - 1) / 2) * DROP_SPACING;
+  const margin = DROP_SPACING / 2;
+  const left = clamp(boss.x - half, margin, width - margin - 2 * half);
+  const y = clamp(boss.y, margin, height - margin);
+  const dieY = y + DROP_SPACING <= height - margin ? y + DROP_SPACING : y - DROP_SPACING;
+  players.forEach((player, index) => {
+    const x = left + index * DROP_SPACING;
+    dropBossTrap(ctx, player.id, { x, y });
+    dropDie(ctx, x, dieY, boss);
+  });
 }
 
 function offerRelics({ state, content }: StepContext): void {

@@ -234,17 +234,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'talkie-walkie',
     name: 'Talkie-walkie',
-    description: 'Tu fais venir les porteurs de loot plus souvent.',
+    description: 'Les pièges arrivent plus souvent.',
     family: 'defense',
-    modifiers: [{ stat: 'lootIntervalMul', mul: 0.72 }],
+    modifiers: [{ stat: 'carrierIntervalMul', mul: 0.72 }],
     rarities: {
       rare: {
-        description: 'Tu fais venir les porteurs de loot deux fois plus souvent.',
-        modifiers: [{ stat: 'lootIntervalMul', mul: 0.5 }],
+        description: 'Les pièges arrivent deux fois plus souvent.',
+        modifiers: [{ stat: 'carrierIntervalMul', mul: 0.5 }],
       },
       legendary: {
-        description: 'Tu fais venir les porteurs de loot trois fois plus souvent.',
-        modifiers: [{ stat: 'lootIntervalMul', mul: 0.3 }],
+        description: 'Les pièges arrivent trois fois plus souvent.',
+        modifiers: [{ stat: 'carrierIntervalMul', mul: 0.3 }],
       },
     },
     maxStacks: 2,
@@ -252,38 +252,56 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'banane',
     name: 'Banane',
-    description: 'Tu ramasses les loots de plus loin.',
+    description: 'Tu récupères les pièges de plus loin.',
     family: 'defense',
-    modifiers: [{ stat: 'lootRadiusMul', mul: 2.2 }],
+    modifiers: [{ stat: 'liftReachMul', mul: 2.5 }],
     rarities: {
       rare: {
-        description: 'Tu ramasses les loots de bien plus loin.',
-        modifiers: [{ stat: 'lootRadiusMul', mul: 4 }],
+        description: 'Tu récupères les pièges de bien plus loin.',
+        modifiers: [{ stat: 'liftReachMul', mul: 4 }],
       },
       legendary: {
-        description: 'Tu ramasses les loots de très loin.',
-        modifiers: [{ stat: 'lootRadiusMul', mul: 9 }],
+        description: 'Tu récupères les pièges de très loin.',
+        modifiers: [{ stat: 'liftReachMul', mul: 6 }],
       },
     },
-    maxStacks: 2,
+    maxStacks: 1,
   },
   {
     id: 'rallonge',
     name: 'Rallonge',
-    description: 'Tu peux poser deux pièges de plus.',
+    description: 'Tu recharges les pièges en passant à côté.',
     family: 'defense',
-    modifiers: [{ stat: 'trapSlotsAdd', add: 2 }],
+    modifiers: [{ stat: 'trapRechargeBarsAdd', add: 2 }],
     rarities: {
       rare: {
-        description: 'Tu peux poser quatre pièges de plus.',
-        modifiers: [{ stat: 'trapSlotsAdd', add: 4 }],
+        description: 'Tu recharges bien les pièges en passant à côté.',
+        modifiers: [{ stat: 'trapRechargeBarsAdd', add: 3 }],
       },
       legendary: {
-        description: 'Tu peux poser six pièges de plus.',
-        modifiers: [{ stat: 'trapSlotsAdd', add: 6 }],
+        description: 'Tu recharges beaucoup les pièges en passant à côté.',
+        modifiers: [{ stat: 'trapRechargeBarsAdd', add: 4 }],
       },
     },
-    maxStacks: 2,
+    maxStacks: 1,
+  },
+  {
+    id: 'colliers-de-serrage',
+    name: 'Colliers de serrage',
+    description: "Tes pièges s'usent moins vite.",
+    family: 'defense',
+    modifiers: [{ stat: 'trapWearMul', mul: 0.9 }],
+    rarities: {
+      rare: {
+        description: "Tes pièges s'usent nettement moins vite.",
+        modifiers: [{ stat: 'trapWearMul', mul: 0.8 }],
+      },
+      legendary: {
+        description: "Tes pièges s'usent bien moins vite.",
+        modifiers: [{ stat: 'trapWearMul', mul: 0.7 }],
+      },
+    },
+    maxStacks: 1,
   },
   {
     id: 'boule-a-facettes',
@@ -311,12 +329,12 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'cable-d-or',
     name: "Câble d'or",
-    description: 'Tes pièges frappent fort et loin, et tes loots abondent.',
+    description: 'Tes pièges frappent fort et loin, leurs porteurs abondent.',
     family: 'relic',
     modifiers: [
       { stat: 'trapDamageMul', mul: 1.3 },
       { stat: 'trapRadiusMul', mul: 1.2 },
-      { stat: 'lootIntervalMul', mul: 0.8 },
+      { stat: 'carrierIntervalMul', mul: 0.8 },
     ],
     maxStacks: 1,
   },
@@ -345,8 +363,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
     maxStacks: 1,
   },
   {
-    id: 'sono-de-reference',
-    name: 'Sono de référence',
+    id: 'mur-de-son',
+    name: 'Mur de son',
     description: 'Tes pièges frappent plus fort et couvrent plus de piste.',
     family: 'relic',
     modifiers: [

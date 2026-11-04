@@ -21,7 +21,7 @@ import type { Prompts } from './prompts';
 import { createSkillTile } from './skill-tile';
 import { createSpeakerPlugs } from './speaker-plugs';
 import { cssName } from './sun';
-import { createTrapHand } from './trap-hand';
+import { createCarriedTrap } from './carried-trap';
 import type { UiFrame } from './types';
 import { type TutorialBanner, createTutorialBanner } from './tutorial';
 
@@ -58,7 +58,7 @@ export function createHud(prompts: Prompts): Hud {
   ribbon.element.append(plugs.row, pauseButton());
   const level = createLevelRing();
   const gear = createGearPlaces();
-  const hand = createTrapHand();
+  const carried = createCarriedTrap(prompts);
   const skill = createSkillTile(prompts);
   const dashTile = createDashTile();
   const gauge = createGaugeTile();
@@ -66,7 +66,7 @@ export function createHud(prompts: Prompts): Hud {
   const status = el('div', 'ui-panel ui-hud__status');
   status.append(level.element, gear.element);
   const actions = el('div', 'ui-panel ui-hud__actions');
-  actions.append(hand.element, skill.element, dashTile.section, gauge.element);
+  actions.append(carried.element, skill.element, dashTile.section, gauge.element);
   bar.append(status, actions);
   const bracelets = createBraceletRow(prompts);
   const top = el('div', 'ui-hud__top');
@@ -92,7 +92,7 @@ export function createHud(prompts: Prompts): Hud {
     setVar(element, '--beat', `${beatPeriodMs(setTempo(set).bpm).toFixed(1)}ms`);
     ribbon.build(set);
     plugs.build(set);
-    hand.build(content, set);
+    carried.build(content);
     dressed = null;
     return set;
   }
@@ -108,7 +108,7 @@ export function createHud(prompts: Prompts): Hud {
     dressed = { definition, device, keys: prompts.version() };
     tutorial.setDevice(prompts.for(device), device === 'touch');
     skill.build(definition.skill, device);
-    setFlag(hand.element, 'gamepad', device === 'gamepad');
+    carried.setDevice(device);
     setVar(element, '--who', `var(${cssName(classToken(definition.id))})`);
     gauge.build(definition.gauge);
   }
@@ -137,7 +137,7 @@ export function createHud(prompts: Prompts): Hud {
     }
     level.update(player);
     gear.update(player, state, content, weaponSlotCount(set));
-    hand.update(player, state, content, set, snapshot.gameplay);
+    carried.update(player, state, content);
     if (definition !== null) {
       skill.update(player, definition.skill);
       dashTile.update(player, content.dash, snapshot.device, state.tick, playedTempo(set, state));
@@ -156,7 +156,7 @@ export function createHud(prompts: Prompts): Hud {
     plugs.update(set, state);
     banner.update(state, content);
     for (const part of parts) {
-      part.update(state, content);
+      part.update(state, content, frame);
     }
     showTeam(frame, content, rosterOf(state, frame));
     const player = shownPlayer(state, frame);
@@ -186,7 +186,6 @@ export function createHud(prompts: Prompts): Hud {
     },
     tutorial,
     reset() {
-      hand.reset();
       level.reset();
       banner.reset();
     },

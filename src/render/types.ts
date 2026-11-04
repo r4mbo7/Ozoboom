@@ -7,6 +7,8 @@ export interface RenderOptions {
   focus?: CameraFocus;
   // The tutorial asks to plug a speaker: the way to the nearest one shows.
   guideToSpeaker?: boolean;
+  // The players who have not moved a trap yet: the oldest trap each has on the field kicks to call them.
+  trapCallers?: readonly PlayerId[];
   // World units from top to bottom of the screen; absent, the camera's own for the screen's height.
   viewHeight?: number;
 }
@@ -27,5 +29,6 @@ export interface Renderer {
   setOptions(options: Partial<RenderOptions>): void;
   resize(width: number, height: number): void;
   screenToWorld(point: Vec2): Vec2;
+  worldToScreen(point: Vec2): Vec2;
   destroy(): void;
 }

@@ -1,4 +1,5 @@
 import { TICKS_PER_BAR } from '../shared/tempo';
+import { TRAP_WEAR } from './traps';
 import type { SetDefinition } from './types';
 
 export const MAIN_STAGE: SetDefinition = {
@@ -9,11 +10,11 @@ export const MAIN_STAGE: SetDefinition = {
   trackIds: ['soiree-ouverture', 'brume-du-lac', 'grenouille-acide', 'goa-des-etoiles'],
   arena: { width: 1600, height: 1000 },
   core: { radius: 56, maxHp: 600 },
-  handSize: 2,
-  startingHand: ['caisson-de-basse'],
-  loot: { everyBars: 12, lifetimeBars: 16, radius: 16, first: 'caisson-de-basse' },
+  startingTrap: 'caisson-de-basse',
+  trapWear: TRAP_WEAR,
+  carriers: { everyBars: 12, frequencyPerVolume: 0.1, first: 'caisson-de-basse' },
   bomb: { everyBars: 64, lifetimeBars: 16, radius: 20 },
-  maxTraps: 6,
+  dice: { lifetimeBars: 16, radius: 16, speakerChance: 0.5, speakerThrow: 96 },
   levelCurve: { baseVibes: 10, vibesPerLevel: 16 },
   pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },
   vibeRain: { bars: 8, dropsPerBar: 4, amount: 0.25, radius: 300, flightBeats: 2 },
@@ -27,7 +28,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       id: 'dome-chill',
       name: 'Le Dôme chill',
-      description: 'Une brume qui te soigne',
+      description: 'Une brume qui soigne',
       x: 800,
       y: 120,
       radius: 40,
@@ -38,7 +39,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       id: 'foret',
       name: 'La Forêt',
-      description: 'Les bad vibes y ralentissent',
+      description: 'Ralentit les bad vibes',
       x: 1430,
       y: 500,
       radius: 40,
@@ -60,7 +61,7 @@ export const MAIN_STAGE: SetDefinition = {
     {
       id: 'cercle-acid',
       name: 'Le Cercle acid',
-      description: 'Les bad vibes y sont marquées',
+      description: 'Attire et rend vulnérable',
       x: 800,
       y: 880,
       radius: 40,

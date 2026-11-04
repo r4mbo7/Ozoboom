@@ -18,9 +18,10 @@ export type StatKey =
   | 'skillRadiusMul'
   | 'trapDamageMul'
   | 'trapRadiusMul'
-  | 'trapSlotsAdd'
-  | 'lootIntervalMul'
-  | 'lootRadiusMul'
+  | 'trapRechargeBarsAdd'
+  | 'trapWearMul'
+  | 'carrierIntervalMul'
+  | 'liftReachMul'
   | 'dashRechargeMul'
   | 'dashChargesAdd'
   | 'weaponRateMul'
@@ -129,6 +130,8 @@ export interface ClassDefinition {
   gustMul?: number;
   // The share of a slow that holds this class; absent, all of it.
   slowMul?: number;
+  // Bad vibes of these behaviours walk under this class: they never chase it nor touch it.
+  towersOver?: readonly EnemyBehaviour[];
   reviveMul?: number;
   attack: AttackDefinition;
   skill: SkillDefinition;
@@ -210,13 +213,34 @@ export interface TrapDefinition {
   id: string;
   name: string;
   description: string;
+  // What the place key does to it, shown beside the key: lift it, put it down.
+  takeLabel: string;
+  putLabel: string;
   radius: number;
   cadence: TrapCadence;
   effect: TrapEffect;
   // Shades the players within from the Canicule's sun.
   shade?: number;
-  // Odds of this trap in a loot against the other traps, the same for every class.
-  lootWeight: number;
+  // Odds of this trap on a carrier against the other traps, the same for every class.
+  carrierWeight: number;
+}
+
+// How every trap wears, placed or carried, from full intensity to out.
+export interface TrapWear {
+  // From full to out, at Volume 0.
+  lifetimeBars: number;
+  // A trap's effect, reach and strength alike, just before it goes out: full is 1.
+  faintest: number;
+  // Each Volume level wears traps slower: at Volume v, a whole life lasts (1 + v x this) times as long.
+  lifetimePerVolume: number;
+  // A player with the Rallonge gives a trap they walk by back a few bars of wear, once every so many
+  // bars, more than any Rallonge gives back.
+  rechargeEveryBars: number;
+  // The plug of a Rallonge, one trap at a time, in beats: it flies, stays in while the wear comes
+  // back evenly, then lets go, and only then may the player plug into the next trap.
+  plugInBeats: number;
+  pluggedBeats: number;
+  unplugBeats: number;
 }
 
 export type UpgradeFamily = 'class' | 'generic' | 'defense' | 'relic';
@@ -393,26 +417,36 @@ export interface TierDefinition {
   bystanderSpawns?: readonly BystanderSpawnRule[];
 }
 
-// Every `everyBars` bars, the next bad vibe to spawn carries a loot it drops when killed.
-export interface LootRules {
+// Every `everyBars` bars, the next bad vibe to spawn carries a trap it drops already placed when killed.
+export interface CarrierRules {
   everyBars: number;
-  lifetimeBars: number;
-  radius: number;
-  // The trap of the game's first loot.
+  // Each Volume level brings carriers more often: at Volume v, (1 + v x this) times as often.
+  frequencyPerVolume: number;
+  // The game's first carried trap.
   first: string;
 }
 
-// Replaces a stage's loot draw: its first loot, then the odds of each trap, none for a trap it leaves out.
-export interface LootDraw {
+// Replaces a stage's trap draw: its first carried trap, then the odds of each, none for a trap it leaves out.
+export interface TrapDraw {
   first: string;
   weights: Readonly<Record<string, number>>;
 }
 
-// As a loot; a player stepping on the bomb clears every bad vibe but the bosses.
+// As a carried trap, but lying for `lifetimeBars`; a player stepping on the bomb clears every bad vibe but the bosses.
 export interface BombRules {
   everyBars: number;
   lifetimeBars: number;
   radius: number;
+}
+
+// A die on the ground: whoever walks on it gains a reroll of an offer. A boss drops one per player.
+export interface DiceRules {
+  lifetimeBars: number;
+  radius: number;
+  // The chance that a speaker drops one as it is plugged.
+  speakerChance: number;
+  // How far past its rim a speaker throws its die, toward the core.
+  speakerThrow: number;
 }
 
 // A stage's ground, decor and card; `lake` is the main stage's.
@@ -439,12 +473,13 @@ export interface SetDefinition {
   acoustics?: { reverbSeconds: number; wet: number; lowCutHz?: number; toneHz?: number };
   arena: { width: number; height: number };
   core: { radius: number; maxHp: number };
-  // Traps a player carries at most.
-  handSize: number;
-  startingHand: readonly string[];
-  loot?: LootRules;
+  // Placed in front of each player as the set starts.
+  startingTrap?: string;
+  // Absent, traps never wear.
+  trapWear?: TrapWear;
+  carriers?: CarrierRules;
   bomb?: BombRules;
-  maxTraps: number;
+  dice?: DiceRules;
   levelCurve: { baseVibes: number; vibesPerLevel: number };
   pickups: { lifetimeTicks: number; speed: number };
   tiers: readonly TierDefinition[];

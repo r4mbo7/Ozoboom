@@ -1,10 +1,11 @@
-import type { Graphics, Sprite } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
 import { clamp, clamp01 } from '../shared/scalar';
+import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { CoreState } from '../sim/state';
 import type { Frame } from './frame';
 import { type PixiPalette, mixColor } from './palette';
 import type { Textures } from './textures';
-import { NAME_TEXTURE_SCALE } from './textures-names';
+import { LABEL_FONT_PX, LABEL_PAD, NAME_TEXTURE_SCALE } from './textures-names';
 import { setTint } from './util';
 
 const TAU = Math.PI * 2;
@@ -13,9 +14,25 @@ const SEGMENT_GAP = 0.28;
 
 export const SEGMENTS = 24;
 
-export interface Label {
-  readonly edge: Sprite;
-  readonly fill: Sprite;
+const PILL_HEIGHT = LABEL_FONT_PX * 1.5;
+const PILL_PAD = LABEL_FONT_PX * 0.55;
+const PILL_BORDER = 1.6;
+const PILL_POP = 0.16;
+const PILL_SHAKE = 3;
+const PILL_WOBBLE = 32;
+const SHOWN_TICKS = 4 * TICKS_PER_BEAT;
+const FADE_TICKS = TICKS_PER_BEAT / 2;
+const KICK_TICKS = 0.7 * TICKS_PER_BEAT;
+
+export interface LifePill {
+  place(
+    textures: Pick<Textures, 'names'>,
+    core: Pick<CoreState, 'hp' | 'maxHp'>,
+    x: number,
+    top: number,
+    size: number,
+    frame: Frame,
+  ): void;
 }
 
 export function litShare(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
@@ -42,8 +59,17 @@ export function percentOf(core: Pick<CoreState, 'hp' | 'maxHp'>): number {
 
 const PERCENT_TEXTS = Array.from({ length: 101 }, (_, value) => `${String(value)}\u202f%`);
 
-export function percentText(core: Pick<CoreState, 'hp' | 'maxHp'>): string {
+function percentText(core: Pick<CoreState, 'hp' | 'maxHp'>): string {
   return PERCENT_TEXTS[percentOf(core)] ?? '';
+}
+
+// Full, the ring says it all: the number shows on a loss, and for good under half.
+function pillAlpha(share: number, sinceLoss: number): number {
+  return share < 0.5 ? 1 : 1 - clamp01((sinceLoss - SHOWN_TICKS) / FADE_TICKS);
+}
+
+function pillKick(sinceLoss: number): number {
+  return sinceLoss >= 0 && sinceLoss < KICK_TICKS ? 1 - sinceLoss / KICK_TICKS : 0;
 }
 
 export function drawSegments(
@@ -64,34 +90,54 @@ export function drawSegments(
   }
 }
 
-export function placeLabel(
-  textures: Textures,
-  label: Label,
-  text: string | null,
-  color: number,
-  x: number,
-  y: number,
-  size: number,
-  frame: Frame,
-): number {
-  const { edge, fill } = label;
-  fill.visible = edge.visible = text !== null;
-  if (text === null) {
-    return y;
-  }
-  const texts = textures.names.get(text);
-  if (fill.texture !== texts.fill) {
-    fill.texture = texts.fill;
-    edge.texture = texts.edge;
-  }
-  const scale = size / NAME_TEXTURE_SCALE;
-  const half = (texts.fill.height * scale) / 2;
-  fill.position.set(x, y + half);
-  edge.position.set(x, y + half);
-  fill.scale.set(scale);
-  edge.scale.set(scale);
-  setTint(fill, color);
-  setTint(edge, frame.palette.sol);
-  edge.alpha = frame.light.additive ? 0.7 : 0.9;
-  return y + 2 * half;
+export function createLifePill(parent: Container): LifePill {
+  const root = parent.addChild(new Container());
+  const back = root.addChild(new Graphics());
+  const border = root.addChild(new Graphics());
+  const fill = root.addChild(new Sprite());
+  fill.anchor.set(0.5);
+  fill.scale.set(1 / NAME_TEXTURE_SCALE);
+  let width = Number.NaN;
+  let segments = Number.NaN;
+  let lostAt = Number.NEGATIVE_INFINITY;
+
+  return {
+    place(textures, core, x, top, size, frame): void {
+      const lit = litSegments(core);
+      if (lit < segments) {
+        lostAt = frame.now;
+      }
+      segments = lit;
+      const share = litShare(core);
+      const sinceLoss = frame.now - lostAt;
+      root.alpha = pillAlpha(share, sinceLoss);
+      root.visible = root.alpha > 0;
+      if (!root.visible) {
+        return;
+      }
+      const texts = textures.names.get(percentText(core));
+      if (fill.texture !== texts.fill) {
+        fill.texture = texts.fill;
+      }
+      const textWidth = texts.fill.width / NAME_TEXTURE_SCALE - 2 * LABEL_PAD;
+      if (textWidth !== width) {
+        width = textWidth;
+        const w = textWidth + 2 * PILL_PAD;
+        back.clear().roundRect(-w / 2, -PILL_HEIGHT / 2, w, PILL_HEIGHT, PILL_HEIGHT / 2);
+        back.fill(0xffffff);
+        border.clear().roundRect(-w / 2, -PILL_HEIGHT / 2, w, PILL_HEIGHT, PILL_HEIGHT / 2);
+        border.stroke({ width: PILL_BORDER, color: 0xffffff });
+      }
+      const { palette } = frame;
+      const color = stageColor(palette, share);
+      const kick = frame.calm ? 0 : pillKick(sinceLoss);
+      setTint(back, mixColor(palette.sol, color, 0.55 * kick * kick));
+      back.alpha = 0.9;
+      setTint(border, color);
+      setTint(fill, mixColor(color, palette.texte, 0.85 * kick));
+      const shake = kick * kick * PILL_SHAKE * Math.sin(kick * PILL_WOBBLE);
+      root.scale.set(size * (1 + PILL_POP * kick));
+      root.position.set(x + shake * size, top + (PILL_HEIGHT / 2) * size);
+    },
+  };
 }

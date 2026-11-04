@@ -6,11 +6,10 @@ import type { Frame } from './frame';
 import { add, placeOutline, setTint } from './util';
 import {
   SEGMENTS,
+  createLifePill,
   drawSegments,
   litSegments,
   litShare,
-  percentText,
-  placeLabel,
   stageColor,
 } from './vu-meter';
 
@@ -33,8 +32,9 @@ export function createStageMarker(ctx: RenderContext): Family {
   const rim = new Graphics();
   const lit = new Graphics();
   root.addChild(track, rim, lit);
-  const percent = { edge: add(root, textures.halo), fill: add(root, textures.halo) };
-  const parts = [halo, outline, arrow, track, rim, lit, percent.edge, percent.fill];
+  const label = root.addChild(new Container());
+  const percent = createLifePill(label);
+  const parts = [halo, outline, arrow, track, rim, lit, label];
   drawSegments(track, RING_RADIUS, 0, SEGMENTS, SEGMENT_WIDTH);
   const marker: EdgeMarker = { x: 0, y: 0, angle: 0 };
   let drawn = Number.NaN;
@@ -85,7 +85,7 @@ export function createStageMarker(ctx: RenderContext): Family {
       rim.visible = !light.additive && segments > 0;
 
       const top = y + RING_RADIUS + (SEGMENT_WIDTH + RIM_GROW) / 2 + LABEL_GAP;
-      placeLabel(textures, percent, percentText(core), palette.texte, x, top, 1, frame);
+      percent.place(textures, core, x, top, 1, frame);
     },
     destroy(): void {
       root.destroy({ children: true });

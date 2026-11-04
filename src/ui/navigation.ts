@@ -1,4 +1,4 @@
-import type { GameplayIntents, MenuIntents } from '../input/intents';
+import type { MenuIntents } from '../input/intents';
 import { wrap } from '../shared/scalar';
 import type { Vec2 } from '../sim/state';
 import { type Direction, direction } from '../shared/i18n';
@@ -104,29 +104,4 @@ export function navigateMenu(index: number, count: number, edges: MenuIntents): 
     confirmed: edges.confirm,
     back: edges.back,
   };
-}
-
-type TrapIntents = Pick<GameplayIntents, 'nextTrap' | 'previousTrap' | 'selectTrap'>;
-
-export function selectTrap(
-  index: number,
-  count: number,
-  current: TrapIntents,
-  previous: TrapIntents | null,
-): number {
-  if (count <= 0) {
-    return 0;
-  }
-  const chosen = current.selectTrap;
-  if (chosen !== null && chosen !== previous?.selectTrap && chosen >= 0 && chosen < count) {
-    return chosen;
-  }
-  const delta =
-    (current.nextTrap && previous?.nextTrap !== true ? 1 : 0) -
-    (current.previousTrap && previous?.previousTrap !== true ? 1 : 0);
-  return wrap(index + delta, count);
-}
-
-export function heldSlot(selected: number, held: number): number {
-  return Math.min(selected, held - 1);
 }

@@ -2738,6 +2738,7 @@ svg.ui-title__lake {
 }
 
 .ui-hud__bar {
+  position: relative;
   display: flex;
   grid-area: bar;
   align-items: center;
@@ -3061,17 +3062,19 @@ svg.ui-title__lake {
   gap: 10px;
 }
 
-/* LB, RB and the number keys sit left to right on every controller and keyboard, in every
-   language: the traps keep that order. */
-.ui-traps {
-  position: relative;
-  display: flex;
-  gap: 8px;
-  direction: ltr;
+/* With a keyboard or a gamepad it holds only the pill above the bar, and no place in it. */
+.ui-hud__bar .ui-hud__traps:not([data-touch]) {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  padding-inline-start: 0;
+  border-inline-start: 0;
+  translate: -50% 0;
 }
 
-.ui-hud__traps:dir(rtl) {
-  flex-direction: row-reverse;
+.ui-hud__traps:not([data-touch]) .ui-traps__name {
+  position: static;
+  translate: none;
 }
 
 .ui-trap {
@@ -3088,123 +3091,10 @@ svg.ui-title__lake {
   background: color-mix(in srgb, var(--sol) 60%, transparent);
 }
 
-.ui-trap[data-selected] {
-  border-color: var(--turquoise);
-  box-shadow:
-    0 0 0 2px var(--sol),
-    0 0 0 4px var(--turquoise),
-    0 0 calc(14px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 40%, transparent);
-}
-
-.ui-trap[data-blocked] .ui-trap__icon {
-  opacity: 0.5;
-}
-
-.ui-trap[data-full] {
-  border-style: dashed;
-  border-color: var(--rouge);
-  background: color-mix(in srgb, var(--rouge) 14%, color-mix(in srgb, var(--sol) 60%, transparent));
-}
-
-.ui-trap[data-full] .ui-trap__icon {
-  opacity: 0.35;
-}
-
-/* Every trap slot is taken: the count sits on the corner of the last tile, like the keys on the first. */
-.ui-traps__count {
-  position: absolute;
-  top: -7px;
-  right: -9px;
-  display: grid;
-  place-items: center;
-  height: 18px;
-  padding-inline: 6px;
-  border: 1px solid var(--rouge);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--rouge) 24%, var(--sol));
-  box-shadow: 0 0 0 2px var(--sol);
-  color: var(--texte);
-  font-size: 11px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.ui-traps__count[data-flash='a'] {
-  animation: ui-traps-flash-a calc(var(--beat) * 0.6) linear;
-}
-
-.ui-traps__count[data-flash='b'] {
-  animation: ui-traps-flash-b calc(var(--beat) * 0.6) linear;
-}
-
-/* Until the player's first trap is down, its tile plays the Caisson's music: a bounce and its bass
-   ring out into the arena on every kick. `data-kick` alternates on each beat to restart the animation. */
-.ui-trap[data-call] {
-  --kick: calc(var(--beat) * 0.5);
-}
-
-.ui-trap[data-call]::after {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: -2px;
-  border: 2px solid var(--turquoise);
-  border-radius: inherit;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.ui-trap[data-call][data-kick='a'] {
-  animation: ui-trap-kick-a var(--kick) ease-out;
-}
-
-.ui-trap[data-call][data-kick='b'] {
-  animation: ui-trap-kick-b var(--kick) ease-out;
-}
-
-.ui-trap[data-call][data-kick='a']::after {
-  animation: ui-trap-ring-a var(--kick) ease-out;
-}
-
-.ui-trap[data-call][data-kick='b']::after {
-  animation: ui-trap-ring-b var(--kick) ease-out;
-}
-
 .ui-trap[data-empty] {
   border-style: dashed;
   border-color: color-mix(in srgb, var(--texte) 26%, transparent);
   background: transparent;
-}
-
-.ui-trap__key {
-  position: absolute;
-  top: -7px;
-  inset-inline-start: -7px;
-  display: grid;
-  place-items: center;
-  min-width: 18px;
-  height: 18px;
-  border: 1px solid var(--ui-line);
-  border-radius: 7px;
-  background: var(--sol-clair);
-  box-shadow: 0 0 0 2px var(--sol);
-  color: var(--texte);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.ui-hud__traps[data-gamepad] .ui-trap__key {
-  display: none;
-}
-
-.ui-traps__cycle {
-  display: none;
-}
-
-.ui-hud__traps[data-gamepad] .ui-traps__cycle {
-  display: block;
 }
 
 .ui-trap__icon {
@@ -3212,7 +3102,16 @@ svg.ui-title__lake {
   height: 24px;
 }
 
-.ui-trap[data-selected] .ui-trap__icon {
+/* The trap carried lights up like the one above the player's head. */
+.ui-trap:not([data-empty], [data-offering]) {
+  border-color: var(--turquoise);
+  box-shadow:
+    0 0 0 2px var(--sol),
+    0 0 0 4px var(--turquoise),
+    0 0 calc(14px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 40%, transparent);
+}
+
+.ui-trap:not([data-empty], [data-offering]) .ui-trap__icon {
   color: var(--ui-turquoise);
   filter: drop-shadow(0 0 calc(6px * var(--ui-halo)) var(--turquoise));
 }
@@ -3221,6 +3120,9 @@ svg.ui-title__lake {
   position: absolute;
   bottom: calc(100% + 14px);
   left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 4px 14px;
   border: 1px solid var(--ui-line);
   border-radius: 999px;
@@ -3230,6 +3132,10 @@ svg.ui-title__lake {
   font-weight: 700;
   white-space: nowrap;
   translate: -50% 0;
+}
+
+.ui-traps__key:empty {
+  display: none;
 }
 
 .ui-skill {
@@ -4314,8 +4220,9 @@ svg.ui-title__lake {
   column-gap: 14px;
 }
 
-/* A game lost with no trap ever placed: a loop shows the Caisson that slows the bad vibes. It
-   rests on its last moment, which reads alone when calm mode stops the animation. */
+/* A game lost with no trap ever moved: a loop shows the Caisson carried above the head, put down
+   in front, and slowing the bad vibes. It rests on its last moment, which reads alone when calm
+   mode stops the animation. */
 .ui-end__lesson {
   --loop: calc(var(--beat, 414ms) * 4);
 
@@ -4391,6 +4298,15 @@ svg.ui-title__lake {
   left: 40%;
   width: 15%;
   rotate: -20deg;
+}
+
+.ui-lesson__held {
+  top: 38%;
+  left: 40%;
+  width: 13%;
+  color: var(--texte);
+  opacity: 0;
+  animation: ui-lesson-held var(--loop) linear infinite;
 }
 
 .ui-lesson__foe {
@@ -4863,6 +4779,19 @@ svg.ui-title__lake {
   border-inline-start: 0;
 }
 
+/* Several players on one screen have only the pill left of the bar, and it takes the bar's place. */
+.ui-hud[data-multi] .ui-hud__bar {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.ui-hud[data-multi] .ui-hud__bar .ui-hud__traps:not([data-touch]) {
+  bottom: 0;
+}
+
 .ui-bracelet {
   --who: var(--or);
 
@@ -5275,8 +5204,85 @@ svg.ui-title__lake {
   opacity: 0;
 }
 
-.ui-offer[data-state='chosen'] .ui-hint {
+.ui-offer[data-state='chosen'] :is(.ui-hint, .ui-reroll) {
   visibility: hidden;
+}
+
+.ui-offer__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 24px;
+}
+
+/* Nothing to show in it: the row takes no room, nor the gap before it. */
+[data-touch] .ui-offer__foot:has(> .ui-reroll[hidden]) {
+  display: none;
+}
+
+.ui-reroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 5px 4px 12px;
+  border: 1.5px solid color-mix(in srgb, var(--or) 60%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--or) 14%, var(--sol));
+  color: var(--texte);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ui-reroll[hidden] {
+  display: none;
+}
+
+/* Two offers side by side or one above the other: the reroll takes the free corner of its panel. */
+.ui-offers__panels[data-multi] .ui-offer__foot {
+  display: contents;
+}
+
+.ui-offers__panels[data-multi] .ui-reroll {
+  position: absolute;
+  top: 20px;
+  inset-inline-start: 24px;
+}
+
+.ui-reroll[aria-current] {
+  border-color: var(--or);
+  box-shadow:
+    0 0 0 3px var(--sol),
+    0 0 0 6px var(--or);
+}
+
+.ui-reroll[data-asked] {
+  opacity: 0.5;
+}
+
+.ui-reroll__die {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: var(--or);
+}
+
+.ui-reroll__die svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ui-reroll__count {
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--or);
+  color: var(--ui-ink);
+  text-align: center;
 }
 
 /* `--wait-x` and `--wait-y` slide the chosen card to the middle of its panel while the others choose. */
@@ -5486,50 +5492,6 @@ svg.ui-title__lake {
   }
 }
 
-@keyframes ui-trap-kick-a {
-  from {
-    scale: 1.15;
-  }
-
-  to {
-    scale: 1;
-  }
-}
-
-@keyframes ui-trap-ring-a {
-  from {
-    scale: 1;
-    opacity: 0.9;
-  }
-
-  to {
-    scale: 2.6;
-    opacity: 0;
-  }
-}
-
-@keyframes ui-trap-kick-b {
-  from {
-    scale: 1.15;
-  }
-
-  to {
-    scale: 1;
-  }
-}
-
-@keyframes ui-trap-ring-b {
-  from {
-    scale: 1;
-    opacity: 0.9;
-  }
-
-  to {
-    scale: 2.6;
-    opacity: 0;
-  }
-}
-
 @keyframes ui-lesson-tap {
   0% {
     opacity: 0;
@@ -5558,6 +5520,23 @@ svg.ui-title__lake {
   14%,
   90% {
     opacity: 0.15;
+  }
+}
+
+/* Above the head until the tap puts it down, and back up as the loop starts over. */
+@keyframes ui-lesson-held {
+  0%,
+  10% {
+    opacity: 1;
+  }
+
+  12%,
+  96% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
   }
 }
 
@@ -5626,36 +5605,6 @@ svg.ui-title__lake {
     top: var(--to-y);
     left: var(--to-x);
     opacity: 0;
-  }
-}
-
-@keyframes ui-traps-flash-a {
-  0%,
-  50% {
-    background: var(--rouge);
-    box-shadow:
-      0 0 0 2px var(--sol),
-      0 0 calc(14px * var(--ui-halo)) var(--rouge);
-  }
-
-  25%,
-  75% {
-    background: color-mix(in srgb, var(--rouge) 24%, var(--sol));
-  }
-}
-
-@keyframes ui-traps-flash-b {
-  0%,
-  50% {
-    background: var(--rouge);
-    box-shadow:
-      0 0 0 2px var(--sol),
-      0 0 calc(14px * var(--ui-halo)) var(--rouge);
-  }
-
-  25%,
-  75% {
-    background: color-mix(in srgb, var(--rouge) 24%, var(--sol));
   }
 }
 
@@ -6919,6 +6868,10 @@ svg.ui-title__lake {
     display: none;
   }
 
+  .ui-offer[data-bar] .ui-offer__foot:has(> .ui-reroll[hidden]) {
+    display: none;
+  }
+
   .ui-end__body {
     gap: 8px;
   }
@@ -7044,7 +6997,7 @@ svg.ui-title__lake {
   height: 18px;
 }
 
-[data-touch] :is(.ui-hint, .ui-trap__key, .ui-skill__key, .ui-toggle--assist, .ui-action--keys) {
+[data-touch] :is(.ui-hint, .ui-skill__key, .ui-toggle--assist, .ui-action--keys) {
   display: none;
 }
 
@@ -7161,6 +7114,10 @@ svg.ui-title__lake {
   }
 
   .ui-offer[data-bar] .ui-hint {
+    display: none;
+  }
+
+  .ui-offer[data-bar] .ui-offer__foot:has(> .ui-reroll[hidden]) {
     display: none;
   }
 

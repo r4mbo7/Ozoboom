@@ -1,3 +1,4 @@
+import { TRAP_WEAR } from '../data/traps';
 import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { MusicTrack } from '../data/types';
 import type { SimEvent } from '../sim/state';
@@ -53,10 +54,14 @@ export type SfxName =
   | 'playerShoved'
   | 'bystanderHelped'
   | 'bystanderLost'
-  | 'lootDropped'
-  | 'lootCollected'
+  | 'trapDropped'
+  | 'trapTaken'
+  | 'trapPlaced'
+  | 'trapRecharged'
   | 'vibesCollected'
   | 'bombDropped'
+  | 'dieThrown'
+  | 'dieCollected'
   | 'bombExploded'
   | 'volumeUp'
   | 'skillCharge'
@@ -72,8 +77,7 @@ export type SfxName =
   | 'launch'
   | 'dashed'
   | 'dashEmpty'
-  | 'dashBack'
-  | 'trapRefused';
+  | 'dashBack';
 
 export interface SfxLimit {
   perFrame: number;
@@ -163,6 +167,13 @@ export function enemyHitDegree(enemy: SfxCore | undefined): number {
   return enemy === undefined ? 7 : Math.round((1 - Math.max(enemy.hp, 0) / enemy.maxHp) * 7);
 }
 
+// A recharge sounds during the plugged beat: when the plug lands, then half a beat later.
+const RECHARGE_NOTES_BEATS = [
+  [0, TRAP_WEAR.plugInBeats],
+  [3, TRAP_WEAR.plugInBeats + TRAP_WEAR.pluggedBeats / 2],
+] as const;
+const RECHARGE_NOTE_SECONDS = 0.18;
+
 // What follows the beat of the set (the fans, the revive pulse) is throttled to it.
 export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> {
   const beat = beatSeconds(tempo);
@@ -210,10 +221,18 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
     bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
-    lootDropped: { perFrame: 1, concurrent: 2, seconds: 0.4 },
-    lootCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
+    trapDropped: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    trapTaken: { perFrame: 1, concurrent: 2, seconds: 0.15 },
+    trapPlaced: { perFrame: 1, concurrent: 2, seconds: 0.2 },
+    trapRecharged: {
+      perFrame: 1,
+      concurrent: 2,
+      seconds: beat * (TRAP_WEAR.plugInBeats + TRAP_WEAR.pluggedBeats / 2) + RECHARGE_NOTE_SECONDS,
+    },
     vibesCollected: { perFrame: 1, concurrent: 2, seconds: 0.15 },
     bombDropped: { perFrame: 1, concurrent: 1, seconds: 0.5 },
+    dieThrown: { perFrame: 1, concurrent: 2, seconds: beat + 0.9 },
+    dieCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
     bombExploded: { perFrame: 1, concurrent: 1, seconds: 1.6 },
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.3 },
@@ -230,7 +249,6 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     dashed: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     dashEmpty: { perFrame: 1, concurrent: 1, seconds: 0.15 },
     dashBack: { perFrame: 1, concurrent: 2, seconds: 0.25 },
-    trapRefused: { perFrame: 1, concurrent: 1, seconds: 0.2 },
   };
 }
 
@@ -260,17 +278,22 @@ export function sfxOf(
     case 'playerDowned':
     case 'playerRevived':
     case 'playerReviving':
-    case 'lootDropped':
-    case 'lootCollected':
+    case 'trapDropped':
+    case 'trapTaken':
+    case 'trapPlaced':
+    case 'trapRecharged':
     case 'bombDropped':
     case 'bombExploded':
       return event.type;
     case 'pickupCollected':
       return 'vibesCollected';
+    case 'dieDropped':
+      return 'dieThrown';
+    case 'dieCollected':
+      return event.type;
     case 'dashed':
     case 'dashEmpty':
     case 'dashBack':
-    case 'trapRefused':
       return event.type;
     case 'skillUsed': {
       const classId = players.find((player) => player.id === event.playerId)?.classId;
@@ -361,6 +384,44 @@ type Voice = (
 ) => void;
 
 const DIED_DEGREES = [4, 3, 0, 5];
+// The bounce in beats after the throw, as `src/render/dice.ts` draws it; the clicks of the rattle in
+// seconds after it; the coins of the landing, degrees rung one after the other.
+const DIE = {
+  bounce: 0.6,
+  rattle: [
+    { after: 0, gain: 1, degree: 4 },
+    { after: 0.032, gain: 0.7, degree: 7 },
+    { after: 0.07, gain: 0.45, degree: 4 },
+  ],
+  coins: [0, 2, 4, 7],
+  // After the clack of the landing, which would add up with the first coin over the master's limiter.
+  coinsAfter: 0.04,
+  coinStep: 0.05,
+} as const;
+
+// A bass thump with a body, `level` 1 at its loudest; kept low, the mids carry the loudness.
+function dieThump(out: AudioNode, at: number, key: MusicKey, level: number): void {
+  playTone(out, at, {
+    wave: 'sine',
+    hz: keyHz(key, 0, 2),
+    toHz: keyHz(key, 0, 1),
+    glide: 0.12,
+    gain: 0.3 * level,
+    attack: 0.002,
+    hold: 0.05,
+    release: 0.16,
+  });
+  playTone(out, at, {
+    wave: 'triangle',
+    hz: keyHz(key, 0, 4),
+    toHz: keyHz(key, 0, 3),
+    glide: 0.06,
+    gain: 0.2 * level,
+    attack: 0.002,
+    hold: 0.015,
+    release: 0.08,
+  });
+}
 const DEALT_DEGREES = [0, 2, 4, 5];
 const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
 
@@ -778,7 +839,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       vibrato: { hz: 8, cents: 30, delay: 0.04 },
     });
   },
-  lootDropped: (out, at, _variant, key) => {
+  trapDropped: (out, at, _variant, key) => {
     playNoise(out, at, {
       gain: 0.22,
       attack: 0.002,
@@ -795,18 +856,46 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.22,
     });
   },
-  lootCollected: (out, at, _variant, key) => {
-    [0, 4].forEach((degree, index) => {
-      playTone(out, at + index * 0.06, {
-        wave: 'square',
-        hz: keyHz(key, degree, 5),
-        gain: 0.07,
-        attack: 0.003,
-        hold: 0.04,
-        release: 0.16,
-        filter: { type: 'lowpass', hz: 2400 },
-      });
+  // One low note that glides a fifth up, then the same note back down: a single note, unlike the
+  // Rallonge's two.
+  trapTaken: (out, at, _variant, key) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, 0, 2),
+      toHz: keyHz(key, 4, 2),
+      glide: 0.09,
+      gain: 0.13,
+      attack: 0.005,
+      hold: 0.045,
+      release: 0.08,
+      filter: { type: 'lowpass', hz: 1400 },
     });
+  },
+  trapPlaced: (out, at, _variant, key) => {
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, 4, 2),
+      toHz: keyHz(key, 0, 2),
+      glide: 0.11,
+      gain: 0.11,
+      attack: 0.006,
+      hold: 0.02,
+      release: 0.14,
+      filter: { type: 'lowpass', hz: 1100 },
+    });
+  },
+  trapRecharged: (out, at, _variant, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
+    for (const [degree, afterBeats] of RECHARGE_NOTES_BEATS) {
+      playTone(out, at + beat * afterBeats, {
+        wave: 'triangle',
+        hz: keyHz(key, degree, 2),
+        gain: 0.14,
+        attack: 0.01,
+        hold: 0.05,
+        release: RECHARGE_NOTE_SECONDS - 0.06,
+        filter: { type: 'lowpass', hz: 1200 },
+      });
+    }
   },
   vibesCollected: (out, at, degree, key, vibes = 1, progress = 0) => {
     const gain = 0.07 + 0.008 * vibes;
@@ -839,6 +928,109 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
         release: 0.14,
       });
     }
+  },
+  // Follows the die thrown, loud like a jackpot: a thump and a whoosh as it leaves, three clicks as it
+  // rattles on its bounce, and on the beat it lands a thump and coins ringing up to the octave.
+  // Two rising notes: the player gains something to spend.
+  dieCollected: (out, at, _variant, key) => {
+    [0, 4].forEach((degree, index) => {
+      playTone(out, at + index * 0.06, {
+        wave: 'square',
+        hz: keyHz(key, degree, 5),
+        gain: 0.07,
+        attack: 0.003,
+        hold: 0.04,
+        release: 0.16,
+        filter: { type: 'lowpass', hz: 2400 },
+      });
+    });
+  },
+  dieThrown: (out, at, _variant, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
+    dieThump(out, at, key, 0.95);
+    playNoise(out, at, {
+      gain: 0.24,
+      attack: 0.001,
+      hold: 0.005,
+      release: 0.03,
+      filter: { type: 'highpass', hz: 3000, q: 1 },
+    });
+    playNoise(out, at + 0.01, {
+      gain: 0.24,
+      attack: 0.07,
+      hold: 0.04,
+      release: 0.1,
+      filter: { type: 'bandpass', hz: 700, toHz: 4200, glide: 0.2, q: 1.4 },
+    });
+    for (const click of DIE.rattle) {
+      const clickAt = at + DIE.bounce * beat + click.after;
+      playNoise(out, clickAt, {
+        gain: 0.45 * click.gain,
+        attack: 0.001,
+        hold: 0.004,
+        release: 0.03,
+        filter: { type: 'bandpass', hz: 2800, q: 5 },
+      });
+      playTone(out, clickAt, {
+        wave: 'sine',
+        hz: keyHz(key, click.degree, 4),
+        toHz: keyHz(key, click.degree, 4) * 0.8,
+        glide: 0.03,
+        gain: 0.33 * click.gain,
+        attack: 0.001,
+        hold: 0.008,
+        release: 0.04,
+      });
+    }
+    const land = at + beat;
+    dieThump(out, land, key, 1);
+    playNoise(out, land, {
+      gain: 0.3,
+      attack: 0.001,
+      hold: 0.008,
+      release: 0.05,
+      filter: { type: 'bandpass', hz: 2600, q: 2 },
+    });
+    DIE.coins.forEach((degree, index) => {
+      const coinAt = land + DIE.coinsAfter + index * DIE.coinStep;
+      const last = index === DIE.coins.length - 1;
+      const pan = -0.3 + (0.6 * index) / (DIE.coins.length - 1);
+      const hz = keyHz(key, degree, 5);
+      playTone(out, coinAt, {
+        wave: 'triangle',
+        hz,
+        gain: 0.3,
+        attack: 0.002,
+        hold: 0.03,
+        release: last ? 0.8 : 0.25,
+        pan,
+      });
+      playTone(out, coinAt, {
+        wave: 'square',
+        hz,
+        gain: 0.1,
+        attack: 0.002,
+        hold: 0.02,
+        release: 0.08,
+        filter: { type: 'lowpass', hz: 5000 },
+        pan,
+      });
+      playTone(out, coinAt, {
+        wave: 'sine',
+        hz: keyHz(key, degree, 6),
+        gain: 0.1,
+        attack: 0.002,
+        hold: 0.01,
+        release: last ? 0.6 : 0.15,
+        pan,
+      });
+    });
+    playNoise(out, land + DIE.coinsAfter, {
+      gain: 0.12,
+      attack: 0.002,
+      hold: 0.02,
+      release: 0.6,
+      filter: { type: 'highpass', hz: 7000, q: 1 },
+    });
   },
   // A warning more than a reward.
   bombDropped: (out, at, _variant, key) => {
@@ -1160,20 +1352,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       attack: 0.002,
       hold: 0.01,
       release: 0.06,
-    });
-  },
-  // A dull knock under the music: the trap has nowhere to go.
-  trapRefused: (out, at, _variant, key) => {
-    playTone(out, at, {
-      wave: 'sine',
-      hz: keyHz(key, 0, 1),
-      toHz: keyHz(key, 0, 0),
-      glide: 0.08,
-      gain: 0.22,
-      attack: 0.003,
-      hold: 0.02,
-      release: 0.12,
-      filter: { type: 'lowpass', hz: 400, q: 0.7 },
     });
   },
   dashBack: (out, at, degree, key) => {
@@ -1519,7 +1697,7 @@ export function createSfx(
                   clock === null ? 0 : barOfTick(timeToTick(clock, now), tempo),
                 ) + 4
               : variantOf(event, core, enemies);
-          VOICES[name](out, now, variant, key);
+          VOICES[name](out, now, variant, key, undefined, undefined, beatSeconds(tempo));
         } else if (event.type === 'bar') {
           for (const enemy of enemies) {
             const call = enemy.kind === undefined ? undefined : BOSS_BAR_CALLS.get(enemy.kind);

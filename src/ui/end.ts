@@ -20,14 +20,14 @@ import type { EndSession } from './types';
 export interface EndScreen {
   readonly element: HTMLElement;
   readonly menu: Menu;
-  // `best`: the record of this device before the game, null for its first; `trapless`: no trap
-  // ever stood on the field.
+  // `best`: the record of this device before the game, null for its first; `unmoved`: nobody
+  // ever moved a trap.
   show(
     state: SimState,
     content: GameContent | null,
     session: EndSession | undefined,
     best: number | null,
-    trapless: boolean,
+    unmoved: boolean,
   ): void;
   setDevice(device: InputDevice): void;
 }
@@ -205,7 +205,7 @@ export function createEnd(
   return {
     element,
     menu,
-    show(state, content, session, best, trapless) {
+    show(state, content, session, best, unmoved) {
       const won = state.status === 'won';
       element.dataset.outcome = won ? 'won' : 'lost';
       emblem.replaceChildren(icon('ui-end__icon', won ? SUN : FOG));
@@ -218,8 +218,8 @@ export function createEnd(
       details.replaceChildren(...(part === undefined ? [] : [part.details]));
       details.hidden = part === undefined;
       fillScore(scoreOf(state), best);
-      lesson.element.hidden = !trapless;
-      if (trapless) {
+      lesson.element.hidden = !unmoved;
+      if (unmoved) {
         lesson.show(state, content);
       }
       players = playerCards(state.players, content);

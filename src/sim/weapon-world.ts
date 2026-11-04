@@ -27,7 +27,7 @@ export function createWeaponWorld(
   classId: string,
   weaponId: string,
 ): WeaponWorld {
-  // Nothing stands between the bad vibes and the player, and no aura acts on them.
+  // Nothing stands between the bad vibes and the player, and no aura or trap acts on them.
   const sets = content.sets.map((candidate) =>
     candidate.id === setId ? { ...candidate, obstacles: [], speakers: [] } : candidate,
   );
@@ -38,6 +38,7 @@ export function createWeaponWorld(
     content: { ...content, sets },
   });
   const { state } = simulation;
+  state.traps = [];
   const player = state.players[0];
   if (player === undefined) {
     throw new Error('a weapon world without its player');

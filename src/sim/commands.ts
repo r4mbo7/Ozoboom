@@ -4,8 +4,6 @@ export interface PlayerInput {
   move: Vec2;
   aim: Vec2;
   fire: boolean;
-  // Ticks held, this one included, as the device counted them; absent, a charged attack counts.
-  fireTicks?: number;
   skill: boolean;
 }
 
@@ -14,10 +12,11 @@ export const EMOTES = ['sunrise', 'fireworks', 'heart', 'arrow'] as const;
 export type Emote = (typeof EMOTES)[number];
 
 export type PlayerAction =
-  // (dx, dy) is normalized by the sim; a zero vector faces the player's aim.
-  | { type: 'placeTrap'; trapId: string; x: number; y: number; dx: number; dy: number }
-  | { type: 'takeTrap'; x: number; y: number }
+  // Lifts the trap in front of the player, or puts the carried one down in front, facing the aim.
+  | { type: 'moveTrap' }
   | { type: 'chooseUpgrade'; upgradeId: string }
+  // Spends a reroll of the reserve on other cards for the offer shown.
+  | { type: 'rerollOffer' }
   | { type: 'dash' }
   | { type: 'emote'; emote: Emote }
   // Online, the host's word that this player's peer has left, on every frame from then on.

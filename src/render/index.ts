@@ -1,10 +1,11 @@
 import { autoDetectRenderer } from 'pixi.js';
 import { SUN_PALETTES } from '../shared/palette';
 import { parseHexColor } from './palette';
-import { type RenderContent, Scene } from './scene';
+import type { RenderContent } from './context';
+import { Scene } from './scene';
 import type { RenderOptions, Renderer } from './types';
 
-export type { RenderContent } from './scene';
+export type { RenderContent } from './context';
 export type { Inset, RenderOptions, Renderer } from './types';
 export { type Portrait, type PortraitClass, createPortraits } from './portraits';
 

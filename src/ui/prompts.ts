@@ -23,7 +23,7 @@ export interface DevicePrompts {
   move: readonly string[];
   fire: readonly string[];
   dash: string;
-  // The key that places the held trap at the feet; none on a touch screen, which touches its tile.
+  // The key that moves a trap; none on a touch screen, which touches its button.
   placeTrap: string;
   controls: readonly Control[];
 }
@@ -53,8 +53,7 @@ const keyboard = (profile: KeyProfile, name: Name): DevicePrompts => ({
     { action: t('Se déplacer'), keys: moveKeys(profile, name) },
     { action: t('Viser'), keys: [t('Souris')] },
     { action: t('Tirer'), keys: keyNames(profile, 'fire', name) },
-    { action: t('Choisir un piège'), keys: [...trapKeys(profile, name), t('1 à 5')] },
-    { action: t('Poser le piège'), keys: keyNames(profile, 'placeTrap', name) },
+    { action: t('Déplacer un piège'), keys: keyNames(profile, 'placeTrap', name) },
     { action: t('Spéciale'), keys: keyNames(profile, 'skill', name) },
     { action: t('Dash'), keys: keyNames(profile, 'dash', name) },
     { action: t('Pause'), keys: [t('Échap')] },
@@ -78,11 +77,7 @@ const gamepad = (profile: KeyProfile): DevicePrompts => ({
     { action: t('Se déplacer'), keys: [sticks(profile).move] },
     { action: t('Viser'), keys: [sticks(profile).aim] },
     { action: t('Tirer'), keys: buttonNames(profile, 'fire') },
-    {
-      action: t('Choisir un piège'),
-      keys: [...buttonNames(profile, 'previousTrap'), ...buttonNames(profile, 'nextTrap')],
-    },
-    { action: t('Poser le piège'), keys: buttonNames(profile, 'placeTrap') },
+    { action: t('Déplacer un piège'), keys: buttonNames(profile, 'placeTrap') },
     { action: t('Spéciale'), keys: buttonNames(profile, 'skill') },
     { action: t('Dash'), keys: buttonNames(profile, 'dash') },
     { action: t('Pause'), keys: ['Start'] },
@@ -106,8 +101,7 @@ const touch = (): DevicePrompts => ({
   controls: [
     { action: t('Se déplacer'), keys: [t('Glisser sur l’arène')] },
     { action: t('Viser et tirer'), keys: [t('Automatique')] },
-    { action: t('Poser un piège à ses pieds'), keys: [t('Toucher son bouton')] },
-    { action: t('Le poser ailleurs'), keys: [t('Glisser son bouton')] },
+    { action: t('Déplacer un piège'), keys: [t('Toucher son bouton')] },
     { action: t('Spéciale'), keys: [t('Toucher son bouton')] },
     { action: t('Dash'), keys: [t('Toucher son bouton')] },
     { action: t('Pause'), keys: ['❚❚'] },
@@ -140,16 +134,6 @@ function moveKeys(profile: KeyProfile, name: Name): string[] {
   });
   const others = words.filter((word) => word !== ARROWS);
   return others.length > 0 ? others : words;
-}
-
-// The wheel turns both ways: one name for the two, else the first key of each way.
-function trapKeys(profile: KeyProfile, name: Name): string[] {
-  const [next] = profile.keyboard.nextTrap.filter((input) => input !== null);
-  const [previous] = profile.keyboard.previousTrap.filter((input) => input !== null);
-  if (next === 'WheelDown' && previous === 'WheelUp') {
-    return [t('Molette')];
-  }
-  return [next, previous].flatMap((input) => (input === undefined ? [] : [name(input)]));
 }
 
 function sticks(profile: KeyProfile): { move: string; aim: string } {

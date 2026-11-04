@@ -53,6 +53,8 @@ export interface LookTextures {
   readonly extent: number;
   readonly height: number;
   readonly centerAhead?: number;
+  // The radius of a round object that hides the body.
+  readonly cover?: number;
   readonly shadow: Shape;
   readonly aimless?: true;
 }
@@ -74,6 +76,11 @@ export interface EmoteTextures {
   readonly heartInner: Shape;
   readonly star: Shape;
   readonly burst: Shape;
+  readonly wave: Shape;
+  readonly outline: { readonly body: Shape; readonly disc: Shape };
+  readonly liner: { readonly body: Shape; readonly disc: Shape };
+  readonly firefly: Shape;
+  readonly source: TextureSource;
 }
 
 export interface PlayerTextures {
@@ -189,15 +196,21 @@ const PIECES = {
   parasol: [112, 112, REFERENCE_RADIUS, parasol],
   parasolShadow: softBlob(PARASOL_RADIUS - 4, PARASOL_RADIUS - 4, 1),
   ...DOWNED_PIECES,
-  ...EMOTE_PIECES,
   ...POI_PIECES,
   ...BAG_PIECES,
   ...PARASOL_PIECES,
 } satisfies Record<string, Piece>;
 
 // One sheet for every class, so that whoever is on screen is drawn in one batch.
+// Gestures are drawn bigger than the body that their sheet is painted for: a finer sheet of their own.
+const EMOTE_DENSITY = 3;
+
 export function playerTextures(density = 1): PlayerTextures {
   const { shapes: t, source } = paintSheet(PIECES, density);
+  const { shapes: e, source: emoteSource } = paintSheet(
+    { ...EMOTE_PIECES, emoteFirefly: DOWNED_PIECES.firefly },
+    density * EMOTE_DENSITY,
+  );
   return {
     shoulders: t.shoulders,
     head: t.head,
@@ -211,14 +224,19 @@ export function playerTextures(density = 1): PlayerTextures {
       veil: t.downedVeil,
     },
     emote: {
-      sun: t.emoteSun,
-      stroke: t.emoteStroke,
-      plate: t.emotePlate,
-      heartFill: t.emoteHeartFill,
-      heartLine: t.emoteHeartLine,
-      heartInner: t.emoteHeartInner,
-      star: t.emoteStar,
-      burst: t.emoteBurst,
+      sun: e.emoteSun,
+      stroke: e.emoteStroke,
+      plate: e.emotePlate,
+      heartFill: e.emoteHeartFill,
+      heartLine: e.emoteHeartLine,
+      heartInner: e.emoteHeartInner,
+      star: e.emoteStar,
+      burst: e.emoteBurst,
+      wave: e.emoteWave,
+      outline: { body: e.emoteOutline, disc: e.emoteOutlineDisc },
+      liner: { body: e.emoteLiner, disc: e.emoteLinerDisc },
+      firefly: e.emoteFirefly,
+      source: emoteSource,
     },
     looks: {
       poi: { extent: POI_ORBIT + POI_BALL, height: 1, shadow: t.poiShadow },
@@ -227,6 +245,7 @@ export function playerTextures(density = 1): PlayerTextures {
         object: t.parasol,
         extent: PARASOL_REACH,
         height: 2.4,
+        cover: PARASOL_RADIUS,
         shadow: t.parasolShadow,
       },
     },
@@ -254,4 +273,12 @@ export function playerTextures(density = 1): PlayerTextures {
     ),
     source,
   };
+}
+
+export function destroyPlayerTextures(players: PlayerTextures): void {
+  players.source.destroy();
+  players.emote.source.destroy();
+  for (const drawing of players.drawings.values()) {
+    drawing.painted?.source.destroy();
+  }
 }

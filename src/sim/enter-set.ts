@@ -7,6 +7,7 @@ import { Obstacles } from './obstacles';
 import { SpatialHash } from './spatial-hash';
 import type { PlayerState, SimEvent, SimState, Vec2 } from './state';
 import { tempo } from './systems/tempo';
+import { placeStartingTraps } from './trap-moves';
 import type { StepContext } from './systems/types';
 
 const ENEMY_GRID_CELL_SIZE = 64;
@@ -68,13 +69,13 @@ export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly V
   state.pickups = [];
   state.placed = [];
   delete state.bystanders;
-  delete state.loots;
-  delete state.lootsDropped;
-  delete state.nextLootBar;
-  delete state.lootDue;
+  delete state.trapsDrawn;
+  delete state.nextCarrierBar;
+  delete state.carrierDue;
   delete state.bombs;
   delete state.nextBombBar;
   delete state.bombDue;
+  delete state.dice;
   delete state.vibeRainTicks;
   delete state.walls;
   delete state.zones;
@@ -88,6 +89,7 @@ export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly V
     carry(state, player, spot);
   });
   Object.assign(ctx, setBindings(set, ctx.content, state.tick));
+  placeStartingTraps(ctx);
 
   removeGridEvents(state.events);
   tempo(ctx);

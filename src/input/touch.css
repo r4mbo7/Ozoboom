@@ -4,16 +4,14 @@
   user-select: none;
 }
 
-.touch-stick,
-.touch-drop {
+.touch-stick {
   position: absolute;
   top: 0;
   left: 0;
   pointer-events: none;
 }
 
-.touch-stick[hidden],
-.touch-drop[hidden] {
+.touch-stick[hidden] {
   display: none;
 }
 
@@ -36,13 +34,4 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--turquoise) 70%, transparent);
   box-shadow: 0 0 16px color-mix(in srgb, var(--turquoise) 50%, transparent);
-}
-
-.touch-drop {
-  width: 76px;
-  height: 76px;
-  margin: -38px 0 0 -38px;
-  border: 3px dashed var(--turquoise);
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--turquoise) 15%, transparent);
 }

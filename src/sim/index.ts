@@ -11,6 +11,7 @@ import { recruits } from './recruits';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
 import { bombCarriers, bombs } from './systems/bomb';
+import { dice } from './systems/dice';
 import { bystanders } from './systems/bystanders';
 import { dashes } from './systems/dashes';
 import { emotes } from './systems/emotes';
@@ -19,7 +20,7 @@ import { departures } from './systems/departures';
 import { enemyAttacks } from './systems/enemy-attacks';
 import { enemySteering } from './systems/enemy-steering';
 import { gauges } from './systems/gauges';
-import { lootCarriers, loots } from './systems/loot';
+import { trapCarriers } from './systems/carriers';
 import { pickups } from './systems/pickups';
 import { placedTotems, placedZones } from './systems/placed';
 import { playerAttack } from './systems/player-attack';
@@ -36,6 +37,7 @@ import { specials } from './systems/specials';
 import { status } from './systems/status';
 import { tempo } from './systems/tempo';
 import { traps } from './systems/traps';
+import { placeStartingTraps } from './trap-moves';
 import { upgradeChoice } from './systems/upgrade-choice';
 import { weapons } from './systems/weapons';
 import type { StepContext, System } from './systems/types';
@@ -79,7 +81,7 @@ const RUNNING: readonly System[] = [
   skills,
   spawning,
   ...(FULL_STEPS.afterSpawning ?? []),
-  lootCarriers,
+  trapCarriers,
   bombCarriers,
   enemySteering,
   placedTotems,
@@ -100,7 +102,7 @@ const RUNNING: readonly System[] = [
   deaths,
   gauges,
   pickups,
-  loots,
+  dice,
   playerBoosts,
   progression,
 ];
@@ -140,6 +142,7 @@ export function createSimulation(
   const commands = new Map<PlayerId, PlayerCommand>();
   const ctx: StepContext = { state, content, commands, mode, ...setBindings(set, content, 0) };
   const steps = pipelines(mode);
+  placeStartingTraps(ctx);
 
   tempo(ctx);
   state.events.push({ type: 'segment', segment: state.set.segment, tier: state.set.tier });

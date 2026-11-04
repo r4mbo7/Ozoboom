@@ -3,6 +3,7 @@ import type { Emote } from '../sim/commands';
 import type { RenderContext } from './context';
 import {
   ARROW_FLIES,
+  ARROW_FROM,
   FIREFLY,
   FIREWORKS,
   HAND,
@@ -18,11 +19,14 @@ import {
 } from './emote-moments';
 import type { Frame } from './frame';
 import { TAU } from './paint';
+import { EmoteCall } from './emote-call';
 import { EMOTE_BURST } from './textures-players-emotes';
 import { EmoteSun, show } from './emote-sun';
 import { add, hide } from './util';
 
 const NEVER = Number.NEGATIVE_INFINITY;
+// How much bigger than the body a gesture is drawn, so that the other players see it.
+const EMOTE_GROWTH = 2.5;
 
 interface Glowing {
   readonly halo: Sprite;
@@ -44,13 +48,14 @@ export class PlayerEmote {
     readonly stars: readonly [Sprite, Sprite];
   };
   private readonly sun: EmoteSun;
+  private readonly call: EmoteCall;
   private readonly all: Sprite[] = [];
   private readonly fly: Fly = { x: 0, y: 0, alpha: 0, size: 0 };
 
-  constructor(ctx: RenderContext, gestures: Container) {
+  constructor(ctx: RenderContext, gestures: Container, underBody: Container) {
     const { textures, layers } = ctx;
     const e = textures.players.emote;
-    const firefly = textures.players.downed.firefly;
+    const firefly = e.firefly;
     this.haloRadius = textures.halo.radius;
     const sprite = (parent: Container, shape: typeof e.sun) => {
       const made = add(parent, shape);
@@ -80,6 +85,11 @@ export class PlayerEmote {
       (shape) => sprite(gestures, shape),
       (shape) => sprite(layers.glow, shape),
     );
+    this.call = new EmoteCall(
+      e,
+      (shape) => sprite(layers.decor, shape),
+      (shape) => sprite(underBody, shape),
+    );
   }
 
   begin(emote: Emote, now: number): void {
@@ -101,6 +111,7 @@ export class PlayerEmote {
     top: number,
     color: number,
     teint: number,
+    cover: number | undefined,
     frame: Frame,
   ): void {
     hide(...this.all);
@@ -111,12 +122,13 @@ export class PlayerEmote {
       return;
     }
     const view = { x, y, cos: Math.cos(angle), sin: Math.sin(angle), scale };
+    const grown = scale * EMOTE_GROWTH;
     switch (this.emote) {
       case 'sunrise':
-        this.sun.place(t, x, top, scale, frame);
+        this.sun.place(t, x, top, grown, frame);
         break;
       case 'fireworks':
-        this.fireworks(t, x, y, scale, color, frame);
+        this.fireworks(t, x, y, grown, color, frame);
         break;
       case 'heart':
         this.heartFrom(t, view, color, teint, frame);
@@ -127,6 +139,7 @@ export class PlayerEmote {
       default:
         break;
     }
+    this.call.place(t, x, y, angle, scale, color, cover, frame);
   }
 
   private fireworks(
@@ -174,9 +187,10 @@ export class PlayerEmote {
     if (moment.alpha <= 0) {
       return;
     }
+    const grown = view.scale * EMOTE_GROWTH;
     const [fx, fy] = toWorld(view, HEART_FRONT, 0);
-    const hy = fy - moment.rise * view.scale;
-    const size = moment.scale * view.scale;
+    const hy = fy - moment.rise * grown;
+    const size = moment.scale * grown;
     const { halo, fill, line, inner, stars } = this.heart;
     show(
       halo,
@@ -197,9 +211,9 @@ export class PlayerEmote {
         show(
           star,
           fx + side * 15 * MOCKUP_PIXEL * size,
-          hy - 4 * MOCKUP_PIXEL * view.scale,
-          starSize * view.scale,
-          starSize * view.scale,
+          hy - 4 * MOCKUP_PIXEL * grown,
+          starSize * grown,
+          starSize * grown,
           palette.or,
           alpha * moment.alpha,
         );
@@ -214,9 +228,14 @@ export class PlayerEmote {
     }
     for (let index = 0; index < ARROW_FLIES; index += 1) {
       const { x, y, alpha, size } = arrowFly(index, t, frame.calm, this.fly);
-      const [px, py] = toWorld(view, x, y);
+      const [px, py] = toWorld(
+        view,
+        ARROW_FROM.x + (x - ARROW_FROM.x) * EMOTE_GROWTH,
+        ARROW_FROM.y + (y - ARROW_FROM.y) * EMOTE_GROWTH,
+      );
       const tip = index === ARROW_FLIES - 1;
-      this.glowing(index, px, py, size, alpha, tip ? frame.palette.or : color, view.scale, frame);
+      const grown = view.scale * EMOTE_GROWTH;
+      this.glowing(index, px, py, size, alpha, tip ? frame.palette.or : color, grown, frame);
     }
   }
 

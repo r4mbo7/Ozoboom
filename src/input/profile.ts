@@ -20,8 +20,6 @@ export const KEYBOARD_ACTIONS = [
   'placeTrap',
   'skill',
   'dash',
-  'nextTrap',
-  'previousTrap',
 ] as const satisfies readonly Control[];
 
 export type KeyboardAction = (typeof KEYBOARD_ACTIONS)[number];
@@ -31,8 +29,6 @@ export const GAMEPAD_ACTIONS = [
   'placeTrap',
   'skill',
   'dash',
-  'previousTrap',
-  'nextTrap',
 ] as const satisfies readonly Control[];
 
 export type GamepadAction = (typeof GAMEPAD_ACTIONS)[number];
@@ -59,16 +55,12 @@ export const DEFAULT_KEY_PROFILE: KeyProfile = {
     placeTrap: ['Mouse2', 'KeyF'],
     skill: ['KeyE', null],
     dash: ['ShiftLeft', 'ShiftRight'],
-    nextTrap: ['WheelDown', 'Tab'],
-    previousTrap: ['WheelUp', null],
   },
   gamepad: {
     fire: [StandardButton.RT, null],
     placeTrap: [StandardButton.A, null],
     skill: [StandardButton.LT, null],
     dash: [StandardButton.B, null],
-    previousTrap: [StandardButton.LB, null],
-    nextTrap: [StandardButton.RB, null],
   },
   swapSticks: false,
 };
@@ -91,14 +83,9 @@ function wheelOf(input: string): Wheel | null {
   return WHEELS[input] ?? null;
 }
 
-// Escape, the digits, Backspace and Delete are the game's; the system and function keys belong to the browser.
+// Escape, Backspace and Delete are the game's; the system and function keys belong to the browser.
 const RESERVED_KEYS: ReadonlySet<string> = new Set([
   'Escape',
-  'Digit1',
-  'Digit2',
-  'Digit3',
-  'Digit4',
-  'Digit5',
   'Backspace',
   'Delete',
   'MetaLeft',

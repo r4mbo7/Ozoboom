@@ -27,6 +27,7 @@ export const FULL_TEASERS: readonly TeaserDefinition[] = [
   { kind: 'class', name: 'L’Avatar', color: '#ff9a5a' },
   { kind: 'class', name: 'Le Jongleur', color: '#f7c948' },
   { kind: 'class', name: 'Le Circadien', color: '#ffc14d' },
+  { kind: 'class', name: 'L’Échassier', color: '#e85d75' },
   { kind: 'stage', name: 'Le Dome', style: 'Downtempo, dub', color: '#d9a441' },
   { kind: 'stage', name: 'Ambyss', style: 'Psychill, ambient', color: '#3fd0c9' },
   { kind: 'stage', name: 'Pumpui', style: 'Progressive', color: '#ff6fa8' },

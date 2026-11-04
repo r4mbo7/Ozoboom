@@ -168,6 +168,11 @@ export function bossScene(state: SimState, boss: DevBoss): void {
   state.events.push({ type: 'segment', segment: 'break', tier: boss.tier });
 }
 
+const SUNRISE_TRAPS = [
+  { kind: 'caisson-de-basse', dx: -220, dy: 140 },
+  { kind: 'laser', dx: 240, dy: -120 },
+];
+
 export function sunriseScene(state: SimState, content: GameContent): void {
   const set = content.sets.find((candidate) => candidate.id === state.setId);
   if (set === undefined) {
@@ -175,6 +180,26 @@ export function sunriseScene(state: SimState, content: GameContent): void {
   }
   state.set.tier = set.tiers.length;
   state.set.segment = 'drop';
+  // Two traps beside the stage, so that a festival shows them burst into vibes.
+  const [player] = state.players;
+  if (player !== undefined) {
+    SUNRISE_TRAPS.forEach(({ kind, dx, dy }) => {
+      const x = state.core.x + dx;
+      const y = state.core.y + dy;
+      state.traps.push({
+        id: state.nextEntityId,
+        kind,
+        ownerId: player.id,
+        intensity: 1,
+        direction: { x: 1, y: 0 },
+        x,
+        y,
+        prevX: x,
+        prevY: y,
+      });
+      state.nextEntityId += 1;
+    });
+  }
 }
 
 export function devScene(

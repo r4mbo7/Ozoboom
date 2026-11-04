@@ -16,6 +16,21 @@ export interface Fly {
   size: number;
 }
 
+export const WAVES = 2;
+const WAVE_BEATS = 1.5;
+const WAVE_FROM = 12;
+export const WAVE_REACH = 70;
+
+export interface WaveMoment {
+  radius: number;
+  alpha: number;
+}
+
+export interface OutlineMoment {
+  swell: number;
+  alpha: number;
+}
+
 export const envelope = (t: number, from: number, to: number, rise: number, fall: number) =>
   clamp01((t - from) / rise) * clamp01((to - t) / fall);
 const onBeat = (t: number) => Math.exp(-frac(t) * 6);
@@ -37,6 +52,8 @@ const ARROW = [
 ] as const;
 const ARROW_RANK = [0, 1, 2, 3, 4, 3, 4, 5] as const;
 const ARROW_HAND = { x: 26, y: 3 };
+// Where the arrow leaves the raised hand.
+export const ARROW_FROM = { x: ARROW_HAND.x * MOCKUP_PIXEL, y: ARROW_HAND.y * MOCKUP_PIXEL };
 
 export function arrowFly(index: number, t: number, calm: boolean, out: Fly): Fly {
   const [px, py] = ARROW[index] ?? [0, 0];
@@ -131,4 +148,19 @@ export function heartAt(t: number, calm: boolean): HeartMoment {
 export function sunRay(index: number, t: number, calm: boolean): number {
   const open = calm ? 1 : easeOutCubic(clamp01((t - 0.8 - index * 0.1) / 0.3));
   return open * (5 + (calm || t <= 1.3 ? 0 : 1.6 * onBeat(t))) * MOCKUP_PIXEL;
+}
+
+// One ring on the beat the gesture starts, the next one on the following beat.
+export function waveAt(index: number, t: number, calm: boolean, out: WaveMoment): WaveMoment {
+  const share = (t - index) / WAVE_BEATS;
+  const shown = share >= 0 && share < 1 && (!calm || index === 0);
+  out.radius = calm ? WAVE_REACH : WAVE_FROM + (WAVE_REACH - WAVE_FROM) * easeOutCubic(share);
+  out.alpha = shown ? 1 - share : 0;
+  return out;
+}
+
+export function outlineAt(t: number, calm: boolean, out: OutlineMoment): OutlineMoment {
+  out.swell = calm ? 0 : onBeat(t);
+  out.alpha = envelope(t, 0, EMOTE_BEATS, 0.12, 0.5);
+  return out;
 }

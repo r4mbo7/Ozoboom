@@ -238,6 +238,13 @@ const UPGRADE_GLYPHS: Readonly<Record<string, string>> = {
     '<g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">' +
     '<path d="M9.5 12.5h5M9.5 15h5M9.5 17.5h5M12.5 2.8a3.6 3.6 0 0 1 2.2 3.2"/>' +
     '<path d="M15.2.9a6.4 6.4 0 0 1 3 4.9" opacity="0.6"/></g>',
+  // A cable tie cinched round a bundle of cables, its notched tail sticking out of the head.
+  'colliers-de-serrage':
+    `<circle cx="10" cy="14" r="7.5" ${STROKE}/>` +
+    '<path d="M6.9 11.6v4.8M10 10.8v6.4M13.1 11.6v4.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+    '<path d="M7.2 3.6h5.6a.8.8 0 0 1 .8.8v3.6a.8.8 0 0 1-.8.8H7.2a.8.8 0 0 1-.8-.8V4.4a.8.8 0 0 1 .8-.8z" fill="currentColor"/>' +
+    '<path d="M13.6 6.2H23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    '<path d="M15.6 3.9v4.6M18.1 3.9v4.6M20.6 3.9v4.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>',
   // Worn across the chest, as at a festival: the strap runs from corner to corner.
   banane:
     '<g transform="translate(12 12.4) rotate(-25.8)">' +
@@ -272,11 +279,10 @@ const UPGRADE_GLYPHS: Readonly<Record<string, string>> = {
     '<path d="M-5.2-2.6H3.4L5-3.2V3.2L3.4 2.6H-5.2a.8.8 0 0 1-.8-.8V-1.8a.8.8 0 0 1 .8-.8zM-2.6 -1.9h.7v3.8h-.7zM-.6 -1.9h.7v3.8h-.7z" fill="currentColor" fill-rule="evenodd" transform="translate(8.6 11) rotate(-22)"/>' +
     '<path d="M5.9 -3.8h.5a.5 .5 0 0 1 .5 .5v6.6a.5 .5 0 0 1 -.5 .5h-.5a.5 .5 0 0 1 -.5 -.5v-6.6a.5 .5 0 0 1 .5 -.5zM-6.6-1.4h-.8a.6.6 0 0 0-.6.6v1.6a.6.6 0 0 0 .6.6h.8z" fill="currentColor" transform="translate(8.6 11) rotate(-22)"/>' +
     '<path d="M0-2.8C.3-.6.6-.3 2.8 0 .6.3.3.6 0 2.8-.3.6-.6.3-2.8 0-.6-.3-.3-.6 0-2.8z" fill="currentColor" transform="translate(3.8 4.4)"/>',
-  'sono-de-reference':
-    '<path d="M8 3 12 1l4 2M12 1V.2" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>' +
-    '<path d="M3.6 3h16.8v1.4h-16.8z" fill="currentColor"/>' +
-    '<path d="M3.7 5h16.6a.7 .7 0 0 1 .7 .7v2.7a.7 .7 0 0 1 -.7 .7h-16.6a.7 .7 0 0 1 -.7 -.7v-2.7a.7 .7 0 0 1 .7 -.7zM3.75 7.05a1.39 1.39 0 1 0 2.79 0a1.39 1.39 0 1 0 -2.79 0zM4.61 7.05a.53 .53 0 1 0 1.06 0a.53 .53 0 1 0 -1.06 0zM17.46 7.05a1.39 1.39 0 1 0 2.79 0a1.39 1.39 0 1 0 -2.79 0zM18.33 7.05a.53 .53 0 1 0 1.06 0a.53 .53 0 1 0 -1.06 0zM9.34 6.65h5.32a.4 .4 0 0 1 .4 .4v0a.4 .4 0 0 1 -.4 .4h-5.32a.4 .4 0 0 1 -.4 -.4v0a.4 .4 0 0 1 .4 -.4zM4.2 9.7h15.6a.7 .7 0 0 1 .7 .7v2.5a.7 .7 0 0 1 -.7 .7h-15.6a.7 .7 0 0 1 -.7 -.7v-2.5a.7 .7 0 0 1 .7 -.7zM4.25 11.65a1.33 1.33 0 1 0 2.65 0a1.33 1.33 0 1 0 -2.65 0zM5.07 11.65a.5 .5 0 1 0 1.01 0a.5 .5 0 1 0 -1.01 0zM17.1 11.65a1.33 1.33 0 1 0 2.65 0a1.33 1.33 0 1 0 -2.65 0zM17.92 11.65a.5 .5 0 1 0 1.01 0a.5 .5 0 1 0 -1.01 0zM9.51 11.25h4.98a.4 .4 0 0 1 .4 .4v0a.4 .4 0 0 1 -.4 .4h-4.98a.4 .4 0 0 1 -.4 -.4v0a.4 .4 0 0 1 .4 -.4zM4.9 14.2h14.2a.7 .7 0 0 1 .7 .7v2.3a.7 .7 0 0 1 -.7 .7h-14.2a.7 .7 0 0 1 -.7 -.7v-2.3a.7 .7 0 0 1 .7 -.7zM4.95 16.05a1.26 1.26 0 1 0 2.52 0a1.26 1.26 0 1 0 -2.52 0zM5.73 16.05a.48 .48 0 1 0 .96 0a.48 .48 0 1 0 -.96 0zM16.53 16.05a1.26 1.26 0 1 0 2.52 0a1.26 1.26 0 1 0 -2.52 0zM17.31 16.05a.48 .48 0 1 0 .96 0a.48 .48 0 1 0 -.96 0zM9.75 15.65h4.5a.4 .4 0 0 1 .4 .4v0a.4 .4 0 0 1 -.4 .4h-4.5a.4 .4 0 0 1 -.4 -.4v0a.4 .4 0 0 1 .4 -.4zM5.8 18.5h12.4a.7 .7 0 0 1 .7 .7v2.1a.7 .7 0 0 1 -.7 .7h-12.4a.7 .7 0 0 1 -.7 -.7v-2.1a.7 .7 0 0 1 .7 -.7zM5.85 20.25a1.19 1.19 0 1 0 2.38 0a1.19 1.19 0 1 0 -2.38 0zM6.59 20.25a.45 .45 0 1 0 .9 0a.45 .45 0 1 0 -.9 0zM15.77 20.25a1.19 1.19 0 1 0 2.38 0a1.19 1.19 0 1 0 -2.38 0zM16.51 20.25a.45 .45 0 1 0 .9 0a.45 .45 0 1 0 -.9 0zM10.05 19.85h3.89a.4 .4 0 0 1 .4 .4v0a.4 .4 0 0 1 -.4 .4h-3.89a.4 .4 0 0 1 -.4 -.4v0a.4 .4 0 0 1 .4 -.4z" fill="currentColor" fill-rule="evenodd"/>' +
-    '<path d="M0-2.8C.3-.6.6-.3 2.8 0 .6.3.3.6 0 2.8-.3.6-.6.3-2.8 0-.6-.3-.3-.6 0-2.8z" fill="currentColor" transform="translate(3.6 20.4)"/>',
+  // Three by three cabinets, stacked up to the height of the card.
+  'mur-de-son':
+    '<path d="M2.3 4.4h6.2v5.8h-6.2zM3.65 7.300000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM4.75 7.300000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM8.9 4.4h6.2v5.8h-6.2zM10.25 7.300000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM11.35 7.300000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM15.5 4.4h6.2v5.8h-6.2zM16.85 7.300000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM17.95 7.300000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM2.3 10.8h6.2v5.8h-6.2zM3.65 13.700000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM4.75 13.700000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM8.9 10.8h6.2v5.8h-6.2zM10.25 13.700000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM11.35 13.700000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM15.5 10.8h6.2v5.8h-6.2zM16.85 13.700000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM17.95 13.700000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM2.3 17.2h6.2v5.8h-6.2zM3.65 20.099999999999998a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM4.75 20.099999999999998a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM8.9 17.2h6.2v5.8h-6.2zM10.25 20.099999999999998a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM11.35 20.099999999999998a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM15.5 17.2h6.2v5.8h-6.2zM16.85 20.099999999999998a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM17.95 20.099999999999998a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0z" fill="currentColor" fill-rule="evenodd"/>' +
+    '<path d="M0-2.8C.3-.6.6-.3 2.8 0 .6.3.3.6 0 2.8-.3.6-.6.3-2.8 0-.6-.3-.3-.6 0-2.8z" fill="currentColor" transform="translate(20.6 2)"/>',
 };
 
 // A class card draws what it changes, the same for every character: its first stat names it.
@@ -397,6 +403,10 @@ export function roleIcon(role: WeaponRole): string {
       );
   }
 }
+
+// A die showing three: the reroll of an offer.
+export const DIE =
+  '<rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="16" cy="16" r="1.6" fill="currentColor"/>';
 
 export const STAR =
   '<path d="m12 2.5 2.6 6.4 6.9.5-5.3 4.4 1.7 6.7L12 16.8l-5.9 3.7 1.7-6.7-5.3-4.4 6.9-.5z" fill="currentColor"/>';

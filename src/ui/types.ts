@@ -1,7 +1,7 @@
 import type { DecorId, GameContent } from '../data/types';
 import type { Locale } from '../shared/i18n';
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
-import type { PlayerId, SimState } from '../sim/state';
+import type { PlayerId, SimState, Vec2 } from '../sim/state';
 import type { TutorialStep } from './tutorial';
 
 export interface LocalPlayer {
@@ -16,6 +16,8 @@ export interface UiFrame {
   devices?: readonly { device: DeviceId; snapshot: InputSnapshot }[];
   // In eighths since the first note of the menu ambience; absent or null while it is silent.
   menuPosition?: number | null;
+  // Where a point of the arena shows, in pixels of the game's view.
+  toScreen?: (point: Vec2) => Vec2;
 }
 
 export interface StageCard {
@@ -110,6 +112,7 @@ export interface UiCallbacks {
   onBackToLobby(): void;
   onQuit(): void;
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
+  onRerollOffer(playerId: PlayerId): void;
   // The variant is the turn of a dealt card, 0 for the other cues.
   onUpgradeCue?(cue: UpgradeCue, variant: number): void;
   // Plays a circus weapon in the canvas of its card, until the returned function is called.
@@ -173,13 +176,19 @@ export interface Ui {
   showNotice(notice: Notice, details: string): void;
   // A tutorial game asks the player its gestures one by one.
   showGame(tutorial: boolean): void;
-  // Once per step of the sim, which only shows its events during that step; the gesture the tutorial
-  // asks now, null outside it.
-  observeStep(state: SimState): TutorialStep | null;
+  // Once per step of the sim, which only shows its events during that step.
+  observeStep(state: SimState): StepGuide;
   // `best`: this device's record for the night before the game, null for the first game.
   showEnd(state: SimState, session: EndSession | undefined, best: number | null): void;
   update(state: SimState, frame: UiFrame, content: GameContent): void;
   destroy(): void;
+}
+
+// What the arena shows a step asks: the gesture the tutorial asks now, null outside it; the players
+// whose first trap calls them, until they move one, the same list while it does not change.
+export interface StepGuide {
+  readonly tutorial: TutorialStep | null;
+  readonly trapCallers: readonly PlayerId[];
 }
 
 export type CreateUi = (root: HTMLElement, callbacks: UiCallbacks) => Ui;

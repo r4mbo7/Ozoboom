@@ -16,7 +16,7 @@ import { ringTarget } from '../rings';
 import type { Circle } from '../spatial-hash';
 import { STEERING_TARGETS } from '../specials';
 import type { SteeringOverride } from '../specials/types';
-import type { EnemyState, SimState } from '../state';
+import type { EnemyState, PlayerState, SimState } from '../state';
 import type { StepContext } from './types';
 
 const LEASH_IN_AGGRO_RADII = 2;
@@ -32,7 +32,7 @@ export function enemySteering(ctx: StepContext): void {
       continue;
     }
     const definition = lookup(content.enemies, enemy.kind, 'enemy');
-    chooseTarget(state, enemy, definition);
+    chooseTarget(state, content, enemy, definition);
     if (hasStatus(enemy, 'bubbled')) {
       bubbleDrift(enemy);
       continue;
@@ -107,7 +107,12 @@ function targetOf(state: SimState, enemy: EnemyState): Circle {
   return playerById(state, enemy.target) ?? state.core;
 }
 
-function chooseTarget(state: SimState, enemy: EnemyState, definition: EnemyDefinition): void {
+function chooseTarget(
+  state: SimState,
+  content: ResolvedContent,
+  enemy: EnemyState,
+  definition: EnemyDefinition,
+): void {
   if (definition.passable === true) {
     enemy.target = 'core';
     return;
@@ -125,11 +130,19 @@ function chooseTarget(state: SimState, enemy: EnemyState, definition: EnemyDefin
   let nearest = definition.aggroRadius * definition.aggroRadius;
   for (const player of state.players) {
     const squared = distanceSquared(enemy, player);
-    if (!player.downed && squared <= nearest) {
+    if (!player.downed && squared <= nearest && !towersOver(content, player, definition)) {
       nearest = squared;
       enemy.target = player.id;
     }
   }
+}
+
+function towersOver(
+  content: ResolvedContent,
+  player: PlayerState,
+  definition: EnemyDefinition,
+): boolean {
+  return content.classes.get(player.classId)?.towersOver?.includes(definition.behaviour) === true;
 }
 
 function separate(state: SimState, grid: StepContext['enemyGrid'], enemy: EnemyState): void {

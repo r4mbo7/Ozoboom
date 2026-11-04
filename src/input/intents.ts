@@ -7,9 +7,6 @@ export interface GameplayIntents extends PlayerInput {
   placeTrap: boolean;
   dash: boolean;
   emote: Emote | null;
-  nextTrap: boolean;
-  previousTrap: boolean;
-  selectTrap: number | null;
   pause: boolean;
 }
 

@@ -1,10 +1,12 @@
 import type { TrapCadence, TrapEffect } from '../../data/types';
 import { touches } from '../effects';
 import type { SimState, SpeakerState } from '../state';
+import { dropSpeakerDie } from './dice';
 import { fire } from './traps';
 import type { StepContext } from './types';
 
-export function speakers({ state, set, tempo, enemyObstacles, enemyGrid }: StepContext): void {
+export function speakers(ctx: StepContext): void {
+  const { state, set, tempo, enemyObstacles, enemyGrid } = ctx;
   const definitions = set.speakers ?? [];
   const beat = state.events.some((event) => event.type === 'beat');
   if (state.speakers?.some((speaker) => speaker.plugged) === true) {
@@ -46,6 +48,7 @@ export function speakers({ state, set, tempo, enemyObstacles, enemyGrid }: StepC
       state.volume = (state.volume ?? 0) + 1;
       state.events.push({ type: 'speakerPlugged', speakerId: speaker.id });
       state.events.push({ type: 'volumeChanged', volume: state.volume });
+      dropSpeakerDie(ctx, speaker);
     } else if (beat) {
       state.events.push({
         type: 'speakerPlugging',

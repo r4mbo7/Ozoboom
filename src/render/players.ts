@@ -2,6 +2,7 @@ import { Container, type Sprite } from 'pixi.js';
 import { clamp, lerp } from '../shared/scalar';
 import type { PlayerState, SimEvent, SimState } from '../sim/state';
 import { MAIN_TEMPO, type Tempo, ticksIntoBeat } from '../shared/tempo';
+import { PlayerCarriedTrap } from './carried-traps';
 import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
 import { DashArc } from './dash-arc';
@@ -53,6 +54,7 @@ interface PlayerView {
   readonly dashArc: DashArc;
   readonly lifeArc: LifeArc;
   readonly emote: PlayerEmote;
+  readonly carried: PlayerCarriedTrap;
 }
 
 export function createPlayers(ctx: RenderContext): Family {
@@ -88,7 +90,8 @@ export function createPlayers(ctx: RenderContext): Family {
       contour: add(marks, t.contour),
       dashArc: new DashArc(ground),
       lifeArc: new LifeArc(ctx, ground, lifeLabels),
-      emote: new PlayerEmote(ctx, gestures),
+      emote: new PlayerEmote(ctx, gestures, ground),
+      carried: new PlayerCarriedTrap(ctx),
     }),
     (view) => {
       view.lastNow = NEVER;
@@ -99,6 +102,7 @@ export function createPlayers(ctx: RenderContext): Family {
       view.lifeArc.reset();
       view.emote.reset();
       hide(view.halo, view.shadow, view.aim, view.contour);
+      view.carried.hide();
       view.lying.hide();
       for (const look of view.looks.values()) {
         look.hide();
@@ -145,10 +149,12 @@ export function createPlayers(ctx: RenderContext): Family {
         case 'emoted':
           views.peek(event.playerId)?.emote.begin(event.emote, state.tick);
           break;
+        case 'carriedTrapWornOut':
+        case 'trapTaken':
+          views.peek(event.playerId)?.carried.onEvent(event, state.tick);
+          break;
         case 'dashEmpty':
           views.peek(event.playerId)?.dashArc.empty(state.tick);
-          break;
-        default:
           break;
       }
     },
@@ -162,8 +168,7 @@ export function createPlayers(ctx: RenderContext): Family {
     update(state: SimState, alpha: number, frame: Frame): void {
       const { palette, light, pulse, now } = frame;
       const sun = shadowAt(frame.fraction);
-      const sunX = Math.cos(sun.angle);
-      const sunY = Math.sin(sun.angle);
+      const [sunX, sunY] = [Math.cos(sun.angle), Math.sin(sun.angle)];
       views.begin();
       for (const player of state.players) {
         const view = views.acquire(player.id);
@@ -207,7 +212,7 @@ export function createPlayers(ctx: RenderContext): Family {
           frame,
           state.players.length > 1,
         );
-        const downed = player.downed;
+        view.carried.place(player.carriedTrap, x, top, frame);
         const bounce = view.glow.place(player, x, y, lookTextures.extent * scale, frame);
         const dt = view.lastNow === NEVER ? 0 : clamp(now - view.lastNow, 0, MAX_STEP_TICKS);
         view.lastNow = now;
@@ -219,13 +224,14 @@ export function createPlayers(ctx: RenderContext): Family {
         view.moving += ((speed > 0.15 ? 1 : 0) - view.moving) * (1 - Math.exp(-dt * 0.5));
 
         let lift = 0;
-        lying.place(downed, x, y, angle, scale, color, share, burst, frame);
-        if (downed) {
+        lying.place(player.downed, x, y, angle, scale, color, share, burst, frame);
+        if (player.downed) {
           look.hide();
           hide(aim, contour);
           view.emote.reset();
         } else {
-          view.emote.place(x, y, angle, scale, top, color, teintOf(player), frame);
+          const { cover } = lookTextures;
+          view.emote.place(x, y, angle, scale, top, color, teintOf(player), cover, frame);
           const moment = moments.of(player.id);
           input ??= createLookInput(state, player, frame);
           input.state = state;
@@ -253,8 +259,8 @@ export function createPlayers(ctx: RenderContext): Family {
         view.dashArc.place(player, x, y, color, ctx.dash, frame);
         view.lifeArc.place(player, x, y, color, now - moments.of(player.id).hit, frame);
 
-        shadow.visible = !downed;
-        if (downed) {
+        shadow.visible = !player.downed;
+        if (player.downed) {
           continue;
         }
         const reach = sun.length * lookTextures.height * 3 + lift * 6 * scale;

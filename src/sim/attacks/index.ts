@@ -12,10 +12,6 @@ export function attackModule(attack: AttackDefinition): AttackModule<AttackDefin
   return ATTACKS[attack.kind];
 }
 
-export function attackChargeTicks(attack: AttackDefinition): number {
-  return attackModule(attack).chargeTicks?.(attack) ?? 0;
-}
-
 export function attackReach(attack: AttackDefinition, player: Upgraded = NO_UPGRADE): number {
   return attackModule(attack).reach(attack, player);
 }

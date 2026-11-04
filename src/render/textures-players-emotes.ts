@@ -6,6 +6,12 @@ const EMOTE_SUN = 10.7;
 export const EMOTE_STROKE = 20;
 export const EMOTE_PLATE = 25;
 export const EMOTE_BURST = 10;
+export const WAVE_RING = 40;
+const OUTLINE_RX = 12;
+const OUTLINE_RY = 24;
+const OUTLINE_BAND = 14;
+// Around a look that hides the body, like a parasol, the outline is a disc scaled to its cover.
+export const OUTLINE_DISC = 46;
 
 function heart(ctx: Ctx, size: number): void {
   const k = size / 9;
@@ -19,6 +25,35 @@ function heart(ctx: Ctx, size: number): void {
 }
 
 const HEART = 11.6;
+
+function band(rx: number, ry: number): Piece {
+  return [
+    (rx + OUTLINE_BAND) * 2 + 4,
+    (ry + OUTLINE_BAND) * 2 + 4,
+    REFERENCE_RADIUS,
+    (ctx) => {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx + OUTLINE_BAND, ry + OUTLINE_BAND, 0, 0, TAU);
+      ctx.fillStyle = WHITE;
+      ctx.fill();
+    },
+  ];
+}
+
+function liner(rx: number, ry: number): Piece {
+  return [
+    (rx + 5) * 2 + 4,
+    (ry + 5) * 2 + 4,
+    REFERENCE_RADIUS,
+    (ctx) => {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx + 2.5, ry + 2.5, 0, 0, TAU);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = WHITE;
+      ctx.stroke();
+    },
+  ];
+}
 
 export const EMOTE_PIECES = {
   emoteSun: [
@@ -135,4 +170,22 @@ export const EMOTE_PIECES = {
       }
     },
   ],
+  emoteWave: [
+    WAVE_RING * 2 + 8,
+    WAVE_RING * 2 + 8,
+    WAVE_RING,
+    (ctx) => {
+      circle(ctx, WAVE_RING);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = RIM;
+      ctx.stroke();
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = WHITE;
+      ctx.stroke();
+    },
+  ],
+  emoteOutline: band(OUTLINE_RX, OUTLINE_RY),
+  emoteLiner: liner(OUTLINE_RX, OUTLINE_RY),
+  emoteOutlineDisc: band(OUTLINE_DISC, OUTLINE_DISC),
+  emoteLinerDisc: liner(OUTLINE_DISC, OUTLINE_DISC),
 } satisfies Record<string, Piece>;

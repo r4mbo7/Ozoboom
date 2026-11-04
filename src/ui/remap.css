@@ -85,16 +85,6 @@
   min-width: 0;
 }
 
-.ui-remap__group[data-wide] {
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 32px;
-}
-
-.ui-remap__group[data-wide] .ui-remap__group-name {
-  grid-column: 1 / -1;
-}
-
 .ui-remap__group-name {
   margin: 0 0 2px;
   padding-inline-start: 18px;
@@ -256,8 +246,7 @@
 }
 
 @media (max-width: 820px) {
-  .ui-remap__panel,
-  .ui-remap__group[data-wide] {
+  .ui-remap__panel {
     grid-template-columns: minmax(0, 1fr);
   }
 }

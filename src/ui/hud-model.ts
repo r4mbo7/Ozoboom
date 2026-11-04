@@ -10,10 +10,10 @@ import type {
 import { t, tn } from '../shared/i18n';
 import { NIGHT_END, NIGHT_START, type PaletteToken, isClassToken } from '../shared/palette';
 import { setTempo, ticksToDrop } from '../sim/lineup';
-import type { PlayerState, SimState, PlayerId } from '../sim/state';
+import type { PlayerState, SimState } from '../sim/state';
 import { gaugeValue } from '../sim/gauges';
 import { skillCooldownTicks } from '../sim/stats';
-import { trapAt } from '../sim/systems/traps';
+import { trapInReach } from '../sim/trap-moves';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
 import { defaultName } from './lobby-model';
 import type { UiFrame } from './types';
@@ -167,69 +167,44 @@ export function volumeCrans(set: SetDefinition, state: SimState): Cran[] {
   });
 }
 
-export interface HandTile {
+// What the player holds above their head: a trap, an offering for the fire or a giant, or nothing.
+export interface CarriedTile {
   trapId: string | null;
-  available: boolean;
-  // The slot after the traps holds an offering for the fire or a giant.
   offering?: true;
-  // Every trap slot of the team is taken: the trap waits for one to be taken back.
-  full?: true;
 }
 
+export function carriedTile(player: Pick<PlayerState, 'carriedTrap' | 'offering'>): CarriedTile {
+  if (player.carriedTrap !== undefined) {
+    return { trapId: player.carriedTrap.kind };
+  }
+  return player.offering === undefined ? { trapId: null } : { trapId: null, offering: true };
+}
+
+// The trap the place key would lift, with empty hands.
 export function trapToTake(
   definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
   state: Pick<SimState, 'traps'>,
-  player: Pick<PlayerState, 'x' | 'y' | 'hand' | 'offering'>,
-  handSize: number,
+  player: Pick<
+    PlayerState,
+    | 'x'
+    | 'y'
+    | 'radius'
+    | 'aim'
+    | 'carriedTrap'
+    | 'offering'
+    | 'modifiers'
+    | 'suppressedTicks'
+    | 'boosts'
+  >,
 ): string | null {
-  const under = trapAt(definitions, state.traps, player);
-  const held = (player.hand?.length ?? 0) + (player.offering === undefined ? 0 : 1);
-  return under === undefined || held >= handSize ? null : under.kind;
-}
-
-// A held trap is available unless the field is full or a trap stands where it would go.
-export function handTiles(
-  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
-  state: Pick<SimState, 'traps'>,
-  player: Pick<PlayerState, 'x' | 'y' | 'hand' | 'offering'>,
-  handSize: number,
-  capacity: number,
-): HandTile[] {
-  const full = trapsFull(state, capacity);
-  const free = !full && trapAt(definitions, state.traps, player) === undefined;
-  const traps = player.hand?.length ?? 0;
-  return Array.from({ length: handSize }, (_, index): HandTile => {
-    if (index === traps && player.offering !== undefined) {
-      return { trapId: null, available: false, offering: true };
-    }
-    const trapId = player.hand?.[index] ?? null;
-    if (trapId !== null && full) {
-      return { trapId, available: false, full: true };
-    }
-    return { trapId, available: trapId !== null && free };
-  });
-}
-
-// The tile that calls for the player's first trap: the first one held, until one of theirs stands
-// on the field; `placed` remembers who did, a trap taken back or a new scene notwithstanding.
-export function firstTrapCall(
-  tiles: readonly HandTile[],
-  state: Pick<SimState, 'traps'>,
-  player: Pick<PlayerState, 'id'>,
-  placed: Set<PlayerId>,
-): number | null {
-  if (state.traps.some((trap) => trap.ownerId === player.id)) {
-    placed.add(player.id);
-  }
-  if (placed.has(player.id)) {
+  if (player.carriedTrap !== undefined || player.offering !== undefined) {
     return null;
   }
-  const index = tiles.findIndex((tile) => tile.trapId !== null && tile.available);
-  return index < 0 ? null : index;
+  return trapInReach(definitions, state.traps, player)?.kind ?? null;
 }
 
 export function trapTileTitle(
-  tile: HandTile,
+  tile: CarriedTile,
   trap: Pick<TrapDefinition, 'name' | 'description'> | undefined,
   look: SummonLook | undefined,
 ): string {
@@ -241,37 +216,17 @@ export function trapTileTitle(
     : t('{name} : {description}', { name: t(trap.name), description: t(trap.description) });
 }
 
-export function trapsFull(state: Pick<SimState, 'traps'>, capacity: number): boolean {
-  return state.traps.length >= capacity;
-}
-
-// The count of the slots taken, shown only once none is left.
-export function trapSlotsFull(state: Pick<SimState, 'traps'>, capacity: number): string | null {
-  return trapsFull(state, capacity)
-    ? t('{taken}/{capacity}', {
-        taken: formatNumber(state.traps.length),
-        capacity: formatNumber(capacity),
-      })
-    : null;
-}
-
 export function trapCaption(
-  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'name'>>,
+  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'takeLabel' | 'putLabel'>>,
   taken: string | null,
-  held: string | undefined,
-  full: boolean,
+  carried: string | null,
 ): string | null {
-  const name = (id: string | undefined) => {
-    const trap = id === undefined ? undefined : definitions.get(id);
-    return trap === undefined ? '' : t(trap.name);
-  };
-  if (taken !== null) {
-    return t('Reprendre : {trap}', { trap: name(taken) });
-  }
-  if (held === undefined) {
+  const id = taken ?? carried;
+  const trap = id === null ? undefined : definitions.get(id);
+  if (trap === undefined) {
     return null;
   }
-  return full ? t('Plus de place pour un piège : reprends-en un') : name(held);
+  return t(taken === null ? trap.putLabel : trap.takeLabel);
 }
 
 const plugHelps = (): readonly string[] => [

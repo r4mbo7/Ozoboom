@@ -13,6 +13,7 @@ import {
   frameCamera,
   isSettled,
   screenToWorld,
+  worldToScreen,
 } from './camera';
 import { ShowClock, isBossLanding } from './boss-moments';
 import { type Family, type RenderContent, createRenderContext } from './context';
@@ -28,8 +29,6 @@ import type { CameraFocus, Inset, RenderOptions, Renderer } from './types';
 import { byId, lookup } from './util';
 import { playedSets } from '../data/played-sets';
 
-export type { RenderContent } from './context';
-
 const CALM = { glowAlpha: 0.4, pulse: 0.3 };
 const SHAKE = { pixels: 7, ticks: TICKS_PER_BEAT / 2 };
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
@@ -44,13 +43,11 @@ export class Scene implements Renderer, InsetScene {
   private readonly options: RenderOptions;
   private camera: Camera;
   private viewHeight: number | undefined;
-
   private readonly stage = new Container();
   private readonly layers: Layers;
   private readonly frame: Frame = createFrame();
   private readonly families: readonly Family[];
   private readonly dropTrails: ReturnType<typeof createDropTrails>;
-
   private lastState: SimState | null = null;
   private lastStage = '';
   private lastTick = -1;
@@ -88,7 +85,6 @@ export class Scene implements Renderer, InsetScene {
     this.layers = createLayers(this.stage);
     this.frame.resolution = pixi.resolution;
     this.dropTrails = createDropTrails(pixi, this.layers);
-
     const ctx = createRenderContext(this.textures, this.layers, this.options, content);
     this.families = createFamilies(ctx, this.borrowed);
   }
@@ -195,6 +191,10 @@ export class Scene implements Renderer, InsetScene {
 
   screenToWorld(point: Vec2): Vec2 {
     return screenToWorld(this.camera, point);
+  }
+
+  worldToScreen(point: Vec2): Vec2 {
+    return worldToScreen(this.camera, point);
   }
 
   destroy(): void {

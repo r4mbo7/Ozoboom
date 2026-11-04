@@ -1,12 +1,13 @@
 import type { Sprite } from 'pixi.js';
 import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
-import { STREAK_HEAD } from './textures';
+import { STREAK_HEAD } from './streak';
 import type { Family, RenderContext } from './context';
 import { enemyShotLook, shotRotation } from './enemy-shots';
 import type { Frame } from './frame';
 import { add, byId, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
+import { FULL_OWN_SHOTS } from './full';
 
 interface ShotView {
   readonly trail: Sprite;
@@ -21,6 +22,12 @@ interface EnemyShotView {
 
 export function createProjectiles(ctx: RenderContext): Family {
   const { textures: t, layers } = ctx;
+  const drawnElsewhere = new Set<string>();
+  for (const [classId, attack] of ctx.attacks) {
+    if (FULL_OWN_SHOTS.includes(attack.kind)) {
+      drawnElsewhere.add(classId);
+    }
+  }
   const enemyShots = new ViewPool<EnemyShotView>(
     () => ({ sprite: add(layers.enemyShots, t.enemyShot), kind: undefined }),
     (view) => {
@@ -74,11 +81,13 @@ export function createProjectiles(ctx: RenderContext): Family {
           sprite.scale.set(projectile.radius / shape.radius);
           continue;
         }
+        const classId = owner.kind === 'player' ? byId(state.players, owner.playerId)?.classId : '';
+        if (classId !== undefined && drawnElsewhere.has(classId)) {
+          continue;
+        }
         const { trail, outline } = lightShots.acquire(projectile.id);
         const token =
-          owner.kind === 'player'
-            ? lookup(ctx.classTokens, byId(state.players, owner.playerId)?.classId ?? '', 'class')
-            : 'texte';
+          owner.kind === 'player' ? lookup(ctx.classTokens, classId ?? '', 'class') : 'texte';
         setTint(trail, palette[token]);
         trail.visible = true;
         trail.alpha = light.haloAlpha;

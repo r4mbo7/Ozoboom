@@ -21,11 +21,9 @@ export const ACTION_NAMES: Readonly<Record<Action, () => string>> = {
   moveLeft: () => t('Gauche'),
   moveRight: () => t('Droite'),
   fire: () => t('Tirer'),
-  placeTrap: () => t('Poser le piège'),
+  placeTrap: () => t('Déplacer un piège'),
   skill: () => t('Spéciale'),
   dash: () => t('Dash'),
-  nextTrap: () => t('Piège suivant'),
-  previousTrap: () => t('Piège précédent'),
 };
 
 export function inputOf(
@@ -59,9 +57,7 @@ export function defaultsFor(profile: KeyProfile, tab: Tab): KeyProfile {
 
 export function fixedKeysText(tab: Tab): string {
   return tab === 'keyboard'
-    ? t(
-        'Toujours là : Échap pour la pause, 1 à 5 pour les pièges, les flèches et Entrée dans les menus.',
-      )
+    ? t('Toujours là : Échap pour la pause, les flèches et Entrée dans les menus.')
     : t('Toujours là : Start pour la pause, la croix pour les gestes, A et B dans les menus.');
 }
 

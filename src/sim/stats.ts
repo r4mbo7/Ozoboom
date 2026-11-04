@@ -4,14 +4,13 @@ import type {
   GameContent,
   Rarity,
   RarityForm,
-  SetDefinition,
   SkillDefinition,
   StatKey,
   StatModifier,
   UpgradeDefinition,
 } from '../data/types';
 import { wholeTicks } from './effects';
-import type { PlayerState, SimState } from './state';
+import type { PlayerState } from './state';
 
 const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   maxHpAdd: true,
@@ -28,9 +27,10 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   skillRadiusMul: false,
   trapDamageMul: false,
   trapRadiusMul: false,
-  trapSlotsAdd: true,
-  lootIntervalMul: false,
-  lootRadiusMul: false,
+  trapRechargeBarsAdd: true,
+  trapWearMul: false,
+  carrierIntervalMul: false,
+  liftReachMul: false,
   dashRechargeMul: false,
   dashChargesAdd: true,
   weaponRateMul: false,
@@ -91,21 +91,6 @@ export function dashRechargeBeats(
 ): number {
   const beats = Math.floor(statValue(player, 'dashRechargeMul', dash.rechargeBeats) + 0.5);
   return Math.max(dash.minRechargeBeats, beats);
-}
-
-export function handFree(player: PlayerState, set: Pick<SetDefinition, 'handSize'>): boolean {
-  return (player.hand?.length ?? 0) + (player.offering === undefined ? 0 : 1) < set.handSize;
-}
-
-export function trapCapacity(
-  set: Pick<SetDefinition, 'maxTraps'>,
-  state: Pick<SimState, 'volume' | 'players'>,
-): number {
-  let capacity = set.maxTraps + (state.volume ?? 0);
-  for (const player of state.players) {
-    capacity = statValue(player, 'trapSlotsAdd', capacity);
-  }
-  return capacity;
 }
 
 export function upgradeForm(upgrade: UpgradeDefinition, rarity: Rarity): RarityForm {
