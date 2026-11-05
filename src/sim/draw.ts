@@ -39,7 +39,7 @@ export function openFusion(
   if (
     weapon.evolvedFrom === undefined ||
     player.fused?.includes(weapon.id) ||
-    !fusionsOpen(state)
+    !fusionsOpen(state, content)
   ) {
     return undefined;
   }
@@ -67,6 +67,7 @@ export function isWeaponOffered(
   player: PlayerState,
   state: SimState,
   set: SetDefinition,
+  content: ResolvedContent,
 ): boolean {
   const held = player.weapons?.find((slot) => slot.id === weapon.id);
   if (held !== undefined) {
@@ -75,19 +76,35 @@ export function isWeaponOffered(
   if (weapon.evolvedFrom !== undefined || (player.weapons?.length ?? 0) >= weaponSlotCount(set)) {
     return false;
   }
-  const opener = (set.speakers ?? []).find((speaker) => speaker.unlocksWeaponId === weapon.id);
-  if (opener !== undefined && !isPlugged(state, opener.id)) {
+  if (opensWithSpeaker(weapon, content) && !isOpened(weapon, state, set)) {
     return false;
   }
   return (weapon.unlockedBySpeakers ?? 0) <= pluggedSpeakers(state);
+}
+
+// Whatever the set: a set without its speaker, as a festival path, leaves the weapon closed.
+function opensWithSpeaker(weapon: WeaponDefinition, content: ResolvedContent): boolean {
+  return [...content.sets.values()].some((set) =>
+    set.speakers?.some((speaker) => speaker.unlocksWeaponId === weapon.id),
+  );
+}
+
+function isOpened(weapon: WeaponDefinition, state: SimState, set: SetDefinition): boolean {
+  return (set.speakers ?? []).some(
+    (speaker) => speaker.unlocksWeaponId === weapon.id && isPlugged(state, speaker.id),
+  );
 }
 
 function isPlugged(state: SimState, speakerId: string): boolean {
   return (state.speakers ?? []).some((speaker) => speaker.id === speakerId && speaker.plugged);
 }
 
-function fusionsOpen(state: SimState): boolean {
-  return (state.speakers ?? []).every((speaker) => speaker.plugged);
+// A set without speakers, as a festival path, has none to plug: closed, unless no set has any.
+function fusionsOpen(state: SimState, content: ResolvedContent): boolean {
+  const speakers = state.speakers ?? [];
+  return speakers.length > 0
+    ? speakers.every((speaker) => speaker.plugged)
+    : ![...content.sets.values()].some((set) => (set.speakers?.length ?? 0) > 0);
 }
 
 function pluggedSpeakers(state: SimState): number {
@@ -137,7 +154,7 @@ function candidates(
     }
     if (openFusion(weapon, player, state, content) !== undefined) {
       pool.push({ id: weapon.id, weight: FUSION_WEIGHT, weapon: true });
-    } else if (isWeaponOffered(weapon, player, state, set)) {
+    } else if (isWeaponOffered(weapon, player, state, set, content)) {
       const weight = hasAffinity(content, weapon, player.classId) ? AFFINITY_WEIGHT : 1;
       pool.push({ id: weapon.id, weight, weapon: true });
     }

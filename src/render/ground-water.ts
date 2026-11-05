@@ -3,6 +3,8 @@ import { nextFloat, seedRng } from '../shared/prng';
 import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import type { RenderContext } from './context';
+import { DOME_LOOK, coreLookOf } from './core-look';
+import { MAIN_CORE_LOOKS } from './core-main-looks';
 import type { Frame } from './frame';
 import { LAKE_SKY_MIX, type Layout, OVERFLOW, shoreAt } from './ground-layout';
 import { mixColor } from './palette';
@@ -70,7 +72,10 @@ export function createWater(ctx: RenderContext, parent: Container) {
       const quiet = frame.calm;
       const shimmer = quiet ? 1 : 0.85 + 0.15 * Math.sin(frame.now * 0.09);
       const { core } = state;
-      const heart = core.radius / t.core.radius;
+      const domed = coreLookOf(MAIN_CORE_LOOKS, state.seed, frame.set.id) === DOME_LOOK;
+      const shape = domed ? t.core : t.halo;
+      const heart = core.radius / shape.radius;
+      coreReflection.texture = shape.texture;
       coreReflection.visible = true;
       setTint(coreReflection, stageColor(frame.palette, litShare(core)));
       coreReflection.position.set(

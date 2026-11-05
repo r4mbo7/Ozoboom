@@ -3,6 +3,7 @@ import { clamp01 } from '../shared/scalar';
 import type { Tempo } from '../shared/tempo';
 import type { PlayerState } from '../sim/state';
 import type { RenderContext } from './context';
+import { strokeArc } from './arc-stroke';
 import type { Frame } from './frame';
 import { LABEL_FONT_PX, LABEL_PAD, NAME_TEXTURE_SCALE } from './textures-names';
 import { add, setTint } from './util';
@@ -107,11 +108,11 @@ export class LifeArc {
     arc.alpha = alpha;
     arc.clear();
     const whole = lifeAngles(1);
-    stroke(arc, radius, whole.from, whole.to, EDGE_WIDTH, edge, 1);
-    stroke(arc, radius, whole.from, whole.to, TRACK_WIDTH, lit, 0.3);
+    strokeArc(arc, radius, whole.from, whole.to, EDGE_WIDTH, edge, 1);
+    strokeArc(arc, radius, whole.from, whole.to, TRACK_WIDTH, lit, 0.3);
     if (fraction > 0) {
       const live = lifeAngles(fraction);
-      stroke(arc, radius, live.from, live.to, lifeWidth(sinceHit, fraction, tempo), lit, 1);
+      strokeArc(arc, radius, live.from, live.to, lifeWidth(sinceHit, fraction, tempo), lit, 1);
     }
 
     const texts = this.ctx.textures.names.get(String(Math.max(0, Math.round(player.hp))));
@@ -137,18 +138,4 @@ export class LifeArc {
     this.fullSince = NEVER;
     this.wasFull = true;
   }
-}
-
-function stroke(
-  arc: Graphics,
-  radius: number,
-  from: number,
-  to: number,
-  width: number,
-  color: number,
-  alpha: number,
-): void {
-  arc.moveTo(Math.cos(from) * radius, Math.sin(from) * radius);
-  arc.arc(0, 0, radius, from, to);
-  arc.stroke({ width, color, alpha, cap: 'round' });
 }

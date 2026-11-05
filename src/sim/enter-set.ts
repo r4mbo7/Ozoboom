@@ -9,6 +9,7 @@ import type { PlayerState, SimEvent, SimState, Vec2 } from './state';
 import { tempo } from './systems/tempo';
 import { placeStartingTraps } from './trap-moves';
 import type { StepContext } from './systems/types';
+import { takeDownWalls } from './walls';
 
 const ENEMY_GRID_CELL_SIZE = 64;
 
@@ -77,7 +78,7 @@ export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly V
   delete state.bombDue;
   delete state.dice;
   delete state.vibeRainTicks;
-  delete state.walls;
+  takeDownWalls(state);
   delete state.zones;
   delete state.puddles;
   delete state.spawnWindow;

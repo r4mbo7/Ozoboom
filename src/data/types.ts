@@ -33,7 +33,8 @@ export type StatKey =
   | 'echoPowerMul'
   | 'twilightBeatsAdd'
   | 'elementBeatsAdd'
-  | 'elementSpreadAdd';
+  | 'elementSpreadAdd'
+  | 'bouquetCountAdd';
 
 export interface StatModifier {
   stat: StatKey;

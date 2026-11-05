@@ -2,6 +2,7 @@ import type { Container } from 'pixi.js';
 import type { DecorId, SetDefinition } from '../data/types';
 import type { SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
+import type { CoreLook } from './core-look';
 import type { Frame } from './frame';
 import { FULL_CLEARINGS, FULL_LOOKS } from './full';
 import { releaseDrawing } from './util';
@@ -19,6 +20,7 @@ export interface Ground {
 
 export interface StageLook {
   readonly decor: DecorId;
+  readonly cores: readonly CoreLook[];
   ground(parent: Container): Ground;
   families(ctx: RenderContext): Family[];
 }

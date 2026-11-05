@@ -3,6 +3,7 @@ import type { DashDefinition } from '../data/types';
 import type { Tempo } from '../shared/tempo';
 import { dashGauge } from '../sim/dash';
 import type { PlayerState } from '../sim/state';
+import { strokeArc } from './arc-stroke';
 import type { Frame } from './frame';
 
 const NEVER = Number.NEGATIVE_INFINITY;
@@ -84,12 +85,12 @@ export class DashArc {
     arc.clear();
     for (let index = 0; index < gauge.charges; index += 1) {
       const { from, to } = notchAngles(gauge.charges, index);
-      stroke(arc, radius, from, to, EDGE_WIDTH, edge, 1);
-      stroke(arc, radius, from, to, TRACK_WIDTH, color, 0.3);
+      strokeArc(arc, radius, from, to, EDGE_WIDTH, edge, 1);
+      strokeArc(arc, radius, from, to, TRACK_WIDTH, color, 0.3);
       if (index < gauge.ready) {
-        stroke(arc, radius, from, to, FULL_WIDTH, lit, 1);
+        strokeArc(arc, radius, from, to, FULL_WIDTH, lit, 1);
       } else if (index === gauge.ready && gauge.fill > 0) {
-        stroke(arc, radius, to - (to - from) * gauge.fill, to, FILL_WIDTH, color, 0.7);
+        strokeArc(arc, radius, to - (to - from) * gauge.fill, to, FILL_WIDTH, color, 0.7);
       }
     }
   }
@@ -101,18 +102,4 @@ export class DashArc {
     this.wasFull = true;
     this.emptyAt = NEVER;
   }
-}
-
-function stroke(
-  arc: Graphics,
-  radius: number,
-  from: number,
-  to: number,
-  width: number,
-  color: number,
-  alpha: number,
-): void {
-  arc.moveTo(Math.cos(from) * radius, Math.sin(from) * radius);
-  arc.arc(0, 0, radius, from, to);
-  arc.stroke({ width, color, alpha, cap: 'round' });
 }

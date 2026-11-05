@@ -3,6 +3,7 @@ import { damageCore, damagePlayer, playerById } from '../damage';
 import { healPlayer, hurtEnemy, knockBack } from '../effects';
 import { type Obstacles, touchesObstacle } from '../obstacles';
 import type { PlayerId, PlayerState, ProjectileState, SimState } from '../state';
+import { stopsShot } from '../walls';
 import type { StepContext } from './types';
 
 const LANDING_KNOCKBACK_PER_RADIUS = 0.25;
@@ -27,7 +28,7 @@ export function projectiles({
     projectile.ticksLeft -= 1;
     let spent = false;
     if (projectile.owner.kind === 'enemy') {
-      spent = hitPlayerOrCore(state, projectile);
+      spent = stopsShot(state, projectile) || hitPlayerOrCore(state, projectile);
     } else if (projectile.returning !== true && projectile.arc === undefined) {
       spent = hitEnemies(state, enemyGrid, projectile, enemyObstacles);
     }

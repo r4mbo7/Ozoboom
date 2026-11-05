@@ -3,7 +3,7 @@ import type { InputDevice } from '../input/intents';
 import { t } from '../shared/i18n';
 import type { PlayerState, SimState } from '../sim/state';
 import { el, icon, keycap, setFlag, setText } from './dom';
-import { FULL_OFFERING_ICONS } from './full';
+import { FULL_OFFERING_ICONS, FULL_PLACE_KEY } from './full';
 import { type CarriedTile, carriedTile, trapCaption, trapTileTitle, trapToTake } from './hud-model';
 import { trapIcon } from './icons';
 import type { Prompts } from './prompts';
@@ -32,6 +32,7 @@ function drawTile(
     tile.append(icon('ui-trap__icon', offering));
   }
   tile.title = trapTileTitle(view, trap, look);
+  setFlag(tile, 'board', false);
   setFlag(tile, 'empty', view.trapId === null && view.offering !== true);
   setFlag(tile, 'offering', view.offering === true);
 }
@@ -59,6 +60,22 @@ export function createCarriedTrap(prompts: Prompts): CarriedTrap {
       drawn = undefined;
     },
     update(player, state, content) {
+      const use = FULL_PLACE_KEY.use?.(state, player);
+      if (use !== undefined) {
+        if (drawn !== use.id) {
+          drawn = use.id;
+          tile.querySelector('.ui-trap__icon')?.remove();
+          tile.append(icon('ui-trap__icon', use.icon));
+          tile.title = use.label;
+          setFlag(tile, 'empty', false);
+          setFlag(tile, 'offering', false);
+          setFlag(tile, 'board', true);
+        }
+        setText(label, use.label);
+        trapName.hidden = false;
+        element.hidden = false;
+        return;
+      }
       const view = carriedTile(player);
       const look = content.summons?.find((summon) => summon.setId === state.setId)?.look;
       const held = view.offering === true ? `offering:${look ?? ''}` : view.trapId;

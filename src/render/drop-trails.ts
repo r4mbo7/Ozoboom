@@ -57,6 +57,7 @@ export function createDropTrails(pixi: Renderer, layers: Layers) {
     buffers = [RenderTexture.create(options), RenderTexture.create(options)];
     capture = RenderTexture.create(options);
     size = { width, height };
+    dirty = false;
   }
 
   function clear(target: RenderTexture): void {

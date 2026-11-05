@@ -8,9 +8,17 @@ import { beatSeconds, timeToTick, type Anchor } from './clock';
 import { chordRootOfBar, keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 import { createVibeArp } from './vibe-arp';
-import { FULL_BAR_CALLS, FULL_EVENT_CALLS } from './full';
+import {
+  FULL_ATTACK_CALLS,
+  FULL_BAR_CALLS,
+  FULL_EVENT_CALLS,
+  FULL_SKILL_CALLS,
+  FULL_SKILL_LIMITS,
+  FULL_SKILL_VOICES,
+} from './full';
 
 export type SfxName =
+  | keyof typeof FULL_SKILL_VOICES
   | 'playerFired'
   | 'enemyHit'
   | 'enemyDied'
@@ -49,6 +57,7 @@ export type SfxName =
   | 'bossFeedback'
   | 'bossGust'
   | 'fireBurnt'
+  | 'fireSwing'
   | 'giantWoken'
   | 'vibesStolen'
   | 'playerShoved'
@@ -67,6 +76,7 @@ export type SfxName =
   | 'skillCharge'
   | 'skillHeal'
   | 'skillGong'
+  | 'skillOla'
   | 'taunted'
   | 'playerHealed'
   | 'playerDowned'
@@ -93,6 +103,7 @@ export interface SfxLimiter {
 export type TrapEffectOf = (kind: string) => string;
 
 export interface SfxLookups {
+  readonly attackKindOf?: (classId: string) => string | undefined;
   readonly skillKindOf?: (classId: string) => string | undefined;
   readonly weaponKindOf?: (weaponId: string) => string | undefined;
   readonly specialKindOf?: (enemyKind: string) => string | undefined;
@@ -125,11 +136,18 @@ const WEAPON_HIT_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
   }),
 );
 
+// An attack sounds its own way when it has a call, the common shot otherwise.
+const ATTACK_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
+  Object.entries(FULL_ATTACK_CALLS),
+);
+
 const SKILL_SFX: ReadonlyMap<string, SfxName> = new Map<string, SfxName>(
   Object.entries<SfxName>({
     nova: 'skillUsed',
     dash: 'skillCharge',
     healPulse: 'skillHeal',
+    ola: 'skillOla',
+    ...FULL_SKILL_CALLS,
   }),
 );
 
@@ -192,7 +210,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     mateChose: { perFrame: 1, concurrent: 2, seconds: 0.3 },
     cardFlight: { perFrame: 1, concurrent: 2, seconds: beat * 0.8 },
     cardLanded: { perFrame: 1, concurrent: 2, seconds: 0.16 },
-    skillUsed: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    skillUsed: { perFrame: 1, concurrent: 2, seconds: 0.45 },
     gameWon: { perFrame: 1, concurrent: 1, seconds: 2 },
     gameLost: { perFrame: 1, concurrent: 1, seconds: 2 },
     weaponSweep: { perFrame: 1, concurrent: 2, seconds: 0.2 },
@@ -216,6 +234,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     bossFeedback: { perFrame: 1, concurrent: 1, seconds: 0.8 },
     bossGust: { perFrame: 1, concurrent: 1, seconds: 1.2 },
     fireBurnt: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    fireSwing: { perFrame: 1, concurrent: 3, seconds: 0.3 },
     giantWoken: { perFrame: 1, concurrent: 2, seconds: 1 },
     vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
     playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
@@ -235,9 +254,11 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     dieCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
     bombExploded: { perFrame: 1, concurrent: 1, seconds: 1.6 },
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
-    skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.3 },
+    skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.45 },
     skillHeal: { perFrame: 1, concurrent: 2, seconds: 0.7 },
     skillGong: { perFrame: 1, concurrent: 2, seconds: 0.6 },
+    skillOla: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    ...FULL_SKILL_LIMITS,
     taunted: { perFrame: 1, concurrent: 2, seconds: 0.5 },
     playerHealed: { perFrame: 1, concurrent: 2, seconds: 0.15 },
     playerDowned: { perFrame: 1, concurrent: 2, seconds: 0.6 },
@@ -261,7 +282,11 @@ export function sfxOf(
   players: readonly SfxPlayer[] = [],
 ): SfxName | null {
   switch (event.type) {
-    case 'playerFired':
+    case 'playerFired': {
+      const classId = players.find((player) => player.id === event.playerId)?.classId;
+      const kind = classId === undefined ? undefined : lookups.attackKindOf?.(classId);
+      return (kind === undefined ? undefined : ATTACK_SFX.get(kind)) ?? event.type;
+    }
     case 'enemyHit':
     case 'enemyDied':
     case 'coreHit':
@@ -372,7 +397,10 @@ export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): S
   };
 }
 
-type Voice = (
+// One casting of a special: what it sounds through, `after` seconds from the first.
+export type SpecialTake = readonly { readonly after: number; readonly event: SimEvent }[];
+
+export type Voice = (
   out: AudioNode,
   at: number,
   variant: number,
@@ -426,6 +454,7 @@ const DEALT_DEGREES = [0, 2, 4, 5];
 const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
 
 const VOICES: Readonly<Record<SfxName, Voice>> = {
+  ...FULL_SKILL_VOICES,
   playerFired: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'square',
@@ -650,17 +679,17 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       hz: keyHz(key, 0, 3),
       toHz: keyHz(key, 0, 5),
       glide: 0.2,
-      gain: 0.1,
+      gain: 0.25,
       attack: 0.01,
       hold: 0.12,
-      release: 0.15,
+      release: 0.29,
       filter: { type: 'lowpass', hz: 800, toHz: 5000, glide: 0.2, q: 4 },
     });
     playNoise(out, at, {
-      gain: 0.12,
+      gain: 0.3,
       attack: 0.08,
       hold: 0.05,
-      release: 0.15,
+      release: 0.29,
       filter: { type: 'bandpass', hz: 1000, toHz: 6000, glide: 0.25, q: 1.2 },
     });
   },
@@ -1250,6 +1279,23 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     }
   },
+  // A torch swung through the air: a warm whoosh that opens and closes, and the flame's crackle.
+  fireSwing: (out, at) => {
+    playNoise(out, at, {
+      gain: 0.26,
+      attack: 0.05,
+      hold: 0.04,
+      release: 0.18,
+      filter: { type: 'bandpass', hz: 220, toHz: 900, glide: 0.12, q: 0.8 },
+    });
+    playNoise(out, at + 0.03, {
+      gain: 0.05,
+      attack: 0.02,
+      hold: 0.05,
+      release: 0.12,
+      filter: { type: 'highpass', hz: 3200, q: 0.7 },
+    });
+  },
   giantWoken: (out, at, _variant, key) => {
     const hz = keyHz(key, 0, 3);
     for (const [ratio, gain, release, pan] of [
@@ -1431,10 +1477,10 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
   },
   skillCharge: (out, at, _variant, key) => {
     playNoise(out, at, {
-      gain: 0.4,
+      gain: 0.6,
       attack: 0.02,
-      hold: 0.03,
-      release: 0.1,
+      hold: 0.1,
+      release: 0.33,
       filter: { type: 'bandpass', hz: 700, toHz: 3200, glide: 0.12, q: 1.2 },
     });
     playTone(out, at, {
@@ -1442,10 +1488,10 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       hz: keyHz(key, 0, 4),
       toHz: keyHz(key, 4, 4),
       glide: 0.1,
-      gain: 0.08,
+      gain: 0.14,
       attack: 0.005,
-      hold: 0.05,
-      release: 0.08,
+      hold: 0.1,
+      release: 0.31,
     });
   },
   skillHeal: (out, at, _variant, key) => {
@@ -1460,25 +1506,48 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
+  // A wave that crosses from left to right, under a rising fifth.
+  skillOla: (out, at, _variant, key) => {
+    [-0.8, -0.3, 0.3, 0.8].forEach((pan, index) => {
+      playNoise(out, at + index * 0.065, {
+        gain: 0.498,
+        attack: 0.08,
+        hold: 0,
+        release: 0.12,
+        pan,
+        filter: { type: 'bandpass', hz: 500 + index * 500, toHz: 3800, glide: 0.2, q: 1.2 },
+      });
+    });
+    playTone(out, at + 0.05, {
+      wave: 'triangle',
+      hz: keyHz(key, 0, 4),
+      toHz: keyHz(key, 4, 4),
+      glide: 0.24,
+      gain: 0.149,
+      attack: 0.04,
+      hold: 0.1,
+      release: 0.18,
+    });
+  },
   skillGong: (out, at, _variant, key) => {
     const root = keyHz(key, 0, 2);
     playNoise(out, at, {
-      gain: 0.11,
+      gain: 0.39,
       attack: 0.002,
       hold: 0,
       release: 0.06,
       filter: { type: 'lowpass', hz: 900 },
     });
     for (const [ratio, gain, decay, pan, detune] of [
-      [0.5, 0.08, 0.5, 0, 0],
-      [1, 0.085, 0.6, -0.15, -5],
-      [1, 0.085, 0.6, 0.15, 5],
-      [1.5, 0.1, 0.46, -0.25, 0],
-      [2.13, 0.09, 0.38, 0.25, 0],
-      [2.79, 0.07, 0.32, -0.25, 0],
-      [3.61, 0.05, 0.26, 0.25, 0],
-      [4.53, 0.035, 0.2, -0.25, 0],
-      [5.92, 0.022, 0.15, 0.25, 0],
+      [0.5, 0.284, 0.5, 0, 0],
+      [1, 0.302, 0.6, -0.15, -5],
+      [1, 0.302, 0.6, 0.15, 5],
+      [1.5, 0.355, 0.46, -0.25, 0],
+      [2.13, 0.32, 0.38, 0.25, 0],
+      [2.79, 0.249, 0.32, -0.25, 0],
+      [3.61, 0.178, 0.26, 0.25, 0],
+      [4.53, 0.124, 0.2, -0.25, 0],
+      [5.92, 0.078, 0.15, 0.25, 0],
     ] as const) {
       playTone(out, at, {
         wave: 'sine',
@@ -1502,7 +1571,7 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       playTone(out, at + 0.08, {
         wave: 'sine',
         hz: root * ratio,
-        gain: 0.018,
+        gain: 0.064,
         attack: 0.2,
         hold: 0,
         release: 0.32,

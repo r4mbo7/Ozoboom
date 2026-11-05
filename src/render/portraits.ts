@@ -13,8 +13,7 @@ import { beatEnvelope } from './motion';
 import { classTokens, writePixiPalette } from './palette';
 import { createPlayers } from './players';
 import { type Textures, createTextures } from './textures';
-import { createClassFxTextures } from './textures-class';
-import { REFERENCE_RADIUS, playerTextures } from './textures-players';
+import { REFERENCE_RADIUS } from './textures-players';
 
 export type PortraitClass = Pick<ClassDefinition, 'id' | 'radius'> & {
   readonly skill: Pick<SkillDefinition, 'effect'>;
@@ -194,11 +193,7 @@ export function createPortraits(
   return () => {
     load();
     if (textures === null) {
-      textures = {
-        ...createTextures(),
-        players: playerTextures(FINER),
-        classFx: createClassFxTextures(FINER),
-      };
+      textures = createTextures(FINER);
       checkDrawings(classes, textures.players.drawings);
     }
     const stage = new Container();

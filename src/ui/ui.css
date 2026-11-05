@@ -2235,15 +2235,6 @@ svg.ui-title__lake {
   backdrop-filter: blur(10px);
 }
 
-.ui-panel__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ui-gap);
-  min-height: 24px;
-  margin-bottom: 10px;
-}
-
 .ui-panel__label {
   color: var(--ui-muted);
   font-size: 13px;
@@ -2251,17 +2242,6 @@ svg.ui-title__lake {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-.ui-panel__value {
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.ui-panel__value--small {
-  font-size: 16px;
 }
 
 .ui-hud__top {
@@ -5177,6 +5157,123 @@ svg.ui-title__lake {
   }
 }
 
+/* Two rows of panels in the height of a 1280x720 screen: the header holds on two tight lines. */
+.ui-upgrade:has(.ui-offers__panels:is([data-count='3'], [data-count='4'])) {
+  padding-block: 10px;
+}
+
+.ui-offers:has(.ui-offers__panels:is([data-count='3'], [data-count='4'])) {
+  gap: 4px;
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) {
+  grid-auto-rows: 1fr;
+  gap: calc(10 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-offer {
+  flex-flow: row wrap;
+  justify-content: center;
+  gap: calc(3 * var(--panel-unit)) calc(12 * var(--panel-unit));
+  padding: calc(10 * var(--panel-unit)) calc(16 * var(--panel-unit)) calc(8 * var(--panel-unit));
+  border-radius: calc(28 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) :is(.ui-heading, .ui-cards, .ui-hint) {
+  flex-basis: 100%;
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-who {
+  gap: calc(6 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-who__mark {
+  width: calc(18 * var(--panel-unit));
+  height: calc(18 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-who__name {
+  font-size: calc(14 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-kicker {
+  font-size: calc(12 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-heading {
+  font-size: calc(16 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-places {
+  top: calc(6 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-place {
+  --ring: calc(22 * var(--panel-unit));
+  --pearl: calc(4 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-cards {
+  --card-head: calc(40 * var(--card-unit));
+
+  gap: calc(10 * var(--card-unit));
+  margin: calc(6 * var(--card-unit)) 0 calc(5 * var(--card-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card {
+  --card-radius: calc(20 * var(--card-unit));
+  --card-gap: calc(4 * var(--card-unit));
+
+  padding-bottom: calc(6 * var(--card-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__family {
+  font-size: calc(11 * var(--card-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__name {
+  --name-size: calc(16 * var(--card-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__desc {
+  font-size: calc(13 * var(--card-unit));
+  line-height: 1.25;
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__fuse {
+  font-size: calc(11 * var(--card-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__foot {
+  min-height: calc(24 * var(--card-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__cta {
+  padding: calc(3 * var(--card-unit)) calc(10 * var(--card-unit));
+  font-size: calc(11 * var(--card-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-hint {
+  gap: calc(16 * var(--panel-unit));
+  font-size: calc(12 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) :is(.ui-hint__part, .ui-hint__keys) {
+  gap: calc(4 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-key {
+  min-width: calc(22 * var(--panel-unit));
+  height: calc(22 * var(--panel-unit));
+  padding: 0 calc(6 * var(--panel-unit));
+  font-size: calc(11 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) :is(.ui-key__arrow, .ui-key__arrow svg) {
+  width: calc(12 * var(--panel-unit));
+  height: calc(12 * var(--panel-unit));
+}
+
 .ui-offer[data-state='chosen'] .ui-card {
   pointer-events: none;
 }
@@ -5251,6 +5348,26 @@ svg.ui-title__lake {
   position: absolute;
   top: 20px;
   inset-inline-start: 24px;
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-reroll {
+  top: calc(7 * var(--panel-unit));
+  inset-inline-start: calc(16 * var(--panel-unit));
+  gap: calc(4 * var(--panel-unit));
+  padding: calc(2 * var(--panel-unit)) calc(3 * var(--panel-unit)) calc(2 * var(--panel-unit))
+    calc(8 * var(--panel-unit));
+  font-size: calc(11 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-reroll__die {
+  width: calc(14 * var(--panel-unit));
+  height: calc(14 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-reroll__count {
+  min-width: calc(18 * var(--panel-unit));
+  height: calc(18 * var(--panel-unit));
+  font-size: calc(11 * var(--panel-unit));
 }
 
 .ui-reroll[aria-current] {

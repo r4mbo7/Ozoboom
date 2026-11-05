@@ -43,6 +43,7 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   twilightBeatsAdd: true,
   elementBeatsAdd: true,
   elementSpreadAdd: true,
+  bouquetCountAdd: true,
 };
 
 export function statValue(

@@ -313,14 +313,20 @@ export interface PlacedState extends Positioned {
 }
 
 // No bad vibe crosses it; a boss only slows down there.
+// A circle around where it was raised, grown by `grow` a tick up to `reach`.
 export interface WallState {
   id: EntityId;
   playerId: PlayerId;
   x: number;
   y: number;
-  normal: Vec2;
-  halfLength: number;
+  radius: number;
+  reach: number;
+  grow: number;
   ticksLeft: number;
+  // On each beat, to every bad vibe it holds out and every boss it slows.
+  damage?: number;
+  // Over the first half of each beat, how far it pushes out every boss on its edge.
+  bossPush?: number;
 }
 
 export interface ZoneState {
@@ -445,13 +451,8 @@ export interface FestivalChallenge {
   id: string;
   x: number;
   y: number;
-  radius: number;
   // In `players` order.
   lit: boolean[];
-  // In `players` order: the player has let go of the fire since their last shot switched it.
-  armed: boolean[];
-  // In `players` order: the player has switched their pastille at least once.
-  switched: boolean[];
   takenTick?: number;
   // Once a pastille went out on the board taken, until it is taken again.
   droppedTick?: number;
@@ -576,6 +577,9 @@ export type SimEvent =
   | { type: 'taunted'; playerId: PlayerId; x: number; y: number; radius: number; count: number }
   | { type: 'skillUsed'; playerId: PlayerId }
   | { type: 'eclipseBurst'; playerId: PlayerId; x: number; y: number }
+  // Déchaîné is cast: `element` is the one of its bar, in the order of the Avatar's cycle.
+  | { type: 'unleashed'; playerId: PlayerId; element: number }
+  | { type: 'stiltLanded'; playerId: PlayerId }
   | { type: 'dashed'; playerId: PlayerId; dx: number; dy: number; onBeat?: true }
   | { type: 'dashEmpty'; playerId: PlayerId }
   | { type: 'dashBack'; playerId: PlayerId }
@@ -613,6 +617,8 @@ export type SimEvent =
   | { type: 'vibesStolen'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'enemyFled'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'enemyShot'; id: EntityId; kind: string; x: number; y: number }
+  // The circle of `playerId` stopped a shot of a bad vibe at (x, y).
+  | { type: 'shotStopped'; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyYawned'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'enemyBabbled'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderSpawned'; id: EntityId; kind: string; x: number; y: number }

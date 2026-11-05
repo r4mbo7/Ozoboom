@@ -32,7 +32,7 @@ export function pushAway(body: Circle, from: Point, distance: number, obstacles:
   moveUntilBlocked(body, (dx / length) * distance, (dy / length) * distance, obstacles);
 }
 
-// A boss always makes its way to the stage: effects may slow it, never push it back nor hold it.
+// A boss always makes its way to the stage: effects may slow it, never push it back nor hold it, but for the Sorcier's circle (`walls`).
 export function knockBack(
   enemy: EnemyState,
   from: Point,

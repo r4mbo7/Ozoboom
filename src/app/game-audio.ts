@@ -31,6 +31,8 @@ export function createGameAudio(content: GameContent, game: PlayedGame): AudioEn
       game.setNamed(game.state().setId).tiers[tier]?.breakBars ?? DEFAULT_BREAK_BARS,
     trapEffectOf: (id) => content.traps.find((trap) => trap.id === id)?.effect.kind ?? id,
     sfxLookups: {
+      attackKindOf: (classId) =>
+        content.classes.find((candidate) => candidate.id === classId)?.attack.kind,
       weaponKindOf: (id) => content.weapons?.find((weapon) => weapon.id === id)?.effect.kind,
       skillKindOf: (classId) =>
         content.classes.find((candidate) => candidate.id === classId)?.skill.effect.kind,

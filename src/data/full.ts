@@ -28,6 +28,8 @@ export const FULL_TEASERS: readonly TeaserDefinition[] = [
   { kind: 'class', name: 'Le Jongleur', color: '#f7c948' },
   { kind: 'class', name: 'Le Circadien', color: '#ffc14d' },
   { kind: 'class', name: 'L’Échassier', color: '#e85d75' },
+  { kind: 'class', name: 'Le Sorcier', color: '#c9a0ff' },
+  { kind: 'class', name: 'Le Cracheur de feu', color: '#ff6a2b' },
   { kind: 'stage', name: 'Le Dome', style: 'Downtempo, dub', color: '#d9a441' },
   { kind: 'stage', name: 'Ambyss', style: 'Psychill, ambient', color: '#3fd0c9' },
   { kind: 'stage', name: 'Pumpui', style: 'Progressive', color: '#ff6fa8' },

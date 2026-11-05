@@ -7,6 +7,7 @@ import { weaponSlotCount } from '../sim/draw';
 import { setOf, setTempo } from '../sim/lineup';
 import type { PlayerId, PlayerState, SimState, UpgradeOffer } from '../sim/state';
 import { el, fillHint, findAll, icon, setFlag, setText, setVar } from './dom';
+import { MENU_GRACE_MS } from './menu-grace';
 import {
   SIXTEENTHS_PER_BAR,
   type Card,
@@ -60,7 +61,6 @@ export interface UpgradeHost {
   readonly prompts: Prompts;
 }
 
-const MENU_GRACE_MS = 500;
 // Mirrors where ui.css lays a card's head as a tile, too small to play a weapon.
 const TILE_HEADS = '(max-width: 720px) and (min-height: 521px)';
 // A dealt card sounds when it touches down, not when it leaves.

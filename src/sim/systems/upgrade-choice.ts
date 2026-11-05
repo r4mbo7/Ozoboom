@@ -7,7 +7,7 @@ import { presentNextOffer } from './progression';
 import type { StepContext } from './types';
 
 export function upgradeChoice(ctx: StepContext): void {
-  const { state, content, set, commands } = ctx;
+  const { state, commands } = ctx;
   for (const player of state.players) {
     for (const action of commands.get(player.id)?.actions ?? []) {
       if (action.type === 'rerollOffer') {
@@ -23,30 +23,9 @@ export function upgradeChoice(ctx: StepContext): void {
       if (offer === undefined || option < 0) {
         continue;
       }
-      const weapon = content.weapons.get(action.upgradeId);
-      if (weapon?.evolvedFrom !== undefined) {
-        const fusion = openFusion(weapon, player, state, content);
-        if (fusion === undefined) {
-          continue;
-        }
-        evolve(ctx, player, fusion.weaponId, weapon);
-      } else if (weapon !== undefined) {
-        if (!isWeaponOffered(weapon, player, state, set)) {
-          continue;
-        }
-        gainWeapon(player, weapon);
-        state.events.push({ type: 'weaponGained', playerId: player.id, weaponId: weapon.id });
-      } else {
-        const upgrade = lookup(content.upgrades, action.upgradeId, 'upgrade');
-        if (!isEligible(upgrade, player)) {
-          continue;
-        }
-        const rarity = offer.rarities[option] ?? 'common';
-        applyModifiers(player, upgradeForm(upgrade, rarity).modifiers);
-        refreshDerivedStats(player, lookup(content.classes, player.classId, 'class'));
-        (player.upgradeRarities ??= player.upgrades.map(() => 'common')).push(rarity);
-        player.upgrades.push(upgrade.id);
-        state.events.push({ type: 'upgradeChosen', playerId: player.id, upgradeId: upgrade.id });
+      if (!takeCard(ctx, player, offer, option, action.upgradeId)) {
+        dealAnew(ctx, player);
+        continue;
       }
       state.pendingUpgrades.splice(index, 1);
       presentNextOffer(ctx, player);
@@ -54,21 +33,84 @@ export function upgradeChoice(ctx: StepContext): void {
   }
 }
 
+// False for a card the player can no longer take: nothing changes.
+function takeCard(
+  ctx: StepContext,
+  player: PlayerState,
+  offer: UpgradeOffer,
+  option: number,
+  cardId: string,
+): boolean {
+  const { state, content, set } = ctx;
+  const weapon = content.weapons.get(cardId);
+  if (weapon?.evolvedFrom !== undefined) {
+    const fusion = openFusion(weapon, player, state, content);
+    if (fusion === undefined) {
+      return false;
+    }
+    evolve(ctx, player, fusion.weaponId, weapon);
+    return true;
+  }
+  if (weapon !== undefined) {
+    if (!isWeaponOffered(weapon, player, state, set, content)) {
+      return false;
+    }
+    gainWeapon(player, weapon);
+    state.events.push({ type: 'weaponGained', playerId: player.id, weaponId: weapon.id });
+    return true;
+  }
+  const upgrade = lookup(content.upgrades, cardId, 'upgrade');
+  if (!isEligible(upgrade, player)) {
+    return false;
+  }
+  const rarity = offer.rarities[option] ?? 'common';
+  applyModifiers(player, upgradeForm(upgrade, rarity).modifiers);
+  refreshDerivedStats(player, lookup(content.classes, player.classId, 'class'));
+  (player.upgradeRarities ??= player.upgrades.map(() => 'common')).push(rarity);
+  player.upgrades.push(upgrade.id);
+  state.events.push({ type: 'upgradeChosen', playerId: player.id, upgradeId: upgrade.id });
+  return true;
+}
+
+// A panel waits for its chosen card: only a new offer reopens it. Nothing left to draw, the offer goes.
+function dealAnew(ctx: StepContext, player: PlayerState): void {
+  const { state } = ctx;
+  const index = state.pendingUpgrades.findIndex((offer) => offer.playerId === player.id);
+  const offer = state.pendingUpgrades[index];
+  if (offer === undefined) {
+    return;
+  }
+  const next = redrawn(ctx, player, offer, []);
+  if (next.options.length > 0) {
+    state.pendingUpgrades[index] = next;
+    return;
+  }
+  state.pendingUpgrades.splice(index, 1);
+  presentNextOffer(ctx, player);
+}
+
+function redrawn(
+  { state, content, set }: StepContext,
+  player: PlayerState,
+  offer: UpgradeOffer,
+  replaced: readonly string[],
+): UpgradeOffer {
+  if (offer.kind === 'relic') {
+    const options = drawRelics(state.rng, state, content, player, replaced);
+    return { ...offer, options, rarities: options.map(() => 'common' as const) };
+  }
+  return { ...offer, ...drawOffer(state.rng, state, content, set, player, replaced) };
+}
+
 // Other cards in a new offer, so that the screen deals them; none left to draw, the reroll is kept.
 function reroll(ctx: StepContext, player: PlayerState): void {
-  const { state, content, set } = ctx;
+  const { state } = ctx;
   const index = state.pendingUpgrades.findIndex((offer) => offer.playerId === player.id);
   const offer = state.pendingUpgrades[index];
   if (offer === undefined || (player.rerolls ?? 0) < 1) {
     return;
   }
-  let next: UpgradeOffer;
-  if (offer.kind === 'relic') {
-    const options = drawRelics(state.rng, state, content, player, offer.options);
-    next = { ...offer, options, rarities: options.map(() => 'common' as const) };
-  } else {
-    next = { ...offer, ...drawOffer(state.rng, state, content, set, player, offer.options) };
-  }
+  const next = redrawn(ctx, player, offer, offer.options);
   if (next.options.length === 0) {
     return;
   }

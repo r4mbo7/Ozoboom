@@ -1,8 +1,20 @@
-import { Graphics } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import type { SimState } from '../sim/state';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { Family, RenderContext } from './context';
+import {
+  DOME_LOOK,
+  LOOK_TEXTURE_RADIUS,
+  coreLookOf,
+  createLookView,
+  lookBeats,
+  type CoreLook,
+  type CoreLookView,
+} from './core-look';
+import { MAIN_CORE_LOOKS } from './core-main-looks';
+import { FULL_LOOKS } from './full';
 import type { Frame } from './frame';
+import { scramble } from './hash';
 import { easeOutQuad } from './motion';
 import { DOME_FACETS, type Facet } from './textures';
 import { add, placeOutline, setTint } from './util';
@@ -29,12 +41,6 @@ const BLINK_TICKS = 2 * TICKS_PER_BEAT;
 const BLINK_PERIOD = TICKS_PER_BEAT / 2;
 const RAYS = 8;
 const LIT_FACETS = 3;
-
-function scramble(value: number): number {
-  let bits = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
-  bits = Math.imul(bits ^ (bits >>> 16), 0x45d9f3b);
-  return (bits ^ (bits >>> 16)) >>> 0;
-}
 
 export function litFacets(beat: number): Facet[] {
   const lit: Facet[] = [];
@@ -77,7 +83,12 @@ export function createCore(ctx: RenderContext): CoreFamily {
   const outline = add(layers.core, t.core);
   const body = add(layers.core, t.core);
   const facets = new Graphics();
-  layers.core.addChild(facets);
+  const looks = new Map<string, readonly CoreLook[]>([
+    ['lake', MAIN_CORE_LOOKS],
+    ...FULL_LOOKS.map((look): [string, readonly CoreLook[]] => [look.decor, look.cores]),
+  ]);
+  const lookLayer = new Container();
+  layers.core.addChild(facets, lookLayer);
   const track = new Graphics();
   const rim = new Graphics();
   const lit = new Graphics();
@@ -89,10 +100,22 @@ export function createCore(ctx: RenderContext): CoreFamily {
   flash.visible = false;
   outline.visible = false;
 
+  let shownLook: CoreLook = DOME_LOOK;
+  let lookView: CoreLookView | null = null;
   let segments = 0;
   let facetBeat = Number.NaN;
   let drawn = { radius: Number.NaN, segments: Number.NaN };
   let loss = { from: 0, to: 0, tick: Number.NEGATIVE_INFINITY };
+
+  function showLook(look: CoreLook): void {
+    if (look === shownLook) {
+      return;
+    }
+    shownLook = look;
+    lookView?.destroy();
+    lookView = look === DOME_LOOK ? null : createLookView(lookLayer, look);
+    body.renderable = look === DOME_LOOK;
+  }
 
   function drawFlash(radius: number, x: number, y: number, frame: Frame): void {
     const progress = (frame.now - frame.flashTick) / (frame.calm ? FADE_TICKS : FLASH_TICKS);
@@ -151,12 +174,24 @@ export function createCore(ctx: RenderContext): CoreFamily {
       const size = 1 / frame.camera.scale;
       percent.place(t, core, core.x, below + LABEL_GAP * size, PERCENT_SIZE * size, frame);
 
+      showLook(coreLookOf(looks.get(frame.set.decor) ?? [], state.seed, frame.set.id));
+      const textureRadius = lookView === null ? t.core.radius : LOOK_TEXTURE_RADIUS;
       body.position.set(core.x, core.y);
-      body.scale.set((core.radius / t.core.radius) * swell);
+      body.scale.set((core.radius / textureRadius) * swell);
       setTint(body, color);
-      placeOutline(outline, body, t.core.texture, t.core.radius, frame);
+      placeOutline(outline, body, t.core.texture, textureRadius, frame);
 
-      facets.visible = !frame.calm;
+      if (lookView !== null) {
+        lookView.root.position.copyFrom(body.position);
+        lookView.root.scale.copyFrom(body.scale);
+        lookView.update(
+          lookBeats(frame.now, frame.tempo.originTick, frame.tempo.ticksPerBeat, frame.calm),
+          color,
+          light.additive,
+        );
+      }
+
+      facets.visible = lookView === null && !frame.calm;
       if (facets.visible && facetBeat !== state.set.beat) {
         facetBeat = state.set.beat;
         drawFacets(facets, facetBeat);
@@ -185,6 +220,7 @@ export function createCore(ctx: RenderContext): CoreFamily {
       drawFlash(core.radius, core.x, core.y, frame);
     },
     destroy(): void {
+      lookView?.destroy();
       layers.core.destroy({ children: true });
       layers.coreLabel.destroy({ children: true });
     },

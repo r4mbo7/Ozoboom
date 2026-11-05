@@ -13,9 +13,3 @@ export interface GameMode {
 export function finishWins(ctx: StepContext): boolean {
   return ctx.mode?.finishWins(ctx) ?? true;
 }
-
-// Besides the bad vibes, what the assist may aim at for a player.
-export type AimTargets = (
-  state: SimState,
-  playerId: PlayerId,
-) => { x: number; y: number; radius: number; hp: number }[];

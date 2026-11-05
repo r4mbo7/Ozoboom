@@ -1,6 +1,7 @@
 import { Graphics } from 'pixi.js';
 import { MAIN_TEMPO, type Tempo, ticksIntoBar } from '../shared/tempo';
 import type { Frame } from './frame';
+import { scramble } from './hash';
 import { ofSpeaker, plugShare } from './speaker-kit';
 import { setTint } from './util';
 
@@ -34,12 +35,6 @@ interface Plug {
   readonly id: string;
   readonly plugTicks: number;
   readonly plugged: boolean;
-}
-
-function scramble(value: number): number {
-  let hash = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
-  hash = Math.imul(hash ^ (hash >>> 16), 0x45d9f3b);
-  return (hash ^ (hash >>> 16)) >>> 0;
 }
 
 function seedOf(id: string): number {

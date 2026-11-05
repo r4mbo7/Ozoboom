@@ -1,4 +1,4 @@
-const MENU_GRACE_MS = 500;
+export const MENU_GRACE_MS = 500;
 
 export interface MenuGrace {
   start(): void;

@@ -8,6 +8,13 @@ export interface HudParts {
   readonly overlay: HTMLElement;
 }
 
+// What the place key does here instead of moving a trap, for the HUD to say it.
+export interface PlaceKeyUse {
+  readonly id: string;
+  readonly icon: string;
+  readonly label: string;
+}
+
 export interface HudPart {
   update(state: SimState, content: GameContent, frame: UiFrame): void;
 }

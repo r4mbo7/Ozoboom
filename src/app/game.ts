@@ -812,6 +812,7 @@ export async function startGame(
   }
 
   function beginEnding(state: SimState, status: 'won' | 'lost'): void {
+    pause.dismiss();
     online.matchEnded();
     stats.end(state, outcomeOf(state));
     const tempo = setTempo(setOf(content, state.setId));

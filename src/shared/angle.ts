@@ -27,6 +27,18 @@ export function rotate(v: Vec2, radians: number): Vec2 {
   return { x: v.x * turn.x - v.y * turn.y, y: v.x * turn.y + v.y * turn.x };
 }
 
+// From `from` toward `to`, both unit, by at most `maxRadians`, the short way round.
+export function turnToward(from: Vec2, to: Vec2, maxRadians: number): Vec2 {
+  const delta = angleOf({
+    x: from.x * to.x + from.y * to.y,
+    y: from.x * to.y - from.y * to.x,
+  });
+  if (Math.abs(delta) <= maxRadians) {
+    return to;
+  }
+  return rotate(from, delta < 0 ? -maxRadians : maxRadians);
+}
+
 export function angleOf(v: Vec2): number {
   if (v.y === 0) {
     return v.x < 0 ? Math.PI : 0;

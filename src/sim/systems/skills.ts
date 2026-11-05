@@ -2,6 +2,7 @@ import { IDLE_INPUT } from '../commands';
 import { lookup } from '../content';
 import { SKILLS, skillModule } from '../skills';
 import { skillCooldownTicks, statValue } from '../stats';
+import { holdsItsPlayer } from '../walls';
 import type { StepContext } from './types';
 
 export function skills(ctx: StepContext): void {
@@ -10,7 +11,10 @@ export function skills(ctx: StepContext): void {
     delete state.core.repairedThisBar;
   }
   for (const player of state.players) {
-    player.skillCooldown = Math.max(0, player.skillCooldown - 1);
+    // Its recharge waits for its circle to fall: no card can keep one standing for good.
+    if (!holdsItsPlayer(state, player)) {
+      player.skillCooldown = Math.max(0, player.skillCooldown - 1);
+    }
     player.invulnerableTicks = Math.max(0, (player.invulnerableTicks ?? 0) - 1);
     if (player.downed || player.carrying !== undefined) {
       continue;

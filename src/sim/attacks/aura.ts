@@ -72,9 +72,13 @@ export function auraRadius(
   return statValue(player, 'attackRadiusMul', attack.radius + notches * attack.kiff.radiusPerNotch);
 }
 
-// A faster cooldown slips a pulse on the offbeat of some beats, of every beat at twice the rate.
 export function pulsesOffbeat(player: Upgraded, beat: number): boolean {
-  const extra = Math.min(1, Math.max(0, 1 / statValue(player, 'attackCooldownMul', 1) - 1));
+  return slipsOffbeat(statValue(player, 'attackCooldownMul', 1), beat);
+}
+
+// A faster cooldown slips a strike on the offbeat of some beats, of every beat at twice the rate.
+export function slipsOffbeat(cooldownMul: number, beat: number): boolean {
+  const extra = Math.min(1, Math.max(0, 1 / cooldownMul - 1));
   return Math.floor((beat + 1) * extra) > Math.floor(beat * extra);
 }
 

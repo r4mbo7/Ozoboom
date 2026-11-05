@@ -7,7 +7,6 @@ import { IDLE_INPUT } from '../sim/commands';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId, PlayerState } from '../sim/state';
 import { attackReach } from '../sim/attacks';
-import { FULL_AIM } from '../sim/full';
 import type { LocalPlayer } from '../ui';
 import { type Assist, Controls, type ScreenToWorld } from './controls';
 import { createSession, type Session } from './session';
@@ -168,7 +167,7 @@ export function createMatch(options: MatchOptions): Match {
           return own.command(
             player,
             toWorld,
-            [...session.state.enemies, ...(FULL_AIM.targets?.(session.state, playerId) ?? [])],
+            session.state.enemies,
             attackReach(attack, player),
             options.assist?.(),
           );

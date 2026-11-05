@@ -1,48 +1,100 @@
-import { clamp, clamp01 } from '../shared/scalar';
-import { normalize } from '../shared/vec';
+import { isBeatTick, ticksIntoBeat } from '../shared/tempo';
+import { playerById } from './damage';
+import { hurtEnemy, pushAway } from './effects';
 import { applyEnemyStatus } from './enemy-status';
-import type { EnemyState, PlayerState, SimState, WallState } from './state';
+import { moveUntilBlocked, type Obstacles } from './obstacles';
+import type { EnemyState, PlayerState, ProjectileState, SimState, WallState } from './state';
 import type { StepContext } from './systems/types';
 
+const EDGE_ROUNDING = 1e-6;
+
 export interface WallShape {
-  distance: number;
-  length: number;
+  x: number;
+  y: number;
+  reach: number;
+  growTicks: number;
   ticks: number;
+  damage?: number;
+  bossPush?: number;
 }
 
+// Growing from nothing at (x, y); its player stands still until it falls.
 export function raiseWall(state: SimState, player: PlayerState, shape: WallShape): WallState {
-  const aim = normalize(player.aim);
-  const normal = aim.x === 0 && aim.y === 0 ? { x: 1, y: 0 } : aim;
   const wall: WallState = {
     id: state.nextEntityId++,
     playerId: player.id,
-    x: player.x + normal.x * shape.distance,
-    y: player.y + normal.y * shape.distance,
-    normal,
-    halfLength: shape.length / 2,
+    x: shape.x,
+    y: shape.y,
+    radius: 0,
+    reach: shape.reach,
+    grow: shape.reach / Math.max(1, shape.growTicks),
     ticksLeft: shape.ticks,
+    ...(shape.damage === undefined ? {} : { damage: shape.damage }),
+    ...(shape.bossPush === undefined ? {} : { bossPush: shape.bossPush }),
   };
   (state.walls ??= []).push(wall);
   return wall;
 }
 
-// After every system that moves bad vibes; a boss is slowed for a beat instead of held.
-export function walls({ state, tempo }: StepContext): void {
+// When the game leaves the stage they stand on: a player is protected for as long as their circle
+// stands, and the timer that says so would outlive it.
+export function takeDownWalls(state: SimState): void {
+  for (const wall of state.walls ?? []) {
+    const player = playerById(state, wall.playerId);
+    if (player !== undefined) {
+      player.invulnerableTicks = 0;
+    }
+  }
+  delete state.walls;
+}
+
+export function holdsItsPlayer(state: SimState, player: Pick<PlayerState, 'id'>): boolean {
+  return state.walls?.some((wall) => wall.playerId === player.id) ?? false;
+}
+
+// A shot of a bad vibe ends where it touches a circle, before it can hit what stands behind.
+export function stopsShot(state: SimState, shot: ProjectileState): boolean {
+  for (const wall of state.walls ?? []) {
+    const dx = shot.x - wall.x;
+    const dy = shot.y - wall.y;
+    const reach = wall.radius + shot.radius;
+    if (dx * dx + dy * dy <= reach * reach) {
+      state.events.push({ type: 'shotStopped', playerId: wall.playerId, x: shot.x, y: shot.y });
+      return true;
+    }
+  }
+  return false;
+}
+
+// After every system that moves bad vibes; a boss is slowed for a beat instead of held out, at most pushed.
+export function walls({ state, tempo, enemyObstacles }: StepContext): void {
   const raised = state.walls;
   if (raised === undefined) {
     return;
   }
+  const beat = isBeatTick(state.tick, tempo);
+  const shoveTicks = Math.floor(tempo.ticksPerBeat / 2);
   for (const wall of raised) {
+    wall.radius = Math.min(wall.reach, wall.radius + wall.grow);
+    const burns = beat && wall.damage !== undefined;
     for (const enemy of state.enemies) {
       if (enemy.hp <= 0) {
         continue;
       }
+      let pressing: boolean;
       if (enemy.isBoss) {
-        if (touchesWall(wall, enemy)) {
+        pressing = touchesWall(wall, enemy);
+        if (pressing) {
           applyEnemyStatus(state, enemy, 'slowed', tempo.ticksPerBeat);
+          if (wall.bossPush !== undefined && shoveTicks > ticksIntoBeat(state.tick, tempo)) {
+            pushAway(enemy, wall, wall.bossPush / shoveTicks, enemyObstacles);
+          }
         }
       } else {
-        holdBack(wall, enemy);
+        pressing = holdOut(wall, enemy, enemyObstacles);
+      }
+      if (burns && pressing) {
+        hurtEnemy(state, enemy, wall.damage ?? 0, wall.playerId, wall);
       }
     }
     wall.ticksLeft -= 1;
@@ -56,56 +108,36 @@ export function walls({ state, tempo }: StepContext): void {
 }
 
 function touchesWall(wall: WallState, enemy: EnemyState): boolean {
-  const { normal, halfLength } = wall;
-  const rx = enemy.x - wall.x;
-  const ry = enemy.y - wall.y;
-  const u = rx * -normal.y + ry * normal.x;
-  const along = u - clamp(u, -halfLength, halfLength);
-  const across = rx * normal.x + ry * normal.y;
-  return along * along + across * across < enemy.radius * enemy.radius;
+  const dx = enemy.x - wall.x;
+  const dy = enemy.y - wall.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  return Math.abs(distance - wall.radius) < enemy.radius;
 }
 
-function holdBack(wall: WallState, enemy: EnemyState): void {
-  const { normal, halfLength } = wall;
-  const tx = -normal.y;
-  const ty = normal.x;
-  const rx = enemy.x - wall.x;
-  const ry = enemy.y - wall.y;
-  const u = rx * tx + ry * ty;
-  const v = rx * normal.x + ry * normal.y;
-  const px = enemy.prevX - wall.x;
-  const py = enemy.prevY - wall.y;
-  const pu = px * tx + py * ty;
-  const pv = px * normal.x + py * normal.y;
-  const side = pv < 0 ? -1 : 1;
-  const reach = enemy.radius;
-  const crossedAt = side * v < 0 ? pu + ((u - pu) * pv) / (pv - v) : u;
-  if (side * v < reach && (Math.abs(u) <= halfLength || Math.abs(crossedAt) <= halfLength)) {
-    place(wall, enemy, u, side * reach);
-    return;
-  }
-  const end = crossedAt < 0 ? -halfLength : halfLength;
-  // A step that crosses the line past an end is held if its path, not only where it lands, touches that end.
-  const su = u - pu;
-  const sv = v - pv;
-  const length = su * su + sv * sv;
-  const t = side * v < 0 && length > 0 ? clamp01(((end - pu) * su - pv * sv) / length) : 1;
-  const du = pu + su * t - end;
-  const dv = side * Math.abs(pv + sv * t);
-  const squared = du * du + dv * dv;
+// True when the bad vibe touches it, held out just now or resting where it was: a push leaves it on
+// the edge, either side by a rounding, or against the obstacle of the stage in its way.
+function holdOut(wall: WallState, enemy: EnemyState, obstacles: Obstacles): boolean {
+  const reach = wall.radius + enemy.radius;
+  const dx = enemy.x - wall.x;
+  const dy = enemy.y - wall.y;
+  const squared = dx * dx + dy * dy;
   if (squared >= reach * reach) {
-    return;
+    const touching = reach + EDGE_ROUNDING;
+    return squared <= touching * touching;
   }
   const distance = Math.sqrt(squared);
-  if (distance === 0) {
-    place(wall, enemy, end, side * reach);
+  let ux: number;
+  let uy: number;
+  if (distance > 0) {
+    ux = dx / distance;
+    uy = dy / distance;
   } else {
-    place(wall, enemy, end + (du / distance) * reach, (dv / distance) * reach);
+    const px = enemy.prevX - wall.x;
+    const py = enemy.prevY - wall.y;
+    const before = Math.sqrt(px * px + py * py);
+    ux = before > 0 ? px / before : 1;
+    uy = before > 0 ? py / before : 0;
   }
-}
-
-function place(wall: WallState, enemy: EnemyState, u: number, v: number): void {
-  const { normal } = wall;
-  enemy.x = wall.x - u * normal.y + v * normal.x;
-  enemy.y = wall.y + u * normal.x + v * normal.y;
+  moveUntilBlocked(enemy, wall.x + ux * reach - enemy.x, wall.y + uy * reach - enemy.y, obstacles);
+  return true;
 }

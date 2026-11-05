@@ -3,6 +3,7 @@ import { ticksIntoBeat } from '../../shared/tempo';
 import { detachCling } from '../specials/cling';
 import type { PlayerState, Vec2 } from '../state';
 import { dashCharges, dashRechargeBeats } from '../stats';
+import { holdsItsPlayer } from '../walls';
 import type { StepContext } from './types';
 
 // Before `playerMovement`; a beat brings back a spent dash before a dash of its tick spends one.
@@ -29,7 +30,7 @@ export function dashes(ctx: StepContext): void {
       continue;
     }
     const spent = player.dashesSpent ?? 0;
-    if (spent >= dashCharges(player, definition)) {
+    if (spent >= dashCharges(player, definition) || holdsItsPlayer(state, player)) {
       state.events.push({ type: 'dashEmpty', playerId: player.id });
       continue;
     }

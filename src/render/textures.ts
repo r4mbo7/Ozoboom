@@ -99,7 +99,7 @@ export const DOME_FACETS: readonly Facet[] = [0, 1, 2, 3, 4].flatMap((index): Fa
   ];
 });
 
-export function createTextures(): Textures {
+export function createTextures(density = 1): Textures {
   return {
     halo: paint(128, 128, 64, (ctx) => {
       const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 64);
@@ -164,7 +164,7 @@ export function createTextures(): Textures {
     cometTail: comet('tail'),
     bomb: bomb(),
     die: die(),
-    players: playerTextures(),
+    players: playerTextures(density),
     recruit: paint(144, 144, FACE_RADIUS, recruit),
     core: paint(256, 256, 96, (ctx) => {
       ctx.fillStyle = SHADE_DEEP;
@@ -270,7 +270,7 @@ export function createTextures(): Textures {
     },
     specials: createSpecialTextures(),
     weapons: createWeaponTextures(),
-    classFx: createClassFxTextures(),
+    classFx: createClassFxTextures(density),
   };
 }
 
