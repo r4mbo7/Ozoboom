@@ -5,7 +5,8 @@ import { setTempo, setOf } from '../sim/lineup';
 import type { SimState } from '../sim/state';
 import { el, setText } from './dom';
 
-const BANNER_BEATS = 9;
+// How long the name of a boss that just landed stays on screen.
+export const BANNER_BEATS = 9;
 
 export function landedBoss(state: Pick<SimState, 'events'>, content: GameContent): string | null {
   for (const event of state.events) {

@@ -17,21 +17,26 @@ export function moveTrap(ctx: StepContext, player: PlayerState): void {
     return;
   }
   const { state, content } = ctx;
+  const capacity = lookup(content.classes, player.classId, 'class').carriedTraps ?? 1;
+  const lifted = trapTheKeyTakes(content.traps, state.traps, player, capacity);
+  if (lifted !== undefined) {
+    state.traps.splice(state.traps.indexOf(lifted), 1);
+    const { id, kind, intensity, rechargedTick } = lifted;
+    if (player.carriedTrap !== undefined) {
+      (player.carriedUnder ??= []).push(player.carriedTrap);
+    }
+    player.carriedTrap = {
+      id,
+      kind,
+      intensity,
+      ...(rechargedTick !== undefined && { rechargedTick }),
+    };
+    const { x, y } = lifted;
+    state.events.push({ type: 'trapTaken', id, kind, playerId: player.id, x, y });
+    return;
+  }
   const carried = player.carriedTrap;
   if (carried === undefined) {
-    const lifted = trapInReach(content.traps, state.traps, player);
-    if (lifted !== undefined) {
-      state.traps.splice(state.traps.indexOf(lifted), 1);
-      const { id, kind, intensity, rechargedTick } = lifted;
-      player.carriedTrap = {
-        id,
-        kind,
-        intensity,
-        ...(rechargedTick !== undefined && { rechargedTick }),
-      };
-      const { x, y } = lifted;
-      state.events.push({ type: 'trapTaken', id, kind, playerId: player.id, x, y });
-    }
     return;
   }
   const { radius } = lookup(content.traps, carried.kind, 'trap');
@@ -40,17 +45,80 @@ export function moveTrap(ctx: StepContext, player: PlayerState): void {
   putDown(ctx, player, { x: player.x + aim.x * gap, y: player.y + aim.y * gap }, aim);
 }
 
-// The carried trap goes down at `at`, or the nearest spot that takes it, in the player's name.
-export function putDown(ctx: StepContext, player: PlayerState, at: Vec2, direction: Vec2): void {
+// The trap the place key takes: in reach, while there is room above the head, never one this
+// player laid while still carrying another.
+export function trapTheKeyTakes(
+  definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
+  traps: readonly TrapState[],
+  player: Pick<
+    PlayerState,
+    | 'x'
+    | 'y'
+    | 'radius'
+    | 'aim'
+    | 'carriedTrap'
+    | 'carriedUnder'
+    | 'laidTrapIds'
+    | 'modifiers'
+    | 'suppressedTicks'
+    | 'boosts'
+  >,
+  capacity: number,
+): TrapState | undefined {
+  if (carriedCount(player) >= capacity) {
+    return undefined;
+  }
+  const laid = player.laidTrapIds;
+  const free =
+    laid === undefined ? traps : traps.filter((candidate) => !laid.includes(candidate.id));
+  return trapInReach(definitions, free, player);
+}
+
+function carriedCount(player: Pick<PlayerState, 'carriedTrap' | 'carriedUnder'>): number {
+  return player.carriedTrap === undefined ? 0 : 1 + (player.carriedUnder?.length ?? 0);
+}
+
+// The carried trap goes down at `at`, or the nearest spot that takes it, in the player's name; the
+// one under it comes up.
+function putDown(ctx: StepContext, player: PlayerState, at: Vec2, direction: Vec2): void {
   const carried = player.carriedTrap;
   if (carried === undefined) {
     return;
   }
   const spot = stand(ctx, carried, player.id, at, direction);
-  if (spot !== undefined) {
+  if (spot === undefined) {
+    return;
+  }
+  liftNext(player);
+  if (player.carriedTrap === undefined) {
+    delete player.laidTrapIds;
+  } else {
+    (player.laidTrapIds ??= []).push(spot.id);
+  }
+  const { id, kind, x, y } = spot;
+  ctx.state.events.push({ type: 'trapPlaced', id, kind, playerId: player.id, x, y });
+}
+
+// Every carried trap goes down around `at`, the top one first, while a spot takes it.
+export function putAllDown(ctx: StepContext, player: PlayerState, at: Vec2, direction: Vec2): void {
+  for (let top = player.carriedTrap; top !== undefined; top = player.carriedTrap) {
+    putDown(ctx, player, at, direction);
+    if (player.carriedTrap === top) {
+      return;
+    }
+  }
+}
+
+// The top carried trap is gone: the one under it comes up.
+export function liftNext(player: PlayerState): void {
+  const next = player.carriedUnder?.pop();
+  if (next === undefined) {
     delete player.carriedTrap;
-    const { id, kind, x, y } = spot;
-    ctx.state.events.push({ type: 'trapPlaced', id, kind, playerId: player.id, x, y });
+  } else {
+    player.carriedTrap = next;
+  }
+  if (player.carriedUnder?.length === 0) {
+    delete player.carriedUnder;
   }
 }
 

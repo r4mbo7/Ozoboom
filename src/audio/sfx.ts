@@ -58,6 +58,7 @@ export type SfxName =
   | 'bossGust'
   | 'fireBurnt'
   | 'fireSwing'
+  | 'pinceClack'
   | 'giantWoken'
   | 'vibesStolen'
   | 'playerShoved'
@@ -71,6 +72,7 @@ export type SfxName =
   | 'bombDropped'
   | 'dieThrown'
   | 'dieCollected'
+  | 'twinVibesTaken'
   | 'bombExploded'
   | 'volumeUp'
   | 'skillCharge'
@@ -235,6 +237,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     bossGust: { perFrame: 1, concurrent: 1, seconds: 1.2 },
     fireBurnt: { perFrame: 1, concurrent: 2, seconds: 0.4 },
     fireSwing: { perFrame: 1, concurrent: 3, seconds: 0.3 },
+    pinceClack: { perFrame: 1, concurrent: 3, seconds: 0.1 },
     giantWoken: { perFrame: 1, concurrent: 2, seconds: 1 },
     vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
     playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
@@ -252,6 +255,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     bombDropped: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     dieThrown: { perFrame: 1, concurrent: 2, seconds: beat + 0.9 },
     dieCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
+    twinVibesTaken: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     bombExploded: { perFrame: 1, concurrent: 1, seconds: 1.6 },
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.45 },
@@ -315,6 +319,7 @@ export function sfxOf(
     case 'dieDropped':
       return 'dieThrown';
     case 'dieCollected':
+    case 'twinVibesTaken':
       return event.type;
     case 'dashed':
     case 'dashEmpty':
@@ -412,6 +417,7 @@ export type Voice = (
 ) => void;
 
 const DIED_DEGREES = [4, 3, 0, 5];
+const TWIN_CLIMB = [0, 2, 4, 7] as const;
 // The bounce in beats after the throw, as `src/render/dice.ts` draws it; the clicks of the rattle in
 // seconds after it; the coins of the landing, degrees rung one after the other.
 const DIE = {
@@ -974,6 +980,21 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
+  // Two voices a third apart climb to the octave: the vibes come in pairs.
+  twinVibesTaken: (out, at, _variant, key) => {
+    TWIN_CLIMB.forEach((degree, index) => {
+      [degree, degree + 2].forEach((voice) => {
+        playTone(out, at + index * 0.07, {
+          wave: 'triangle',
+          hz: keyHz(key, voice, 5),
+          gain: 0.08,
+          attack: 0.004,
+          hold: 0.06,
+          release: 0.3,
+        });
+      });
+    });
+  },
   dieThrown: (out, at, _variant, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
     dieThump(out, at, key, 0.95);
     playNoise(out, at, {
@@ -1294,6 +1315,26 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       hold: 0.05,
       release: 0.12,
       filter: { type: 'highpass', hz: 3200, q: 0.7 },
+    });
+  },
+  // A litter picker's plastic jaws snapping shut: a dry click on a short knock of the scale.
+  pinceClack: (out, at, _variant, key) => {
+    playNoise(out, at, {
+      gain: 0.16,
+      attack: 0.001,
+      hold: 0.004,
+      release: 0.03,
+      filter: { type: 'bandpass', hz: 2600, q: 3 },
+    });
+    playTone(out, at, {
+      wave: 'triangle',
+      hz: keyHz(key, 4, 5) * 1.4,
+      toHz: keyHz(key, 4, 5),
+      glide: 0.015,
+      gain: 0.08,
+      attack: 0.001,
+      hold: 0.005,
+      release: 0.06,
     });
   },
   giantWoken: (out, at, _variant, key) => {

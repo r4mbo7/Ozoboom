@@ -11,6 +11,7 @@ import { recruits } from './recruits';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
 import { bombCarriers, bombs } from './systems/bomb';
+import { twinVibes, twinVibesCarriers } from './systems/twin-vibes';
 import { dice } from './systems/dice';
 import { bystanders } from './systems/bystanders';
 import { dashes } from './systems/dashes';
@@ -83,6 +84,7 @@ const RUNNING: readonly System[] = [
   ...(FULL_STEPS.afterSpawning ?? []),
   trapCarriers,
   bombCarriers,
+  twinVibesCarriers,
   enemySteering,
   placedTotems,
   specials,
@@ -98,6 +100,7 @@ const RUNNING: readonly System[] = [
   enemyAttacks,
   enemyStatuses,
   bombs,
+  twinVibes,
   rings,
   deaths,
   gauges,

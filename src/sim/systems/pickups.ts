@@ -25,8 +25,10 @@ export function pickups({ state, content, set }: StepContext): void {
       pickup.x = clamp(pickup.x + drift.x, 0, state.arena.width);
       pickup.y = clamp(pickup.y + drift.y, 0, state.arena.height);
     }
-    const collector = nearestCollector(state, content, pickup);
-    if (collector !== undefined && attract(pickup, collector, set.pickups.speed)) {
+    const swept = sweptTo(state, pickup);
+    const collector = swept ?? nearestCollector(state, content, pickup);
+    const speed = set.pickups.speed * (swept === undefined ? 1 : SWEPT_SPEED_MUL);
+    if (collector !== undefined && attract(pickup, collector, speed)) {
       collect(state, pickup, collector);
       continue;
     }
@@ -36,6 +38,21 @@ export function pickups({ state, content, set }: StepContext): void {
     }
   }
   state.pickups.length = kept;
+}
+
+// A vibe swept to a player flies to them that much faster, from anywhere.
+const SWEPT_SPEED_MUL = 2;
+
+function sweptTo(state: SimState, pickup: PickupState): PlayerState | undefined {
+  if (pickup.drawnBy === undefined) {
+    return undefined;
+  }
+  const player = state.players.find((candidate) => candidate.id === pickup.drawnBy);
+  if (player === undefined || player.downed || player.gone === true) {
+    delete pickup.drawnBy;
+    return undefined;
+  }
+  return player;
 }
 
 function nearestCollector(

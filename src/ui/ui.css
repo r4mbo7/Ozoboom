@@ -2184,6 +2184,43 @@ svg.ui-title__lake {
   animation: none;
 }
 
+/* Each side's glow shrinks from the corners toward its middle as the doubling drains. */
+.ui-hud__twins {
+  --twins-left: 0;
+  --twins-glow: rgb(from var(--or) r g b / 0.6);
+  --twins-reach: calc(var(--twins-left) * 60% + 8%);
+
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(var(--twins-reach) 6vh at 50% 0, var(--twins-glow), transparent),
+    radial-gradient(var(--twins-reach) 6vh at 50% 100%, var(--twins-glow), transparent),
+    radial-gradient(6vh var(--twins-reach) at 0 50%, var(--twins-glow), transparent),
+    radial-gradient(6vh var(--twins-reach) at 100% 50%, var(--twins-glow), transparent);
+  transition: opacity 0.6s ease;
+}
+
+.ui-hud[data-twins] .ui-hud__twins {
+  opacity: 1;
+  animation: ui-twins-beat var(--beat) ease-out infinite;
+}
+
+.ui-hud[data-twins-ending] .ui-hud__twins {
+  animation: ui-twins-ending var(--beat) ease-in-out infinite;
+}
+
+@keyframes ui-twins-beat {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.75;
+  }
+}
+
 .ui-hud__watched {
   position: fixed;
   inset-block-end: 22%;
@@ -2835,6 +2872,36 @@ svg.ui-title__lake {
   font-size: 20px;
   font-weight: 900;
   line-height: 1;
+}
+
+.ui-level[data-twins] {
+  background: conic-gradient(
+    var(--or) calc(var(--level-fill) * 360deg),
+    color-mix(in srgb, var(--texte) 14%, transparent) calc(var(--level-fill) * 360deg)
+  );
+}
+
+.ui-level__twins {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(var(--or) calc(var(--twins-left) * 360deg), transparent 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  visibility: hidden;
+}
+
+.ui-level[data-twins] .ui-level__twins {
+  visibility: visible;
+}
+
+.ui-level[data-ending] .ui-level__twins {
+  animation: ui-twins-ending var(--beat) steps(2, jump-none) infinite;
+}
+
+@keyframes ui-twins-ending {
+  50% {
+    opacity: 0.25;
+  }
 }
 
 .ui-bar {
@@ -4059,7 +4126,7 @@ svg.ui-title__lake {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: min(100%, 1200px);
   text-align: center;
 }
@@ -4152,7 +4219,7 @@ svg.ui-title__lake {
   justify-content: center;
   gap: 16px;
   width: 100%;
-  margin: 4px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -4163,12 +4230,11 @@ svg.ui-title__lake {
   align-items: stretch;
   gap: 16px;
   width: 100%;
-  margin: 4px 0 0;
+  margin: 0;
 }
 
 .ui-end__table .ui-end__cards {
   width: auto;
-  margin: 0;
 }
 
 /* Three players or more fill the row: the lesson goes under their cards, in one line. */
@@ -4399,7 +4465,7 @@ svg.ui-title__lake {
   grid-area: 1 / 1;
   align-items: center;
   gap: 2px;
-  padding: 14px 16px 12px;
+  padding: 8px 16px;
   border: 1px solid var(--ui-line);
   border-inline-start: 5px solid var(--who);
   border-radius: var(--ui-radius);
@@ -4464,11 +4530,13 @@ svg.ui-title__lake {
   height: 100%;
 }
 
+/* The state sits under the avatar, in the flow: a translation of any length never covers it. */
 .ui-end-card__head {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
 }
 
@@ -4498,15 +4566,13 @@ svg.ui-title__lake {
 }
 
 .ui-end-card__state {
-  position: absolute;
-  inset-block-start: 12px;
-  inset-inline-end: 12px;
-  padding: 2px 8px;
+  padding: 1px 8px;
   border: 1px solid color-mix(in srgb, var(--who) 45%, transparent);
   border-radius: 999px;
   color: color-mix(in srgb, var(--who) 80%, var(--texte));
   font-size: 11px;
   font-weight: 800;
+  line-height: 1.3;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -4518,7 +4584,6 @@ svg.ui-title__lake {
 
 .ui-end-card__name {
   max-width: 100%;
-  margin-top: 6px;
   overflow: hidden;
   font-size: 19px;
   font-weight: 800;
@@ -4540,8 +4605,8 @@ svg.ui-title__lake {
 
 .ui-end-card__title {
   width: 100%;
-  margin-top: 8px;
-  padding-top: 10px;
+  margin-top: 6px;
+  padding-top: 8px;
   border-top: 1px solid var(--ui-line);
   color: color-mix(in srgb, var(--who) 80%, var(--texte));
   font-size: 16px;
@@ -4553,7 +4618,7 @@ svg.ui-title__lake {
 }
 
 .ui-end-card__proof {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-size: 18px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -6571,7 +6636,6 @@ svg.ui-title__lake {
 @media (max-height: 520px) and (min-width: 600px) {
   .ui-end__table {
     gap: 8px;
-    margin: 0;
   }
 
   .ui-end__lesson {
@@ -6852,7 +6916,6 @@ svg.ui-title__lake {
   .ui-end__cards {
     grid-auto-columns: minmax(0, 150px);
     gap: 8px;
-    margin: 0;
   }
 
   .ui-end-card__face {
@@ -6904,8 +6967,12 @@ svg.ui-title__lake {
     padding: 7px;
   }
 
+  .ui-end-card__head {
+    flex-direction: row;
+    gap: 6px;
+  }
+
   .ui-end-card__state {
-    position: static;
     padding: 1px 6px;
     font-size: 10px;
   }

@@ -6,6 +6,7 @@ import { playerById } from './damage';
 import { hurtEnemy, knockBack, touches } from './effects';
 import { resolveObstacles } from './obstacles';
 import type { EnemyState, PlayerState, RecruitState, SimState } from './state';
+import { statValue } from './stats';
 import type { StepContext } from './systems/types';
 
 const FOLLOW_DISTANCE = 48;
@@ -47,7 +48,7 @@ function recruit(
       oldest = oldest < 0 ? index : oldest;
     }
   });
-  if (mine >= definition.max && oldest >= 0) {
+  if (mine >= statValue(player, 'recruitCountAdd', definition.max) && oldest >= 0) {
     const [gone] = recruits.splice(oldest, 1);
     if (gone !== undefined) {
       leave(state, gone);
@@ -93,7 +94,8 @@ export function recruits(ctx: StepContext): void {
     } else {
       approach(recruit, target.x, target.y, recruit.radius + target.radius, definition.speed);
       if (beat && touches(target, recruit, recruit.radius + CONTACT_SLACK)) {
-        hurtEnemy(state, target, definition.damage, recruit.playerId, recruit);
+        const damage = statValue(player, 'recruitPowerMul', definition.damage);
+        hurtEnemy(state, target, damage, recruit.playerId, recruit);
         knockBack(target, recruit, definition.knockback, ctx.enemyObstacles);
       }
     }

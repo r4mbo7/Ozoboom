@@ -4,7 +4,8 @@ import { distanceSquared } from '../shared/vec';
 import { lookup } from './lookup';
 import type { CarriedTrap, PlayerId, PlayerState, SimState, TrapState } from './state';
 import { statValue } from './stats';
-import { nearTrap } from './trap-moves';
+import { keepWhere } from './effects';
+import { liftNext, nearTrap } from './trap-moves';
 import type { StepContext } from './systems/types';
 
 // The share of its full effect a trap acts with, reach and strength alike: from 1 fresh down to the
@@ -41,12 +42,33 @@ export function wearTraps({ state, set, tempo }: StepContext): void {
     if (carried === undefined) {
       continue;
     }
-    carried.intensity -= wear * wearMul(player);
-    if (carried.intensity <= 0) {
-      delete player.carriedTrap;
-      const { id, kind } = carried;
+    const worn = wear * wearMul(player);
+    const outs: CarriedTrap[] = [];
+    for (const held of [carried, ...(player.carriedUnder ?? [])]) {
+      held.intensity -= worn;
+      if (held.intensity <= 0) {
+        outs.push(held);
+      }
+    }
+    for (const out of outs) {
+      dropCarried(player, out);
+      const { id, kind } = out;
       state.events.push({ type: 'carriedTrapWornOut', id, kind, playerId: player.id });
     }
+  }
+}
+
+function dropCarried(player: PlayerState, out: CarriedTrap): void {
+  if (player.carriedTrap === out) {
+    liftNext(player);
+  } else if (player.carriedUnder !== undefined) {
+    keepWhere(player.carriedUnder, (held) => held !== out);
+    if (player.carriedUnder.length === 0) {
+      delete player.carriedUnder;
+    }
+  }
+  if (player.carriedTrap === undefined) {
+    delete player.laidTrapIds;
   }
 }
 

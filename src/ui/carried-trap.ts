@@ -84,7 +84,14 @@ export function createCarriedTrap(prompts: Prompts): CarriedTrap {
         const trap = view.trapId === null ? undefined : definitions.get(view.trapId);
         drawTile(tile, view, trap, look);
       }
-      const caption = trapCaption(definitions, trapToTake(definitions, state, player), view.trapId);
+      const capacity = content.classes.find(
+        (definition) => definition.id === player.classId,
+      )?.carriedTraps;
+      const caption = trapCaption(
+        definitions,
+        trapToTake(definitions, state, player, capacity),
+        view.trapId,
+      );
       setText(label, caption ?? '');
       trapName.hidden = caption === null;
       element.hidden = !touch && caption === null;

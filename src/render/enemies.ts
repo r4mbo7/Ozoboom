@@ -11,6 +11,7 @@ import { frontGlintOf, glintAlpha, glintStart, placeGlint } from './front-glint'
 import { type Frame, createFrame } from './frame';
 import { blinkLit } from './motion';
 import { type PixiPalette, mixColor } from './palette';
+import { Tosses } from './tossed';
 import { add, byId, hide, keepIn, setTint } from './util';
 import { ViewPool } from './views';
 
@@ -70,6 +71,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
   const guards = new Container();
   const smiles = new Container();
   const sleepers = new Container();
+  const tosses = new Tosses(layers.enemies, textures.halo);
   layers.enemies.addChild(bosses.under, bodies, bosses.over, guards, smiles, sleepers);
 
   const views = new ViewPool<EnemyView>(
@@ -179,6 +181,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       const downTint = mixColor(palette.badVibeRim, DOWN_GRAY, DOWN_MIX);
       const guardTint = mixColor(palette.texte, DOWN_GRAY, GUARD_GRAY);
       views.begin();
+      tosses.begin();
       bosses.begin();
       for (const enemy of state.enemies) {
         const mask = maskOf(enemy.kind);
@@ -191,7 +194,8 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         const down = (enemy.downTicks ?? 0) > 0;
         const asleep = !down && enemy.stunTicks > 0;
         const { sprite } = view;
-        keepIn(mask.face.flies === true ? bosses.flying.masks : bodies, sprite);
+        const flight = tosses.at(enemy, frame.now);
+        keepIn(mask.face.flies === true || flight !== null ? bosses.flying.masks : bodies, sprite);
         const frames = mask.awake.length;
         const stagger = enemy.isBoss ? 0 : enemy.id;
         const loop = mask.face.loopBeats * frame.tempo.ticksPerBeat;
@@ -210,9 +214,9 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
             : tint,
         );
         sprite.visible = true;
-        const held = frame.now < view.holdUntil;
-        const x = (view.x = held ? view.x : lerp(enemy.prevX, enemy.x, alpha));
-        const y = (view.y = held ? view.y : lerp(enemy.prevY, enemy.y, alpha));
+        const held = flight === null && frame.now < view.holdUntil;
+        const x = (view.x = flight?.x ?? (held ? view.x : lerp(enemy.prevX, enemy.x, alpha)));
+        const y = (view.y = flight?.y ?? (held ? view.y : lerp(enemy.prevY, enemy.y, alpha)));
         sprite.position.set(x, y);
         const swell = down || enemy.isBoss ? 1 : 1 + BEAT_SWELL * frame.pulse;
         const size = (enemy.radius / mask.radius) * swell;
@@ -220,25 +224,29 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         const lean = enemy.isBoss ? BOSS_LEAN : LEAN;
         sprite.rotation = view.tilt = down ? 0 : lean * Math.cos(view.heading);
         view.radius = enemy.radius;
+        if (flight !== null) {
+          tosses.lift(enemy.id, sprite, flight, enemy.radius, calm);
+        }
         view.boss = enemy.isBoss;
         if (enemy.isBoss) {
           bosses.dress(enemy, mask, sprite, frame);
         }
         const shine = down ? 0 : glintAlpha(frame.now, view.glintStart, calm);
         if (shine > 0) {
-          guard(view, x, y, shine, guardTint);
+          guard(view, x, sprite.y, shine, guardTint);
         } else if (view.glint !== null) {
           view.glint.visible = false;
         }
         if (asleep) {
-          dreams(view, x, y, 1, frame);
+          dreams(view, x, sprite.y, 1, frame);
         } else if (mask.face.drowsy === true && !down) {
-          dreams(view, x, y, 0.45, frame);
+          dreams(view, x, sprite.y, 0.45, frame);
         } else {
           hide(...(view.zs ?? []));
         }
       }
       views.end();
+      tosses.end();
       bosses.update(state, frame);
       latest = frame;
       farewells.update(frame.now, calm, hooks);

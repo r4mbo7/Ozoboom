@@ -4,15 +4,17 @@ import { playerById } from '../damage';
 import { drawRelics } from '../draw';
 import { recruitFallen } from '../recruits';
 import { SPECIALS } from '../specials';
-import type { EnemyState, PickupKind, SimState } from '../state';
+import type { EnemyState, PickupKind, SimState, Vec2 } from '../state';
 import { dropBomb } from './bomb';
 import { dropDie } from './dice';
 import { dropBossTrap, dropCarriedTrap } from './carriers';
 import { tallyOf } from '../tally';
+import { dropTwinVibes, vibesDoubled } from './twin-vibes';
 import { isLastTier } from './set-progress';
 import type { StepContext } from './types';
 
 const DROP_SPACING = 40;
+const TWIN_GAP = 7;
 
 export function deaths(ctx: StepContext): void {
   const { state, content, set } = ctx;
@@ -72,11 +74,14 @@ export function deaths(ctx: StepContext): void {
     if (enemy.carriesBomb === true) {
       dropBomb(ctx, enemy.x, enemy.y);
     }
+    if (enemy.carriesTwinVibes === true) {
+      dropTwinVibes(ctx, enemy.x, enemy.y);
+    }
     if (enemy.isBoss) {
       dropBossRows(ctx, enemy);
     }
     if (vibesDrop > 0) {
-      drop(state, 'vibes', vibesDrop, enemy.x, enemy.y, set.pickups.lifetimeTicks);
+      dropVibes(state, vibesDrop, enemy, set.pickups.lifetimeTicks);
     }
   }
   state.enemies.length = kept;
@@ -110,6 +115,16 @@ function offerRelics({ state, content }: StepContext): void {
       state.events.push({ type: 'relicOffered', playerId: player.id, options });
     }
   }
+}
+
+// Doubled, they fall as a pair side by side, each the whole drop.
+function dropVibes(state: SimState, amount: number, at: Vec2, ticksLeft: number): void {
+  if (!vibesDoubled(state)) {
+    drop(state, 'vibes', amount, at.x, at.y, ticksLeft);
+    return;
+  }
+  drop(state, 'vibes', amount, at.x - TWIN_GAP, at.y, ticksLeft);
+  drop(state, 'vibes', amount, at.x + TWIN_GAP, at.y, ticksLeft);
 }
 
 function drop(

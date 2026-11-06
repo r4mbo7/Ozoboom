@@ -13,7 +13,7 @@ import { setTempo, ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
 import { gaugeValue } from '../sim/gauges';
 import { skillCooldownTicks } from '../sim/stats';
-import { trapInReach } from '../sim/trap-moves';
+import { trapTheKeyTakes } from '../sim/trap-moves';
 import { formatDuration, formatNumber, formatPercent, ratio } from './format';
 import { defaultName } from './lobby-model';
 import type { UiFrame } from './types';
@@ -134,6 +134,27 @@ export function levelReading(
   return { fill, gained, levelled, near: fill >= NEAR_LEVEL };
 }
 
+export interface TwinVibesReading {
+  left: number;
+  ending: boolean;
+}
+
+// While the vibes jumelles double the vibes: the share of their bars left, and whether their last bar plays.
+export function twinVibesReading(
+  state: Pick<SimState, 'twinVibes'>,
+  set: SetDefinition,
+  ticksPerBar: number,
+): TwinVibesReading | null {
+  const twins = state.twinVibes;
+  if (twins?.stage !== 'doubling' || set.twinVibes === undefined) {
+    return null;
+  }
+  return {
+    left: ratio(twins.ticksLeft, set.twinVibes.bars * ticksPerBar),
+    ending: twins.ticksLeft <= ticksPerBar,
+  };
+}
+
 const GEAR_SLOTS = 3;
 
 function speakerToken(id: string, index: number): PaletteToken {
@@ -180,7 +201,7 @@ export function carriedTile(player: Pick<PlayerState, 'carriedTrap' | 'offering'
   return player.offering === undefined ? { trapId: null } : { trapId: null, offering: true };
 }
 
-// The trap the place key would lift, with empty hands.
+// The trap the place key would lift: with empty hands, or with room for one more above the head.
 export function trapToTake(
   definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
   state: Pick<SimState, 'traps'>,
@@ -191,16 +212,19 @@ export function trapToTake(
     | 'radius'
     | 'aim'
     | 'carriedTrap'
+    | 'carriedUnder'
+    | 'laidTrapIds'
     | 'offering'
     | 'modifiers'
     | 'suppressedTicks'
     | 'boosts'
   >,
+  capacity = 1,
 ): string | null {
-  if (player.carriedTrap !== undefined || player.offering !== undefined) {
+  if (player.offering !== undefined) {
     return null;
   }
-  return trapInReach(definitions, state.traps, player)?.kind ?? null;
+  return trapTheKeyTakes(definitions, state.traps, player, capacity)?.kind ?? null;
 }
 
 export function trapTileTitle(

@@ -34,7 +34,9 @@ export type StatKey =
   | 'twilightBeatsAdd'
   | 'elementBeatsAdd'
   | 'elementSpreadAdd'
-  | 'bouquetCountAdd';
+  | 'bouquetCountAdd'
+  | 'recruitCountAdd'
+  | 'recruitPowerMul';
 
 export interface StatModifier {
   stat: StatKey;
@@ -134,6 +136,8 @@ export interface ClassDefinition {
   // Bad vibes of these behaviours walk under this class: they never chase it nor touch it.
   towersOver?: readonly EnemyBehaviour[];
   reviveMul?: number;
+  // How many traps the place key stacks above the head; absent, one.
+  carriedTraps?: number;
   attack: AttackDefinition;
   skill: SkillDefinition;
   gauge?: GaugeDefinition;
@@ -440,6 +444,14 @@ export interface BombRules {
   radius: number;
 }
 
+// Once per stage, the next bad vibe to spawn in a build-up phrase drawn from the seed carries them, lying `lifetimeBars`
+// once killed; a player stepping on them makes every fallen bad vibe drop its vibes twice, for `bars`.
+export interface TwinVibesRules {
+  lifetimeBars: number;
+  radius: number;
+  bars: number;
+}
+
 // A die on the ground: whoever walks on it gains a reroll of an offer. A boss drops one per player.
 export interface DiceRules {
   lifetimeBars: number;
@@ -480,6 +492,7 @@ export interface SetDefinition {
   trapWear?: TrapWear;
   carriers?: CarrierRules;
   bomb?: BombRules;
+  twinVibes?: TwinVibesRules;
   dice?: DiceRules;
   levelCurve: { baseVibes: number; vibesPerLevel: number };
   pickups: { lifetimeTicks: number; speed: number };

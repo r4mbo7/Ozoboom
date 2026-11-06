@@ -70,7 +70,10 @@ export function lapseMarks(enemy: EnemyState, tick: number): void {
   if (marks.ribbon !== undefined && marks.ribbon.untilTick <= tick) {
     delete marks.ribbon;
   }
-  if (marks.lure === undefined && marks.ribbon === undefined) {
+  if (marks.mapping !== undefined && marks.mapping.untilTick <= tick) {
+    delete marks.mapping;
+  }
+  if (marks.lure === undefined && marks.ribbon === undefined && marks.mapping === undefined) {
     delete enemy.marks;
   }
 }
@@ -79,7 +82,9 @@ function markDamageMul({ marks }: EnemyState): number {
   if (marks === undefined) {
     return 1;
   }
-  return (marks.lure?.damageMul ?? 1) * (marks.ribbon?.damageMul ?? 1);
+  return (
+    (marks.lure?.damageMul ?? 1) * (marks.ribbon?.damageMul ?? 1) * (marks.mapping?.damageMul ?? 1)
+  );
 }
 
 export function hurtEnemy(

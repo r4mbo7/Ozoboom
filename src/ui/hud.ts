@@ -13,7 +13,15 @@ import { FULL_HUD } from './full';
 import { createGaugeTile } from './gauge-tile';
 import { createGearPlaces } from './gear-places';
 import type { WeaponPlace } from './cards';
-import { type Roster, allDown, classToken, inDanger, rosterOf } from './hud-model';
+import {
+  type Roster,
+  type TwinVibesReading,
+  allDown,
+  classToken,
+  inDanger,
+  rosterOf,
+  twinVibesReading,
+} from './hud-model';
 import { PAUSE } from './icons';
 import { createLevelRing } from './level-ring';
 import { createLineupRibbon } from './lineup-ribbon';
@@ -75,9 +83,11 @@ export function createHud(prompts: Prompts): Hud {
   const banner = createBossBanner();
   const danger = el('div', 'ui-hud__danger');
   danger.setAttribute('aria-hidden', 'true');
+  const twinsFrame = el('div', 'ui-hud__twins');
+  twinsFrame.setAttribute('aria-hidden', 'true');
   const watched = el('p', 'ui-hud__watched');
   watched.setAttribute('role', 'status');
-  element.append(danger, watched, top, banner.element, bracelets.element, bar);
+  element.append(danger, twinsFrame, watched, top, banner.element, bracelets.element, bar);
   const parts = Object.values(FULL_HUD).map((create) =>
     create({ ribbon: ribbon.element, overlay: element }),
   );
@@ -123,24 +133,32 @@ export function createHud(prompts: Prompts): Hud {
     setText(watched, down ? t('Les lucioles veillent sur toi') : '');
   }
 
+  function showTwinVibes(twins: TwinVibesReading | null): void {
+    setFlag(element, 'twins', twins !== null);
+    setFlag(element, 'twins-ending', twins?.ending === true);
+    setVar(twinsFrame, '--twins-left', String(twins?.left ?? 0));
+  }
+
   function showPlayer(
     player: PlayerState,
     state: SimState,
     frame: UiFrame,
     content: GameContent,
     set: SetDefinition,
+    twins: TwinVibesReading | null,
   ): void {
     const snapshot = frame.players[0]?.snapshot ?? frame.snapshot;
     const definition = content.classes.find((entry) => entry.id === player.classId) ?? null;
     if (definition !== null) {
       dress(definition, snapshot.device);
     }
-    level.update(player);
+    const tempo = playedTempo(set, state);
+    level.update(player, twins);
     gear.update(player, state, content, weaponSlotCount(set));
     carried.update(player, state, content);
     if (definition !== null) {
       skill.update(player, definition.skill);
-      dashTile.update(player, content.dash, snapshot.device, state.tick, playedTempo(set, state));
+      dashTile.update(player, content.dash, snapshot.device, state.tick, tempo);
       if (definition.gauge !== undefined) {
         gauge.update(player, definition.gauge);
       }
@@ -159,11 +177,13 @@ export function createHud(prompts: Prompts): Hud {
       part.update(state, content, frame);
     }
     showTeam(frame, content, rosterOf(state, frame));
+    const twins = twinVibesReading(state, set, playedTempo(set, state).ticksPerBar);
+    showTwinVibes(twins);
     const player = shownPlayer(state, frame);
     setFlag(element, 'no-player', player === undefined);
     shownId = player?.id ?? null;
     if (player !== undefined) {
-      showPlayer(player, state, frame, content, set);
+      showPlayer(player, state, frame, content, set, twins);
     }
   }
 

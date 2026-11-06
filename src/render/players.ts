@@ -2,7 +2,7 @@ import { Container, type Sprite } from 'pixi.js';
 import { clamp, lerp } from '../shared/scalar';
 import type { PlayerState, SimEvent, SimState } from '../sim/state';
 import { MAIN_TEMPO, type Tempo, ticksIntoBeat } from '../shared/tempo';
-import { PlayerCarriedTrap } from './carried-traps';
+import { PlayerCarriedTraps } from './carried-traps';
 import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
 import { DashArc } from './dash-arc';
@@ -54,7 +54,7 @@ interface PlayerView {
   readonly dashArc: DashArc;
   readonly lifeArc: LifeArc;
   readonly emote: PlayerEmote;
-  readonly carried: PlayerCarriedTrap;
+  readonly carried: PlayerCarriedTraps;
 }
 
 export function createPlayers(ctx: RenderContext): Family {
@@ -91,7 +91,7 @@ export function createPlayers(ctx: RenderContext): Family {
       dashArc: new DashArc(ground),
       lifeArc: new LifeArc(ctx, ground, lifeLabels),
       emote: new PlayerEmote(ctx, gestures, ground),
-      carried: new PlayerCarriedTrap(ctx),
+      carried: new PlayerCarriedTraps(ctx),
     }),
     (view) => {
       view.lastNow = NEVER;
@@ -212,7 +212,7 @@ export function createPlayers(ctx: RenderContext): Family {
           frame,
           state.players.length > 1,
         );
-        view.carried.place(player.carriedTrap, x, top, frame);
+        view.carried.place(player, x, top, frame);
         const bounce = view.glow.place(player, x, y, lookTextures.extent * scale, frame);
         const dt = view.lastNow === NEVER ? 0 : clamp(now - view.lastNow, 0, MAX_STEP_TICKS);
         view.lastNow = now;

@@ -14,7 +14,7 @@ export type EntityId = number;
 export const PLAYER_IDS = [0, 1, 2, 3] as const;
 
 // Marks of different sources multiply the damage a bad vibe takes; one source keeps its strongest.
-export type MarkSource = 'lure' | 'ribbon';
+export type MarkSource = 'lure' | 'ribbon' | 'mapping';
 
 export interface EnemyMark {
   damageMul: number;
@@ -131,6 +131,10 @@ export interface PlayerState extends Positioned {
   weapons?: WeaponSlot[];
   // Above the head, where it does not act.
   carriedTrap?: CarriedTrap;
+  // Under it, the others a class that carries several holds, the last taken on top.
+  carriedUnder?: CarriedTrap[];
+  // Put down while it still carries another: the key takes none of them back until it carries none.
+  laidTrapIds?: EntityId[];
   // The Rallonge plugged into one trap, from `tick` on, until it has let go.
   rechargePlug?: { trapId: EntityId; tick: number };
   // A recipe serves once per player.
@@ -217,6 +221,7 @@ export interface EnemyState extends Positioned {
   // The trap drawn when it entered, dropped already placed where it dies.
   carriesTrap?: string;
   carriesBomb?: boolean;
+  carriesTwinVibes?: true;
   // Called into the drop by a fire or a giant.
   called?: true;
   // Mâle alpha: its last step; the hits it faces count `damageMul`.
@@ -227,6 +232,25 @@ export interface EnemyState extends Positioned {
   ring?: { x: number; y: number };
   // At place `slot` of the ring of boss `id`, `orbit` pixels from him.
   ringOf?: { id: EntityId; slot: number; orbit: number };
+  // Thrown by the Bénévole's grabber: it flies from `from` to `to`, over everything, and acts not
+  // meanwhile; where it lands it takes `damage`, those within `fallRadius` take `fall`, and it
+  // bounces on `bounces` times, `bounce` further along the unit `way` each.
+  tossed?: {
+    by: PlayerId;
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    wayX: number;
+    wayY: number;
+    startTick: number;
+    landTick: number;
+    damage: number;
+    fall: number;
+    fallRadius: number;
+    bounces: number;
+    bounce: number;
+  };
   // Moustiques: the target and its trail, from its start to its return; absent between two.
   sting?: {
     x: number;
@@ -384,6 +408,8 @@ export interface PickupState extends Positioned {
   ticksLeft: number;
   // Lobbed by a speaker: `x`, `y` is where it lands, and nobody can take it before.
   flight?: { ticksLeft: number; ticks: number; fromX: number; fromY: number };
+  // Swept to this player whatever the distance: the Bénévole's Grand ménage.
+  drawnBy?: PlayerId;
 }
 
 // Set a bar ahead; it rules from `startTick` to `endTick` excluded, or until `byId` is chased.
@@ -407,6 +433,14 @@ export interface BombState extends Positioned {
   id: EntityId;
   ticksLeft: number;
 }
+
+// The stage's vibes jumelles, from due to the end of their doubling; `over` once dropped for good.
+export type TwinVibesState =
+  | { stage: 'due' }
+  | { stage: 'carried' }
+  | (Vec2 & { stage: 'lying'; id: EntityId; ticksLeft: number })
+  | { stage: 'doubling'; ticksLeft: number }
+  | { stage: 'over' };
 
 export interface DieState extends Positioned {
   id: EntityId;
@@ -567,6 +601,9 @@ export type SimEvent =
       byPlayer: PlayerId | null;
     }
   | { type: 'playerFired'; playerId: PlayerId; x: number; y: number; angle: number }
+  // The Bénévole's grabber closes on bad vibe `id`; a thrown one lands.
+  | { type: 'pinched'; playerId: PlayerId; id: EntityId; x: number; y: number }
+  | { type: 'tossLanded'; playerId: PlayerId; id: EntityId; x: number; y: number }
   // The Kiffeur's good mood reached a bad vibe past the rim of his aura.
   | { type: 'moodSpilled'; playerId: PlayerId; id: EntityId; x: number; y: number }
   | { type: 'playerHit'; playerId: PlayerId; damage: number }
@@ -606,6 +643,9 @@ export type SimEvent =
   | { type: 'dieCollected'; id: EntityId; playerId: PlayerId; x: number; y: number }
   | { type: 'offerRerolled'; playerId: PlayerId }
   | { type: 'bombExploded'; id: EntityId; playerId: PlayerId; x: number; y: number }
+  | { type: 'twinVibesDropped'; id: EntityId; x: number; y: number }
+  | { type: 'twinVibesTaken'; id: EntityId; playerId: PlayerId; x: number; y: number }
+  | { type: 'twinVibesEnded' }
   | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyStatusStarted'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
   | { type: 'enemyStatusEnded'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
@@ -703,6 +743,8 @@ export interface SimState {
   nextBombBar?: number;
   // Due, and no bad vibe carries it yet.
   bombDue?: boolean;
+  // Optional like `bombs`: created when the stage's vibes jumelles fall due.
+  twinVibes?: TwinVibesState;
   // Optional like `bombs`, and created with the first die dropped.
   dice?: DieState[];
   volume?: number;

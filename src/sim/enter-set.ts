@@ -76,6 +76,7 @@ export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly V
   delete state.bombs;
   delete state.nextBombBar;
   delete state.bombDue;
+  delete state.twinVibes;
   delete state.dice;
   delete state.vibeRainTicks;
   takeDownWalls(state);

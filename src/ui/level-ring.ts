@@ -2,11 +2,11 @@ import { t, tn } from '../shared/i18n';
 import type { PlayerState } from '../sim/state';
 import { el, setFlag, setText, setVar } from './dom';
 import { formatNumber } from './format';
-import { levelReading } from './hud-model';
+import { type TwinVibesReading, levelReading } from './hud-model';
 
 export interface LevelRing {
   readonly element: HTMLElement;
-  update(player: PlayerState): void;
+  update(player: PlayerState, twins: TwinVibesReading | null): void;
   reset(): void;
 }
 
@@ -28,13 +28,13 @@ export function createLevelRing(): LevelRing {
   element.setAttribute('aria-label', t('Niveau'));
   const ring = el('div', 'ui-level');
   const number = el('span', 'ui-level__number');
-  ring.append(number);
+  ring.append(el('span', 'ui-level__twins'), number);
   element.append(ring);
   let shown: Pick<PlayerState, 'level' | 'vibes'> | null = null;
 
   return {
     element,
-    update(player) {
+    update(player, twins) {
       const reading = levelReading(shown, player);
       if (shown === null || reading.levelled) {
         ring.dataset.restart = '';
@@ -47,6 +47,9 @@ export function createLevelRing(): LevelRing {
       setText(number, String(player.level));
       setVar(ring, '--level-fill', String(reading.fill));
       setFlag(element, 'near', reading.near);
+      setFlag(ring, 'twins', twins !== null);
+      setFlag(ring, 'ending', twins?.ending === true);
+      setVar(ring, '--twins-left', String(twins?.left ?? 0));
       if (reading.gained) {
         ring.dataset.gain = ring.dataset.gain === 'a' ? 'b' : 'a';
       }

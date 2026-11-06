@@ -10,6 +10,7 @@ import { FULL_FAMILIES, FULL_LOOKS } from './full';
 import { createGround } from './ground';
 import { createGroundWaves } from './ground-waves';
 import { createBombs } from './bombs';
+import { createTwinVibes } from './twin-vibes';
 import { createDice } from './dice';
 import { createCarriers } from './carried-traps';
 import { createMood } from './mood';
@@ -56,6 +57,7 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
     createPickupBursts(ctx),
     createCarriers(ctx),
     createBombs(ctx),
+    createTwinVibes(ctx),
     createDice(ctx),
     createBystanders(ctx),
     enemies,

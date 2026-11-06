@@ -14,6 +14,7 @@ export const MAIN_STAGE: SetDefinition = {
   trapWear: TRAP_WEAR,
   carriers: { everyBars: 12, frequencyPerVolume: 0.1, first: 'caisson-de-basse' },
   bomb: { everyBars: 64, lifetimeBars: 16, radius: 20 },
+  twinVibes: { lifetimeBars: 16, radius: 20, bars: 16 },
   dice: { lifetimeBars: 16, radius: 16, speakerChance: 0.5, speakerThrow: 96 },
   levelCurve: { baseVibes: 10, vibesPerLevel: 16 },
   pickups: { lifetimeTicks: 8 * TICKS_PER_BAR, speed: 12 },

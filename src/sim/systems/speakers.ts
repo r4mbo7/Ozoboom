@@ -2,7 +2,7 @@ import type { TrapCadence, TrapEffect } from '../../data/types';
 import { touches } from '../effects';
 import type { SimState, SpeakerState } from '../state';
 import { dropSpeakerDie } from './dice';
-import { fire } from './traps';
+import { fire } from '../trap-fire';
 import type { StepContext } from './types';
 
 export function speakers(ctx: StepContext): void {
