@@ -184,10 +184,12 @@ export interface Ui {
   destroy(): void;
 }
 
-// What the arena shows a step asks: the gesture the tutorial asks now, null outside it; the players
-// whose first trap calls them, until they move one, the same list while it does not change.
+// What the arena shows a step asks: the gesture the tutorial asks now, null outside it, and its key
+// ('' on touch); the players whose first trap calls them, until they move one, the same list while
+// it does not change.
 export interface StepGuide {
   readonly tutorial: TutorialStep | null;
+  readonly tutorialKey: string;
   readonly trapCallers: readonly PlayerId[];
 }
 

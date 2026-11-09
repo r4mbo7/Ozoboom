@@ -16,6 +16,7 @@ import type { DeviceId, InputSnapshot } from '../input/intents';
 import { createKeyNames, learnKeyboardLayout } from '../input/key-names';
 import { createPlayerKeys } from '../input/profile';
 import { createPortraits, createRenderer } from '../render';
+import { NO_ARENA_GUIDE, arenaGuide } from './arena-guide';
 import type { GameEvent, GameMode } from '../shared/stats';
 import { TICK_MS } from '../shared/tempo';
 import { scoreOf } from '../sim/score';
@@ -165,10 +166,8 @@ export async function startGame(
 
   let stageId = prefs.stageId;
   let frozenAlpha = 0;
-  // The tutorial asks to plug a speaker: the scene shows the way.
-  let guidingToSpeaker = false;
-  // The players whose first trap calls them in the arena.
-  let trapCallers: readonly PlayerId[] = [];
+  // What the arena shows of the guide of the last step.
+  let arena = NO_ARENA_GUIDE;
   let endingLeft = 0;
   let recorder: Recorder | null = null;
   let match = soloMatch();
@@ -792,14 +791,10 @@ export async function startGame(
       audio.update(session.state);
     }
     const guide = ui.observeStep(session.state);
-    const guided = guide.tutorial === 'speaker';
-    if (guided !== guidingToSpeaker) {
-      guidingToSpeaker = guided;
-      renderer.setOptions({ guideToSpeaker: guided });
-    }
-    if (guide.trapCallers !== trapCallers) {
-      trapCallers = guide.trapCallers;
-      renderer.setOptions({ trapCallers });
+    const next = arenaGuide(guide, arena);
+    if (next !== arena) {
+      arena = next;
+      renderer.setOptions(arena);
     }
     const { status } = session.state;
     if (screen === 'game' && (status === 'won' || status === 'lost')) {

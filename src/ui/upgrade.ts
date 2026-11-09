@@ -24,6 +24,7 @@ import {
   offerHeading,
   offerKicker,
   pickOf,
+  slideToMiddle,
   waitingFor,
   weaponPlaces,
 } from './cards';
@@ -427,6 +428,8 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   let clock = 0;
   // The places last shown, null once given back to the HUD.
   let shownPlaces: string | null = null;
+  // The chosen card waiting in the middle of its panel while the others choose.
+  let waiting: HTMLElement | null = null;
   let playing = -1;
   let stops: (() => void)[] = [];
   let rerolls = 0;
@@ -514,18 +517,28 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         run() {
           host.choose(playerId, upgradeId);
           if (team) {
-            wait(picked);
+            waiting = picked;
+            wait();
           }
         },
       },
     );
   }
 
-  function wait(picked: HTMLElement): void {
-    const from = restingCenterOf(picked);
-    const to = centerOf(cards);
-    setVar(picked, '--wait-x', `${(to.x - from.x).toFixed(1)}px`);
-    setVar(picked, '--wait-y', `${(to.y - from.y).toFixed(1)}px`);
+  // Measured again at every frame: the waiting line, the places given back to the HUD or a turned
+  // phone move the panel after the pick.
+  function wait(): void {
+    if (waiting === null) {
+      return;
+    }
+    const moved = new DOMMatrix(getComputedStyle(waiting).transform);
+    const slide = slideToMiddle(
+      waiting.getBoundingClientRect(),
+      { x: moved.e, y: moved.f },
+      cards.getBoundingClientRect(),
+    );
+    setVar(waiting, '--wait-x', `${slide.x.toFixed(1)}px`);
+    setVar(waiting, '--wait-y', `${slide.y.toFixed(1)}px`);
   }
 
   function mark(): void {
@@ -717,6 +730,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     scenes = false;
     current = null;
     chosen = null;
+    waiting = null;
     rerolling = false;
     later = [];
     element.hidden = true;
@@ -747,6 +761,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       team = inTeam;
       const edges = input.edges(snapshot.menu, snapshot.gameplay.move);
       later = runDue(later, now);
+      wait();
       if (offer === undefined) {
         // Before the chosen card flies: it lands on the HUD's place of its weapon.
         givePlacesBack();
@@ -759,6 +774,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       if (offer !== current) {
         current = offer;
         chosen = null;
+        waiting = null;
         rerolling = false;
         shownPlaces = null;
         playing = -1;

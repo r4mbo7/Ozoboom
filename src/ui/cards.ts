@@ -391,3 +391,24 @@ export function waitingFor(remote: readonly RemoteChoice[], localsDone: boolean)
         : null,
   };
 }
+
+export interface Box {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface Shift {
+  x: number;
+  y: number;
+}
+
+// The slide that brings a card to the middle of its row, from where its layout puts it: `moved` is
+// the shift its transform gives it now.
+export function slideToMiddle(card: Box, moved: Shift, row: Box): Shift {
+  return {
+    x: row.left + row.width / 2 - (card.left + card.width / 2 - moved.x),
+    y: row.top + row.height / 2 - (card.top + card.height / 2 - moved.y),
+  };
+}

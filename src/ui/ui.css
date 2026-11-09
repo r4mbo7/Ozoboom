@@ -2676,27 +2676,180 @@ svg.ui-title__lake {
   color: var(--turquoise);
 }
 
-/* While the banner speaks of it, the level ring of the bar calls on two beats. */
-.ui-hud:has(.ui-tutorial[data-step='upgrade']:not([hidden], [data-done='true'])) .ui-hud__level {
-  animation: ui-tutorial-call calc(var(--beat) * 2) ease-in-out infinite;
+/* While the banner names it, a button of the bar kicks on every beat, as the Caisson calls in the
+   arena: it hops and a turquoise ring flies out of it over half a beat. Each beat of the sim swaps
+   the banner's kick, which starts the two animations again on the beat. */
+.ui-hud:has(.ui-tutorial[data-kick='a']) {
+  --tutorial-hop: ui-tutorial-hop-a;
+  --tutorial-ring: ui-tutorial-ring-a;
+}
+
+.ui-hud:has(.ui-tutorial[data-kick='b']) {
+  --tutorial-hop: ui-tutorial-hop-b;
+  --tutorial-ring: ui-tutorial-ring-b;
+}
+
+.ui-hud:has(.ui-tutorial[data-step='upgrade']:not([hidden], [data-done='true'])) .ui-hud__level,
+.ui-hud:has(.ui-tutorial[data-step='dash']:not([hidden], [data-done='true']))
+  .ui-hud__dash
+  .ui-skill__ring,
+.ui-hud:has(.ui-tutorial[data-step='trap']:not([hidden], [data-done='true']))
+  .ui-hud__traps[data-touch]
+  .ui-trap,
+.ui-hud:has(.ui-tutorial[data-step='trap']:not([hidden], [data-done='true']))
+  .ui-hud__traps:not([data-touch])
+  .ui-traps__name {
+  position: relative;
+  animation: var(--tutorial-hop) calc(var(--beat) / 2) ease-out;
+}
+
+.ui-hud:has(.ui-tutorial[data-step='upgrade']:not([hidden], [data-done='true']))
+  .ui-hud__level::after,
+.ui-hud:has(.ui-tutorial[data-step='dash']:not([hidden], [data-done='true']))
+  .ui-hud__dash
+  .ui-skill__ring::after,
+.ui-hud:has(.ui-tutorial[data-step='trap']:not([hidden], [data-done='true']))
+  .ui-hud__traps[data-touch]
+  .ui-trap::after,
+.ui-hud:has(.ui-tutorial[data-step='trap']:not([hidden], [data-done='true']))
+  .ui-hud__traps:not([data-touch])
+  .ui-traps__name::after {
+  position: absolute;
+  border: 2px solid var(--turquoise);
+  border-radius: inherit;
+  content: '';
+  inset: -2px;
+  opacity: 0;
+  pointer-events: none;
+  animation: var(--tutorial-ring) calc(var(--beat) / 2) ease-out;
+}
+
+/* The ring of the level kicks round, as its gauge is. */
+.ui-hud__level {
+  border-radius: 50%;
+}
+
+/* Calm mode holds the ring still, halfway out, as in the arena. */
+.calm
+  > .ui
+  .ui-hud:has(.ui-tutorial[data-step='upgrade']:not([hidden], [data-done='true']))
+  .ui-hud__level,
+.calm
+  > .ui
+  .ui-hud:has(.ui-tutorial[data-step='dash']:not([hidden], [data-done='true']))
+  .ui-hud__dash
+  .ui-skill__ring,
+.calm
+  > .ui
+  .ui-hud:has(.ui-tutorial[data-step='trap']:not([hidden], [data-done='true']))
+  .ui-hud__traps[data-touch]
+  .ui-trap,
+.calm
+  > .ui
+  .ui-hud:has(.ui-tutorial[data-step='trap']:not([hidden], [data-done='true']))
+  .ui-hud__traps:not([data-touch])
+  .ui-traps__name {
+  animation: none;
+}
+
+/* The charge of the speaker the player stands in: one cell per beat, two bars of four. */
+.ui-tutorial__charge {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+}
+
+.ui-tutorial__charge[hidden] {
+  display: none;
+}
+
+.ui-tutorial__cell {
+  width: 0.4em;
+  height: 0.8em;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--texte) 16%, transparent);
+  transition: background-color 120ms ease-out;
+}
+
+.ui-tutorial__cell:nth-child(4) {
+  margin-inline-end: 0.25em;
+}
+
+.ui-tutorial__cell.is-lit {
+  background: var(--turquoise);
+  box-shadow: 0 0 calc(6px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 60%, transparent);
+}
+
+/* The banner says it already: the help of a first speaker stays away while it asks one. */
+.ui-tutorial[data-step='speaker']:not([hidden]) ~ .ui-hud__help {
+  display: none;
 }
 
 .calm
   > .ui
   .ui-hud:has(.ui-tutorial[data-step='upgrade']:not([hidden], [data-done='true']))
-  .ui-hud__level {
-  filter: drop-shadow(0 0 8px var(--turquoise));
+  .ui-hud__level::after,
+.calm
+  > .ui
+  .ui-hud:has(.ui-tutorial[data-step='dash']:not([hidden], [data-done='true']))
+  .ui-hud__dash
+  .ui-skill__ring::after,
+.calm
+  > .ui
+  .ui-hud:has(.ui-tutorial[data-step='trap']:not([hidden], [data-done='true']))
+  .ui-hud__traps[data-touch]
+  .ui-trap::after,
+.calm
+  > .ui
+  .ui-hud:has(.ui-tutorial[data-step='trap']:not([hidden], [data-done='true']))
+  .ui-hud__traps:not([data-touch])
+  .ui-traps__name::after {
+  opacity: 0.55;
+  scale: 1.4;
   animation: none;
 }
 
-@keyframes ui-tutorial-call {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 4px var(--turquoise));
+@keyframes ui-tutorial-hop-a {
+  from {
+    scale: 1.15;
   }
 
-  50% {
-    filter: drop-shadow(0 0 10px var(--turquoise)) drop-shadow(0 0 18px var(--turquoise));
+  to {
+    scale: 1;
+  }
+}
+
+@keyframes ui-tutorial-hop-b {
+  from {
+    scale: 1.15;
+  }
+
+  to {
+    scale: 1;
+  }
+}
+
+@keyframes ui-tutorial-ring-a {
+  from {
+    opacity: 0.9;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1.8;
+  }
+}
+
+@keyframes ui-tutorial-ring-b {
+  from {
+    opacity: 0.9;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1.8;
   }
 }
 
@@ -6773,6 +6926,40 @@ svg.ui-title__lake {
     display: none;
   }
 
+  /* The chips already name the players awaited. */
+  .ui-offers__wait {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  /* Online, the row of chips under the cards is paid for with their margins. */
+  .ui-offers:has(> .ui-offers__remote:not([hidden])) {
+    gap: 4px;
+  }
+
+  .ui-offers:has(> .ui-offers__remote:not([hidden])) .ui-cards {
+    margin-block: 4px;
+  }
+
+  .ui-offers__chip {
+    gap: 6px;
+    padding: 2px 12px;
+    font-size: 13px;
+  }
+
+  /* The waiting card takes the room of the hints and fills it: it is neither raised nor grown out
+     of the screen. */
+  .ui-offer[data-state='chosen'] .ui-offer__foot {
+    display: none;
+  }
+
+  .ui-offer[data-state='chosen'] .ui-card[data-slammed] {
+    transform: translate(var(--wait-x, 0px), var(--wait-y, 0px));
+  }
+
   .ui-hint {
     display: flex;
     gap: 20px;
@@ -7034,6 +7221,16 @@ svg.ui-title__lake {
   }
 }
 
+/* Online on a short or upright screen, the chips of the others take the room of the player's own
+   name and level: the HUD shows them. */
+@media (max-height: 700px), (orientation: portrait) and (max-width: 1024px) {
+  .ui-offers:has(> .ui-offers__remote:not([hidden]))
+    > .ui-offers__panels:not([data-multi])
+    :is(.ui-who, .ui-kicker) {
+    display: none;
+  }
+}
+
 @media (max-height: 700px) and (min-height: 521px) {
   .ui-upgrade {
     padding-block: 16px;
@@ -7054,6 +7251,16 @@ svg.ui-title__lake {
 
   .ui-offer[data-bar] .ui-offer__foot:has(> .ui-reroll[hidden]) {
     display: none;
+  }
+
+  /* Online, the row of chips under the cards is paid for with their margins: a card name on two
+     lines still fits. */
+  .ui-offers:has(> .ui-offers__remote:not([hidden])) {
+    gap: 6px;
+  }
+
+  .ui-offers:has(> .ui-offers__remote:not([hidden])) .ui-cards {
+    margin-block: 12px;
   }
 
   .ui-end__body {

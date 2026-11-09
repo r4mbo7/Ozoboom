@@ -1,10 +1,11 @@
 import { type Container, Graphics } from 'pixi.js';
 import type { DashDefinition } from '../data/types';
-import type { Tempo } from '../shared/tempo';
+import { type Tempo, ticksIntoBeat } from '../shared/tempo';
 import { dashGauge } from '../sim/dash';
 import type { PlayerState } from '../sim/state';
 import { strokeArc } from './arc-stroke';
 import type { Frame } from './frame';
+import { trapKick } from './trap-call';
 
 const NEVER = Number.NEGATIVE_INFINITY;
 const REACH = 23 / 14;
@@ -45,7 +46,11 @@ export class DashArc {
   private wasFull = true;
   private emptyAt = NEVER;
 
-  constructor(parent: Container) {
+  private readonly called: () => boolean;
+
+  // `called`: the tutorial asks to dash, so the arc kicks on every beat, lit whole, as a trap calls.
+  constructor(parent: Container, called: () => boolean = () => false) {
+    this.called = called;
     parent.addChild(this.arc);
   }
 
@@ -73,11 +78,13 @@ export class DashArc {
       this.fullSince = now;
     }
     this.wasFull = full;
+    const kick = this.called() ? trapKick(ticksIntoBeat(now, tempo), tempo, calm) : null;
     const shaken = (now - this.emptyAt) / (tempo.ticksPerBeat / 2);
     const shaking = shaken >= 0 && shaken < 1;
     const offset = shaking && !calm ? Math.sin(shaken * Math.PI * 4) * SHAKE * (1 - shaken) : 0;
     arc.position.set(x + offset, y);
-    arc.alpha = full ? arcAlpha(now - this.fullSince, tempo) : 1;
+    arc.alpha = full && kick === null ? arcAlpha(now - this.fullSince, tempo) : 1;
+    arc.scale.set(kick?.bounce ?? 1);
 
     const radius = player.radius * REACH;
     const edge = light.additive ? palette.sol : palette.texte;

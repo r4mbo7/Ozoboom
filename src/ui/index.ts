@@ -341,7 +341,11 @@ export function createUi(
       unmoved = stillToMove(unmoved, state.players);
       // The tutorial asks one gesture at a time: the trap calls only when it is asked.
       const calling = !tutorialGame || tutorial === 'trap';
-      return { tutorial, trapCallers: calling ? unmoved : NO_CALLERS };
+      return {
+        tutorial,
+        tutorialKey: hud.tutorial.askedKey(),
+        trapCallers: calling ? unmoved : NO_CALLERS,
+      };
     },
     update(state, frame, content) {
       lastContent = content;

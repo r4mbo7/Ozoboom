@@ -39,9 +39,10 @@ export function presentNextOffer(ctx: StepContext, player: PlayerState): void {
   }
 }
 
+// Rounded to a whole vibe, so the level ring shows the exact threshold whatever the curve.
 function vibesToReach(set: SetDefinition, level: number): number {
   const { baseVibes, vibesPerLevel } = set.levelCurve;
-  const vibes = baseVibes + vibesPerLevel * (level - 1);
+  const vibes = Math.floor(baseVibes + vibesPerLevel * (level - 1) + 0.5);
   if (!(vibes > 0)) {
     throw new RangeError(`set "${set.id}" asks ${String(vibes)} vibes for level ${String(level)}`);
   }

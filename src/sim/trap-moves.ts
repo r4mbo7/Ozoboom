@@ -99,14 +99,21 @@ function putDown(ctx: StepContext, player: PlayerState, at: Vec2, direction: Vec
   ctx.state.events.push({ type: 'trapPlaced', id, kind, playerId: player.id, x, y });
 }
 
-// Every carried trap goes down around `at`, the top one first, while a spot takes it.
-export function putAllDown(ctx: StepContext, player: PlayerState, at: Vec2, direction: Vec2): void {
+// Every carried trap goes down around `at`, the top one first, while a spot takes it. Returns
+// whether the player's hands are free.
+export function putAllDown(
+  ctx: StepContext,
+  player: PlayerState,
+  at: Vec2,
+  direction: Vec2,
+): boolean {
   for (let top = player.carriedTrap; top !== undefined; top = player.carriedTrap) {
     putDown(ctx, player, at, direction);
     if (player.carriedTrap === top) {
-      return;
+      return false;
     }
   }
+  return true;
 }
 
 // The top carried trap is gone: the one under it comes up.
@@ -185,7 +192,7 @@ function outward(state: SimState, from: Vec2): Vec2 {
 }
 
 // The spot itself if it takes the trap, else the nearest of rings of eight around it.
-function trapSpot(
+export function trapSpot(
   state: Pick<SimState, 'arena' | 'core' | 'traps'>,
   set: Pick<SetDefinition, 'obstacles'>,
   footprint: { x: number; y: number; radius: number },

@@ -88,7 +88,7 @@ export function createPlayers(ctx: RenderContext): Family {
       lying: new Downed(ctx, bodies, marks),
       aim: add(marks, t.aim),
       contour: add(marks, t.contour),
-      dashArc: new DashArc(ground),
+      dashArc: new DashArc(ground, () => ctx.options.tutorialCall?.gesture === 'dash'),
       lifeArc: new LifeArc(ctx, ground, lifeLabels),
       emote: new PlayerEmote(ctx, gestures, ground),
       carried: new PlayerCarriedTraps(ctx),

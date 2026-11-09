@@ -1,9 +1,16 @@
 import { MAIN_STAGE } from './main-stage';
 import type { SetDefinition } from './types';
 
+// The Main stage without its doubled vibes, a bonus that would muddle the gestures the banner asks.
+function withoutTwinVibes(set: SetDefinition): SetDefinition {
+  const rules = { ...set };
+  delete rules.twinVibes;
+  return rules;
+}
+
 // The Main stage, short and gentle: one tier, a sound system that holds, a first level that comes fast.
 export const TUTORIAL: SetDefinition = {
-  ...MAIN_STAGE,
+  ...withoutTwinVibes(MAIN_STAGE),
   id: 'didacticiel',
   name: 'Didacticiel',
   core: { radius: 56, maxHp: 2000 },

@@ -172,6 +172,7 @@ export function createHud(prompts: Prompts): Hud {
         : build(content, state.setId);
     ribbon.update(set, state);
     plugs.update(set, state);
+    tutorial.follow(set, state);
     banner.update(state, content);
     for (const part of parts) {
       part.update(state, content, frame);
