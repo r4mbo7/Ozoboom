@@ -96,7 +96,8 @@ export function mergeFrames(
         ),
         aim,
         fire: held('fire'),
-        skill: held('skill'),
+        // A tap shorter than a frame still casts it.
+        skill: held('skill') || pressed('skill'),
         placeTrap: pressed('placeTrap'),
         dash: pressed('dash'),
         emote: EMOTES.find((emote) => pressed(EMOTE_CONTROLS[emote])) ?? null,

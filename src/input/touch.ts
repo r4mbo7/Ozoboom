@@ -15,8 +15,6 @@ interface Stick {
 export interface TouchState {
   readonly stick: Stick | null;
   readonly skill: ReadonlySet<number>;
-  // A finger lands on the skill this frame: a tap shorter than a frame still casts it.
-  readonly skillTapped: boolean;
   readonly presses: readonly Control[];
   readonly active: boolean;
 }
@@ -41,7 +39,6 @@ export type TouchEventLike =
 export const INITIAL_TOUCH_STATE: TouchState = {
   stick: null,
   skill: new Set(),
-  skillTapped: false,
   presses: [],
   active: false,
 };
@@ -66,7 +63,7 @@ export function reduceTouch(state: TouchState, event: TouchEventLike): TouchStat
 }
 
 export function releaseTouches(state: TouchState): TouchState {
-  return { ...state, stick: null, skill: new Set(), skillTapped: false };
+  return { ...state, stick: null, skill: new Set(), presses: [] };
 }
 
 function press(state: TouchState, id: number, control: TouchControl | null, at: Vec2): TouchState {
@@ -76,7 +73,11 @@ function press(state: TouchState, id: number, control: TouchControl | null, at: 
     return state.stick === null ? { ...touched, stick: { id, origin: at, at } } : touched;
   }
   if (control === 'skill') {
-    return { ...touched, skill: new Set(state.skill).add(id), skillTapped: true };
+    return {
+      ...touched,
+      skill: new Set(state.skill).add(id),
+      presses: [...state.presses, 'skill'],
+    };
   }
   const pressed: Control = control === 'trap' ? 'placeTrap' : control;
   return { ...touched, presses: [...state.presses, pressed] };
@@ -106,7 +107,7 @@ export function takeTouchFrame(state: TouchState): { frame: TouchFrame; state: T
   const { stick } = state;
   return {
     frame: {
-      held: new Set<Control>(state.skill.size > 0 || state.skillTapped ? ['skill'] : []),
+      held: new Set<Control>(state.skill.size > 0 ? ['skill'] : []),
       presses: state.presses,
       move:
         stick === null
@@ -118,7 +119,7 @@ export function takeTouchFrame(state: TouchState): { frame: TouchFrame; state: T
       aim: null,
       active: state.active,
     },
-    state: { ...state, skillTapped: false, presses: [], active: false },
+    state: { ...state, presses: [], active: false },
   };
 }
 

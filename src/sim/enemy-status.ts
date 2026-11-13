@@ -1,5 +1,6 @@
 import { unitFromAngle } from '../shared/angle';
 import type { Vec2 } from '../shared/vec';
+import { gustDrift } from './gusts';
 import type { EnemyState, EnemyStatusKind, SimState } from './state';
 import type { StepContext } from './systems/types';
 
@@ -40,6 +41,23 @@ export function applyEnemyStatus(
     state.events.push({ type: 'enemyStatusStarted', id, status, x, y });
   }
   statuses[status] = Math.max(left ?? 0, ticks);
+}
+
+// Before its time: what took it off lets it go at once.
+export function endEnemyStatus(state: SimState, enemy: EnemyState, kind: EnemyStatusKind): void {
+  const statuses = enemy.statuses;
+  if (statuses?.[kind] === undefined) {
+    return;
+  }
+  const { id, x, y } = enemy;
+  state.events.push({ type: 'enemyStatusEnded', id, status: kind, x, y });
+  statuses[kind] = 0;
+  const kept = stillRunning(statuses);
+  if (kept === undefined) {
+    delete enemy.statuses;
+  } else {
+    enemy.statuses = kept;
+  }
 }
 
 export function hasStatus(enemy: EnemyState, kind: EnemyStatusKind): boolean {
@@ -91,8 +109,15 @@ export function disorientedHeading(tick: number, enemy: EnemyState): Vec2 {
   return DISORIENTED_HEADINGS[index] ?? { x: 1, y: 0 };
 }
 
-export function bubbleDrift(enemy: EnemyState): void {
-  enemy.y = Math.max(enemy.radius, enemy.y - BUBBLE_DRIFT_SPEED);
+// It rises, and a gust carries it off like the bubble round it, within the arena.
+export function bubbleDrift(state: SimState, enemy: EnemyState): void {
+  const drift = gustDrift(state) ?? { x: 0, y: 0 };
+  const { width, height } = state.arena;
+  enemy.x = Math.min(width - enemy.radius, Math.max(enemy.radius, enemy.x + drift.x));
+  enemy.y = Math.min(
+    height - enemy.radius,
+    Math.max(enemy.radius, enemy.y - BUBBLE_DRIFT_SPEED + drift.y),
+  );
 }
 
 // After the last system that reads them: a status posed for n ticks rules n steps.

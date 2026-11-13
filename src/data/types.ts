@@ -36,7 +36,8 @@ export type StatKey =
   | 'elementSpreadAdd'
   | 'bouquetCountAdd'
   | 'recruitCountAdd'
-  | 'recruitPowerMul';
+  | 'recruitPowerMul'
+  | 'dishPowerMul';
 
 export interface StatModifier {
   stat: StatKey;

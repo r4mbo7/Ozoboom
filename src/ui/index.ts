@@ -53,6 +53,7 @@ export { type RemapScreen, openRemap } from './remap';
 export { createAutoAimToggle, createAutoFireToggle, createHitSoundToggle } from './toggle';
 export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './volume';
 export { defaultName } from './lobby-model';
+export { showRendererUnavailable } from './renderer-unavailable';
 
 const NO_CALLERS: readonly PlayerId[] = [];
 

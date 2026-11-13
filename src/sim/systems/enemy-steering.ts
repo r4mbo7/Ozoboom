@@ -34,7 +34,7 @@ export function enemySteering(ctx: StepContext): void {
     const definition = lookup(content.enemies, enemy.kind, 'enemy');
     chooseTarget(state, content, enemy, definition);
     if (hasStatus(enemy, 'bubbled')) {
-      bubbleDrift(enemy);
+      bubbleDrift(state, enemy);
       continue;
     }
     if (isRooted(enemy)) {

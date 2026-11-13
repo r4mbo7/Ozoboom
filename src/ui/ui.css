@@ -928,6 +928,7 @@ svg.ui-title__lake {
   box-shadow: 0 0 calc(10px * var(--ui-halo)) var(--class-color);
 }
 
+/* src/render/portrait-canvas.ts paints the same disc where a portrait has no renderer. */
 .ui-portrait-swatch {
   display: block;
   width: 34%;
@@ -1209,7 +1210,7 @@ svg.ui-title__lake {
 
 /* The script sets the width of a card and the inset that wraps the cards in even rows. */
 .ui-classpicker[data-many] .ui-classcards {
-  --card-least: 84px;
+  --card-least: 86px;
   display: flex;
   box-sizing: border-box;
   flex-wrap: wrap;
@@ -1233,6 +1234,17 @@ svg.ui-title__lake {
 .ui-classpicker[data-many] .ui-classcard__portrait {
   width: 48px;
   height: 48px;
+}
+
+/* A narrow card sets its name a size smaller: the longest word, Somnam’bulle, stays whole. */
+.ui-classpicker[data-many] .ui-classcard {
+  container-type: inline-size;
+}
+
+@container (max-width: 92px) {
+  .ui-classpicker[data-many] .ui-classcard__name {
+    font-size: 12px;
+  }
 }
 
 .ui-classpicker[data-many] .ui-classcards[aria-current] .ui-classcard[aria-checked='true']::before {
@@ -5785,6 +5797,11 @@ svg.ui-title__lake {
   background: var(--ui-panel);
   font-size: 16px;
   font-weight: 700;
+}
+
+/* The game could not start: what to do is the whole screen, kept on a short phone too. */
+.ui-unavailable .ui-end__text {
+  display: block;
 }
 
 /* Beat and motion */

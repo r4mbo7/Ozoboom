@@ -1,15 +1,17 @@
-import { autoDetectRenderer } from 'pixi.js';
 import { SUN_PALETTES } from '../shared/palette';
 import { parseHexColor } from './palette';
 import type { RenderContent } from './context';
 import { Scene } from './scene';
 import type { RenderOptions, Renderer } from './types';
+import { createWebGLRenderer } from './webgl';
 
 export type { RenderContent } from './context';
 export type { Inset, RenderOptions, Renderer } from './types';
 export { type Portrait, type PortraitClass, createPortraits } from './portraits';
+export { RendererUnavailable } from './webgl';
 
 // `light` draws a quarter of the pixels without antialiasing, for tests that render in software.
+// Throws RendererUnavailable when the browser refuses the WebGL context.
 export async function createRenderer(
   container: HTMLElement,
   options: RenderOptions,
@@ -18,8 +20,7 @@ export async function createRenderer(
 ): Promise<Renderer> {
   const width = container.clientWidth;
   const height = container.clientHeight;
-  const pixi = await autoDetectRenderer({
-    preference: 'webgl',
+  const pixi = await createWebGLRenderer({
     width,
     height,
     resolution: light ? 0.5 : Math.min(window.devicePixelRatio, 2),

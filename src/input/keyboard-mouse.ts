@@ -82,7 +82,7 @@ export function reducePointer(
 }
 
 export function releaseAll(state: KeyboardMouseState): KeyboardMouseState {
-  return { ...state, keys: new Set(), buttons: new Set() };
+  return { ...state, keys: new Set(), buttons: new Set(), presses: [] };
 }
 
 export function takeKeyboardMouseFrame(

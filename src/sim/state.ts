@@ -614,6 +614,8 @@ export type SimEvent =
   | { type: 'taunted'; playerId: PlayerId; x: number; y: number; radius: number; count: number }
   | { type: 'skillUsed'; playerId: PlayerId }
   | { type: 'eclipseBurst'; playerId: PlayerId; x: number; y: number }
+  // The Éclat of a bubble of the Somnam’bulle, hurting all within `radius`.
+  | { type: 'bubbleBurst'; id: EntityId; playerId: PlayerId; x: number; y: number; radius: number }
   // Déchaîné is cast: `element` is the one of its bar, in the order of the Avatar's cycle.
   | { type: 'unleashed'; playerId: PlayerId; element: number }
   | { type: 'stiltLanded'; playerId: PlayerId }

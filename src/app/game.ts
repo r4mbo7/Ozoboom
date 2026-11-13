@@ -40,6 +40,7 @@ import {
   createUi,
   openRemap,
   prefersCalmMode,
+  showRendererUnavailable,
 } from '../ui';
 import { type DevOptions, benchSlots, createDevProbe, devScene } from './dev';
 import { createBackgroundPlay } from './background-play';
@@ -81,6 +82,7 @@ import type { UiCallbacks, UpgradeCue } from '../ui/types';
 import { showsStageChoice } from '../ui/teaser';
 import { createPrompts } from '../ui/prompts';
 import { chooseLocale } from './locale';
+import { startOrExplain } from './renderer-start';
 import { createStillness } from './stillness';
 import { createWeaponScenes } from './weapon-scenes';
 import { downloadJson } from './download';
@@ -153,7 +155,15 @@ export async function startGame(
   const stage = document.createElement('div');
   stage.className = 'game-stage';
   root.append(stage);
-  const renderer = await createRenderer(stage, { calmMode: prefs.calmMode }, content, dev.light);
+  const renderer = await startOrExplain(
+    createRenderer(stage, { calmMode: prefs.calmMode }, content, dev.light),
+    () => {
+      stage.remove();
+      showRendererUnavailable(root, () => {
+        window.location.reload();
+      });
+    },
+  );
   const stillness = createStillness();
   let stageSize = { width: stage.clientWidth, height: stage.clientHeight };
   const hub = createInputHub(stage, keys, names);

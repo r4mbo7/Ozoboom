@@ -1,19 +1,23 @@
-import { Container, type Renderer as PixiRenderer, autoDetectRenderer } from 'pixi.js';
+import { Container, type Renderer as PixiRenderer, type WebGLOptions } from 'pixi.js';
 import type { ClassDefinition, SkillDefinition } from '../data/types';
 import { NIGHT_END, NIGHT_START, lightAt, paletteAt } from '../shared/palette';
 import { TICK_MS } from '../shared/tempo';
 import type { SimState } from '../sim/state';
 import { createClassEffects } from './class-effects';
 import { checkDrawings } from './drawings';
-import type { Family, RenderContext } from './context';
+import type { Family } from './context';
 import { type Frame, createFrame } from './frame';
+import { holdRenderer, rebuildInstructions } from './held-renderer';
 import { type Layers, applyLight, createLayers } from './layers';
-import { emptyState, portraitEvents, portraitPixels, standing } from './portrait-state';
+import { fitPortraitCanvas, paintPortraitDisc } from './portrait-canvas';
+import { portraitContext } from './portrait-context';
+import { emptyState, portraitEvents, standing } from './portrait-state';
 import { beatEnvelope } from './motion';
 import { classTokens, writePixiPalette } from './palette';
 import { createPlayers } from './players';
 import { type Textures, createTextures } from './textures';
 import { REFERENCE_RADIUS } from './textures-players';
+import { createWebGLRenderer } from './webgl';
 
 export type PortraitClass = Pick<ClassDefinition, 'id' | 'radius'> & {
   readonly skill: Pick<SkillDefinition, 'effect'>;
@@ -33,6 +37,17 @@ const MAX_PIXELS = 512;
 const NIGHT = (NIGHT_START + NIGHT_END) / 2;
 const CALM_PULSE = 0.3;
 const MAX_CATCH_UP = 8;
+// Long enough to go from one menu to the next without making the renderer again.
+const RELEASE_MS = 10_000;
+const RENDERER: Partial<WebGLOptions> = {
+  width: MAX_PIXELS,
+  height: MAX_PIXELS,
+  resolution: 1,
+  antialias: true,
+  backgroundAlpha: 0,
+  preserveDrawingBuffer: true,
+  skipExtensionImports: true,
+};
 
 interface View {
   readonly canvas: HTMLCanvasElement;
@@ -43,9 +58,14 @@ interface View {
   readonly frame: Frame;
   beatTick: number;
   visible: boolean;
+  // The renderer that last drew the view, by its rank; 0 before any drew it.
+  drawnBy: number;
 }
 
 // One hidden WebGL renderer draws every portrait in turn; nothing runs while none is on screen.
+// The renderer holds a WebGL context, which a phone has few of: it is made when a portrait shows,
+// and let go once none has shown for a while, so that a game holds the game's context alone.
+// Until it draws, or when the browser refuses it, a portrait shows its class's lit disc.
 export function createPortraits(
   classes: readonly PortraitClass[],
   calm: () => boolean,
@@ -60,7 +80,11 @@ export function createPortraits(
     for (const entry of entries) {
       const view = views.get(entry.target);
       if (view !== undefined) {
+        const appearing = entry.isIntersecting && !view.visible;
         view.visible = entry.isIntersecting;
+        if (appearing) {
+          paintDisc(view);
+        }
       }
     }
     wake();
@@ -68,10 +92,17 @@ export function createPortraits(
   const palette = paletteAt(NIGHT);
   const light = lightAt(NIGHT);
   let textures: Textures | null = null;
-  let pixi: PixiRenderer | null = null;
-  let loading: Promise<void> | null = null;
   let startedAt = Number.NaN;
   let frameRequest = 0;
+  let rendererRank = 0;
+  // A refused context leaves the discs on, and is asked for again the next time portraits show.
+  const held = holdRenderer(() => createWebGLRenderer(RENDERER), {
+    releaseAfterMs: RELEASE_MS,
+    onReady() {
+      rendererRank += 1;
+      wake();
+    },
+  });
 
   function definitionOf(classId: string): PortraitClass {
     const found = definitions.get(classId);
@@ -81,25 +112,31 @@ export function createPortraits(
     return found;
   }
 
-  function load(): void {
-    loading ??= autoDetectRenderer({
-      preference: 'webgl',
-      width: MAX_PIXELS,
-      height: MAX_PIXELS,
-      resolution: 1,
-      antialias: true,
-      backgroundAlpha: 0,
-      preserveDrawingBuffer: true,
-      skipExtensionImports: true,
-    }).then((created) => {
-      pixi = created;
-      wake();
-    });
+  function anyVisible(): boolean {
+    for (const view of views.values()) {
+      if (view.visible) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function wake(): void {
-    if (frameRequest === 0 && pixi !== null && [...views.values()].some((view) => view.visible)) {
+    if (!anyVisible()) {
+      held.idle();
+      return;
+    }
+    held.want();
+    if (held.current !== null && frameRequest === 0) {
       frameRequest = requestAnimationFrame(loop);
+    }
+  }
+
+  // Only on screen, and while no renderer draws the portraits.
+  function paintDisc({ canvas, state, visible }: View): void {
+    const token = tokens.get(state.players[0]?.classId ?? '');
+    if (visible && held.current === null && token !== undefined) {
+      paintPortraitDisc(canvas, MAX_PIXELS, palette[token], calm());
     }
   }
 
@@ -130,20 +167,17 @@ export function createPortraits(
 
   function draw(view: View, renderer: PixiRenderer, now: number): void {
     const { canvas, frame, layers, state } = view;
-    const { width, height } = portraitPixels(
-      canvas.clientWidth,
-      canvas.clientHeight,
-      window.devicePixelRatio,
-      MAX_PIXELS,
-    );
-    const target = canvas.getContext('2d');
-    if (width === 0 || height === 0 || target === null) {
+    if (view.drawnBy !== rendererRank) {
+      if (view.drawnBy !== 0) {
+        rebuildInstructions(view.stage.renderGroup);
+      }
+      view.drawnBy = rendererRank;
+    }
+    const fitted = fitPortraitCanvas(canvas, MAX_PIXELS);
+    if (fitted === null) {
       return;
     }
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
+    const { target, width, height } = fitted;
     const tick = Math.floor(now);
     advance(view, tick);
     const alpha = now - tick;
@@ -175,6 +209,7 @@ export function createPortraits(
 
   function loop(time: number): void {
     frameRequest = 0;
+    const pixi = held.current;
     if (pixi === null) {
       return;
     }
@@ -191,30 +226,13 @@ export function createPortraits(
   }
 
   return () => {
-    load();
     if (textures === null) {
       textures = createTextures(FINER);
       checkDrawings(classes, textures.players.drawings);
     }
     const stage = new Container();
     const layers = createLayers(stage);
-    const ctx: RenderContext = {
-      textures,
-      layers,
-      options: { calmMode: false },
-      dash: null,
-      stages: new Map(),
-      classTokens: tokens,
-      behaviours: new Map(),
-      trapLooks: new Map(),
-      specials: new Map(),
-      helpTicks: new Map(),
-      speakerLooks: new Map(),
-      weaponLooks: new Map(),
-      skillEffects,
-      shadeRadii: new Map(),
-      attacks: new Map(),
-    };
+    const ctx = portraitContext(textures, layers, tokens, skillEffects);
     const first = classes[0];
     if (first === undefined) {
       throw new Error('No class to portray');
@@ -243,6 +261,7 @@ export function createPortraits(
         for (const family of families) {
           family.reset?.();
         }
+        paintDisc(view);
       },
       destroy() {
         if (views.delete(canvas)) {
@@ -263,6 +282,7 @@ export function createPortraits(
       state,
       frame,
       beatTick: Number.NEGATIVE_INFINITY,
+      drawnBy: 0,
       visible: false,
     };
     views.set(canvas, view);
