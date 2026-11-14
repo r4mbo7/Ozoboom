@@ -2,7 +2,10 @@ import type {
   GameContent,
   Rarity,
   StatKey,
+  TrapDefinition,
+  UpgradeDefinition,
   UpgradeFamily,
+  UpgradeGift,
   WeaponDefinition,
   WeaponRole,
 } from '../data/types';
@@ -60,8 +63,10 @@ export interface UpgradeCard extends CardBase {
   stat: StatKey | null;
   label: string;
   rank: string;
-  // A relic comes once, from a boss: it has no rank to tell.
+  // A relic comes once, from a boss: it has no rank to tell. Nor a card that gives a trap.
   pearls: Pearls | null;
+  // A card that gives a trap: the one it shows, or every one the surprise may give.
+  gift?: { form: UpgradeGift['trap']; traps: readonly TrapDefinition[] };
 }
 
 export interface WeaponCard extends CardBase {
@@ -139,6 +144,9 @@ export function cardFor(
   content: GameContent,
 ): Card {
   const upgrade = content.upgrades.find((entry) => entry.id === id);
+  if (upgrade?.gives !== undefined) {
+    return trapCardFor(upgrade, offer, content);
+  }
   if (upgrade !== undefined) {
     const rarity = offer.rarities[offer.options.indexOf(id)] ?? 'common';
     const form = upgradeForm(upgrade, rarity);
@@ -232,6 +240,44 @@ export function cardFor(
   };
 }
 
+// Common, no rank: the trap is the gain, named on the card when it shows it.
+function trapCardFor(
+  upgrade: UpgradeDefinition,
+  offer: UpgradeOffer,
+  content: GameContent,
+): UpgradeCard {
+  const base = {
+    kind: 'upgrade' as const,
+    id: upgrade.id,
+    family: upgrade.family,
+    stat: null,
+    label: familyLabels()[upgrade.family],
+    rank: '',
+    pearls: null,
+    tint: 'common' as const,
+    rarityLabel: null,
+  };
+  if (upgrade.gives?.trap === 'surprise') {
+    return {
+      ...base,
+      name: t(upgrade.name),
+      description: t(upgrade.description),
+      gift: { form: 'surprise', traps: content.traps },
+    };
+  }
+  const trap = content.traps.find((entry) => entry.id === offer.trapId);
+  if (trap === undefined) {
+    throw new Error(`Card "${upgrade.id}" offered without its trap`);
+  }
+  const name = t(trap.name);
+  return {
+    ...base,
+    name,
+    description: t('Un {name} tout neuf, prêt à poser.', { name }),
+    gift: { form: 'shown', traps: [trap] },
+  };
+}
+
 export interface WeaponPlace {
   // `ghost`: the free place the new weapon of the focused card would take.
   state: 'held' | 'ghost' | 'free';
@@ -307,7 +353,8 @@ function rolesOf(
 export function cardName(id: string, content: GameContent): string {
   const name =
     content.upgrades.find((entry) => entry.id === id)?.name ??
-    content.weapons?.find((entry) => entry.id === id)?.name;
+    content.weapons?.find((entry) => entry.id === id)?.name ??
+    content.traps.find((entry) => entry.id === id)?.name;
   return name === undefined ? id : t(name);
 }
 
@@ -338,8 +385,9 @@ export function dealOf(tints: readonly CardTint[]): Dealt[] {
 
 export function pickOf(event: SimEvent): { playerId: PlayerId; cardId: string } | null {
   switch (event.type) {
+    // A card that gave a trap is named after it.
     case 'upgradeChosen':
-      return { playerId: event.playerId, cardId: event.upgradeId };
+      return { playerId: event.playerId, cardId: event.trapKind ?? event.upgradeId };
     case 'weaponGained':
       return { playerId: event.playerId, cardId: event.weaponId };
     case 'weaponEvolved':

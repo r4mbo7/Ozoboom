@@ -121,6 +121,12 @@ export interface UiCallbacks {
     weaponId: string,
     playerId: PlayerId,
   ): (() => void) | null;
+  // Shows the player with a trap above the head, turning through them when there are several.
+  onShowTrap?(
+    canvas: HTMLCanvasElement,
+    trapIds: readonly string[],
+    playerId: PlayerId,
+  ): (() => void) | null;
   onToggleCalmMode(enabled: boolean): void;
   onToggleMute(muted: boolean): void;
   // From 1 to `VOLUME_STEPS`.

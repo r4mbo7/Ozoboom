@@ -1,8 +1,10 @@
-import type { WeaponDefinition } from '../../data/types';
+import type { UpgradeDefinition, WeaponDefinition } from '../../data/types';
 import { lookup } from '../content';
 import { drawOffer, drawRelics, isEligible, isWeaponOffered, openFusion } from '../draw';
 import type { PlayerState, UpgradeOffer } from '../state';
+import { pick } from '../../shared/prng';
 import { applyModifiers, refreshDerivedStats, upgradeForm } from '../stats';
+import { giveTrap } from '../trap-moves';
 import { presentNextOffer } from './progression';
 import type { StepContext } from './types';
 
@@ -60,8 +62,19 @@ function takeCard(
     return true;
   }
   const upgrade = lookup(content.upgrades, cardId, 'upgrade');
-  if (!isEligible(upgrade, player)) {
+  if (!isEligible(upgrade, player, content)) {
     return false;
+  }
+  if (upgrade.gives !== undefined) {
+    const trapKind = giftedTrap(ctx, upgrade, offer);
+    giveTrap(ctx, player, trapKind);
+    state.events.push({
+      type: 'upgradeChosen',
+      playerId: player.id,
+      upgradeId: upgrade.id,
+      trapKind,
+    });
+    return true;
   }
   const rarity = offer.rarities[option] ?? 'common';
   applyModifiers(player, upgradeForm(upgrade, rarity).modifiers);
@@ -70,6 +83,21 @@ function takeCard(
   player.upgrades.push(upgrade.id);
   state.events.push({ type: 'upgradeChosen', playerId: player.id, upgradeId: upgrade.id });
   return true;
+}
+
+// The trap shown on the card, or for the surprise, any trap alike.
+function giftedTrap(
+  { state, content }: StepContext,
+  upgrade: UpgradeDefinition,
+  offer: UpgradeOffer,
+): string {
+  if (upgrade.gives?.trap === 'shown') {
+    if (offer.trapId === undefined) {
+      throw new Error(`"${upgrade.id}" offered without its trap`);
+    }
+    return offer.trapId;
+  }
+  return pick(state.rng, [...content.traps.keys()]);
 }
 
 // A panel waits for its chosen card: only a new offer reopens it. Nothing left to draw, the offer goes.
@@ -96,10 +124,15 @@ function redrawn(
   replaced: readonly string[],
 ): UpgradeOffer {
   if (offer.kind === 'relic') {
-    const options = drawRelics(state.rng, state, content, player, replaced);
+    const options = drawRelics(state.rng, content, player, replaced);
     return { ...offer, options, rarities: options.map(() => 'common' as const) };
   }
-  return { ...offer, ...drawOffer(state.rng, state, content, set, player, replaced) };
+  // Rebuilt rather than spread: the trap of a card no longer shown goes with it.
+  return {
+    playerId: offer.playerId,
+    ...(offer.kind !== undefined && { kind: offer.kind }),
+    ...drawOffer(state.rng, state, content, set, player, replaced),
+  };
 }
 
 // Other cards in a new offer, so that the screen deals them; none left to draw, the reroll is kept.

@@ -1,5 +1,5 @@
 import type { WeaponEffect, WeaponRhythm } from '../../data/types';
-import { MAIN_TEMPO, type Tempo } from '../../shared/tempo';
+import { MAIN_TEMPO, type Tempo, sixteenthTick } from '../../shared/tempo';
 import { normalize } from '../../shared/vec';
 import { blackedOut } from '../blackout';
 import { compound } from '../effects';
@@ -43,11 +43,6 @@ export function firesOnTick(
     return true;
   }
   return stepOn(rhythm, tick, tempo) !== undefined;
-}
-
-// A sixteenth is not a whole number of ticks on every stage.
-function sixteenthTick(step: number, tempo: Tempo): number {
-  return Math.floor((step * tempo.ticksPerBeat) / 4);
 }
 
 function ticksIntoPeriod(

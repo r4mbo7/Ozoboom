@@ -30,7 +30,17 @@ import {
 } from './cards';
 import { formatNumber } from './format';
 import { playerLabel } from './hud-model';
-import { DIE, STAR, classMark, medallion, roleIcon, upgradeIcon } from './icons';
+import {
+  DIE,
+  STAR,
+  classMark,
+  medallion,
+  roleIcon,
+  FAN_SPAN,
+  trapFanIcon,
+  trapIcon,
+  upgradeIcon,
+} from './icons';
 import { type Menu, createMenu } from './menu';
 import { type MenuInput, createMenuInput } from './navigation';
 import type { Prompts } from './prompts';
@@ -59,6 +69,11 @@ export interface UpgradeHost {
   offerPlaces(playerId: PlayerId, places: readonly WeaponPlace[] | null): HTMLElement | null;
   // null when nothing can draw the weapon: the card keeps its medallion.
   showWeapon(canvas: HTMLCanvasElement, weaponId: string, playerId: PlayerId): (() => void) | null;
+  showTrap(
+    canvas: HTMLCanvasElement,
+    trapIds: readonly string[],
+    playerId: PlayerId,
+  ): (() => void) | null;
   readonly prompts: Prompts;
 }
 
@@ -243,10 +258,7 @@ function card(model: Card): HTMLButtonElement {
   if (model.kind === 'upgrade') {
     button.dataset.family = model.family;
   }
-  const glyph =
-    model.kind === 'upgrade'
-      ? upgradeIcon(model.id, model.family, model.stat)
-      : weaponGlyph(model.weapon.effect);
+  const glyph = model.kind === 'upgrade' ? upgradeGlyph(model) : weaponGlyph(model.weapon.effect);
   const familyRow = el('span', 'ui-card__family');
   familyRow.append(el('span', 'ui-card__label', model.label));
   if (model.rarityLabel !== null) {
@@ -258,10 +270,11 @@ function card(model: Card): HTMLButtonElement {
     el('span', 'ui-card__cta', t('Choisir')),
   );
   const head = el('span', 'ui-card__head');
-  if (model.kind !== 'upgrade') {
+  if (model.kind !== 'upgrade' || model.gift !== undefined) {
     head.append(el('canvas', 'ui-card__scene'));
   }
-  head.append(icon('ui-card__medal', medallion(glyph), '0 0 84 84'));
+  const span = isSurprise(model) ? FAN_SPAN : undefined;
+  head.append(icon('ui-card__medal', medallion(glyph, span), '0 0 84 84'));
   const body = el('span', 'ui-card__body');
   const name = el('span', 'ui-card__name', model.name);
   if (model.kind === 'weapon' && model.adds) {
@@ -290,6 +303,21 @@ function card(model: Card): HTMLButtonElement {
     button.append(strip(model));
   }
   return button;
+}
+
+// The card gives one of several traps, found when taken.
+function isSurprise(model: Card): boolean {
+  return model.kind === 'upgrade' && model.gift?.form === 'surprise';
+}
+
+// A card that gives a trap draws it, or every one it may give, fanned out.
+function upgradeGlyph(model: UpgradeCard): string {
+  const traps = model.gift?.traps ?? [];
+  const [first] = traps;
+  if (first === undefined) {
+    return upgradeIcon(model.id, model.family, model.stat);
+  }
+  return isSurprise(model) ? trapFanIcon(traps.map((trap) => trap.effect)) : trapIcon(first.effect);
 }
 
 function centerOf(node: Element): { x: number; y: number } {
@@ -586,16 +614,30 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     if (tiles.matches) {
       return;
     }
-    for (const button of buttons) {
+    buttons.forEach((button, index) => {
       const canvas = button.querySelector('canvas');
-      const id = button.dataset.id;
-      const stop =
-        canvas === null || id === undefined ? null : host.showWeapon(canvas, id, playerId);
+      const model = models[index];
+      const stop = canvas === null || model === undefined ? null : showScene(canvas, model);
       if (stop !== null) {
         stops.push(stop);
         button.querySelector('.ui-card__head')?.setAttribute('data-live', '');
       }
+    });
+  }
+
+  // A still picture of the surprise would name one trap: in calm mode, its fan says them all.
+  function showScene(canvas: HTMLCanvasElement, model: Card): (() => void) | null {
+    if (model.kind !== 'upgrade') {
+      return host.showWeapon(canvas, model.id, playerId);
     }
+    const { gift } = model;
+    return gift === undefined || (gift.form === 'surprise' && host.calm())
+      ? null
+      : host.showTrap(
+          canvas,
+          gift.traps.map((trap) => trap.id),
+          playerId,
+        );
   }
 
   function walkStrips(): void {

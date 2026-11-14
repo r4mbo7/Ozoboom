@@ -6,6 +6,8 @@ export const TICKS_PER_BAR = TICKS_PER_BEAT * BEATS_PER_BAR;
 export const TICKS_PER_PHRASE = TICKS_PER_BAR * BARS_PER_PHRASE;
 export const TICK_RATE_HZ = (DEFAULT_BPM * TICKS_PER_BEAT) / 60;
 export const TICK_MS = 1000 / TICK_RATE_HZ;
+// Vibes picked up within this many beats of each other chain: the arpeggio climbs, the counter heats.
+export const VIBE_STREAK_BEATS = 2;
 
 // The tick rate never changes, only the beat length (ADR 0012); beats count from the set's start (ADR 0018).
 export interface Tempo {
@@ -64,6 +66,11 @@ export function ticksIntoBar(tick: number, tempo: Tempo = MAIN_TEMPO): number {
 
 function ticksIntoPhrase(tick: number, tempo: Tempo = MAIN_TEMPO): number {
   return within(tick - tempo.originTick, tempo.ticksPerPhrase);
+}
+
+// A sixteenth is not a whole number of ticks on every stage.
+export function sixteenthTick(step: number, tempo: Tempo = MAIN_TEMPO): number {
+  return Math.floor((step * tempo.ticksPerBeat) / 4);
 }
 
 export function isBeatTick(tick: number, tempo: Tempo = MAIN_TEMPO): boolean {

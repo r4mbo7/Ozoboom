@@ -3,17 +3,26 @@ import type { Inset, Renderer } from '../render/types';
 import { clamp } from '../shared/scalar';
 import { TICK_MS } from '../shared/tempo';
 import type { SimState } from '../sim/state';
-import { type WeaponWorld, createWeaponWorld } from '../sim/weapon-world';
+import { type WeaponWorld, createTrapWorld, createWeaponWorld } from '../sim/weapon-world';
 
 export interface WeaponScenes {
   // Until the returned function is called.
   show(canvas: HTMLCanvasElement, weaponId: string, setId: string, classId: string): () => void;
+  // The player with a trap above the head, turning through them when there are several.
+  showTrap(
+    canvas: HTMLCanvasElement,
+    traps: readonly string[],
+    setId: string,
+    classId: string,
+  ): () => void;
   frame(now: number, calm: boolean, played: SimState): void;
 }
 
 interface Scene {
   canvas: HTMLCanvasElement;
   world: WeaponWorld;
+  // World width across the card.
+  across: number;
   clock: number;
   // In calm mode a scene holds on the moment its weapon acts.
   still: boolean;
@@ -21,6 +30,8 @@ interface Scene {
 
 // A scene shows this much world across, a little more on a short card, so that a weapon's reach fits.
 const VIEW_WIDTH = 440;
+// A trap above the head is small: its scene comes closer.
+const TRAP_VIEW_WIDTH = 200;
 const MIN_VIEW_HEIGHT = 140;
 const MAX_VIEW_HEIGHT = 320;
 // A slow frame steps at most this many ticks, so that a late card does not freeze the page.
@@ -29,9 +40,10 @@ const MAX_TICKS_PER_FRAME = 8;
 const ACTS_FOR = 4;
 const HOLDS_BY_BARS = 3;
 
-function viewHeight(canvas: HTMLCanvasElement): number {
+function viewHeight({ canvas, across }: Scene): number {
   const share = canvas.clientHeight / Math.max(canvas.clientWidth, 1);
-  return clamp(VIEW_WIDTH * share, MIN_VIEW_HEIGHT, MAX_VIEW_HEIGHT);
+  const scale = across / VIEW_WIDTH;
+  return clamp(across * share, MIN_VIEW_HEIGHT * scale, MAX_VIEW_HEIGHT * scale);
 }
 
 function acts(world: WeaponWorld): boolean {
@@ -59,18 +71,20 @@ export function createWeaponScenes(
   let scenes: Scene[] = [];
   let painted = true;
 
+  function play(canvas: HTMLCanvasElement, world: WeaponWorld, across: number): () => void {
+    const scene: Scene = { canvas, world, across, clock: start, still: false };
+    scenes.push(scene);
+    return () => {
+      scenes = scenes.filter((other) => other !== scene);
+    };
+  }
+
   return {
     show(canvas, weaponId, setId, classId) {
-      const scene: Scene = {
-        canvas,
-        world: createWeaponWorld(content, setId, classId, weaponId),
-        clock: start,
-        still: false,
-      };
-      scenes.push(scene);
-      return () => {
-        scenes = scenes.filter((other) => other !== scene);
-      };
+      return play(canvas, createWeaponWorld(content, setId, classId, weaponId), VIEW_WIDTH);
+    },
+    showTrap(canvas, traps, setId, classId) {
+      return play(canvas, createTrapWorld(content, setId, classId, traps), TRAP_VIEW_WIDTH);
     },
     frame(now, calm, played) {
       start = now;
@@ -94,7 +108,7 @@ export function createWeaponScenes(
       const insets: Inset[] = scenes.map((scene) => ({
         canvas: scene.canvas,
         state: scene.world.state,
-        viewHeight: viewHeight(scene.canvas),
+        viewHeight: viewHeight(scene),
         played,
       }));
       renderer.setInsets(insets);

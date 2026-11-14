@@ -88,7 +88,7 @@
 .ui-remap__group-name {
   margin: 0 0 2px;
   padding-inline-start: 18px;
-  color: var(--ui-or);
+  color: color-mix(in srgb, var(--or) 40%, var(--texte));
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.2em;

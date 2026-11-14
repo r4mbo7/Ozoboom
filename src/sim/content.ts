@@ -74,6 +74,9 @@ export function resolveContent(content: GameContent): ResolvedContent {
     if (upgrade.classId !== undefined) {
       lookup(resolved.classes, upgrade.classId, `class of upgrade "${upgrade.id}"`);
     }
+    if (upgrade.gives !== undefined && resolved.traps.size === 0) {
+      throw new Error(`upgrade "${upgrade.id}" gives a trap, but the content has none`);
+    }
   }
   for (const weapon of resolved.weapons.values()) {
     if (resolved.upgrades.has(weapon.id)) {

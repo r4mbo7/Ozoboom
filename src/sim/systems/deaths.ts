@@ -5,12 +5,13 @@ import { drawRelics } from '../draw';
 import { recruitFallen } from '../recruits';
 import { SPECIALS } from '../specials';
 import type { EnemyState, PickupKind, SimState, Vec2 } from '../state';
+import { dropBattery } from './battery';
 import { dropBomb } from './bomb';
 import { dropDie } from './dice';
 import { dropBossTrap, dropCarriedTrap } from './carriers';
 import { tallyOf } from '../tally';
 import { dropTwinVibes, vibesDoubled } from './twin-vibes';
-import { isLastTier } from './set-progress';
+import { bossLeft, isLastTier } from './set-progress';
 import type { StepContext } from './types';
 
 const DROP_SPACING = 40;
@@ -19,6 +20,7 @@ const TWIN_GAP = 7;
 export function deaths(ctx: StepContext): void {
   const { state, content, set } = ctx;
   let kept = 0;
+  let bossFell = false;
   for (const enemy of state.enemies) {
     if (enemy.hp > 0) {
       state.enemies[kept] = enemy;
@@ -67,15 +69,16 @@ export function deaths(ctx: StepContext): void {
       state.stats.calledDown = (state.stats.calledDown ?? 0) + 1;
     }
     recruitFallen(ctx, enemy, definition);
-    if (enemy.isBoss && !isLastTier(state.set, set)) {
-      offerRelics(ctx);
-    }
+    bossFell ||= enemy.isBoss;
     dropCarriedTrap(ctx, enemy);
     if (enemy.carriesBomb === true) {
       dropBomb(ctx, enemy.x, enemy.y);
     }
     if (enemy.carriesTwinVibes === true) {
       dropTwinVibes(ctx, enemy.x, enemy.y);
+    }
+    if (enemy.carriesBattery === true) {
+      dropBattery(ctx, enemy.x, enemy.y);
     }
     if (enemy.isBoss) {
       dropBossRows(ctx, enemy);
@@ -85,6 +88,10 @@ export function deaths(ctx: StepContext): void {
     }
   }
   state.enemies.length = kept;
+  // The relics wait for the last boss of the drop, called ones included.
+  if (bossFell && !bossLeft(state) && !isLastTier(state.set, set)) {
+    offerRelics(ctx);
+  }
 }
 
 // A placed trap and a die per player, in two rows under the boss, kept whole inside the arena.
@@ -108,7 +115,7 @@ function offerRelics({ state, content }: StepContext): void {
     if (player.gone === true) {
       continue;
     }
-    const options = drawRelics(state.rng, state, content, player);
+    const options = drawRelics(state.rng, content, player);
     if (options.length > 0) {
       const rarities = options.map(() => 'common' as const);
       state.pendingUpgrades.push({ playerId: player.id, options, rarities, kind: 'relic' });

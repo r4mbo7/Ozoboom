@@ -1,13 +1,31 @@
+/* Worked out from the palette again wherever veil.ts changes it: a menu over the game and its panels. */
 .ui,
-.ui-overlay {
+.ui-overlay,
+.ui-overlay :is(.ui-card, .ui-end-card, .ui-button) {
   --ui-panel: color-mix(in srgb, var(--sol-clair) 92%, transparent);
   --ui-muted: color-mix(in srgb, var(--texte) 82%, var(--sol-clair));
   --ui-lift:
     0 10px 30px color-mix(in srgb, var(--sol) 45%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--texte) 12%, transparent);
-  --ui-focus: 0 0 0 3px var(--sol), 0 0 0 7px var(--turquoise);
+  --ui-focus: 0 0 0 3px var(--sol), 0 0 0 var(--ui-ring) var(--turquoise);
   /* Text on a gold or amber fill: the ground at night, the ground darkened to brown by day. */
   --ui-ink: oklch(from var(--sol) min(l, 0.18) c h);
+  --ui-line: color-mix(in srgb, var(--texte) 16%, transparent);
+  --ui-turquoise: color-mix(in srgb, var(--turquoise) 60%, var(--texte));
+  --ui-or: color-mix(in srgb, var(--or) 50%, var(--texte));
+  --ui-noyau: color-mix(in srgb, var(--noyau) 45%, var(--texte));
+  --ui-mage: color-mix(in srgb, var(--mage) 60%, var(--texte));
+  --ui-tank: color-mix(in srgb, var(--tank) 80%, var(--texte));
+}
+
+/* On the night veil, the sand of a panel is whole: the veil showing through would darken it. */
+.ui-overlay :is(.ui-card, .ui-end-card, .ui-button) {
+  --ui-panel: var(--sol-clair);
+}
+
+.ui,
+.ui-overlay {
+  --ui-ring: 7px;
   --ui-to-end: 90deg;
 }
 
@@ -23,12 +41,6 @@
     from var(--sol-clair) min(l, 0.88) calc(c + max(0, l - 0.88) * 0.12)
       calc(h - max(0, l - 0.88) * 80)
   );
-  --ui-line: color-mix(in srgb, var(--texte) 16%, transparent);
-  --ui-turquoise: color-mix(in srgb, var(--turquoise) 60%, var(--texte));
-  --ui-or: color-mix(in srgb, var(--or) 50%, var(--texte));
-  --ui-noyau: color-mix(in srgb, var(--noyau) 45%, var(--texte));
-  --ui-mage: color-mix(in srgb, var(--mage) 60%, var(--texte));
-  --ui-tank: color-mix(in srgb, var(--tank) 80%, var(--texte));
   --ui-halo: 1;
   --ui-radius: 26px;
   --ui-gap: 16px;
@@ -638,6 +650,226 @@ svg.ui-title__lake {
 .ui-title__stars {
   fill: var(--texte);
   opacity: calc(0.6 - 0.25 * var(--swell));
+}
+
+/* The moon sets once in the lake left of the logo, the night giving way to the sunrise: 30 s after
+   the arrival on the title she comes down from above the screen, and takes 4 min to set. Opaque and
+   unveiled, she hides the stars she passes; she never crosses the logo. Calm, she rests high in the
+   sky. */
+@property --moon-k {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+.ui-title__body {
+  /* Her radius, smaller where the logo leaves little sky beside it, and her distance left of the
+     sun at the start, halfway from the logo to the edge of the screen, and at the end. */
+  --moon-r: clamp(
+    0.3 * var(--title-em),
+    (50% - 3.3 * var(--title-em)) / 2 - 0.15 * var(--title-em),
+    0.5 * var(--title-em)
+  );
+  --moon-d0: min(6.2 * var(--title-em), 25% + 1.65 * var(--title-em));
+  --moon-d1: min(
+    var(--moon-d0) + 0.7 * var(--title-em),
+    50% - var(--moon-r) - 0.05 * var(--title-em)
+  );
+  /* The course is the quadratic from her start, just above the screen, to 0.6 em under the horizon
+     that crosses it at 80 %, whatever the height of the sky: the lake below can follow her without
+     knowing it. */
+  --moon-e: calc(var(--moon-k) * var(--moon-k) * (3 - 2 * var(--moon-k)));
+  --moon-l0: calc((var(--moon-e) - 0.8) * (var(--moon-e) - 1) / 0.8);
+  --moon-l2: calc(var(--moon-e) * (var(--moon-e) - 0.8) / 0.2);
+  --moon-x: calc(
+    50% - var(--moon-d0) - (var(--moon-d1) - var(--moon-d0)) * var(--moon-e) * var(--moon-e)
+  );
+  /* Her height in title em in a sky about 5 em tall, for what follows her near the lake, dawn and
+     reflection: there her start barely counts. */
+  --moon-y: calc(5 * var(--moon-l0) - 0.6 * var(--moon-l2));
+  --moon-dawn: clamp(0, (2.3 - var(--moon-y)) / 2.5, 1);
+  --moon-near: clamp(0, (2 - var(--moon-y)) / 1.9, 1);
+  --moon-sunk: clamp(0, -2 * var(--moon-y), 1);
+  --moon-ink: color-mix(in srgb, var(--sol-clair) 85%, var(--texte));
+  animation: ui-title-moon 240s linear 30s forwards;
+}
+
+@keyframes ui-title-moon {
+  to {
+    --moon-k: 1;
+  }
+}
+
+/* She moves by transforms, by fractions of a pixel, where left and bottom would step her a whole
+   pixel at a time: the layer the size of the sky carries what is in percentages of the sky, and the
+   moon her start 1.1 radius above it, in percentages of her own size, 6 radii. */
+.ui-title__moonlit,
+.ui-title__moonlake {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.ui-title__moonlit {
+  transform: translate(
+    var(--moon-x),
+    calc(0.6 * var(--title-em) * var(--moon-l2) - 100% * var(--moon-l0))
+  );
+}
+
+.ui-title__moonlake {
+  transform: translateX(var(--moon-x));
+}
+
+svg.ui-title__moon {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc(6 * var(--moon-r));
+  height: auto;
+  aspect-ratio: 1;
+  translate: -50% calc(50% - 1.1 / 6 * 100% * var(--moon-l0));
+  /* Her halo shows at the top of the screen only once she starts down. */
+  animation: ui-title-moon-rise 10s ease-out 30s backwards;
+}
+
+@keyframes ui-title-moon-rise {
+  from {
+    opacity: 0;
+  }
+}
+
+.calm > .ui .ui-title__moonlit {
+  transform: translate(
+    var(--moon-x),
+    calc(-1 * clamp(1.1 * var(--title-em), 100% - 0.75 * var(--title-em), 5 * var(--title-em)))
+  );
+}
+
+.calm > .ui svg.ui-title__moon {
+  translate: -50% 50%;
+}
+
+.ui-title__moon-glow {
+  stop-color: var(--texte);
+}
+
+.ui-title__moon-halo {
+  opacity: calc((0.12 + 0.05 * var(--swell)) * var(--ui-halo));
+}
+
+.ui-title__moon-aura {
+  opacity: calc((0.1 + 0.05 * var(--swell)) * var(--ui-halo));
+}
+
+.ui-title__moon-light {
+  stop-color: color-mix(in srgb, var(--texte) 70%, #fff);
+}
+
+.ui-title__moon-shade {
+  stop-color: color-mix(in srgb, var(--texte) 80%, var(--or));
+}
+
+/* She warms as she nears the sunrise. */
+.ui-title__moon-dawn {
+  fill: color-mix(in srgb, var(--noyau) 55%, var(--tank));
+  opacity: calc(0.28 * var(--moon-dawn) * var(--moon-dawn) * (3 - 2 * var(--moon-dawn)));
+}
+
+.ui-title__moon-blush {
+  stop-color: var(--mage);
+}
+
+.ui-title__moon-lips {
+  opacity: 0.9;
+}
+
+.ui-title__moon-face {
+  fill: none;
+  stroke: var(--moon-ink);
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ui-title__moon-open circle {
+  fill: var(--moon-ink);
+  stroke: none;
+}
+
+.ui-title__moon-lid {
+  stroke-width: 4;
+}
+
+/* Her eye closes for a moment every 8 s. */
+.ui-title__moon-open {
+  animation: ui-title-moon-open 8s step-end infinite;
+}
+
+.ui-title__moon-shut {
+  opacity: 0;
+  animation: ui-title-moon-shut 8s step-end infinite;
+}
+
+@keyframes ui-title-moon-open {
+  70% {
+    opacity: 0;
+  }
+
+  72% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-title-moon-shut {
+  70% {
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 0;
+  }
+}
+
+.ui-title__moon-rim {
+  fill: none;
+  stroke: var(--or);
+  stroke-width: 4.6;
+  stroke-linejoin: round;
+}
+
+/* Her reflection grows as she nears the lake, and narrows as she sinks under. */
+svg.ui-title__moon-glint {
+  --moon-wide: calc(1 - var(--moon-sunk) * var(--moon-sunk));
+  position: absolute;
+  top: 0;
+  left: calc(-0.35 * var(--moon-r));
+  width: calc(3.9 * var(--moon-r));
+  height: auto;
+  aspect-ratio: 390 / 160;
+  translate: -50% 0;
+  scale: calc(0.45 + 0.55 * var(--moon-wide)) 1;
+  opacity: calc(
+    var(--moon-near) * var(--moon-near) * (3 - 2 * var(--moon-near)) * var(--moon-wide)
+  );
+  fill: none;
+  stroke: color-mix(in srgb, var(--texte) 60%, var(--noyau));
+  stroke-width: 4.6;
+  stroke-linecap: round;
+}
+
+.ui-title__moon-ripples {
+  animation: ui-title-moon-sway 4s ease-in-out infinite alternate;
+}
+
+@keyframes ui-title-moon-sway {
+  from {
+    translate: -7px 0;
+  }
+
+  to {
+    translate: 7px 0;
+  }
 }
 
 .ui-title__sun-glow {
@@ -2945,7 +3177,7 @@ svg.ui-title__lake {
   align-self: stretch;
 }
 
-.ui-hud__bar section:not(.ui-hud__level) {
+.ui-hud__bar section:not(.ui-hud__level, .ui-hud__vibes) {
   padding-inline-start: 16px;
   border-inline-start: 1px solid var(--ui-line);
 }
@@ -3057,6 +3289,193 @@ svg.ui-title__lake {
 
 .ui-level[data-twins] .ui-level__twins {
   visibility: visible;
+}
+
+/* The team's vibes, right after the level ring: gold, it heats as vibes chain (--vibe-heat, 0 to 1). */
+.ui-hud__vibes {
+  margin-inline: -6px 10px;
+}
+
+.ui-hud:not([data-multi]) .ui-hud__ribbon .ui-hud__vibes,
+.ui-hud[data-multi] .ui-hud__bar .ui-hud__vibes {
+  display: none;
+}
+
+.ui-hud__ribbon .ui-hud__vibes {
+  margin-inline-start: 0;
+  padding-inline-start: 18px;
+  border-inline-start: 1px solid var(--ui-line);
+}
+
+.ui-vibes {
+  --vibe-heat: 0;
+  /* Readable gold at every hour, heating towards the text colour: whiter by night, deeper by day. */
+  --vibe-ink: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--or) 70%, var(--texte)) calc(100% - var(--vibe-heat) * 60%),
+    var(--texte)
+  );
+
+  display: flex;
+  position: relative;
+  align-items: center;
+  gap: 6px;
+  color: var(--vibe-ink);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow:
+    0 1px 0 rgb(4 6 18 / 90%),
+    0 0 calc((4px + 12px * var(--vibe-heat)) * var(--ui-halo))
+      color-mix(in srgb, var(--noyau) calc(45% + 45% * var(--vibe-heat)), transparent);
+  transform: scale(calc(1 + 0.16 * var(--vibe-heat)));
+  transform-origin: 0 50%;
+  transition:
+    transform var(--beat) ease-out,
+    color var(--beat) ease-out,
+    text-shadow var(--beat) ease-out;
+}
+
+.ui-vibes__spark {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--or);
+  filter: drop-shadow(0 0 calc(4px * var(--ui-halo)) var(--noyau));
+}
+
+/* Five digits wide, separator included, so the bar does not shift at a thousand. */
+.ui-vibes__number {
+  display: inline-flex;
+  min-width: 4.4ch;
+}
+
+.ui-vibes__char {
+  position: relative;
+}
+
+.ui-vibes__char::before,
+.ui-vibes__char::after {
+  position: absolute;
+  inset: 0;
+  color: var(--vibe-ink);
+  opacity: 0;
+}
+
+.ui-vibes__char::before {
+  content: attr(data-was);
+}
+
+.ui-vibes__char::after {
+  content: attr(data-now);
+}
+
+.ui-vibes__char[data-roll] {
+  --vibe-roll: calc(var(--beat) / 4);
+}
+
+.ui-vibes__char[data-roll='a'] {
+  animation: ui-vibes-hide-a var(--vibe-roll) step-end;
+}
+
+.ui-vibes__char[data-roll='b'] {
+  animation: ui-vibes-hide-b var(--vibe-roll) step-end;
+}
+
+.ui-vibes__char[data-roll='a']::before {
+  animation: ui-vibes-out-a var(--vibe-roll) ease-in;
+}
+
+.ui-vibes__char[data-roll='b']::before {
+  animation: ui-vibes-out-b var(--vibe-roll) ease-in;
+}
+
+.ui-vibes__char[data-roll='a']::after {
+  animation: ui-vibes-in-a var(--vibe-roll) ease-out;
+}
+
+.ui-vibes__char[data-roll='b']::after {
+  animation: ui-vibes-in-b var(--vibe-roll) ease-out;
+}
+
+.ui-vibes[data-gain='a'] .ui-vibes__number {
+  animation: ui-thump calc(var(--beat) / 2) ease-out;
+}
+
+.ui-vibes[data-gain='b'] .ui-vibes__number {
+  animation: ui-thump-b calc(var(--beat) / 2) ease-out;
+}
+
+.ui-vibes__crackle,
+.ui-vibes__crown {
+  --spark-turn: calc(var(--i) * 60deg + 30deg);
+
+  position: absolute;
+  top: calc(50% - 2px);
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--noyau);
+  box-shadow: 0 0 calc(6px * var(--ui-halo)) 1px var(--or);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ui-vibes__crown {
+  --spark-turn: calc(var(--i) * 30deg);
+  --spark-reach: 34px;
+}
+
+.ui-vibes[data-size='thousand'] .ui-vibes__crown {
+  --spark-reach: 48px;
+
+  width: 6px;
+  height: 6px;
+}
+
+.ui-vibes[data-gain='a'] .ui-vibes__crackle {
+  animation: ui-vibes-crackle-a calc(var(--beat) / 2) ease-out;
+}
+
+.ui-vibes[data-gain='b'] .ui-vibes__crackle {
+  animation: ui-vibes-crackle-b calc(var(--beat) / 2) ease-out;
+}
+
+.ui-vibes[data-crown='a'] .ui-vibes__crown {
+  animation: ui-vibes-crown-a var(--beat) ease-out;
+}
+
+.ui-vibes[data-crown='b'] .ui-vibes__crown {
+  animation: ui-vibes-crown-b var(--beat) ease-out;
+}
+
+.ui-vibes::after {
+  position: absolute;
+  inset: -6px -10px;
+  border: 2px solid var(--or);
+  border-radius: 999px;
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* A hundred: the counter pulses on the next two beats, its ring widening. */
+.ui-vibes[data-crown='a'] {
+  animation: ui-vibes-pulse-a var(--beat) ease-out 2;
+}
+
+.ui-vibes[data-crown='b'] {
+  animation: ui-vibes-pulse-b var(--beat) ease-out 2;
+}
+
+.ui-vibes[data-crown='a']::after {
+  animation: ui-level-burst-a var(--beat) ease-out;
+}
+
+.ui-vibes[data-crown='b']::after {
+  animation: ui-level-burst-b var(--beat) ease-out;
 }
 
 .ui-level[data-ending] .ui-level__twins {
@@ -3587,16 +4006,13 @@ svg.ui-title__lake {
 
 /* Overlays */
 
-/* A menu over a light sky caps its lightness and warms to sand: it must not dazzle after the night. */
 .ui-overlay {
-  --sol: var(--ui-voile);
-  --sol-clair: var(--ui-voile-clair);
-
   display: grid;
   place-items: center;
   overflow-y: auto;
   padding: 32px var(--ui-gap);
   background: color-mix(in srgb, var(--sol) 90%, transparent);
+  color: var(--texte);
   backdrop-filter: blur(6px);
   pointer-events: auto;
 }
@@ -3642,6 +4058,7 @@ svg.ui-title__lake {
   --cols: 3;
   --card-width: clamp(200px, (100vw - 120px - (var(--cols) - 1) * 24px) / var(--cols), 420px);
   --card-unit: clamp(1px, var(--card-width) / 340, 1.25px);
+  --card-lift: calc(10 * var(--card-unit));
   --card-head: clamp(
     72px,
     min(var(--card-width) * 0.6, 100vh - 590px - var(--bar-room, 0px)),
@@ -3657,6 +4074,10 @@ svg.ui-title__lake {
 
 .ui-cards[data-count='4'] {
   --cols: 4;
+  /* A fourth card takes from the margins and the gaps rather than from each card. */
+  --card-width: clamp(200px, (100vw - 64px - 3 * 16px) / 4, 420px);
+
+  gap: calc(16 * var(--card-unit));
 }
 
 .ui-card {
@@ -3825,7 +4246,7 @@ svg.ui-title__lake {
   box-shadow:
     var(--ui-focus),
     0 0 calc(32px * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 30%, transparent);
-  transform: translateY(calc(-10 * var(--card-unit)));
+  transform: translateY(calc(-1 * var(--card-lift)));
 }
 
 .ui-card__family {
@@ -3999,6 +4420,19 @@ svg.ui-title__lake {
     0 -1px 0 rgb(40 10 60 / 35%);
 }
 
+/* On a bracelet too narrow for the name on one line, as four cards on a phone, it wraps rather than shrinks. */
+@container (max-width: 170px) {
+  .ui-card__tag {
+    max-width: calc(100cqi - 24px);
+    padding-inline: 8px;
+  }
+
+  .ui-card__tag .ui-card__name {
+    white-space: normal;
+    font-size: var(--name-size);
+  }
+}
+
 /* The ends knot together at the side, two braided tails hanging from the knot. */
 .ui-card__knot {
   position: absolute;
@@ -4127,7 +4561,7 @@ svg.ui-title__lake {
 .ui-role[data-fresh] {
   border-color: var(--healer);
   box-shadow: 0 0 calc(12px * var(--ui-halo)) color-mix(in srgb, var(--healer) 35%, transparent);
-  color: color-mix(in srgb, var(--healer) 80%, var(--texte));
+  color: color-mix(in srgb, var(--healer) 70%, var(--texte));
 }
 
 .ui-card__fuse {
@@ -4331,7 +4765,7 @@ svg.ui-title__lake {
 .ui-end__text {
   max-width: 44em;
   text-wrap: balance;
-  color: var(--ui-muted);
+  color: color-mix(in srgb, var(--texte) 86%, var(--sol-clair));
   font-size: 17px;
 }
 
@@ -4611,7 +5045,7 @@ svg.ui-title__lake {
   padding: 0;
   border: 0;
   background: none;
-  color: inherit;
+  color: var(--texte);
   font: inherit;
   text-align: center;
   cursor: pointer;
@@ -5277,6 +5711,11 @@ svg.ui-title__lake {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* Three or four panels have no height for two rows: four cards share the one. */
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-cards[data-count='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .ui-offers__panels[data-multi] .ui-card {
   --card-pad-x: calc(14 * var(--card-unit));
   --card-radius: calc(28 * var(--card-unit));
@@ -5430,8 +5869,9 @@ svg.ui-title__lake {
   font-size: calc(12 * var(--panel-unit));
 }
 
+/* The cards say it, as on a phone: the panels keep the room for them. */
 .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-heading {
-  font-size: calc(16 * var(--panel-unit));
+  display: none;
 }
 
 .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-places {
@@ -5444,10 +5884,14 @@ svg.ui-title__lake {
 }
 
 .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-cards {
+  /* The ring alone marks the current card: a lift would cost the panel its height. */
+  --card-lift: 0px;
   --card-head: calc(40 * var(--card-unit));
 
   gap: calc(10 * var(--card-unit));
-  margin: calc(6 * var(--card-unit)) 0 calc(5 * var(--card-unit));
+  /* The current card's ring, 2px clear of the row above past the panel's row gap. */
+  margin: calc(var(--card-lift) + var(--ui-ring) + 2px - 3 * var(--panel-unit)) 0
+    calc(5 * var(--card-unit));
 }
 
 .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card {
@@ -6033,6 +6477,126 @@ svg.ui-title__lake {
   }
 }
 
+@keyframes ui-vibes-hide-a {
+  from {
+    color: transparent;
+    text-shadow: none;
+  }
+}
+
+@keyframes ui-vibes-out-a {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(-70%);
+  }
+}
+
+@keyframes ui-vibes-in-a {
+  from {
+    opacity: 0;
+    transform: translateY(70%);
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-vibes-crackle-a {
+  from {
+    opacity: calc(0.3 + var(--vibe-heat));
+    transform: rotate(var(--spark-turn)) translateX(12px);
+  }
+
+  to {
+    transform: rotate(var(--spark-turn)) translateX(calc(16px + 10px * var(--vibe-heat))) scale(0.4);
+  }
+}
+
+@keyframes ui-vibes-crown-a {
+  from {
+    opacity: 1;
+    transform: rotate(var(--spark-turn)) translateX(14px);
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  to {
+    transform: rotate(var(--spark-turn)) translateX(var(--spark-reach)) scale(0.5);
+  }
+}
+
+@keyframes ui-vibes-pulse-a {
+  from {
+    scale: 1.25;
+  }
+}
+
+@keyframes ui-vibes-hide-b {
+  from {
+    color: transparent;
+    text-shadow: none;
+  }
+}
+
+@keyframes ui-vibes-out-b {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(-70%);
+  }
+}
+
+@keyframes ui-vibes-in-b {
+  from {
+    opacity: 0;
+    transform: translateY(70%);
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-vibes-crackle-b {
+  from {
+    opacity: calc(0.3 + var(--vibe-heat));
+    transform: rotate(var(--spark-turn)) translateX(12px);
+  }
+
+  to {
+    transform: rotate(var(--spark-turn)) translateX(calc(16px + 10px * var(--vibe-heat))) scale(0.4);
+  }
+}
+
+@keyframes ui-vibes-crown-b {
+  from {
+    opacity: 1;
+    transform: rotate(var(--spark-turn)) translateX(14px);
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  to {
+    transform: rotate(var(--spark-turn)) translateX(var(--spark-reach)) scale(0.5);
+  }
+}
+
+@keyframes ui-vibes-pulse-b {
+  from {
+    scale: 1.25;
+  }
+}
+
 @keyframes ui-level-beat {
   from {
     filter: brightness(1.3);
@@ -6173,7 +6737,7 @@ svg.ui-title__lake {
 @keyframes ui-card-slam {
   0% {
     filter: brightness(1);
-    transform: translateY(calc(-10 * var(--card-unit))) scale(1);
+    transform: translateY(calc(-1 * var(--card-lift))) scale(1);
   }
 
   16% {
@@ -6280,12 +6844,32 @@ svg.ui-title__lake {
   transition: var(--level-glide) !important;
 }
 
+/* Calm: the vibes counter only changes its number. */
+.calm > .ui .ui-vibes {
+  --vibe-heat: 0 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .ui .ui-title__moonlit {
+    transform: translate(
+      var(--moon-x),
+      calc(-1 * clamp(1.1 * var(--title-em), 100% - 0.75 * var(--title-em), 5 * var(--title-em)))
+    );
+  }
+
+  .ui svg.ui-title__moon {
+    translate: -50% 50%;
+  }
+
   .ui *,
   .ui *::before,
   .ui *::after {
     animation: none !important;
     transition: none !important;
+  }
+
+  .ui .ui-vibes {
+    --vibe-heat: 0 !important;
   }
 }
 
@@ -6318,9 +6902,19 @@ svg.ui-title__lake {
   }
 }
 
-@media (max-width: 1200px) {
+/* Four cards keep one row while each keeps its 200px; narrower, two by two, with lower heads. */
+@media (max-width: 911px) {
   .ui-cards[data-count='4'] {
-    grid-template-columns: repeat(2, 272px);
+    --cols: 2;
+    --card-width: clamp(200px, (100vw - 120px - 24px) / 2, 420px);
+    --card-head: 72px;
+  }
+}
+
+/* Four narrow cards have no room for both: the pearls tell the rank. */
+@media (max-width: 1231px) {
+  .ui-cards[data-count='4'] .ui-card__pearls + .ui-card__rank-text {
+    display: none;
   }
 }
 
@@ -6336,7 +6930,7 @@ svg.ui-title__lake {
     padding-inline-end: 14px;
   }
 
-  .ui-hud__bar section:not(.ui-hud__level) {
+  .ui-hud__bar section:not(.ui-hud__level, .ui-hud__vibes) {
     padding-inline-start: 8px;
   }
 }
@@ -6461,7 +7055,7 @@ svg.ui-title__lake {
     border-radius: 28px;
   }
 
-  .ui-hud__bar section:not(.ui-hud__level) {
+  .ui-hud__bar section:not(.ui-hud__level, .ui-hud__vibes) {
     padding-inline-start: 0;
     border-inline-start: 0;
   }
@@ -6592,6 +7186,17 @@ svg.ui-title__lake {
   }
 }
 
+/* Where the top bar cannot hold the team's vibes inline, they get a pill of their own. */
+@media (orientation: portrait) and (max-width: 1024px), (max-height: 520px) and (min-width: 600px) {
+  .ui-hud__ribbon .ui-hud__vibes {
+    padding-inline: 14px;
+    border: 1px solid var(--ui-line);
+    border-radius: 999px;
+    background: var(--ui-panel);
+    box-shadow: var(--ui-lift);
+  }
+}
+
 @media (orientation: portrait) and (max-width: 1024px) {
   /* Relative, not static: the weapon flying in from a card passes over the cards. */
   .ui-offers__panels:not([data-multi]) .ui-places {
@@ -6605,6 +7210,18 @@ svg.ui-title__lake {
     align-self: auto;
     padding-inline: 0;
     text-align: center;
+  }
+
+  /* The top bar fills an upright screen: the team's vibes hang just under its speakers. */
+  .ui-hud__ribbon {
+    position: relative;
+  }
+
+  .ui-hud__ribbon .ui-hud__vibes {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 18px;
+    padding-block: 6px;
   }
 }
 
@@ -6634,6 +7251,11 @@ svg.ui-title__lake {
     grid-template-columns: minmax(0, 520px);
     width: 100%;
     justify-content: center;
+  }
+
+  /* Four rows would pass the screen: two by two. */
+  .ui-offers__panels:not([data-multi]) .ui-cards[data-count='4'] {
+    grid-template-columns: repeat(2, minmax(0, 340px));
   }
 
   .ui-offers__panels:not([data-multi]) .ui-cards:not([data-count='5'], [data-count='6']) .ui-card {
@@ -7248,6 +7870,18 @@ svg.ui-title__lake {
   }
 }
 
+/* Online, the row of chips under the cards is paid for with their margins: a card name on two
+   lines, over a text on two lines, still fits a 720 px window. */
+@media (max-height: 760px) and (min-height: 521px) {
+  .ui-offers:has(> .ui-offers__remote:not([hidden])) {
+    gap: 6px;
+  }
+
+  .ui-offers:has(> .ui-offers__remote:not([hidden])) .ui-cards {
+    margin-block: 12px;
+  }
+}
+
 @media (max-height: 700px) and (min-height: 521px) {
   .ui-upgrade {
     padding-block: 16px;
@@ -7268,16 +7902,6 @@ svg.ui-title__lake {
 
   .ui-offer[data-bar] .ui-offer__foot:has(> .ui-reroll[hidden]) {
     display: none;
-  }
-
-  /* Online, the row of chips under the cards is paid for with their margins: a card name on two
-     lines still fits. */
-  .ui-offers:has(> .ui-offers__remote:not([hidden])) {
-    gap: 6px;
-  }
-
-  .ui-offers:has(> .ui-offers__remote:not([hidden])) .ui-cards {
-    margin-block: 12px;
   }
 
   .ui-end__body {
@@ -7474,6 +8098,16 @@ svg.ui-title__lake {
     align-items: flex-start;
   }
 
+  /* The top bar splits into panels here: on a shared screen the team's vibes get their own. */
+  .ui-hud__ribbon .ui-hud__vibes {
+    margin-inline-end: auto;
+    padding-block: 4px;
+  }
+
+  .ui-hud__ribbon .ui-vibes {
+    font-size: 18px;
+  }
+
   .ui-hud__bar {
     align-items: flex-end;
   }
@@ -7529,6 +8163,19 @@ svg.ui-title__lake {
     display: none;
   }
 
+  /* The reroll waits in the middle of the bar's row, between the bracelet and the actions. */
+  .ui-offer[data-bar] .ui-offer__foot {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: var(--bar-room);
+    pointer-events: none;
+  }
+
+  .ui-offer[data-bar] .ui-reroll {
+    pointer-events: auto;
+  }
+
   .ui-hud[data-multi] .ui-hud__status,
   .ui-moment,
   .ui-plugs,
@@ -7567,7 +8214,7 @@ svg.ui-title__lake {
     height: 14px;
   }
 
-  .ui-hud__bar section:not(.ui-hud__level) {
+  .ui-hud__bar section:not(.ui-hud__level, .ui-hud__vibes) {
     padding-inline-start: 10px;
     border-inline-start: 1px solid var(--ui-line);
   }

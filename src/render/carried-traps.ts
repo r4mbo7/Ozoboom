@@ -5,11 +5,13 @@ import { trapPower } from '../sim/trap-wear';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { TRAP_TOKENS } from './textures';
+import { mixColor } from './palette';
 import { WORN_FADE_BEATS, wornBodyAlpha } from './traps';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
 const RING_GAP = 7;
+const WHITE = 0xffffff;
 // Above the head, the trap is drawn this share of its size on the ground.
 const CARRIED_SCALE = 0.7;
 // Between a head, or the name above it, and the trap carried.
@@ -19,6 +21,8 @@ const STACK_GAP = 2;
 // A lifted trap flies from the ground to above the head in half a beat, on an arc this high.
 const FLIGHT_BEATS = 0.5;
 const FLIGHT_ARC = 18;
+// Renewed by the Batterie, every carried trap flashes white and swells a little, for half a beat.
+const RENEWED = { beats: 0.5, white: 0.7, swell: 0.25 };
 
 interface CarriedView {
   readonly outline: Sprite;
@@ -49,16 +53,19 @@ function placeCarriedTrap(
   alpha: number,
   frame: Frame,
   scale = CARRIED_SCALE,
+  renewed = 0,
 ): void {
   const look = lookup(ctx.trapLooks, kind, 'trap kind');
   const effect = look.effect.kind;
   const shape = ctx.textures.traps[effect];
   const { body, outline } = view;
+  const color = frame.palette[TRAP_TOKENS[effect]];
+  const swell = frame.calm ? 1 : 1 + RENEWED.swell * renewed;
   body.texture = shape.texture;
   body.visible = true;
-  setTint(body, frame.palette[TRAP_TOKENS[effect]]);
+  setTint(body, renewed > 0 ? mixColor(color, WHITE, RENEWED.white * renewed) : color);
   body.position.set(x, y - look.radius * scale);
-  body.scale.set((look.radius * scale) / shape.radius);
+  body.scale.set((look.radius * scale * swell) / shape.radius);
   body.alpha = alpha;
   placeOutline(outline, body, shape.texture, shape.radius, frame);
 }
@@ -80,6 +87,7 @@ export class PlayerCarriedTraps {
   private readonly drawn = new Map<EntityId, { rise: number; alpha: number }>();
   private fading: Fading[] = [];
   private flight: { id: EntityId; from: Vec2; since: number } | null = null;
+  private renewedSince: number | null = null;
 
   constructor(ctx: RenderContext) {
     this.ctx = ctx;
@@ -104,6 +112,11 @@ export class PlayerCarriedTraps {
     });
   }
 
+  // The Batterie renews every trap the player carries.
+  renew(since: number): void {
+    this.renewedSince = since;
+  }
+
   // `top` is the top of the head, or of the name above it.
   place(
     player: Pick<PlayerState, 'carriedTrap' | 'carriedUnder'>,
@@ -114,13 +127,14 @@ export class PlayerCarriedTraps {
     const carried = player.carriedTrap;
     this.drawn.clear();
     let used = 0;
+    const renewed = this.renewed(frame);
     if (carried !== undefined) {
       const stack = [...(player.carriedUnder ?? []), carried];
       let rise = CARRIED_GAP;
       for (const trap of stack) {
         const alpha = wornBodyAlpha(trapPower(trap, frame.set.trapWear));
         const flying = trap === carried ? this.flying(trap.id, frame) : null;
-        this.draw(used, trap.kind, x, top - rise, alpha, frame, flying);
+        this.draw(used, trap.kind, x, top - rise, alpha, frame, flying, renewed);
         used += 1;
         this.drawn.set(trap.id, { rise, alpha });
         rise += 2 * this.radiusOf(trap.kind) * CARRIED_SCALE + STACK_GAP;
@@ -144,6 +158,7 @@ export class PlayerCarriedTraps {
   hide(): void {
     this.fading = [];
     this.flight = null;
+    this.renewedSince = null;
     this.drawn.clear();
     this.hideFrom(0);
   }
@@ -152,6 +167,20 @@ export class PlayerCarriedTraps {
     for (const view of this.views.slice(index)) {
       hide(view.body, view.outline);
     }
+  }
+
+  // From 1 as the Batterie is taken down to 0 half a beat later.
+  private renewed(frame: Frame): number {
+    if (this.renewedSince === null) {
+      return 0;
+    }
+    const share =
+      Math.max(0, frame.now - this.renewedSince) / (RENEWED.beats * frame.tempo.ticksPerBeat);
+    if (share >= 1) {
+      this.renewedSince = null;
+      return 0;
+    }
+    return 1 - share;
   }
 
   private radiusOf(kind: string): number {
@@ -181,6 +210,7 @@ export class PlayerCarriedTraps {
     alpha: number,
     frame: Frame,
     flying: { from: Vec2; flown: number } | null,
+    renewed = 0,
   ): void {
     let view = this.views[index];
     if (view === undefined) {
@@ -188,7 +218,7 @@ export class PlayerCarriedTraps {
       this.views.push(view);
     }
     if (flying === null) {
-      placeCarriedTrap(this.ctx, view, kind, x, y, alpha, frame);
+      placeCarriedTrap(this.ctx, view, kind, x, y, alpha, frame, CARRIED_SCALE, renewed);
       return;
     }
     const { from, flown } = flying;

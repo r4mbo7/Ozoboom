@@ -32,6 +32,7 @@ import type {
   UiFrame,
 } from './types';
 import { type UpgradeOverlay, createUpgradeOverlay } from './upgrade';
+import { veilStyle } from './veil';
 import { lostWithoutMove, stillToMove } from './trap-lesson';
 
 export type {
@@ -155,6 +156,7 @@ export function createUi(
   portrait: CreatePortrait = () => swatchPortrait(classes),
 ): Ui {
   const container = el('div', 'ui');
+  container.append(el('style', '', veilStyle()));
   root.append(container);
   const sun = createSunFollower(root);
   const shown = createShownScreen('title');
@@ -219,6 +221,8 @@ export function createUi(
       offerPlaces: (playerId, places) => hud.offerPlaces(playerId, places),
       showWeapon: (canvas, weaponId, playerId) =>
         callbacks.onShowWeapon?.(canvas, weaponId, playerId) ?? null,
+      showTrap: (canvas, trapIds, playerId) =>
+        callbacks.onShowTrap?.(canvas, trapIds, playerId) ?? null,
     });
     const end = createEnd(
       prompts,

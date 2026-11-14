@@ -9,6 +9,9 @@ import type {
 import { nextInt, nextU32, pick, seedRng } from '../shared/prng';
 import type { ResolvedContent } from './content';
 import type { PlayerState, RngState, SimState, UpgradeOffer } from './state';
+import { offerCardsAdded } from './stats';
+import { hasTrapRoom, trapCapacity } from './trap-moves';
+import { drawCarriersTrap } from './trap-odds';
 
 const OFFER_SIZE = 3;
 const MAX_WEAPONS_PER_OFFER = 2;
@@ -20,11 +23,21 @@ interface Candidate {
   id: string;
   weight: number;
   weapon?: true;
+  // Every card that gives a trap stands in the pool as one candidate, as often as one card: at most
+  // one per offer, its form drawn once it is picked.
+  gifts?: readonly UpgradeDefinition[];
 }
 
-export function isEligible(upgrade: UpgradeDefinition, player: PlayerState): boolean {
+export function isEligible(
+  upgrade: UpgradeDefinition,
+  player: PlayerState,
+  content: Pick<ResolvedContent, 'classes'>,
+): boolean {
   if (upgrade.family === 'class' && upgrade.classId !== player.classId) {
     return false;
+  }
+  if (upgrade.gives !== undefined) {
+    return hasTrapRoom(player, trapCapacity(content, player));
   }
   const stacks = player.upgrades.filter((id) => id === upgrade.id).length;
   return stacks < upgrade.maxStacks;
@@ -142,10 +155,20 @@ function candidates(
   replaced: readonly string[],
 ): Candidate[] {
   const pool: Candidate[] = [];
+  const gifts: UpgradeDefinition[] = [];
   for (const upgrade of content.upgrades.values()) {
-    if (upgrade.family !== 'relic' && isEligible(upgrade, player)) {
-      pool.push({ id: upgrade.id, weight: 1 });
+    if (upgrade.family === 'relic' || !isEligible(upgrade, player, content)) {
+      continue;
     }
+    if (upgrade.gives === undefined) {
+      pool.push({ id: upgrade.id, weight: 1 });
+    } else {
+      gifts.push(upgrade);
+    }
+  }
+  // A reroll deals other cards than those shown: no trap card after one.
+  if (gifts.length > 0 && !gifts.some((gift) => replaced.includes(gift.id))) {
+    pool.push({ id: 'trap-card', weight: 1, gifts });
   }
   const excluded = content.classes.get(player.classId)?.excludedWeaponIds;
   for (const weapon of content.weapons.values()) {
@@ -162,6 +185,10 @@ function candidates(
   return pool.filter((candidate) => !replaced.includes(candidate.id));
 }
 
+function offerSize(player: PlayerState): number {
+  return OFFER_SIZE + offerCardsAdded(player);
+}
+
 // Unit weights consume the generator as a uniform draw would; rarity right after its upgrade (ADR 0010).
 export function drawOffer(
   rng: RngState,
@@ -171,15 +198,16 @@ export function drawOffer(
   player: PlayerState,
   // A reroll leaves out the cards it replaces.
   replaced: readonly string[] = [],
-): Pick<UpgradeOffer, 'options' | 'rarities'> {
+): Pick<UpgradeOffer, 'options' | 'rarities' | 'trapId'> {
   const pool = candidates(state, content, set, player, replaced);
   const { rarityWeights } = content;
   const weights = rarityWeights[Math.min(state.volume ?? 0, rarityWeights.length - 1)];
   let total = pool.reduce((sum, candidate) => sum + candidate.weight, 0);
   const options: string[] = [];
   const rarities: Rarity[] = [];
+  let trapId: string | undefined;
   let weapons = 0;
-  while (options.length < OFFER_SIZE && pool.length > 0) {
+  while (options.length < offerSize(player) && pool.length > 0) {
     let roll = nextInt(rng, total);
     let index = 0;
     while (roll >= (pool[index]?.weight ?? 0)) {
@@ -187,14 +215,24 @@ export function drawOffer(
       index += 1;
     }
     const [picked] = pool.splice(index, 1);
-    if (picked !== undefined) {
+    if (picked === undefined) {
+      continue;
+    }
+    total -= picked.weight;
+    if (picked.gifts !== undefined) {
+      const gift = pick(rng, picked.gifts);
+      options.push(gift.id);
+      rarities.push('common');
+      if (gift.gives?.trap === 'shown') {
+        trapId = drawCarriersTrap(rng, content.traps, state.trapDraw);
+      }
+    } else {
       options.push(picked.id);
       rarities.push(
         content.upgrades.get(picked.id)?.rarities === undefined
           ? 'common'
           : drawRarity(rng, weights),
       );
-      total -= picked.weight;
       weapons += picked.weapon === true ? 1 : 0;
       if (picked.weapon === true && weapons === MAX_WEAPONS_PER_OFFER) {
         total -= pool.reduce(
@@ -205,26 +243,23 @@ export function drawOffer(
       }
     }
   }
-  return { options, rarities };
-}
-
-function relicOfferSize(state: SimState): number {
-  return OFFER_SIZE + (state.volume ?? 0);
+  return { options, rarities, ...(trapId !== undefined && { trapId }) };
 }
 
 export function drawRelics(
   rng: RngState,
-  state: SimState,
   content: ResolvedContent,
   player: PlayerState,
   replaced: readonly string[] = [],
 ): string[] {
   const pool = [...content.upgrades.values()].filter(
     (upgrade) =>
-      upgrade.family === 'relic' && isEligible(upgrade, player) && !replaced.includes(upgrade.id),
+      upgrade.family === 'relic' &&
+      isEligible(upgrade, player, content) &&
+      !replaced.includes(upgrade.id),
   );
   const offer: string[] = [];
-  while (offer.length < relicOfferSize(state) && pool.length > 0) {
+  while (offer.length < offerSize(player) && pool.length > 0) {
     const [picked] = pool.splice(nextInt(rng, pool.length), 1);
     if (picked !== undefined) {
       offer.push(picked.id);

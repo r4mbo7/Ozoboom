@@ -6,6 +6,7 @@ import { setTempo } from './lineup';
 import { Obstacles } from './obstacles';
 import { SpatialHash } from './spatial-hash';
 import type { PlayerState, SimEvent, SimState, Vec2 } from './state';
+import { clearBattery } from './systems/battery';
 import { tempo } from './systems/tempo';
 import { placeStartingTraps } from './trap-moves';
 import type { StepContext } from './systems/types';
@@ -77,6 +78,7 @@ export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly V
   delete state.nextBombBar;
   delete state.bombDue;
   delete state.twinVibes;
+  clearBattery(state);
   delete state.dice;
   delete state.vibeRainTicks;
   takeDownWalls(state);

@@ -1,7 +1,7 @@
 import type { SetDefinition } from '../data/types';
 import { t, tn } from '../shared/i18n';
 import type { SimState } from '../sim/state';
-import { el, icon, setText, setVar } from './dom';
+import { el, icon, replay, setText, setVar } from './dom';
 import { formatNumber } from './format';
 import { NO_PLUG_HELP, nextPlugHelp, volumeCrans } from './hud-model';
 import { SPEAKER } from './icons';
@@ -78,7 +78,7 @@ export function createSpeakerPlugs(): SpeakerPlugs {
       });
       paintPlugged(row, value, state.volume ?? 0, levels.length);
       if (state.events.some((event) => event.type === 'volumeChanged')) {
-        row.dataset.bump = row.dataset.bump === 'a' ? 'b' : 'a';
+        replay(row, 'bump');
       }
 
       plugHelp = nextPlugHelp(plugHelp, set, state);

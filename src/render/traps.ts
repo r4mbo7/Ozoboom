@@ -188,6 +188,8 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
         recharged.delete(id);
       } else if (event.type === 'trapRecharged') {
         recharged.set(event.id, state.tick);
+      } else if (event.type === 'batteryPlugged') {
+        recharged.set(event.trapId, state.tick);
       } else if (event.type === 'beat') {
         beatTick = state.tick;
       }

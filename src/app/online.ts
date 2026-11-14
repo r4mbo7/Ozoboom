@@ -13,6 +13,7 @@ import type { PlayerId } from '../sim/state';
 import type { LobbyModel, Notice, Ui } from '../ui';
 import { type LobbyDefaults, canLaunch, lobbyModel } from './online-lobby';
 import { connectionText, hostSilentText, refusalText } from './online-text';
+import { createLeaveGuard } from './leave-guard';
 import { createHostWatch, createRoundTripProbe } from './online-watch';
 
 export interface OnlineMatch {
@@ -90,6 +91,7 @@ export function createOnline(env: OnlineEnv): Online {
   let lobbyShown = false;
   let players = 0;
   let connectMs: number | null = null;
+  const leaveGuard = createLeaveGuard(window);
   const roundTrip = createRoundTripProbe(() => transport?.roundTripMs());
   const hostWatch = createHostWatch({
     now: () => performance.now(),
@@ -130,6 +132,7 @@ export function createOnline(env: OnlineEnv): Online {
   }
 
   function teardown(): void {
+    leaveGuard.disarm();
     generation += 1;
     busy = false;
     hostWatch.stop();
@@ -160,6 +163,7 @@ export function createOnline(env: OnlineEnv): Online {
     }
     interrupted = true;
     phase = 'ended';
+    leaveGuard.disarm();
     env.onInterruption(interruption);
   }
 
@@ -254,6 +258,7 @@ export function createOnline(env: OnlineEnv): Online {
       festival: env.festival(),
     });
     room = joined;
+    leaveGuard.arm();
     joined.onChange(roomChanged);
     joined.onStart(handleStart);
     joined.onRefused((reason) => {

@@ -3,20 +3,14 @@ import { touches } from '../effects';
 import type { SpeakerState, Vec2 } from '../state';
 import type { StepContext } from './types';
 
-export function dropDie(
-  { state, set, tempo }: StepContext,
-  x: number,
-  y: number,
-  from: Vec2,
-): void {
+export function dropDie({ state, set }: StepContext, x: number, y: number, from: Vec2): void {
   const rules = set.dice;
   if (rules === undefined) {
     return;
   }
   const id = state.nextEntityId;
   state.nextEntityId += 1;
-  const ticksLeft = rules.lifetimeBars * tempo.ticksPerBar;
-  (state.dice ??= []).push({ id, ticksLeft, x, y, prevX: x, prevY: y });
+  (state.dice ??= []).push({ id, x, y, prevX: x, prevY: y });
   state.events.push({ type: 'dieDropped', id, x, y, fromX: from.x, fromY: from.y });
 }
 
@@ -55,11 +49,8 @@ export function dice({ state, set }: StepContext): void {
       state.events.push({ type: 'dieCollected', id, playerId: taker.id, x, y });
       continue;
     }
-    die.ticksLeft -= 1;
-    if (die.ticksLeft > 0) {
-      lying[kept] = die;
-      kept += 1;
-    }
+    lying[kept] = die;
+    kept += 1;
   }
   lying.length = kept;
 }

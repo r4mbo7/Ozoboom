@@ -1,12 +1,29 @@
 import type { TrapWear } from '../data/types';
 import { clamp01 } from '../shared/scalar';
+import type { Tempo } from '../shared/tempo';
 import { distanceSquared } from '../shared/vec';
 import { lookup } from './lookup';
 import type { CarriedTrap, PlayerId, PlayerState, SimState, TrapState } from './state';
 import { statValue } from './stats';
 import { keepWhere } from './effects';
-import { liftNext, nearTrap } from './trap-moves';
+import { carriedTraps, liftNext, nearTrap } from './trap-moves';
 import type { StepContext } from './systems/types';
+
+// A Batterie cord's flight, its plugged time and its letting go, in whole ticks: the sweep renews and lets go on them.
+export function cordTicks(
+  wear: TrapWear,
+  tempo: Tempo,
+): { flight: number; plugged: number; unplug: number } {
+  return {
+    flight: ticksOf(wear.plugInBeats, tempo),
+    plugged: ticksOf(wear.pluggedBeats, tempo),
+    unplug: ticksOf(wear.unplugBeats, tempo),
+  };
+}
+
+function ticksOf(beats: number, tempo: Tempo): number {
+  return Math.ceil(beats * tempo.ticksPerBeat);
+}
 
 // The share of its full effect a trap acts with, reach and strength alike: from 1 fresh down to the
 // set's `faintest` just before it goes out; 1 on a set where traps do not wear.
@@ -18,7 +35,7 @@ export function trapPower(
 }
 
 // Every trap wears, placed or carried, slower at each Volume level and with its owner's or carrier's
-// Colliers de serrage; out, it leaves quietly.
+// Colliers de serrage, but not while a Batterie is about to renew it; out, it leaves quietly.
 export function wearTraps({ state, set, tempo }: StepContext): void {
   const rules = set.trapWear;
   if (rules === undefined) {
@@ -27,7 +44,9 @@ export function wearTraps({ state, set, tempo }: StepContext): void {
   const wear = wearPerBar(rules, state) / tempo.ticksPerBar;
   let kept = 0;
   for (const trap of state.traps) {
-    trap.intensity -= wear * wearMul(ownerOf(state, trap.ownerId));
+    if (trap.awaitsCord !== true) {
+      trap.intensity -= wear * wearMul(ownerOf(state, trap.ownerId));
+    }
     if (trap.intensity > 0) {
       state.traps[kept] = trap;
       kept += 1;
@@ -38,14 +57,15 @@ export function wearTraps({ state, set, tempo }: StepContext): void {
   }
   state.traps.length = kept;
   for (const player of state.players) {
-    const carried = player.carriedTrap;
-    if (carried === undefined) {
+    if (player.carriedTrap === undefined) {
       continue;
     }
     const worn = wear * wearMul(player);
     const outs: CarriedTrap[] = [];
-    for (const held of [carried, ...(player.carriedUnder ?? [])]) {
-      held.intensity -= worn;
+    for (const held of carriedTraps(player)) {
+      if (held.awaitsCord !== true) {
+        held.intensity -= worn;
+      }
       if (held.intensity <= 0) {
         outs.push(held);
       }

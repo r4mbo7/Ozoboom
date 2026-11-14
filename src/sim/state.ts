@@ -222,6 +222,7 @@ export interface EnemyState extends Positioned {
   carriesTrap?: string;
   carriesBomb?: boolean;
   carriesTwinVibes?: true;
+  carriesBattery?: true;
   // Called into the drop by a fire or a giant.
   called?: true;
   // Mâle alpha: its last step; the hits it faces count `damageMul`.
@@ -298,6 +299,8 @@ export interface CarriedTrap {
   intensity: number;
   // When a Rallonge last recharged it: once every `TrapWear.rechargeEveryBars` at most.
   rechargedTick?: number;
+  // Queued by a Batterie, or under its cord in flight: it does not wear until renewed.
+  awaitsCord?: true;
 }
 
 export interface TrapState extends Positioned, CarriedTrap {
@@ -401,6 +404,8 @@ export interface PropState extends Positioned {
 
 export type PickupKind = 'vibes';
 
+export type VibeMilestone = 'hundred' | 'thousand';
+
 export interface PickupState extends Positioned {
   id: EntityId;
   kind: PickupKind;
@@ -431,20 +436,41 @@ export interface GustState {
 
 export interface BombState extends Positioned {
   id: EntityId;
-  ticksLeft: number;
 }
 
-// The stage's vibes jumelles, from due to the end of their doubling; `over` once dropped for good.
+// The stage's vibes jumelles, from due to the end of their doubling; `over` once their doubling ends.
 export type TwinVibesState =
   | { stage: 'due' }
   | { stage: 'carried' }
-  | (Vec2 & { stage: 'lying'; id: EntityId; ticksLeft: number })
+  | (Vec2 & { stage: 'lying'; id: EntityId })
   | { stage: 'doubling'; ticksLeft: number }
+  | { stage: 'over' };
+
+// A cord of the Batterie, thrown at `tick` to the placed trap `trapId`.
+export interface BatteryPlug {
+  trapId: EntityId;
+  tick: number;
+}
+
+// The stage's Batterie, from due to its last cord let go; `over` once spent. Charging, a cord
+// flies from the taker each beat to the next trap of `queue`, nearest first, and renews it as it lands
+// (`TrapWear.plugInBeats` after its throw); all let go at `letGoTick`, set once the last one landed. `x`, `y`: where
+// it was taken.
+export type BatteryState =
+  | { stage: 'due' }
+  | { stage: 'carried' }
+  | (Vec2 & { stage: 'lying'; id: EntityId })
+  | (Vec2 & {
+      stage: 'charging';
+      playerId: PlayerId;
+      queue: EntityId[];
+      plugs: BatteryPlug[];
+      letGoTick?: number;
+    })
   | { stage: 'over' };
 
 export interface DieState extends Positioned {
   id: EntityId;
-  ticksLeft: number;
 }
 
 export interface BystanderState extends Positioned {
@@ -524,6 +550,8 @@ export interface UpgradeOffer {
   rarities: readonly Rarity[];
   // Absent means levelUp.
   kind?: 'levelUp' | 'relic';
+  // The trap a card that shows its trap gives; absent without such a card.
+  trapId?: string;
 }
 
 // What one player did in the game, for the titles of the end screen.
@@ -639,6 +667,8 @@ export type SimEvent =
   // A player with the Rallonge walked by it.
   | { type: 'trapRecharged'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'pickupCollected'; playerId: PlayerId; kind: PickupKind; amount: number }
+  // The team's whole vibes total crossed a hundred, or a thousand: the biggest, once per pickup.
+  | { type: 'vibesMilestone'; milestone: VibeMilestone }
   | { type: 'bombDropped'; id: EntityId; x: number; y: number }
   // From where it was thrown: the render flies it from there.
   | { type: 'dieDropped'; id: EntityId; x: number; y: number; fromX: number; fromY: number }
@@ -648,6 +678,19 @@ export type SimEvent =
   | { type: 'twinVibesDropped'; id: EntityId; x: number; y: number }
   | { type: 'twinVibesTaken'; id: EntityId; playerId: PlayerId; x: number; y: number }
   | { type: 'twinVibesEnded' }
+  | { type: 'batteryDropped'; id: EntityId; x: number; y: number }
+  | { type: 'batteryTaken'; id: EntityId; playerId: PlayerId; x: number; y: number }
+  // A cord of the Batterie thrown to placed trap `trapId`, renewed as it lands: `index` counts the cords of its sweep
+  // from 0.
+  | {
+      type: 'batteryPlugged';
+      trapId: EntityId;
+      kind: string;
+      playerId: PlayerId;
+      index: number;
+      x: number;
+      y: number;
+    }
   | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyStatusStarted'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
   | { type: 'enemyStatusEnded'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
@@ -667,7 +710,8 @@ export type SimEvent =
   | { type: 'bystanderHelped'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderLost'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'levelUp'; playerId: PlayerId; level: number }
-  | { type: 'upgradeChosen'; playerId: PlayerId; upgradeId: string }
+  // `trapKind`: the trap a card that gives one put above the head.
+  | { type: 'upgradeChosen'; playerId: PlayerId; upgradeId: string; trapKind?: string }
   | { type: 'weaponGained'; playerId: PlayerId; weaponId: string }
   // dx, dy: unit direction of the shot.
   | {
@@ -693,7 +737,19 @@ export type SimEvent =
   | { type: 'volumeChanged'; volume: number }
   | { type: 'relicOffered'; playerId: PlayerId; options: readonly string[] }
   | { type: 'offeringTaken'; playerId: PlayerId; x: number; y: number; heavy: boolean }
-  | { type: 'offeringThrown'; playerId: PlayerId; site: number; x: number; y: number }
+  // The moment it leaves the hands: (x, y) the thrower, (ax, ay) their aim; or, heavy, the log's
+  // centre and axis as it reaches the site.
+  | {
+      type: 'offeringThrown';
+      playerId: PlayerId;
+      look: SummonLook;
+      heavy: boolean;
+      site: number;
+      x: number;
+      y: number;
+      ax: number;
+      ay: number;
+    }
   | { type: 'heavyGrabbed'; id: EntityId; playerId: PlayerId }
   | { type: 'heavyDropped'; id: EntityId; playerId: PlayerId }
   // On the 1: `burnt` at this site, `total` at the stage.
@@ -747,6 +803,8 @@ export interface SimState {
   bombDue?: boolean;
   // Optional like `bombs`: created when the stage's vibes jumelles fall due.
   twinVibes?: TwinVibesState;
+  // Optional like `twinVibes`: created when the stage's Batterie falls due.
+  battery?: BatteryState;
   // Optional like `bombs`, and created with the first die dropped.
   dice?: DieState[];
   volume?: number;

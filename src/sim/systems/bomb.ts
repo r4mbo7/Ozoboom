@@ -1,6 +1,7 @@
 import { barOfTick, isBarTick } from '../../shared/tempo';
 import { lookup } from '../content';
 import { hurtEnemy, touches } from '../effects';
+import { freeCarrier } from './stage-bonus';
 import type { StepContext } from './types';
 
 export function bombCarriers({ state, set, tempo }: StepContext): void {
@@ -16,26 +17,21 @@ export function bombCarriers({ state, set, tempo }: StepContext): void {
   if (state.bombDue !== true) {
     return;
   }
-  for (const event of state.events) {
-    const enemy =
-      event.type === 'enemySpawned' ? state.enemies.find(({ id }) => id === event.id) : undefined;
-    if (enemy !== undefined && !enemy.isBoss && enemy.carriesTrap === undefined) {
-      enemy.carriesBomb = true;
-      state.bombDue = false;
-      return;
-    }
+  const carrier = freeCarrier(state);
+  if (carrier !== undefined) {
+    carrier.carriesBomb = true;
+    state.bombDue = false;
   }
 }
 
-export function dropBomb({ state, set, tempo }: StepContext, x: number, y: number): void {
+export function dropBomb({ state, set }: StepContext, x: number, y: number): void {
   const rules = set.bomb;
   if (rules === undefined) {
     return;
   }
   const id = state.nextEntityId;
   state.nextEntityId += 1;
-  const ticksLeft = rules.lifetimeBars * tempo.ticksPerBar;
-  (state.bombs ??= []).push({ id, ticksLeft, x, y, prevX: x, prevY: y });
+  (state.bombs ??= []).push({ id, x, y, prevX: x, prevY: y });
   state.events.push({ type: 'bombDropped', id, x, y });
 }
 
@@ -49,7 +45,7 @@ export function bombs({ state, content, set }: StepContext): void {
   let kept = 0;
   for (const bomb of lying) {
     const trigger = state.players.find(
-      (player) => !player.downed && touches(player, bomb, rules.radius),
+      (player) => !player.downed && player.gone !== true && touches(player, bomb, rules.radius),
     );
     if (trigger !== undefined) {
       for (const enemy of state.enemies) {
@@ -70,11 +66,8 @@ export function bombs({ state, content, set }: StepContext): void {
       state.events.push({ type: 'bombExploded', id, playerId: trigger.id, x, y });
       continue;
     }
-    bomb.ticksLeft -= 1;
-    if (bomb.ticksLeft > 0) {
-      lying[kept] = bomb;
-      kept += 1;
-    }
+    lying[kept] = bomb;
+    kept += 1;
   }
   lying.length = kept;
 }

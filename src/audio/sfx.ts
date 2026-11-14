@@ -3,7 +3,7 @@ import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { MusicTrack } from '../data/types';
 import type { SimEvent } from '../sim/state';
 import type { Cue } from './types';
-import { MAIN_TEMPO, type Tempo, barOfTick } from '../shared/tempo';
+import { BEATS_PER_BAR, MAIN_TEMPO, type Tempo, barOfTick, ticksIntoBar } from '../shared/tempo';
 import { beatSeconds, timeToTick, type Anchor } from './clock';
 import { chordRootOfBar, keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
@@ -56,6 +56,8 @@ export type SfxName =
   | 'bossThunder'
   | 'bossFeedback'
   | 'bossGust'
+  | 'fireThrown'
+  | 'sporesThrown'
   | 'fireBurnt'
   | 'fireSwing'
   | 'pinceClack'
@@ -73,6 +75,8 @@ export type SfxName =
   | 'dieThrown'
   | 'dieCollected'
   | 'twinVibesTaken'
+  | 'batteryTaken'
+  | 'batteryPlugged'
   | 'bombExploded'
   | 'volumeUp'
   | 'skillCharge'
@@ -89,7 +93,9 @@ export type SfxName =
   | 'launch'
   | 'dashed'
   | 'dashEmpty'
-  | 'dashBack';
+  | 'dashBack'
+  | 'vibesHundred'
+  | 'vibesThousand';
 
 export interface SfxLimit {
   perFrame: number;
@@ -193,6 +199,8 @@ const RECHARGE_NOTES_BEATS = [
   [3, TRAP_WEAR.plugInBeats + TRAP_WEAR.pluggedBeats / 2],
 ] as const;
 const RECHARGE_NOTE_SECONDS = 0.18;
+// The charge-up's rise, then the chord it lands on.
+const CHARGE = { rise: 0.24, chord: [0, 4, 7] } as const;
 
 // What follows the beat of the set (the fans, the revive pulse) is throttled to it.
 export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> {
@@ -235,7 +243,9 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     bossThunder: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     bossFeedback: { perFrame: 1, concurrent: 1, seconds: 0.8 },
     bossGust: { perFrame: 1, concurrent: 1, seconds: 1.2 },
-    fireBurnt: { perFrame: 1, concurrent: 2, seconds: 0.4 },
+    fireThrown: { perFrame: 1, concurrent: 2, seconds: beat * BEATS_PER_BAR },
+    sporesThrown: { perFrame: 1, concurrent: 2, seconds: beat },
+    fireBurnt: { perFrame: 1, concurrent: 2, seconds: beat * BEATS_PER_BAR },
     fireSwing: { perFrame: 1, concurrent: 3, seconds: 0.3 },
     pinceClack: { perFrame: 1, concurrent: 3, seconds: 0.1 },
     giantWoken: { perFrame: 1, concurrent: 2, seconds: 1 },
@@ -256,6 +266,12 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     dieThrown: { perFrame: 1, concurrent: 2, seconds: beat + 0.9 },
     dieCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
     twinVibesTaken: { perFrame: 1, concurrent: 1, seconds: 0.6 },
+    batteryTaken: { perFrame: 1, concurrent: 1, seconds: 0.6 },
+    batteryPlugged: {
+      perFrame: 1,
+      concurrent: 2,
+      seconds: beat * (TRAP_WEAR.plugInBeats + TRAP_WEAR.pluggedBeats / 2) + RECHARGE_NOTE_SECONDS,
+    },
     bombExploded: { perFrame: 1, concurrent: 1, seconds: 1.6 },
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.45 },
@@ -274,6 +290,8 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     dashed: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     dashEmpty: { perFrame: 1, concurrent: 1, seconds: 0.15 },
     dashBack: { perFrame: 1, concurrent: 2, seconds: 0.25 },
+    vibesHundred: { perFrame: 1, concurrent: 1, seconds: beat },
+    vibesThousand: { perFrame: 1, concurrent: 1, seconds: 2 * beat },
   };
 }
 
@@ -314,8 +332,15 @@ export function sfxOf(
     case 'bombDropped':
     case 'bombExploded':
       return event.type;
+    case 'batteryDropped':
+      return 'bombDropped';
+    case 'batteryTaken':
+    case 'batteryPlugged':
+      return event.type;
     case 'pickupCollected':
       return 'vibesCollected';
+    case 'vibesMilestone':
+      return event.milestone === 'thousand' ? 'vibesThousand' : 'vibesHundred';
     case 'dieDropped':
       return 'dieThrown';
     case 'dieCollected':
@@ -418,6 +443,38 @@ export type Voice = (
 
 const DIED_DEGREES = [4, 3, 0, 5];
 const TWIN_CLIMB = [0, 2, 4, 7] as const;
+const HUNDRED_CHIME = [0, 4, 7] as const;
+const THOUSAND_CHIME = [0, 2, 4, 7, 11] as const;
+
+// A gold bell per degree above the chord root, rolled on sixteenths: the crown of the vibes counter.
+function vibesChime(
+  out: AudioNode,
+  at: number,
+  root: number,
+  key: MusicKey,
+  degrees: readonly number[],
+  beat: number,
+): void {
+  degrees.forEach((degree, index) => {
+    const when = at + (index * beat) / 4;
+    playTone(out, when, {
+      wave: 'sine',
+      hz: keyHz(key, root + degree, 5),
+      gain: 0.12,
+      attack: 0.002,
+      hold: 0.02,
+      release: 0.5,
+    });
+    playTone(out, when, {
+      wave: 'sine',
+      hz: keyHz(key, root + degree + 7, 5),
+      gain: 0.035,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.3,
+    });
+  });
+}
 // The bounce in beats after the throw, as `src/render/dice.ts` draws it; the clicks of the rattle in
 // seconds after it; the coins of the landing, degrees rung one after the other.
 const DIE = {
@@ -432,6 +489,27 @@ const DIE = {
   coinsAfter: 0.04,
   coinStep: 0.05,
 } as const;
+
+// A plug thrown at `at` sounds as it lands, then half a beat later, `step` degrees up the scale.
+function rechargeNotes(
+  out: AudioNode,
+  at: number,
+  key: MusicKey,
+  beat: number,
+  step: number,
+): void {
+  for (const [degree, afterBeats] of RECHARGE_NOTES_BEATS) {
+    playTone(out, at + beat * afterBeats, {
+      wave: 'triangle',
+      hz: keyHz(key, step + degree, 2),
+      gain: 0.14,
+      attack: 0.01,
+      hold: 0.05,
+      release: RECHARGE_NOTE_SECONDS - 0.06,
+      filter: { type: 'lowpass', hz: 1200 },
+    });
+  }
+}
 
 // A bass thump with a body, `level` 1 at its loudest; kept low, the mids carry the loudness.
 function dieThump(out: AudioNode, at: number, key: MusicKey, level: number): void {
@@ -456,6 +534,73 @@ function dieThump(out: AudioNode, at: number, key: MusicKey, level: number): voi
     release: 0.08,
   });
 }
+const THROWN_FLIGHT_BEATS = 0.5;
+
+// The short breath of an offering leaving the hands.
+function tossBreath(out: AudioNode, at: number): void {
+  playNoise(out, at, {
+    gain: 0.07,
+    attack: 0.04,
+    hold: 0.03,
+    release: 0.14,
+    filter: { type: 'bandpass', hz: 600, toHz: 1500, glide: 0.12, q: 0.9 },
+  });
+}
+
+const FLARE_RISER_BEATS = 0.5;
+// The flare's open chord, [degree, octave, pan], and the bells that run across with its rays.
+const FLARE_CHORD = [
+  [0, 2, 0],
+  [4, 2, -0.2],
+  [0, 3, 0.2],
+  [4, 3, -0.35],
+  [0, 4, 0.35],
+  [2, 4, 0],
+] as const;
+const FLARE_BELLS = [0, 2, 4, 7, 9, 11] as const;
+
+// Up to half a beat before the 1 that burns an offering: noise and a fifth climbing an octave,
+// swelling like a reversed sound, cut right on the 1.
+function flareRiser(out: AudioNode, from: number, one: number, key: MusicKey): void {
+  const rise = one - from;
+  if (rise < 0.05) {
+    return;
+  }
+  const swell = { attack: rise - 0.015, hold: 0, release: 0.025 };
+  playNoise(out, from, {
+    gain: 0.16,
+    ...swell,
+    filter: { type: 'bandpass', hz: 700, toHz: 5200, glide: rise, q: 1.4 },
+  });
+  for (const [degree, gain, pan] of [
+    [0, 0.09, -0.3],
+    [4, 0.06, 0.3],
+  ] as const) {
+    playTone(out, from, {
+      wave: 'triangle',
+      hz: keyHz(key, degree, 3),
+      toHz: keyHz(key, degree, 4),
+      glide: rise,
+      gain,
+      ...swell,
+      pan,
+    });
+  }
+}
+
+// One crack of a fire, scattered a little in time and across the stereo.
+function fireSpark(out: AudioNode, at: number, index: number, gain: number): void {
+  const scatter = Math.abs(Math.sin((at + index) * 78.233) * 43_758.545) % 1;
+  playNoise(out, at + scatter * 0.05, {
+    gain,
+    attack: 0.001,
+    hold: 0.004,
+    release: 0.03,
+    pan: scatter * 1.2 - 0.6,
+    filter: { type: 'highpass', hz: 3500, q: 0.7 },
+  });
+}
+
 const DEALT_DEGREES = [0, 2, 4, 5];
 const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
 
@@ -920,17 +1065,11 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
     });
   },
   trapRecharged: (out, at, _variant, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
-    for (const [degree, afterBeats] of RECHARGE_NOTES_BEATS) {
-      playTone(out, at + beat * afterBeats, {
-        wave: 'triangle',
-        hz: keyHz(key, degree, 2),
-        gain: 0.14,
-        attack: 0.01,
-        hold: 0.05,
-        release: RECHARGE_NOTE_SECONDS - 0.06,
-        filter: { type: 'lowpass', hz: 1200 },
-      });
-    }
+    rechargeNotes(out, at, key, beat, 0);
+  },
+  // The Rallonge's two low notes, a scale step higher for each cord of the sweep, back down after an octave.
+  batteryPlugged: (out, at, index, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
+    rechargeNotes(out, at, key, beat, index % key.scale.length);
   },
   vibesCollected: (out, at, degree, key, vibes = 1, progress = 0) => {
     const gain = 0.07 + 0.008 * vibes;
@@ -980,6 +1119,12 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       });
     });
   },
+  vibesHundred: (out, at, root, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
+    vibesChime(out, at, root, key, HUNDRED_CHIME, beat);
+  },
+  vibesThousand: (out, at, root, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
+    vibesChime(out, at, root, key, THOUSAND_CHIME, beat);
+  },
   // Two voices a third apart climb to the octave: the vibes come in pairs.
   twinVibesTaken: (out, at, _variant, key) => {
     TWIN_CLIMB.forEach((degree, index) => {
@@ -992,6 +1137,45 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
           hold: 0.06,
           release: 0.3,
         });
+      });
+    });
+  },
+  // A charge-up, loud like a jackpot: a thump, a buzzing rise from low to the octave as its filter opens, and a
+  // bright chord on top once full.
+  batteryTaken: (out, at, _variant, key) => {
+    dieThump(out, at, key, 0.8);
+    playTone(out, at, {
+      wave: 'sawtooth',
+      hz: keyHz(key, 0, 3),
+      toHz: keyHz(key, 0, 5),
+      glide: CHARGE.rise,
+      gain: 0.08,
+      attack: 0.01,
+      hold: CHARGE.rise - 0.01,
+      release: 0.05,
+      filter: { type: 'lowpass', hz: 500, toHz: 3600, glide: CHARGE.rise, q: 4 },
+    });
+    CHARGE.chord.forEach((degree, index) => {
+      const hz = keyHz(key, degree, 5);
+      const pan = -0.25 + (0.5 * index) / (CHARGE.chord.length - 1);
+      playTone(out, at + CHARGE.rise, {
+        wave: 'triangle',
+        hz,
+        gain: 0.16,
+        attack: 0.003,
+        hold: 0.04,
+        release: 0.28,
+        pan,
+      });
+      playTone(out, at + CHARGE.rise, {
+        wave: 'square',
+        hz,
+        gain: 0.05,
+        attack: 0.003,
+        hold: 0.02,
+        release: 0.08,
+        filter: { type: 'lowpass', hz: 5000 },
+        pan,
       });
     });
   },
@@ -1280,25 +1464,127 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz: hz * 2, q: 8 },
     });
   },
-  fireBurnt: (out, at) => {
-    playNoise(out, at, {
-      gain: 0.09,
-      attack: 0.03,
-      hold: 0.12,
-      release: 0.5,
-      filter: { type: 'bandpass', hz: 300, toHz: 1600, glide: 0.4, q: 1.1 },
+  // Wood thrown in the fire, `beatsToOne` before the 1 that burns it: a short breath as it leaves,
+  // a matt knock of wood on the embers half a beat later, then a crackle growing until the 1.
+  fireThrown: (out, at, beatsToOne, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
+    tossBreath(out, at);
+    const land = at + THROWN_FLIGHT_BEATS * beat;
+    playTone(out, land, {
+      wave: 'triangle',
+      hz: keyHz(key, 0, 2) * 1.5,
+      toHz: keyHz(key, 0, 2),
+      glide: 0.04,
+      gain: 0.16,
+      attack: 0.001,
+      hold: 0.01,
+      release: 0.09,
+      filter: { type: 'lowpass', hz: 900 },
     });
-    for (let spark = 0; spark < 7; spark++) {
-      const scatter = Math.abs(Math.sin((at + spark) * 78.233) * 43_758.545) % 1;
-      playNoise(out, at + 0.12 + spark * 0.07 + scatter * 0.05, {
-        gain: 0.06 * (1 - spark / 9),
-        attack: 0.001,
-        hold: 0.004,
-        release: 0.03,
-        pan: scatter * 1.2 - 0.6,
-        filter: { type: 'highpass', hz: 3500, q: 0.7 },
+    playNoise(out, land, {
+      gain: 0.1,
+      attack: 0.001,
+      hold: 0.006,
+      release: 0.05,
+      filter: { type: 'bandpass', hz: 1100, q: 2.5 },
+    });
+    // A 1 that catches it in flight burns it as it lands: no crackle, and the rise is cut on that 1.
+    const one = at + beatsToOne * beat;
+    const sparks = Math.min(40, Math.floor((one - land) / 0.07));
+    for (let spark = 1; spark < sparks; spark++) {
+      fireSpark(out, land + spark * 0.07, spark, 0.012 + 0.05 * (spark / sparks));
+    }
+    if (beatsToOne > 0) {
+      flareRiser(out, Math.max(at, one - FLARE_RISER_BEATS * beat), one, key);
+    }
+  },
+  // A ball of spores thrown at a giant: the same breath, and a soft puff as it lands.
+  sporesThrown: (out, at, _variant, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
+    tossBreath(out, at);
+    const land = at + THROWN_FLIGHT_BEATS * beat;
+    playNoise(out, land, {
+      gain: 0.08,
+      attack: 0.01,
+      hold: 0.02,
+      release: 0.18,
+      filter: { type: 'lowpass', hz: 700, q: 0.7 },
+    });
+    playTone(out, land, {
+      wave: 'sine',
+      hz: keyHz(key, 4, 5),
+      gain: 0.03,
+      attack: 0.005,
+      hold: 0.02,
+      release: 0.4,
+    });
+  },
+  // The light switched on: a sub boom, a bright open chord in the key whose filter opens in a quarter
+  // beat as the cut flames stretch, golden bells running across with the rays, gone in two beats.
+  fireBurnt: (out, at, _variant, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
+    const quarter = beat / 4;
+    const fade = 2.6 * beat;
+    playTone(out, at, {
+      wave: 'sine',
+      hz: keyHz(key, 0, 2),
+      toHz: keyHz(key, 0, 0),
+      glide: 0.16,
+      gain: 0.38,
+      attack: 0.003,
+      hold: 0.08,
+      release: 0.85,
+    });
+    for (const [degree, octave, pan] of FLARE_CHORD) {
+      for (const detune of [-11, 11]) {
+        playTone(out, at, {
+          wave: 'sawtooth',
+          hz: keyHz(key, degree, octave),
+          detune,
+          gain: 0.042,
+          attack: 0.006,
+          hold: 0.18,
+          release: fade - 0.18,
+          pan: pan + detune / 60,
+          filter: { type: 'lowpass', hz: 420, toHz: 5200, glide: quarter, q: 1.3 },
+        });
+      }
+      playTone(out, at, {
+        wave: 'triangle',
+        hz: keyHz(key, degree, octave),
+        gain: 0.05,
+        attack: 0.006,
+        hold: 0.3,
+        release: fade + beat,
+        pan,
       });
     }
+    playNoise(out, at, {
+      gain: 0.06,
+      attack: 0.004,
+      hold: 0.05,
+      release: 0.9,
+      filter: { type: 'highpass', hz: 6500, q: 0.7 },
+    });
+    FLARE_BELLS.forEach((degree, index) => {
+      const when = at + quarter * 0.5 + index * quarter * 0.75;
+      const pan = -0.75 + (1.5 * index) / (FLARE_BELLS.length - 1);
+      playTone(out, when, {
+        wave: 'sine',
+        hz: keyHz(key, degree, 5),
+        gain: 0.1 * (1 - index / 9),
+        attack: 0.002,
+        hold: 0.02,
+        release: 0.9,
+        pan,
+      });
+      playTone(out, when, {
+        wave: 'sine',
+        hz: keyHz(key, degree + 7, 5),
+        gain: 0.03,
+        attack: 0.002,
+        hold: 0.01,
+        release: 0.3,
+        pan,
+      });
+    });
   },
   // A torch swung through the air: a warm whoosh that opens and closes, and the flame's crackle.
   fireSwing: (out, at) => {
@@ -1772,6 +2058,9 @@ function variantOf(event: SimEvent, core: SfxCore, enemies: readonly SfxEnemy[])
   if (event.type === 'enemyHit') {
     return enemyHitDegree(enemies.find((enemy) => enemy.id === event.id));
   }
+  if (event.type === 'batteryPlugged') {
+    return event.index;
+  }
   return 'id' in event ? event.id : 0;
 }
 
@@ -1788,6 +2077,36 @@ export function createSfx(
   let progress = 0;
   let hitSound = true;
   const arp = createVibeArp();
+  // The root of the chord the set plays at `now`.
+  const chordRootNow = (now: number): number =>
+    chordRootOfBar(key.chords, clock === null ? 0 : barOfTick(timeToTick(clock, now), tempo));
+  // Beats from `now` to the next 1, when the offerings thrown in burn.
+  const beatsToOne = (now: number): number =>
+    clock === null
+      ? BEATS_PER_BAR
+      : (tempo.ticksPerBar - ticksIntoBar(timeToTick(clock, now), tempo)) / tempo.ticksPerBeat;
+  const variantAt = (
+    event: SimEvent,
+    events: readonly SimEvent[],
+    now: number,
+    core: SfxCore,
+    enemies: readonly SfxEnemy[],
+  ): number => {
+    if (event.type === 'dashBack') {
+      return chordRootNow(now) + 4;
+    }
+    if (event.type === 'vibesMilestone') {
+      return chordRootNow(now);
+    }
+    if (event.type === 'offeringThrown') {
+      // Thrown on the 1 itself, it burns in the same step.
+      const burnt = events.some(
+        (other) => other.type === 'offeringBurnt' && other.site === event.site,
+      );
+      return burnt ? 0 : beatsToOne(now);
+    }
+    return variantOf(event, core, enemies);
+  };
   return {
     play(events, now, players = [], core = FULL_CORE, enemies = []) {
       let vibes = 0;
@@ -1800,13 +2119,7 @@ export function createSfx(
           vibes += 1;
           progress = levelProgress(players.find((player) => player.id === event.playerId));
         } else if (name !== null && limiter.tryAcquire(name, now)) {
-          const variant =
-            event.type === 'dashBack'
-              ? chordRootOfBar(
-                  key.chords,
-                  clock === null ? 0 : barOfTick(timeToTick(clock, now), tempo),
-                ) + 4
-              : variantOf(event, core, enemies);
+          const variant = variantAt(event, events, now, core, enemies);
           VOICES[name](out, now, variant, key, undefined, undefined, beatSeconds(tempo));
         } else if (event.type === 'bar') {
           for (const enemy of enemies) {
@@ -1839,9 +2152,10 @@ export function createSfx(
     },
     setTempo(next) {
       if (next.ticksPerBeat !== tempo.ticksPerBeat) {
-        tempo = next;
         limiter = createSfxLimiter(sfxLimitsFor(next));
       }
+      // A stage entered from its path keeps the path's beat but starts its bars at its own tick.
+      tempo = next;
     },
     setClock(anchor) {
       clock = anchor;

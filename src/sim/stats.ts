@@ -47,6 +47,7 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   recruitCountAdd: true,
   recruitPowerMul: false,
   dishPowerMul: false,
+  offerCardsAdd: true,
 };
 
 export function statValue(
@@ -81,6 +82,12 @@ export function skillCooldownTicks(
 }
 
 type Carded = Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts'>;
+
+// The Tamatebako's cards more, read past `statValue`: the Intolérant's cut never takes them, since the
+// offer pauses the game and the card would be lost for all of it.
+export function offerCardsAdded(player: Pick<PlayerState, 'modifiers'>): number {
+  return player.modifiers.offerCardsAdd ?? 0;
+}
 
 export function dashCharges(
   player: Carded,

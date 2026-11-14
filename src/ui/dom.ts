@@ -118,6 +118,11 @@ export function setVar(node: HTMLElement, name: string, value: string): void {
   }
 }
 
+// Flips data-<name> between a and b, so that the animation each value names plays again.
+export function replay(node: HTMLElement, name: string): void {
+  node.dataset[name] = node.dataset[name] === 'a' ? 'b' : 'a';
+}
+
 export function setFlag(node: Element, name: string, on: boolean): void {
   if (on) {
     node.setAttribute(`data-${name}`, '');

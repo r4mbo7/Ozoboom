@@ -51,7 +51,7 @@ function isSegmentOver(state: SimState, tier: TierDefinition, tempo: Tempo): boo
   }
 }
 
-function bossLeft(state: SimState): boolean {
+export function bossLeft(state: SimState): boolean {
   return state.bossesDue !== undefined || state.enemies.some((enemy) => enemy.isBoss);
 }
 

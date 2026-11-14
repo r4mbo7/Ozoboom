@@ -1,6 +1,6 @@
 import { Container, type Sprite } from 'pixi.js';
 import { clamp, lerp } from '../shared/scalar';
-import type { PlayerState, SimEvent, SimState } from '../sim/state';
+import type { SimEvent, SimState } from '../sim/state';
 import { MAIN_TEMPO, type Tempo, ticksIntoBeat } from '../shared/tempo';
 import { PlayerCarriedTraps } from './carried-traps';
 import { createBurster } from './class-bursts';
@@ -16,14 +16,13 @@ import type { Frame } from './frame';
 import { TAU } from './paint';
 import { Downed } from './player-downed';
 import { PlayerGlow } from './player-glow';
-import { type Look, type LookInput, type Spawn, createLookInput } from './player-look';
+import { type Look, type LookInput, type Spawn, createLookInput, teintOf } from './player-look';
 import { PlayerTag, ReviveLog } from './player-tags';
 import { CONTOUR_RING, REFERENCE_RADIUS } from './textures-players';
 import { DOWNED_REACH } from './textures-players-downed';
 import { add, hide, lookup, setTint } from './util';
 import { ViewPool } from './views';
 
-const TEINTS = [0xf1c9a5, 0xd9a07a, 0xa86f4c, 0x7a4a31];
 const CONTOUR_MARGIN = 4;
 const MAX_STEP_TICKS = 3;
 const NEVER = Number.NEGATIVE_INFINITY;
@@ -33,10 +32,6 @@ const PLAYER_BURSTS = 48;
 export function contourAlpha(now: number, tempo: Tempo = MAIN_TEMPO): number {
   const phase = ticksIntoBeat(now, tempo) / tempo.ticksPerBeat;
   return 0.3 + 0.35 * (1 + Math.sin(phase * TAU));
-}
-
-function teintOf(player: PlayerState): number {
-  return TEINTS[player.id % TEINTS.length] ?? 0xf1c9a5;
 }
 
 interface PlayerView {
@@ -152,6 +147,11 @@ export function createPlayers(ctx: RenderContext): Family {
         case 'carriedTrapWornOut':
         case 'trapTaken':
           views.peek(event.playerId)?.carried.onEvent(event, state.tick);
+          break;
+        case 'batteryTaken':
+          for (const { id } of state.players) {
+            views.peek(id)?.carried.renew(state.tick);
+          }
           break;
         case 'dashEmpty':
           views.peek(event.playerId)?.dashArc.empty(state.tick);

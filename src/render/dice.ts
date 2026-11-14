@@ -10,7 +10,6 @@ import { ViewPool } from './views';
 const TAU = Math.PI * 2;
 const DIE_WIDTH = 30;
 const HALO_RADIUS = 34;
-const FADING_BARS = 4;
 // A taken die rises and swells as it fades, a beat long.
 const POP = { beats: 1, rise: 36, swell: 0.8 };
 // A dropped die is thrown from its speaker or its boss: a high hop, then a low one that lands a beat
@@ -177,8 +176,6 @@ export function createDice(ctx: RenderContext): Family {
 
   function drawLying(view: DieView, die: DieState, sinceLanding: number, frame: Frame): void {
     const beat = frame.calm ? 0 : frame.pulse;
-    const fading = !frame.calm && die.ticksLeft < FADING_BARS * frame.tempo.ticksPerBar;
-    const shown = fading ? 0.45 + 0.55 * frame.pulse : 1;
     const settle = clamp01(1 - sinceLanding / THROW.settleBeats);
     const flare = clamp01(1 - sinceLanding / THROW.burstBeats);
     const size = (DIE_WIDTH * (1 + 0.06 * beat)) / (2 * t.die.radius);
@@ -187,14 +184,12 @@ export function createDice(ctx: RenderContext): Family {
     view.body.position.set(die.x, die.y - 3 * beat);
     view.body.rotation = 0;
     view.body.scale.set(size * (1 + 0.3 * settle), size * (1 - 0.28 * settle));
-    view.body.alpha = shown;
     placeOutline(view.outline, view.body, t.die.texture, t.die.radius, frame);
-    view.outline.alpha = shown;
     view.halo.visible = true;
     setTint(view.halo, frame.palette.or);
     view.halo.position.set(die.x, die.y);
     view.halo.scale.set((HALO_RADIUS + 22 * flare) / t.halo.radius);
-    view.halo.alpha = (0.7 + 0.3 * beat + 0.3 * flare) * frame.light.haloAlpha * shown;
+    view.halo.alpha = (0.7 + 0.3 * beat + 0.3 * flare) * frame.light.haloAlpha;
     hide(view.shadow, ...view.trail);
   }
 

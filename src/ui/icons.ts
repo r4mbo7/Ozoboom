@@ -136,6 +136,26 @@ export function trapIcon(effect: TrapEffect): string {
   }
 }
 
+// Every trap a surprise may give, fanned out like a hand of cards, the middle one in front.
+export function trapFanIcon(effects: readonly TrapEffect[]): string {
+  const step = effects.length > 1 ? 44 / (effects.length - 1) : 0;
+  const order = effects.map((effect, index) => ({ effect, index }));
+  const middle = (effects.length - 1) / 2;
+  order.sort((a, b) => Math.abs(b.index - middle) - Math.abs(a.index - middle));
+  return order
+    .map(({ effect, index }) => {
+      const angle = ((index - middle) * step).toFixed(1);
+      return (
+        `<g transform="rotate(${angle} 12 22)">` +
+        '<rect x="6.2" y="3.2" width="11.6" height="11.6" rx="2.6" style="fill: var(--sol)" ' +
+        'stroke="currentColor" stroke-width="1.3"/>' +
+        `<svg x="7.6" y="4.6" width="8.8" height="8.8" viewBox="0 0 24 24">${trapIcon(effect)}</svg>` +
+        '</g>'
+      );
+    })
+    .join('');
+}
+
 // Read by a plain string: in the demo, no skill is left for them.
 const FULL_ICONS: Readonly<Record<string, string>> = FULL_SKILL_ICONS;
 
@@ -283,6 +303,15 @@ const UPGRADE_GLYPHS: Readonly<Record<string, string>> = {
   'mur-de-son':
     '<path d="M2.3 4.4h6.2v5.8h-6.2zM3.65 7.300000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM4.75 7.300000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM8.9 4.4h6.2v5.8h-6.2zM10.25 7.300000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM11.35 7.300000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM15.5 4.4h6.2v5.8h-6.2zM16.85 7.300000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM17.95 7.300000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM2.3 10.8h6.2v5.8h-6.2zM3.65 13.700000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM4.75 13.700000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM8.9 10.8h6.2v5.8h-6.2zM10.25 13.700000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM11.35 13.700000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM15.5 10.8h6.2v5.8h-6.2zM16.85 13.700000000000001a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM17.95 13.700000000000001a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM2.3 17.2h6.2v5.8h-6.2zM3.65 20.099999999999998a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM4.75 20.099999999999998a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM8.9 17.2h6.2v5.8h-6.2zM10.25 20.099999999999998a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM11.35 20.099999999999998a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0zM15.5 17.2h6.2v5.8h-6.2zM16.85 20.099999999999998a1.75 1.75 0 1 0 3.5 0a1.75 1.75 0 1 0 -3.5 0zM17.95 20.099999999999998a0.65 0.65 0 1 0 1.3 0a0.65 0.65 0 1 0 -1.3 0z" fill="currentColor" fill-rule="evenodd"/>' +
     '<path d="M0-2.8C.3-.6.6-.3 2.8 0 .6.3.3.6 0 2.8-.3.6-.6.3-2.8 0-.6-.3-.3-.6 0-2.8z" fill="currentColor" transform="translate(20.6 2)"/>',
+  // The box half open, a card marked « + » rising out of it between two puffs of smoke.
+  tamatebako:
+    '<path d="M3.9 14.6h10.3a1.4 1.4 0 0 1 1.4 1.4v5a1.4 1.4 0 0 1 -1.4 1.4h-10.3a1.4 1.4 0 0 1 -1.4 -1.4v-5a1.4 1.4 0 0 1 1.4 -1.4zM2.5 16.6h13.1v.9h-13.1z" fill="currentColor" fill-rule="evenodd"/>' +
+    '<path d="M-12.2-4.2h10.8a1.4 1.4 0 0 1 1.4 1.4V0H-13.6v-2.8a1.4 1.4 0 0 1 1.4 -1.4z" fill="currentColor" transform="translate(15.6 14.6) rotate(110)"/>' +
+    '<path d="M7.2 2.6h3.8a1.2 1.2 0 0 1 1.2 1.2v8.4a1.2 1.2 0 0 1 -1.2 1.2h-3.8a1.2 1.2 0 0 1 -1.2 -1.2v-8.4a1.2 1.2 0 0 1 1.2 -1.2zM8.35 6.25v1.25h-1.25v1.5h1.25v1.25h1.5v-1.25h1.25v-1.5h-1.25v-1.25z" fill="currentColor" fill-rule="evenodd"/>' +
+    '<path d="M2.6 15.4C.8 16.8.6 18.6 1.6 20.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+    '<path d="M1.6 19.4l1.3 3.2h-2.6z" fill="currentColor"/>' +
+    '<path d="M0-2.8C.3-.6.6-.3 2.8 0 .6.3.3.6 0 2.8-.3.6-.6.3-2.8 0-.6-.3-.3-.6 0-2.8z" fill="currentColor" transform="translate(3.2 4.2)"/>' +
+    '<path d="M13.2 12.1a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0 -2.6 0zM13.5 9.6a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0zM13.3 6.9a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0zM14.4 4.6a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0 -2.4 0zM3.2 12.2a1.1 1.1 0 1 0 2.2 0a1.1 1.1 0 1 0 -2.2 0zM2.35 10.2a1.35 1.35 0 1 0 2.7 0a1.35 1.35 0 1 0 -2.7 0z" fill="currentColor" opacity="0.5"/>',
 };
 
 // A class card draws what it changes, the same for every character: its first stat names it.
@@ -343,8 +372,12 @@ export function upgradeIcon(id: string, family: UpgradeFamily, stat: StatKey | n
   );
 }
 
-// Six circles in a flower, drawn in a box of 84.
-export function medallion(glyph: string): string {
+// How much of the medallion a fan of traps takes, more than a single glyph.
+export const FAN_SPAN = 52;
+const GLYPH_SPAN = 36;
+
+// Six circles in a flower, drawn in a box of 84. `span`: how much of it the glyph takes.
+export function medallion(glyph: string, span = GLYPH_SPAN): string {
   const petals = Array.from({ length: 6 }, (_, petal) => {
     const angle = (petal * Math.PI) / 3;
     return `<circle cx="${(42 + 19 * Math.cos(angle)).toFixed(1)}" cy="${(42 + 19 * Math.sin(angle)).toFixed(1)}" r="19"/>`;
@@ -353,7 +386,7 @@ export function medallion(glyph: string): string {
     '<g fill="none" stroke="currentColor"><circle cx="42" cy="42" r="40" stroke-width="1.5"/>' +
     '<circle cx="42" cy="42" r="36" stroke-width="0.8" opacity="0.6"/>' +
     `<g stroke-width="0.8" opacity="0.32">${petals}</g></g>` +
-    `<svg x="24" y="24" width="36" height="36" viewBox="0 0 24 24">${glyph}</svg>`
+    `<svg x="${String(42 - span / 2)}" y="${String(42 - span / 2)}" width="${String(span)}" height="${String(span)}" viewBox="0 0 24 24">${glyph}</svg>`
   );
 }
 
@@ -407,6 +440,9 @@ export function roleIcon(role: WeaponRole): string {
 // A die showing three: the reroll of an offer.
 export const DIE =
   '<rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="16" cy="16" r="1.6" fill="currentColor"/>';
+
+export const VIBE =
+  '<path d="M12 2c.9 6.2 3.8 9.1 10 10-6.2.9-9.1 3.8-10 10-.9-6.2-3.8-9.1-10-10 6.2-.9 9.1-3.8 10-10z" fill="currentColor"/>';
 
 export const STAR =
   '<path d="m12 2.5 2.6 6.4 6.9.5-5.3 4.4 1.7 6.7L12 16.8l-5.9 3.7 1.7-6.7-5.3-4.4 6.9-.5z" fill="currentColor"/>';

@@ -294,6 +294,13 @@ export async function startGame(
   }
   applySound();
 
+  // The stage and class a card's scene shows for that player, null once they left.
+  function stageOf(playerId: PlayerId): { setId: string; classId: string } | null {
+    const { frame } = match.session;
+    const player = frame.players.find((candidate) => candidate.id === playerId);
+    return player === undefined ? null : { setId: frame.setId, classId: player.classId };
+  }
+
   function gameCallbacks() {
     return {
       onRestart() {
@@ -317,11 +324,14 @@ export async function startGame(
         audio.cue(cue, variant);
       },
       onShowWeapon(canvas: HTMLCanvasElement, weaponId: string, playerId: PlayerId) {
-        const { frame } = match.session;
-        const player = frame.players.find((candidate) => candidate.id === playerId);
-        return player === undefined
+        const seen = stageOf(playerId);
+        return seen === null ? null : weaponScenes.show(canvas, weaponId, seen.setId, seen.classId);
+      },
+      onShowTrap(canvas: HTMLCanvasElement, trapIds: readonly string[], playerId: PlayerId) {
+        const seen = stageOf(playerId);
+        return seen === null
           ? null
-          : weaponScenes.show(canvas, weaponId, frame.setId, player.classId);
+          : weaponScenes.showTrap(canvas, trapIds, seen.setId, seen.classId);
       },
       onLeaveNotice: quit,
     };
@@ -611,6 +621,8 @@ export async function startGame(
     setMatch(onlineMatchOf(started, content, () => prefs, recorded));
     pause.dismiss();
     beginGame(started.start.trackId, started.role === 'host' ? 'online' : null);
+    // A tab already in the background when the set starts sees no visibilitychange.
+    background.start();
   }
 
   function interrupt(next: Interruption): void {
@@ -755,7 +767,7 @@ export async function startGame(
       ) {
         return;
       }
-      const rush = replay?.rush?.() ?? 0;
+      const rush = rushing();
       for (let rushed = 0; rushed < rush && playing(); rushed++) {
         if (!stepOnce(false)) {
           return;
@@ -789,6 +801,11 @@ export async function startGame(
 
   function playing(): boolean {
     return screen === 'game';
+  }
+
+  // The steps a replay plays a frame, undrawn: only during the set, its ending is drawn.
+  function rushing(): number {
+    return playing() ? (replay?.rush?.() ?? 0) : 0;
   }
 
   function stepOnce(heard = true): boolean {
@@ -843,7 +860,7 @@ export async function startGame(
       frozenAlpha = alpha;
     }
     const { session } = match;
-    if ((replay?.rush?.() ?? 0) > 0) {
+    if (rushing() > 0) {
       session.endFrame();
       return;
     }
@@ -893,14 +910,14 @@ export async function startGame(
   );
   const background = createBackgroundPlay({
     tickMs: TICK_MS / dev.speed,
-    maxTicks: MAX_TICKS_PER_FRAME * dev.speed,
     now: () => performance.now(),
     hiddenOnline: () => document.hidden && onlineMatch !== null,
     standStill: () => {
       match.frame(stillView(view));
     },
     play(ticks) {
-      catchUp = CATCH_UP_TICKS_PER_FRAME;
+      // A guest drains the frames it took in meanwhile, instead of leaving its queue to grow.
+      catchUp = CATCH_UP_TICKS_PER_FRAME * ticks;
       for (let index = 0; index < ticks; index++) {
         if (step() === false) {
           break;

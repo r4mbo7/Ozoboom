@@ -94,6 +94,70 @@ const STARS = scatter(46, 7)
   })
   .join('');
 
+// The moon is drawn in hundredths of its radius: a crescent in profile, looking right towards the
+// sun, her lid heavy; ui.css sets her course down into the lake.
+const MOON_RIM =
+  'M42 -91C20 -82 8 -68 10 -50C11 -42 19 -40 17 -33C15 -27 15 -24 19 -18C27 -10 40 -6 43 -2' +
+  'C44 2 33 5 25 4C27 8 34 10 33 15L24 19C33 21 34 26 29 30C24 33 19 34 20 39C21 46 30 49 33 55' +
+  'C36 64 48 74 62 78A100 100 0 1 1 42 -91Z';
+
+const MOON =
+  '<div class="ui-title__moonlit"><svg class="ui-title__moon" ' +
+  'viewBox="-300 -300 600 600" aria-hidden="true" focusable="false"><defs>' +
+  '<radialGradient id="ui-title-moon-halo"><stop class="ui-title__moon-glow" offset="0"/>' +
+  '<stop class="ui-title__moon-glow" offset="1" stop-opacity="0"/></radialGradient>' +
+  '<radialGradient id="ui-title-moon-gold"><stop class="ui-title__gold" offset="0"/>' +
+  '<stop class="ui-title__gold" offset="1" stop-opacity="0"/></radialGradient>' +
+  '<radialGradient id="ui-title-moon-fill" cx="-20" cy="0" r="105" fx="-35" fy="-20" fr="10" ' +
+  'gradientUnits="userSpaceOnUse"><stop class="ui-title__moon-light" offset="0"/>' +
+  '<stop class="ui-title__moon-shade" offset="1"/></radialGradient>' +
+  '<radialGradient id="ui-title-moon-blush"><stop class="ui-title__moon-blush" offset="0" stop-opacity="0.3"/>' +
+  '<stop class="ui-title__moon-blush" offset="1" stop-opacity="0"/></radialGradient>' +
+  `<path id="ui-title-moon-rim" d="${MOON_RIM}"/>` +
+  '<clipPath id="ui-title-moon-face"><use href="#ui-title-moon-rim"/></clipPath>' +
+  '<clipPath id="ui-title-moon-eye"><path d="M-25 -27Q-8 -40 9 -27Q-8 -19 -25 -27Z"/></clipPath>' +
+  '</defs>' +
+  '<circle class="ui-title__moon-halo" r="280" fill="url(#ui-title-moon-halo)"/>' +
+  '<circle class="ui-title__moon-aura" cx="-30" r="140" fill="url(#ui-title-moon-gold)"/>' +
+  '<use href="#ui-title-moon-rim" fill="url(#ui-title-moon-fill)"/>' +
+  '<use class="ui-title__moon-dawn" href="#ui-title-moon-rim"/>' +
+  '<g clip-path="url(#ui-title-moon-face)">' +
+  '<circle cx="-2" cy="8" r="32" fill="url(#ui-title-moon-blush)"/>' +
+  '<circle class="ui-title__moon-lips" cx="27" cy="20" r="12" fill="url(#ui-title-moon-blush)"/></g>' +
+  '<g class="ui-title__moon-face">' +
+  '<g class="ui-title__moon-open"><g clip-path="url(#ui-title-moon-eye)">' +
+  '<circle cx="2" cy="-27" r="6.5"/>' +
+  '<path d="M-30 -47H14V-27Q-8 -32.1 -30 -27Z" fill="url(#ui-title-moon-fill)" stroke="none"/></g>' +
+  '<path class="ui-title__moon-lid" d="M-25 -27Q-8 -32.1 9 -27"/></g>' +
+  '<path class="ui-title__moon-lid ui-title__moon-shut" d="M-25 -27Q-8 -20 9 -27"/>' +
+  '<path d="M-22 -25.8Q-8 -19.5 7 -26.5" stroke-width="2.4" opacity="0.75"/>' +
+  '<path d="M-23 -34Q-8 -43 8 -33" stroke-width="2.6" opacity="0.55"/>' +
+  '<path d="M-30 -40C-20 -52 2 -52 13 -43"/>' +
+  '<path d="M27 -5Q31 0 36 -1M24 19Q17 20 13 17" stroke-width="3.2"/></g>' +
+  '<use class="ui-title__moon-rim" href="#ui-title-moon-rim"/></svg></div>';
+
+// Her reflection, broken twice like the sun's, centred under the lit side of the crescent.
+const MOON_RIPPLES = [
+  { depth: 25, reach: 92 },
+  { depth: 51, reach: 73 },
+  { depth: 77, reach: 54 },
+  { depth: 103, reach: 35 },
+];
+
+const MOON_GLINT =
+  '<div class="ui-title__moonlake"><svg class="ui-title__moon-glint" viewBox="-230 0 390 160" ' +
+  'aria-hidden="true" focusable="false"><circle cx="0" cy="31" r="120" ' +
+  'fill="url(#ui-title-moon-halo)" stroke="none" opacity="0.15"/><g class="ui-title__moon-ripples">' +
+  MOON_RIPPLES.map(({ depth, reach }, index) => {
+    const [gap, inner] = [reach * 0.32, reach * 0.18];
+    const x = (offset: number) => (offset - 35).toFixed(0);
+    return (
+      `<path opacity="${(0.75 - index * 0.12).toFixed(2)}" d="M${x(-reach)} ${String(depth)}` +
+      `H${x(-gap)}M${x(-inner)} ${String(depth)}H${x(inner)}M${x(gap)} ${String(depth)}H${x(reach)}"/>`
+    );
+  }).join('') +
+  '</g></svg></div>';
+
 // The glow stays low, not veiled behind the title: a veil would cut it into a band.
 const NIGHT =
   '<svg class="ui-title__night ui-title__veiled" viewBox="0 0 2000 1000" ' +
@@ -166,9 +230,9 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   element.setAttribute('aria-label', t('Écran titre'));
 
   const sky = el('div', 'ui-title__sky');
-  sky.innerHTML = NIGHT + GLOW + SUN;
+  sky.innerHTML = NIGHT + MOON + GLOW + SUN;
   const water = el('div', 'ui-title__water');
-  water.innerHTML = WATER;
+  water.innerHTML = WATER + MOON_GLINT;
 
   const header = el('header', 'ui-title__header');
   const mark = el('div', 'ui-title__mark');

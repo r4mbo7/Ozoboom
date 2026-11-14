@@ -147,6 +147,58 @@ export function bomb(): Shape {
   });
 }
 
+// The Batterie, in the bomb's units (radius 20): a rounded cell, its terminal on the right as the bomb's cap.
+const BATTERY_CELL = { x: -16.5, y: -10, width: 28, height: 20, round: 7 } as const;
+const BATTERY_TERMINAL = { x: 11.5, y: -4.5, width: 4.5, height: 9, round: 2 } as const;
+// Lit from its upper left, as the bomb's shine: under the turquoise tint, the reviewed teal.
+const BATTERY_CORE_LIT = '#5e5e5e';
+// Its bolt, painted apart to light up on the beat, sits this far left of the cell's centre.
+export const BATTERY_BOLT_AT = { x: -2, y: 0 } as const;
+
+export function battery(): Shape {
+  return paint(64, 64, 20, (ctx) => {
+    glow(ctx, WHITE, 6);
+    ctx.fillStyle = WHITE;
+    const terminal = BATTERY_TERMINAL;
+    ctx.beginPath();
+    ctx.roundRect(terminal.x, terminal.y, terminal.width, terminal.height, terminal.round);
+    ctx.fill();
+    const core = ctx.createRadialGradient(-6, -3, 0, -3, 0, 14);
+    core.addColorStop(0, BATTERY_CORE_LIT);
+    core.addColorStop(1, SHADE_DEEP);
+    ctx.fillStyle = core;
+    const cell = BATTERY_CELL;
+    ctx.beginPath();
+    ctx.roundRect(cell.x, cell.y, cell.width, cell.height, cell.round);
+    ctx.fill();
+    ctx.strokeStyle = WHITE;
+    doubleStroke(ctx, 6, 2);
+    ctx.shadowBlur = 0;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-11, 0.5);
+    ctx.quadraticCurveTo(-11, -4.5, -6.5, -4.5);
+    ctx.stroke();
+  });
+}
+
+export function batteryBolt(): Shape {
+  return paint(28, 28, 20, (ctx) => {
+    glow(ctx, WHITE, 4);
+    ctx.fillStyle = WHITE;
+    polygon(ctx, [
+      [1.6, -6.5],
+      [-3.6, 1],
+      [-0.4, 1],
+      [-1.6, 6.5],
+      [3.6, -1],
+      [0.4, -1],
+    ]);
+    ctx.fill();
+  });
+}
+
 export const CONE_LENGTH = 128;
 export const CONE_DEGREES = 50;
 

@@ -26,6 +26,12 @@ export interface LookInput {
   sinceSkill: number;
 }
 
+const TEINTS = [0xf1c9a5, 0xd9a07a, 0xa86f4c, 0x7a4a31];
+
+export function teintOf(player: Pick<PlayerState, 'id'>): number {
+  return TEINTS[player.id % TEINTS.length] ?? 0xf1c9a5;
+}
+
 export function createLookInput(state: SimState, player: PlayerState, frame: Frame): LookInput {
   return {
     state,

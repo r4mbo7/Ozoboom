@@ -1,4 +1,4 @@
-import { barOfTick, type Tempo } from '../shared/tempo';
+import { VIBE_STREAK_BEATS, barOfTick, type Tempo } from '../shared/tempo';
 import {
   LATE_TOLERANCE_SECONDS,
   TICK_SECONDS,
@@ -13,7 +13,6 @@ import {
 // Degrees above the chord root: two octaves up, then back down.
 const ARPEGGIO = [0, 2, 4, 7, 9, 11, 14, 11, 9, 7, 4, 2];
 const MAX_VIBES = 5;
-const STREAK_BEATS = 2;
 
 export interface VibeNote {
   readonly at: number;
@@ -51,7 +50,7 @@ export function createVibeArp(): VibeArp {
 
   return {
     collect(vibes, now, tempo, anchor) {
-      if (now - collectedAt > STREAK_BEATS * beatSeconds(tempo)) {
+      if (now - collectedAt > VIBE_STREAK_BEATS * beatSeconds(tempo)) {
         streak = 0;
         pending = 0;
       }

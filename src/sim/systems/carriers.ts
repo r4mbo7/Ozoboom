@@ -1,9 +1,8 @@
-import type { TrapDefinition, TrapDraw } from '../../data/types';
-import { type RngState, nextFloat } from '../../shared/prng';
 import { barOfTick, isBarTick } from '../../shared/tempo';
 import type { EnemyState, PlayerId, Vec2 } from '../state';
 import { statValue } from '../stats';
 import { dropTrap } from '../trap-moves';
+import { drawCarriersTrap } from '../trap-odds';
 import type { StepContext } from './types';
 
 export function trapCarriers(ctx: StepContext): void {
@@ -62,34 +61,5 @@ function drawCarriedTrap({ state, content, set }: StepContext): string {
       return first;
     }
   }
-  return drawTrap(state.rng, trapOdds([...content.traps.values()], draw));
-}
-
-function trapOdds(
-  traps: readonly TrapDefinition[],
-  draw: TrapDraw | undefined,
-): readonly Pick<TrapDefinition, 'id' | 'carrierWeight'>[] {
-  if (draw === undefined) {
-    return traps;
-  }
-  return traps.map(({ id }) => ({ id, carrierWeight: draw.weights[id] ?? 0 }));
-}
-
-export function drawTrap(
-  rng: RngState,
-  traps: readonly Pick<TrapDefinition, 'id' | 'carrierWeight'>[],
-): string {
-  const total = traps.reduce((sum, trap) => sum + trap.carrierWeight, 0);
-  let roll = nextFloat(rng) * total;
-  for (const trap of traps) {
-    roll -= trap.carrierWeight;
-    if (roll < 0) {
-      return trap.id;
-    }
-  }
-  const last = traps.at(-1);
-  if (last === undefined) {
-    throw new Error('A carrier needs at least one trap');
-  }
-  return last.id;
+  return drawCarriersTrap(state.rng, content.traps, draw);
 }

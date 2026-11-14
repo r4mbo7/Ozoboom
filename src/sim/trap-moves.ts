@@ -1,5 +1,6 @@
 import type { SetDefinition, TrapDefinition } from '../data/types';
 import { distanceSquared, normalize } from '../shared/vec';
+import type { ResolvedContent } from './content';
 import { lookup } from './lookup';
 import type { CarriedTrap, PlayerId, PlayerState, SimState, TrapState, Vec2 } from './state';
 import { statValue } from './stats';
@@ -17,20 +18,17 @@ export function moveTrap(ctx: StepContext, player: PlayerState): void {
     return;
   }
   const { state, content } = ctx;
-  const capacity = lookup(content.classes, player.classId, 'class').carriedTraps ?? 1;
-  const lifted = trapTheKeyTakes(content.traps, state.traps, player, capacity);
+  const lifted = trapTheKeyTakes(content.traps, state.traps, player, trapCapacity(content, player));
   if (lifted !== undefined) {
     state.traps.splice(state.traps.indexOf(lifted), 1);
-    const { id, kind, intensity, rechargedTick } = lifted;
-    if (player.carriedTrap !== undefined) {
-      (player.carriedUnder ??= []).push(player.carriedTrap);
-    }
-    player.carriedTrap = {
+    const { id, kind, intensity, rechargedTick, awaitsCord } = lifted;
+    carryOnTop(player, {
       id,
       kind,
       intensity,
       ...(rechargedTick !== undefined && { rechargedTick }),
-    };
+      ...(awaitsCord !== undefined && { awaitsCord }),
+    });
     const { x, y } = lifted;
     state.events.push({ type: 'trapTaken', id, kind, playerId: player.id, x, y });
     return;
@@ -65,7 +63,7 @@ export function trapTheKeyTakes(
   >,
   capacity: number,
 ): TrapState | undefined {
-  if (carriedCount(player) >= capacity) {
+  if (!hasTrapRoom(player, capacity)) {
     return undefined;
   }
   const laid = player.laidTrapIds;
@@ -76,6 +74,49 @@ export function trapTheKeyTakes(
 
 function carriedCount(player: Pick<PlayerState, 'carriedTrap' | 'carriedUnder'>): number {
   return player.carriedTrap === undefined ? 0 : 1 + (player.carriedUnder?.length ?? 0);
+}
+
+// The traps a player carries, the top one first.
+export function carriedTraps(
+  player: Pick<PlayerState, 'carriedTrap' | 'carriedUnder'>,
+): CarriedTrap[] {
+  return player.carriedTrap === undefined
+    ? []
+    : [player.carriedTrap, ...(player.carriedUnder ?? [])];
+}
+
+// How many traps the player's class carries above the head: `ClassDefinition.carriedTraps`, absent
+// meaning one.
+export function trapCapacity(
+  content: Pick<ResolvedContent, 'classes'>,
+  player: Pick<PlayerState, 'classId'>,
+): number {
+  return lookup(content.classes, player.classId, 'class').carriedTraps ?? 1;
+}
+
+// Room above the head for one more trap.
+export function hasTrapRoom(
+  player: Pick<PlayerState, 'carriedTrap' | 'carriedUnder'>,
+  capacity: number,
+): boolean {
+  return carriedCount(player) < capacity;
+}
+
+// On top of any carried trap, the one below kept for later: `liftNext` undoes it.
+function carryOnTop(player: PlayerState, trap: CarriedTrap): void {
+  if (player.carriedTrap !== undefined) {
+    (player.carriedUnder ??= []).push(player.carriedTrap);
+  }
+  player.carriedTrap = trap;
+}
+
+// A new trap straight above the head: it rises from the player.
+export function giveTrap(ctx: StepContext, player: PlayerState, kind: string): void {
+  const { state } = ctx;
+  const id = state.nextEntityId;
+  state.nextEntityId += 1;
+  carryOnTop(player, { id, kind, intensity: 1 });
+  state.events.push({ type: 'trapTaken', id, kind, playerId: player.id, x: player.x, y: player.y });
 }
 
 // The carried trap goes down at `at`, or the nearest spot that takes it, in the player's name; the

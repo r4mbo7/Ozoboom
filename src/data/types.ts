@@ -37,7 +37,8 @@ export type StatKey =
   | 'bouquetCountAdd'
   | 'recruitCountAdd'
   | 'recruitPowerMul'
-  | 'dishPowerMul';
+  | 'dishPowerMul'
+  | 'offerCardsAdd';
 
 export interface StatModifier {
   stat: StatKey;
@@ -89,6 +90,8 @@ export interface ZoneDefinition {
   heal?: number;
   // Dealt to the bad vibes on it when it ends.
   closeDamage?: number;
+  // The bad vibes on it lose their way until it ends; a boss is only slowed.
+  disorients?: true;
 }
 
 export interface SkillDefinition {
@@ -270,6 +273,14 @@ export interface UpgradeDefinition {
   modifiers: readonly StatModifier[];
   // Counts stacks of every rarity.
   maxStacks: number;
+  // What the card gives on the spot, in place of stats.
+  gives?: UpgradeGift;
+}
+
+// A new trap above the head: `shown`, drawn with the offer at the carriers' odds and shown on the
+// card; `surprise`, drawn when taken, every trap alike.
+export interface UpgradeGift {
+  trap: 'shown' | 'surprise';
 }
 
 // Indexed by Volume; the last entry holds beyond.
@@ -438,24 +449,28 @@ export interface TrapDraw {
   weights: Readonly<Record<string, number>>;
 }
 
-// As a carried trap, but lying for `lifetimeBars`; a player stepping on the bomb clears every bad vibe but the bosses.
+// As a carried trap, but lying until taken; a player stepping on the bomb clears every bad vibe but the bosses.
 export interface BombRules {
   everyBars: number;
-  lifetimeBars: number;
   radius: number;
 }
 
-// Once per stage, the next bad vibe to spawn in a build-up phrase drawn from the seed carries them, lying `lifetimeBars`
+// Once per stage, the next bad vibe to spawn in a build-up phrase drawn from the seed carries them, lying until taken
 // once killed; a player stepping on them makes every fallen bad vibe drop its vibes twice, for `bars`.
 export interface TwinVibesRules {
-  lifetimeBars: number;
   radius: number;
   bars: number;
 }
 
-// A die on the ground: whoever walks on it gains a reroll of an offer. A boss drops one per player.
+// At most once per stage, with `chance`, the next bad vibe to spawn in a build-up phrase drawn from the seed carries it,
+// lying until taken once killed; a player stepping on it renews every trap, carried at once, placed one a beat.
+export interface BatteryRules {
+  chance: number;
+  radius: number;
+}
+
+// A die on the ground until taken: whoever walks on it gains a reroll of an offer. A boss drops one per player.
 export interface DiceRules {
-  lifetimeBars: number;
   radius: number;
   // The chance that a speaker drops one as it is plugged.
   speakerChance: number;
@@ -494,6 +509,8 @@ export interface SetDefinition {
   carriers?: CarrierRules;
   bomb?: BombRules;
   twinVibes?: TwinVibesRules;
+  // Renews traps that wear: a set with it has `trapWear`.
+  battery?: BatteryRules;
   dice?: DiceRules;
   levelCurve: { baseVibes: number; vibesPerLevel: number };
   pickups: { lifetimeTicks: number; speed: number };

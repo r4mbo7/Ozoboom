@@ -1,7 +1,7 @@
 import { t } from '../shared/i18n';
 import type { SetDefinition } from '../data/types';
 import type { PlayerState, SimEvent, SimState, Vec2 } from '../sim/state';
-import { el, icon, keycap, setText } from './dom';
+import { el, icon, keycap, replay, setText } from './dom';
 import { enteredSpeaker, volumeCrans } from './hud-model';
 import { PLUG, SENT } from './icons';
 import type { DevicePrompts } from './prompts';
@@ -322,7 +322,7 @@ export function createTutorialBanner(): TutorialBanner {
       now = sight.tick;
       // Each beat swaps the kick, which starts the call of the button the banner names again.
       if (sight.events.some((event) => event.type === 'beat')) {
-        element.dataset.kick = element.dataset.kick === 'a' ? 'b' : 'a';
+        replay(element, 'kick');
       }
       carrying = sight.players[0]?.carriedTrap !== undefined;
       draw();

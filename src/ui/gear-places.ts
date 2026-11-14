@@ -1,6 +1,7 @@
 import type { GameContent } from '../data/types';
 import type { PlayerState, SimState } from '../sim/state';
 import { type WeaponPlace, weaponPlaces } from './cards';
+import { replay } from './dom';
 import { createPlaceRow } from './weapon-place';
 
 export interface GearPlaces {
@@ -27,7 +28,7 @@ export function createGearPlaces(): GearPlaces {
       }
       const place = placeOf(event.weaponId);
       if (place !== null && place.dataset.continuous === undefined) {
-        place.dataset.pulse = place.dataset.pulse === 'a' ? 'b' : 'a';
+        replay(place, 'pulse');
       }
     }
   }

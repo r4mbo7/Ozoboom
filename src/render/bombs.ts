@@ -4,17 +4,16 @@ import type { Arena, SimEvent, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { easeOutCubic } from './motion';
+import { placeCarrierMarks, placeHalo } from './bonus-marks';
 import { BOMB_FUSE_TIP } from './textures-traps';
 import { add, hide, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
 
 const BOMB_WIDTH = 42;
 const CARRIER_BOMB_WIDTH = 34;
-const CARRIER_GAP = 7;
 const CARRIER_BOMB_LIFT = 20;
 const HALO_RADIUS = 40;
 const SPARK_RADIUS = 8;
-const FADING_BARS = 4;
 const FLASH_RADIUS = { from: 40, to: 320 };
 
 const WAVE = { bars: 1, peak: 0.95, band: 34, line: 6 };
@@ -90,13 +89,6 @@ export function createBombs(ctx: RenderContext): Family {
     view.spark.rotation = frame.calm ? 0 : frame.now * 0.15;
   }
 
-  function placeHalo(halo: Sprite, x: number, y: number, radius: number, frame: Frame): void {
-    halo.visible = true;
-    setTint(halo, frame.palette.mage);
-    halo.position.set(x, y);
-    halo.scale.set(radius / t.halo.radius);
-  }
-
   function drawWaves(frame: Frame): void {
     wave.clear();
     flash.visible = false;
@@ -132,11 +124,12 @@ export function createBombs(ctx: RenderContext): Family {
       if (!frame.calm && progress < 0.5) {
         const burst = progress * 2;
         placeHalo(
+          t,
           flash,
           item.x,
           item.y,
           FLASH_RADIUS.from + (FLASH_RADIUS.to - FLASH_RADIUS.from) * burst,
-          frame,
+          frame.palette.mage,
         );
         flash.alpha = (1 - burst) * frame.light.haloAlpha;
       }
@@ -162,12 +155,9 @@ export function createBombs(ctx: RenderContext): Family {
       lying.begin();
       for (const bomb of state.bombs ?? []) {
         const view = lying.acquire(bomb.id);
-        const fading = !frame.calm && bomb.ticksLeft < FADING_BARS * frame.tempo.ticksPerBar;
-        const shown = fading ? 0.45 + 0.55 * frame.pulse : 1;
         placeBomb(view, bomb.x, bomb.y, BOMB_WIDTH * (1 + 0.06 * beat), frame);
-        view.body.alpha = view.outline.alpha = view.spark.alpha = shown;
-        placeHalo(view.halo, bomb.x, bomb.y, HALO_RADIUS, frame);
-        view.halo.alpha = (0.7 + 0.3 * beat) * frame.light.haloAlpha * shown;
+        placeHalo(t, view.halo, bomb.x, bomb.y, HALO_RADIUS, frame.palette.mage);
+        view.halo.alpha = (0.7 + 0.3 * beat) * frame.light.haloAlpha;
       }
       lying.end();
 
@@ -179,15 +169,18 @@ export function createBombs(ctx: RenderContext): Family {
         const view = carriers.acquire(enemy.id);
         const x = lerp(enemy.prevX, enemy.x, alpha);
         const y = lerp(enemy.prevY, enemy.y, alpha);
-        placeHalo(view.halo, x, y, enemy.radius * 2.6, frame);
-        view.halo.alpha = frame.light.haloAlpha;
-        view.ring.visible = true;
-        setTint(view.ring, frame.palette.mage);
-        view.ring.position.set(x, y);
-        view.ring.scale.set((enemy.radius + CARRIER_GAP) / t.ring.radius);
-        view.ring.alpha = 0.85 + 0.15 * beat;
-        const lift = enemy.radius + CARRIER_BOMB_LIFT + 3 * beat;
-        placeBomb(view, x, y - lift, CARRIER_BOMB_WIDTH, frame);
+        const { mage } = frame.palette;
+        const above = placeCarrierMarks(
+          t,
+          view,
+          x,
+          y,
+          enemy.radius,
+          CARRIER_BOMB_LIFT,
+          mage,
+          frame,
+        );
+        placeBomb(view, x, above, CARRIER_BOMB_WIDTH, frame);
       }
       carriers.end();
 

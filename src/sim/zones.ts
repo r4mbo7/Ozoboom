@@ -2,6 +2,7 @@ import type { ZoneCadence, ZoneDefinition } from '../data/types';
 import { clamp } from '../shared/scalar';
 import { isBeatTick, isOffbeatTick, type Tempo } from '../shared/tempo';
 import { normalize, type Vec2 } from '../shared/vec';
+import { applyEnemyStatus } from './enemy-status';
 import { drawTo, healPlayer, hurtEnemy, keepWhere, knockBack, touches } from './effects';
 import type { PlayerState, SimState, ZoneState } from './state';
 import { statValue } from './stats';
@@ -78,6 +79,10 @@ export function zones({ state, tempo, enemyObstacles, enemyGrid }: StepContext):
       moved ||= moves;
       if (definition.slowFactor !== undefined) {
         enemy.slowFactor = Math.min(enemy.slowFactor, definition.slowFactor);
+      }
+      if (definition.disorients === true) {
+        // Counted down this step too: it ends on the step the zone closes.
+        applyEnemyStatus(state, enemy, 'disoriented', zone.ticksLeft + 1);
       }
       if (definition.pull === true) {
         drawTo(enemy, zone, enemy.radius, enemyObstacles);

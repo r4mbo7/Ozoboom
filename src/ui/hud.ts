@@ -1,7 +1,7 @@
 import type { ClassDefinition, GameContent, SetDefinition } from '../data/types';
 import type { InputDevice } from '../input/intents';
 import { t } from '../shared/i18n';
-import { beatPeriodMs } from '../shared/tempo';
+import { type Tempo, beatPeriodMs } from '../shared/tempo';
 import { weaponSlotCount } from '../sim/draw';
 import { playedTempo, setOf, setTempo } from '../sim/lineup';
 import type { PlayerId, PlayerState, SimState } from '../sim/state';
@@ -29,6 +29,7 @@ import type { Prompts } from './prompts';
 import { createSkillTile } from './skill-tile';
 import { createSpeakerPlugs } from './speaker-plugs';
 import { cssName } from './sun';
+import { createVibeCounter } from './vibe-counter';
 import { createCarriedTrap } from './carried-trap';
 import type { UiFrame } from './types';
 import { type TutorialBanner, createTutorialBanner } from './tutorial';
@@ -63,8 +64,11 @@ export function createHud(prompts: Prompts): Hud {
   const element = el('div', 'ui-screen ui-hud');
   const ribbon = createLineupRibbon();
   const plugs = createSpeakerPlugs();
-  ribbon.element.append(plugs.row, pauseButton());
+  // A shared screen has no level ring in its bar: its team's vibes show in the top bar instead.
+  const ribbonVibes = createVibeCounter();
+  ribbon.element.append(plugs.row, ribbonVibes.element, pauseButton());
   const level = createLevelRing();
+  const vibes = createVibeCounter();
   const gear = createGearPlaces();
   const carried = createCarriedTrap(prompts);
   const skill = createSkillTile(prompts);
@@ -72,7 +76,7 @@ export function createHud(prompts: Prompts): Hud {
   const gauge = createGaugeTile();
   const bar = el('div', 'ui-panel ui-hud__bar');
   const status = el('div', 'ui-panel ui-hud__status');
-  status.append(level.element, gear.element);
+  status.append(level.element, vibes.element, gear.element);
   const actions = el('div', 'ui-panel ui-hud__actions');
   actions.append(carried.element, skill.element, dashTile.section, gauge.element);
   bar.append(status, actions);
@@ -145,6 +149,7 @@ export function createHud(prompts: Prompts): Hud {
     frame: UiFrame,
     content: GameContent,
     set: SetDefinition,
+    tempo: Tempo,
     twins: TwinVibesReading | null,
   ): void {
     const snapshot = frame.players[0]?.snapshot ?? frame.snapshot;
@@ -152,7 +157,6 @@ export function createHud(prompts: Prompts): Hud {
     if (definition !== null) {
       dress(definition, snapshot.device);
     }
-    const tempo = playedTempo(set, state);
     level.update(player, twins);
     gear.update(player, state, content, weaponSlotCount(set));
     carried.update(player, state, content);
@@ -170,7 +174,10 @@ export function createHud(prompts: Prompts): Hud {
       built?.content === content && built.set.id === state.setId
         ? built.set
         : build(content, state.setId);
+    const tempo = playedTempo(set, state);
     ribbon.update(set, state);
+    vibes.update(state, tempo.ticksPerBeat);
+    ribbonVibes.update(state, tempo.ticksPerBeat);
     plugs.update(set, state);
     tutorial.follow(set, state);
     banner.update(state, content);
@@ -178,13 +185,13 @@ export function createHud(prompts: Prompts): Hud {
       part.update(state, content, frame);
     }
     showTeam(frame, content, rosterOf(state, frame));
-    const twins = twinVibesReading(state, set, playedTempo(set, state).ticksPerBar);
+    const twins = twinVibesReading(state, set, tempo.ticksPerBar);
     showTwinVibes(twins);
     const player = shownPlayer(state, frame);
     setFlag(element, 'no-player', player === undefined);
     shownId = player?.id ?? null;
     if (player !== undefined) {
-      showPlayer(player, state, frame, content, set, twins);
+      showPlayer(player, state, frame, content, set, tempo, twins);
     }
   }
 
@@ -208,6 +215,8 @@ export function createHud(prompts: Prompts): Hud {
     tutorial,
     reset() {
       level.reset();
+      vibes.reset();
+      ribbonVibes.reset();
       banner.reset();
     },
   };

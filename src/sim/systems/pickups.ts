@@ -1,7 +1,7 @@
 import { clamp } from '../../shared/scalar';
 import { lookup, type ResolvedContent } from '../content';
 import { gustDrift } from '../gusts';
-import type { PickupState, PlayerState, SimState } from '../state';
+import type { PickupState, PlayerState, SimState, VibeMilestone } from '../state';
 import { statValue } from '../stats';
 import { tallyOf } from '../tally';
 import { volumeMul } from '../volume';
@@ -102,6 +102,7 @@ function collect(state: SimState, pickup: PickupState, player: PlayerState): voi
       member.vibes += amount;
     }
   }
+  const before = Math.floor(state.stats.vibesCollected);
   state.stats.vibesCollected += amount;
   tallyOf(player).vibes += amount;
   state.events.push({
@@ -110,4 +111,15 @@ function collect(state: SimState, pickup: PickupState, player: PlayerState): voi
     kind: pickup.kind,
     amount: pickup.amount,
   });
+  const milestone = milestoneCrossed(before, Math.floor(state.stats.vibesCollected));
+  if (milestone !== null) {
+    state.events.push({ type: 'vibesMilestone', milestone });
+  }
+}
+
+function milestoneCrossed(before: number, after: number): VibeMilestone | null {
+  if (Math.floor(after / 1000) > Math.floor(before / 1000)) {
+    return 'thousand';
+  }
+  return Math.floor(after / 100) > Math.floor(before / 100) ? 'hundred' : null;
 }

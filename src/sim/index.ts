@@ -10,6 +10,7 @@ import { playerBoosts } from './player-boosts';
 import { recruits } from './recruits';
 import type { GameStatus, PlayerId, SimState } from './state';
 import { beginStep } from './systems/begin-step';
+import { battery, batteryCarriers } from './systems/battery';
 import { bombCarriers, bombs } from './systems/bomb';
 import { twinVibes, twinVibesCarriers } from './systems/twin-vibes';
 import { dice } from './systems/dice';
@@ -85,6 +86,7 @@ const RUNNING: readonly System[] = [
   trapCarriers,
   bombCarriers,
   twinVibesCarriers,
+  batteryCarriers,
   enemySteering,
   placedTotems,
   specials,
@@ -101,6 +103,7 @@ const RUNNING: readonly System[] = [
   enemyStatuses,
   bombs,
   twinVibes,
+  battery,
   rings,
   deaths,
   gauges,

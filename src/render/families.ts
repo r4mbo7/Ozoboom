@@ -11,6 +11,7 @@ import { createGround } from './ground';
 import { createGroundWaves } from './ground-waves';
 import { createBombs } from './bombs';
 import { createTwinVibes } from './twin-vibes';
+import { createBattery } from './battery';
 import { createDice } from './dice';
 import { createCarriers } from './carried-traps';
 import { createMood } from './mood';
@@ -59,6 +60,7 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
     createCarriers(ctx),
     createBombs(ctx),
     createTwinVibes(ctx),
+    createBattery(ctx),
     createDice(ctx),
     createBystanders(ctx),
     enemies,

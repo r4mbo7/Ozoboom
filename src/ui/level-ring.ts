@@ -1,6 +1,6 @@
 import { t, tn } from '../shared/i18n';
 import type { PlayerState } from '../sim/state';
-import { el, setFlag, setText, setVar } from './dom';
+import { el, replay, setFlag, setText, setVar } from './dom';
 import { formatNumber } from './format';
 import { type TwinVibesReading, levelReading } from './hud-model';
 
@@ -51,10 +51,10 @@ export function createLevelRing(): LevelRing {
       setFlag(ring, 'ending', twins?.ending === true);
       setVar(ring, '--twins-left', String(twins?.left ?? 0));
       if (reading.gained) {
-        ring.dataset.gain = ring.dataset.gain === 'a' ? 'b' : 'a';
+        replay(ring, 'gain');
       }
       if (reading.levelled) {
-        ring.dataset.burst = ring.dataset.burst === 'a' ? 'b' : 'a';
+        replay(ring, 'burst');
       }
       element.title = levelTitle(player);
     },
