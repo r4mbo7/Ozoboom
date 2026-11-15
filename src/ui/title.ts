@@ -16,6 +16,9 @@ import {
 import { createSoundControl } from './volume';
 import { createLanguageControl, createLanguageList } from './language';
 import { locale, t, tn, type Locale } from '../shared/i18n';
+import { createCredits } from './credits';
+import { createThanksClock, thanksOf } from './title-thanks';
+import { createThanksPainter } from './title-thanks-paint';
 
 export interface TitleActions {
   start(): void;
@@ -41,7 +44,7 @@ export interface TitleOptions {
   readonly autoAim: boolean;
 }
 
-export type TitleView = 'main' | 'together' | 'settings';
+export type TitleView = 'main' | 'together' | 'settings' | 'credits';
 
 export interface TitleScreen {
   readonly element: HTMLElement;
@@ -52,8 +55,8 @@ export interface TitleScreen {
   setOptions(options: TitleOptions): void;
   setDevice(device: InputDevice): void;
   setVisits(count: number): void;
-  // In eighths; null stills the title.
-  follow(position: number | null): void;
+  // The ambience position in eighths, null when there is none; calm or null stills the title.
+  follow(position: number | null, calm: boolean): void;
 }
 
 // The scene is drawn in hundredths of the title's em, so the sun keeps its size against the logo.
@@ -184,10 +187,12 @@ const SUN =
   `<stop class="ui-title__gold" offset="${(1 / RAY_FADE).toFixed(3)}"/>` +
   '<stop class="ui-title__gold" offset="1" stop-opacity="0"/></radialGradient>' +
   `<linearGradient id="ui-title-disc" x1="0" x2="0" y1="${String(HORIZON - DISC)}" ` +
-  `y2="${String(HORIZON)}" gradientUnits="userSpaceOnUse">` +
+  `y2="${String(HORIZON + DISC)}" gradientUnits="userSpaceOnUse">` +
   '<stop class="ui-title__disc-stop" offset="0" style="--a: 0.12"/>' +
-  '<stop class="ui-title__disc-stop" offset="0.55" style="--a: 0.2"/>' +
-  '<stop class="ui-title__disc-stop ui-title__ember" offset="1" style="--a: 0.62"/></linearGradient>' +
+  '<stop class="ui-title__disc-stop" offset="0.275" style="--a: 0.2"/>' +
+  '<stop class="ui-title__disc-stop ui-title__ember" offset="0.5" style="--a: 0.62"/>' +
+  '<stop class="ui-title__disc-stop ui-title__ember" offset="1" style="--a: 0.62"/>' +
+  '</linearGradient>' +
   '</defs><path class="ui-title__sun-rays" stroke="url(#ui-title-rays)" d="' +
   Array.from({ length: RAYS }, (_, index) => {
     const turn = ((index + 1) * Math.PI) / (RAYS + 1);
@@ -195,8 +200,9 @@ const SUN =
     return `M${point(DISC + 16, turn)}L${point(reach, turn)}`;
   }).join('') +
   '"/>' +
-  `<path class="ui-title__sun-disc" fill="url(#ui-title-disc)" d="M${String(CENTRE - DISC)} ` +
-  `${String(HORIZON)}A${String(DISC)} ${String(DISC)} 0 0 1 ${String(CENTRE + DISC)} ${String(HORIZON)}"/>` +
+  // A whole disc: the title shows its top half over the horizon, the credits see it rise.
+  `<circle class="ui-title__sun-disc" fill="url(#ui-title-disc)" cx="${String(CENTRE)}" ` +
+  `cy="${String(HORIZON)}" r="${String(DISC)}"/>` +
   `<circle class="ui-title__sun-ring" cx="${String(CENTRE)}" cy="${String(HORIZON)}" ` +
   `r="${String(DISC + 9)}"/></svg>`;
 
@@ -233,6 +239,9 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   sky.innerHTML = NIGHT + MOON + GLOW + SUN;
   const water = el('div', 'ui-title__water');
   water.innerHTML = WATER + MOON_GLINT;
+  const lake = el('canvas', 'ui-title__thanks');
+  lake.setAttribute('aria-hidden', 'true');
+  water.append(lake);
 
   const header = el('header', 'ui-title__header');
   const mark = el('div', 'ui-title__mark');
@@ -293,6 +302,13 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     return button;
   };
 
+  const credits = createCredits();
+  const creditsButton = el('button', 'ui-title__credits', t('Crédits'));
+  creditsButton.type = 'button';
+  const creditsBack = el('button', 'ui-button ui-title__credits-back');
+  creditsBack.type = 'button';
+  creditsBack.append(icon('ui-title__credits-chevron', '<path d="M15 5l-7 7 7 7"/>'), t('Retour'));
+
   const discord = el('button', 'ui-title__discord');
   discord.type = 'button';
   discord.setAttribute('aria-label', t('Backstage'));
@@ -302,7 +318,12 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   const views: Record<TitleView, { title: string; items: HTMLElement[]; nav: HTMLElement }> = {
     main: {
       title: '',
-      items: [play, together, sound.element, settings, discord],
+      items: [play, together, sound.element, settings, discord, creditsButton],
+      nav: el('nav', 'ui-menu'),
+    },
+    credits: {
+      title: t('Crédits'),
+      items: [creditsBack, credits.link],
       nav: el('nav', 'ui-menu'),
     },
     together: {
@@ -327,19 +348,23 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   };
   views.main.nav.setAttribute('aria-label', t('Menu principal'));
   views.main.nav.append(play, together, sound.element, settings);
-  for (const name of ['together', 'settings'] as const) {
+  for (const name of ['together', 'settings', 'credits'] as const) {
     views[name].nav.setAttribute('aria-label', views[name].title);
-    views[name].nav.append(...views[name].items);
   }
+  views.together.nav.append(...views.together.items);
+  views.settings.nav.append(...views.settings.items);
+  views.credits.nav.append(creditsBack);
 
   const hint = el('p', 'ui-hint');
   const deck = el('div', 'ui-title__deck');
-  deck.append(views.main.nav, views.together.nav, views.settings.nav);
+  deck.append(views.main.nav, views.together.nav, views.settings.nav, views.credits.nav);
 
   const meta = el('p', 'ui-title__meta', `v${__APP_RELEASE__}`);
+  const corner = el('div', 'ui-title__corner');
+  corner.append(meta, creditsButton);
 
   const body = el('div', 'ui-title__body');
-  body.append(sky, water, header, heading, deck, hint, meta, discord);
+  body.append(sky, water, credits.element, header, heading, deck, hint, corner, discord);
   const languages = createLanguageList(
     prompts,
     locale(),
@@ -372,6 +397,12 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       },
     ],
     [discord, openDiscord],
+    [
+      creditsButton,
+      () => {
+        open('credits');
+      },
+    ],
     [
       same,
       () => {
@@ -432,6 +463,12 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       actions.feedback?.();
     });
   }
+  activations.set(creditsBack, () => {
+    open('main');
+  });
+  activations.set(credits.link, () => {
+    window.open(credits.link.href, '_blank', 'noopener');
+  });
   for (const name of ['together', 'settings'] as const) {
     const back = views[name].items.at(-1);
     if (back !== undefined) {
@@ -441,6 +478,12 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     }
   }
 
+  // Back on the title, the selection is the entry the player left it by.
+  const openers: Partial<Record<TitleView, HTMLElement>> = {
+    together,
+    settings,
+    credits: creditsButton,
+  };
   let view: TitleView = 'main';
   const menu = createMenu(
     (index) => {
@@ -463,22 +506,38 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     view = next;
     body.dataset.view = next;
     header.hidden = next !== 'main';
-    heading.hidden = next === 'main';
+    heading.hidden = next === 'main' || next === 'credits';
     discord.hidden = next !== 'main';
+    corner.hidden = next === 'credits';
+    creditsButton.hidden = next !== 'main';
+    hint.hidden = next === 'credits';
+    credits.element.hidden = next !== 'credits';
     setText(heading, views[next].title);
     for (const [name, { nav }] of Object.entries(views)) {
       nav.hidden = name !== next;
     }
     menu.setItems(views[next].items);
-    const opener = from === 'together' ? together : from === 'settings' ? settings : null;
+    const opener = openers[from] ?? null;
     if (next === 'main' && opener !== null) {
       menu.select(views.main.items.indexOf(opener));
     }
+    if (next === 'credits') {
+      body.style.setProperty('--credits-roll', `${credits.open().toFixed(1)}s`);
+    }
+    thanks.wake();
     showHint();
   }
 
   let device: InputDevice | null = null;
   let keysShown = -1;
+  let calmNow = false;
+  const thanks = createThanksClock(thanksOf());
+  const painter = createThanksPainter(lake, views.main.nav);
+  for (const type of ['pointermove', 'pointerdown', 'wheel'] as const) {
+    element.addEventListener(type, () => {
+      thanks.wake();
+    });
+  }
 
   function showHint(): void {
     if (device === null) {
@@ -508,14 +567,27 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
         languages.handle(edges);
         return;
       }
+      if (Object.values(edges).includes(true)) {
+        thanks.wake();
+      }
       if (edges.back && view !== 'main') {
         open('main');
         return;
       }
+      if (view === 'credits' && calmNow && edges.up !== edges.down) {
+        credits.scroll(edges.down ? 1 : -1);
+        return;
+      }
       menu.handle(edges);
     },
-    follow(position) {
-      if (position === null) {
+    follow(position, still) {
+      calmNow = still;
+      painter.paint(
+        position === null || view !== 'main' || languages.isOpen ? null : thanks.at(position),
+        still,
+        position ?? 0,
+      );
+      if (position === null || still) {
         origin = null;
         show(TITLE_AT_REST);
         return;

@@ -1,17 +1,19 @@
 import { TUTORIAL } from '../data/tutorial';
 import type { GameContent } from '../data/types';
-import type { InputDevice } from '../input/intents';
+import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
-import { scoreOf } from '../sim/score';
+import { scoreBreakdown } from '../sim/score';
 import type { FestivalState, SimState } from '../sim/state';
 import { el, fillHint, icon, setText } from './dom';
 import { createActionButton, createFeedbackButton } from './feedback-button';
 import { openDiscord } from './discord';
 import { type PlayerCard, playerCards, turnCard } from './end-cards';
-import { endStats, formatDuration, formatNumber } from './format';
+import { formatDuration, formatNumber } from './format';
 import { DISCORD, FOG, SUN } from './icons';
-import { type Menu, createMenu } from './menu';
+import { createMenu } from './menu';
 import type { Prompts } from './prompts';
+import { tallyOf } from './score-tally';
+import { createScoreTicket, setTally, tallyState } from './score-ticket';
 import type { Ending } from './end-parts';
 import { FULL_END } from './full';
 import { createTrapLesson } from './trap-lesson';
@@ -19,7 +21,8 @@ import type { EndSession } from './types';
 
 export interface EndScreen {
   readonly element: HTMLElement;
-  readonly menu: Menu;
+  // While the ticket counts, every press only skips it.
+  handle(edges: MenuIntents): void;
   // `best`: the record of this device before the game, null for its first; `unmoved`: nobody
   // ever moved a trap.
   show(
@@ -86,8 +89,15 @@ export function offersTutorial(state: {
   );
 }
 
+// `calm`: the screen arrives at rest; `graceOver`: a press or a tap from the game is spent.
+export interface EndPace {
+  calm(): boolean;
+  graceOver(): boolean;
+}
+
 export function createEnd(
   prompts: Prompts,
+  pace: EndPace,
   onRestart: () => void,
   onBackToLobby: () => void,
   onQuit: () => void,
@@ -99,17 +109,23 @@ export function createEnd(
   const emblem = el('div', 'ui-end__emblem');
   const title = el('h2', 'ui-end__title');
   const text = el('p', 'ui-end__text');
-  const score = el('p', 'ui-end__score');
+  // The score is a button that opens its detail in the cards' place; the record ends the detail.
+  const score = el('button', 'ui-end__score');
+  score.type = 'button';
+  score.setAttribute('aria-label', t('Détail du score'));
   const scoreValue = el('strong', 'ui-end__score-value');
+  const opens = el('span', 'ui-end__score-open', t('Détail'));
+  const chevron = el('span', 'ui-end__score-chevron', '▾');
+  chevron.setAttribute('aria-hidden', 'true');
+  opens.append(chevron);
+  score.append(el('span', 'ui-end__score-label', t('Score')), scoreValue, opens);
   const record = el('span', 'ui-end__record');
-  score.append(el('span', 'ui-end__score-label', t('Score')), scoreValue, record);
   const cards = el('ul', 'ui-end__cards');
   cards.setAttribute('aria-label', t('L’équipe'));
   const lesson = createTrapLesson();
   // The lesson deals beside the cards: a phone has width to spare, not height.
   const table = el('div', 'ui-end__table');
   table.append(cards, lesson.element);
-  const stats = el('dl', 'ui-end__stats');
   const restart = el('button', 'ui-button ui-button--primary');
   restart.type = 'button';
   const learn = el('button', 'ui-button', t('Apprendre à jouer'));
@@ -136,15 +152,30 @@ export function createEnd(
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-end__body');
   const details = el('div', 'ui-end__details');
-  body.append(emblem, title, text, score, details, table, stats, actions, hint);
+  const ticket = createScoreTicket(element, score, scoreValue, record);
+  // The ticket counts over the cards, which wait for it to fold.
+  const stage = el('div', 'ui-end__stage');
+  stage.append(table, ticket.ticket);
+  // The details tell how the game went, right under the title that says how it ended.
+  body.append(emblem, title, details, text, score, stage, actions, hint);
   element.append(body);
 
   let items: HTMLElement[] = [];
   let players: PlayerCard[] = [];
+  let buttons: HTMLElement[] = [];
   const menu = createMenu((index) => {
     const item = items[index];
     const turned = players.find((player) => player.card === item);
-    if (turned !== undefined) {
+    const counting = tallyState(element) === 'counting';
+    if (counting) {
+      setTally(element, 'folded');
+    }
+    // A press on the score while it counts only skips the count.
+    if (item === score) {
+      if (!counting) {
+        setTally(element, tallyState(element) === 'open' ? 'folded' : 'open');
+      }
+    } else if (turned !== undefined) {
       turnCard(turned.card);
     } else if (item === restart) {
       onRestart();
@@ -163,13 +194,42 @@ export function createEnd(
 
   let device: InputDevice | null = null;
 
+  // A tap off the buttons skips the count; off the open ticket, it folds it.
+  element.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const state = tallyState(element);
+    if (state === 'counting' && pace.graceOver() && !inside(target, '.ui-button')) {
+      setTally(element, 'folded');
+    } else if (state === 'open' && !inside(target, '.ui-end__ticket, .ui-end__score')) {
+      setTally(element, 'folded');
+    }
+  });
+
+  // The menu follows the ticket: the cards it replaces when open leave it.
+  element.addEventListener('tally', () => {
+    settle(items[menu.index] ?? score);
+  });
+  function settle(selected: HTMLElement): void {
+    const open = tallyState(element) === 'open';
+    items = [score, ...(open ? [] : players.map((player) => player.card)), ...buttons];
+    menu.setItems(items, Math.max(0, items.indexOf(selected)));
+    fillHints();
+  }
+
   function fillHints(): void {
     const shown = prompts.for(device ?? 'none');
     lesson.setDevice(shown);
+    const state = tallyState(element);
     const confirm = { keys: [shown.confirm], label: t('valider') };
     fillHint(
       hint,
-      items.length > 1 ? [{ keys: shown.navigateRow, label: t('naviguer') }, confirm] : [confirm],
+      state === 'counting'
+        ? [{ keys: [shown.confirm], label: t('passer') }]
+        : [
+            { keys: shown.navigateRow, label: t('naviguer') },
+            confirm,
+            ...(state === 'open' ? [{ keys: [shown.back], label: t('replier') }] : []),
+          ],
       shown.style,
     );
   }
@@ -182,29 +242,32 @@ export function createEnd(
     }
     const beaten = points > best;
     record.dataset.beaten = String(beaten);
+    // A record beaten says so alone: the old one no longer matters.
     record.replaceChildren(
-      ...(beaten
-        ? [
-            el('span', 'ui-end__record-new', t('Nouveau record\u202f!')),
-            el(
-              'span',
-              'ui-end__record-old',
-              t('avant\u202f: {score}', { score: formatNumber(best) }),
-            ),
-          ]
-        : [
-            el(
-              'span',
-              'ui-end__record-old',
-              t('Record\u202f: {score}', { score: formatNumber(best) }),
-            ),
-          ]),
+      beaten
+        ? el('span', 'ui-end__record-new', t('Nouveau record\u202f!'))
+        : el(
+            'span',
+            'ui-end__record-old',
+            t('Record\u202f: {score}', { score: formatNumber(best) }),
+          ),
     );
   }
 
   return {
     element,
-    menu,
+    handle(edges) {
+      const state = tallyState(element);
+      if (state === 'counting') {
+        if (pressed(edges)) {
+          setTally(element, 'folded');
+        }
+      } else if (state === 'open' && edges.back) {
+        setTally(element, 'folded');
+      } else {
+        menu.handle(edges);
+      }
+    },
     show(state, content, session, best, unmoved) {
       const won = state.status === 'won';
       element.dataset.outcome = won ? 'won' : 'lost';
@@ -215,9 +278,11 @@ export function createEnd(
       const ending = part?.ending ?? endingOf(state);
       setText(title, ending.title);
       setText(text, ending.text);
+      text.hidden = ending.text === '';
       details.replaceChildren(...(part === undefined ? [] : [part.details]));
       details.hidden = part === undefined;
-      fillScore(scoreOf(state), best);
+      const breakdown = scoreBreakdown(state);
+      fillScore(breakdown.total, best);
       lesson.element.hidden = !unmoved;
       if (unmoved) {
         lesson.show(state, content);
@@ -225,13 +290,6 @@ export function createEnd(
       players = playerCards(state.players, content);
       cards.replaceChildren(...players.map((player) => player.seat));
       cards.style.setProperty('--count', String(state.players.length));
-      stats.replaceChildren(
-        ...endStats(state).map((stat) => {
-          const item = el('div', 'ui-end__stat');
-          item.append(el('dt', '', stat.label), el('dd', '', stat.value));
-          return item;
-        }),
-      );
       const guest = session?.role === 'guest';
       const leads = session?.role === 'host';
       const learns = offersTutorial(state);
@@ -241,9 +299,8 @@ export function createEnd(
       learn.hidden = !learns;
       lobby.hidden = !leads;
       wait.hidden = !guest;
-      // The cards come before the buttons, as they read; the screen opens on the first button.
-      items = [
-        ...players.map((player) => player.card),
+      // The score and the cards come before the buttons, as they read; the screen opens on the first button.
+      buttons = [
         ...(guest ? [] : [restart]),
         ...(learns ? [learn] : []),
         ...(leads ? [lobby] : []),
@@ -251,9 +308,8 @@ export function createEnd(
         ...(feedback === null ? [] : [feedback]),
         discord,
       ];
-      menu.setItems(items);
-      menu.select(players.length);
-      fillHints();
+      ticket.show(tallyOf(breakdown), !pace.calm());
+      settle(buttons[0] ?? quit);
     },
     setDevice(next) {
       if (next === device) {
@@ -263,4 +319,12 @@ export function createEnd(
       fillHints();
     },
   };
+}
+
+function pressed(edges: MenuIntents): boolean {
+  return Object.values(edges).some(Boolean);
+}
+
+function inside(target: Element | null, selector: string): boolean {
+  return target !== null && target.closest(selector) !== null;
 }

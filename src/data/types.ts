@@ -1,6 +1,7 @@
 import type { FullAttack, FullSkillEffect, FullSpecialEffect } from './full';
 import type { AuraAttack, OlaEffect } from './kiffeur';
 import type { GustEffect } from './coup-de-vent';
+import type { UnmaskEffect } from './neon';
 import type { MoshRingEffect } from './pogo';
 
 export type StatKey =
@@ -38,7 +39,8 @@ export type StatKey =
   | 'recruitCountAdd'
   | 'recruitPowerMul'
   | 'dishPowerMul'
-  | 'offerCardsAdd';
+  | 'offerCardsAdd'
+  | 'oneLoveHealMul';
 
 export interface StatModifier {
   stat: StatKey;
@@ -154,7 +156,6 @@ export interface ClassDefinition {
 export type EnemyBehaviour = 'rusher' | 'horde' | 'heavy' | 'shooter' | 'boss';
 
 export type SpecialEffect =
-  | { kind: 'shove'; knockback: number }
   | { kind: 'bottle'; slowFactor: number; durationTicks: number }
   | { kind: 'cling'; slowFactor: number; detachDamage: number }
   | { kind: 'suppress'; radius: number }
@@ -166,6 +167,7 @@ export type SpecialEffect =
   | { kind: 'frontGuard'; frontDamageMul: number }
   | GustEffect
   | MoshRingEffect
+  | UnmaskEffect
   | FullSpecialEffect;
 
 export interface EnemyDefinition {
@@ -191,6 +193,8 @@ export interface EnemyDefinition {
   special?: SpecialEffect;
   // Players run through it; its touch hurts the stage only.
   passable?: boolean;
+  // A spawn rule sends one at most, and none while one is out, as a bad vibe or as its dancer.
+  oneAtATime?: true;
 }
 
 export type TrapCadence = 'beat' | 'bar' | 'drop' | 'continuous';
@@ -488,6 +492,8 @@ export interface ObstacleDefinition {
   radius: number;
 }
 
+export type DancerLook = 'kid' | 'rain';
+
 export interface SetDefinition {
   id: string;
   name: string;
@@ -496,6 +502,10 @@ export interface SetDefinition {
   // The tick rate stays the same (ADR 0012). Absent means 12.
   ticksPerBeat?: number;
   decor: DecorId;
+  // A lake along the west edge: players and all they pick up stay on its shore, bad vibes swim it.
+  lake?: true;
+  // Who dances under a chased Néon's mask. Absent, the kid who jumps.
+  dancer?: DancerLook;
   obstacles?: readonly ObstacleDefinition[];
   trackIds: readonly string[];
   // Absent, a dry stage; `lowCutHz` keeps the lows out of the room, `toneHz` darkens its tail.

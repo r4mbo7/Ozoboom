@@ -5,6 +5,7 @@ import type { ResolvedContent } from '../content';
 import type { FlowFields } from '../flow-field';
 import type { GameMode } from '../mode';
 import type { Obstacles } from '../obstacles';
+import type { Shore } from '../shore';
 import type { SpatialHash } from '../spatial-hash';
 import type { PlayerId, SimState } from '../state';
 
@@ -21,6 +22,8 @@ export interface StepContext {
   enemyObstacles: Obstacles;
   // Absent on a set without obstacles or without bad vibes.
   flowFields: FlowFields | undefined;
+  // Absent on a set without a lake.
+  shore: Shore | null;
   // Absent in a game of one set.
   mode: GameMode | undefined;
 }

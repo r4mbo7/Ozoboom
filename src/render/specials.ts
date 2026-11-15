@@ -39,7 +39,10 @@ function hideView(view: SpecialView): void {
 }
 
 function targetOf(state: SimState, enemy: EnemyState): { x: number; y: number } | undefined {
-  return enemy.target === 'core' ? state.core : byId(state.players, enemy.target);
+  if (enemy.target === 'core') {
+    return state.core;
+  }
+  return enemy.target === 'dancer' ? state.dancer : byId(state.players, enemy.target);
 }
 
 export function createSpecials(ctx: RenderContext): Family {

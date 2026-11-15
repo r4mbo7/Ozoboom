@@ -1,8 +1,10 @@
 import type { EnemyDefinition } from '../../data/types';
 import { clamp } from '../../shared/scalar';
 import { distanceSquared } from '../../shared/vec';
+import { pushBodies, towersOver } from '../bodies';
 import { lookup, type ResolvedContent } from '../content';
-import { playerById } from '../damage';
+import { lureRadiusOf, lures } from '../dancer';
+import { playerById, targetOf } from '../damage';
 import {
   bubbleDrift,
   disorientedHeading,
@@ -13,10 +15,10 @@ import {
 import { flowWaypoint } from '../flow-field';
 import { lineBlocked, resolveObstacles } from '../obstacles';
 import { ringTarget } from '../rings';
-import type { Circle } from '../spatial-hash';
+import { ashore } from '../shore';
 import { STEERING_TARGETS } from '../specials';
 import type { SteeringOverride } from '../specials/types';
-import type { EnemyState, PlayerState, SimState } from '../state';
+import type { EnemyState, SimState } from '../state';
 import type { StepContext } from './types';
 
 const LEASH_IN_AGGRO_RADII = 2;
@@ -27,12 +29,13 @@ const waypoint = { x: 0, y: 0 };
 export function enemySteering(ctx: StepContext): void {
   const { state, content, enemyGrid, enemyObstacles: obstacles } = ctx;
   enemyGrid.rebuild(state.enemies);
+  const lureRadius = lureRadiusOf(state, content);
   for (const enemy of state.enemies) {
     if (enemy.hp <= 0) {
       continue;
     }
     const definition = lookup(content.enemies, enemy.kind, 'enemy');
-    chooseTarget(state, content, enemy, definition);
+    chooseTarget(state, content, enemy, definition, lureRadius);
     if (hasStatus(enemy, 'bubbled')) {
       bubbleDrift(state, enemy);
       continue;
@@ -82,9 +85,10 @@ export function enemySteering(ctx: StepContext): void {
     resolveObstacles(enemy, fromX, fromY, obstacles);
     const moved = moveX !== 0 || moveY !== 0;
     if (moved && (definition.behaviour === 'heavy' || definition.behaviour === 'boss')) {
-      pushTraps(state, content, enemy);
+      pushTraps(ctx, enemy);
     }
   }
+  pushBodies(ctx);
 }
 
 function steeringOverride(
@@ -100,22 +104,19 @@ function steeringOverride(
   return special === undefined ? undefined : STEERING_TARGETS[special.kind]?.(ctx, enemy, special);
 }
 
-function targetOf(state: SimState, enemy: EnemyState): Circle {
-  if (enemy.target === 'core') {
-    return state.core;
-  }
-  return playerById(state, enemy.target) ?? state.core;
-}
-
 function chooseTarget(
   state: SimState,
   content: ResolvedContent,
   enemy: EnemyState,
   definition: EnemyDefinition,
+  lureRadius: number,
 ): void {
   if (definition.passable === true) {
     enemy.target = 'core';
     return;
+  }
+  if (enemy.target === 'dancer') {
+    enemy.target = 'core';
   }
   if (enemy.target !== 'core') {
     const chased = playerById(state, enemy.target);
@@ -135,14 +136,9 @@ function chooseTarget(
       enemy.target = player.id;
     }
   }
-}
-
-function towersOver(
-  content: ResolvedContent,
-  player: PlayerState,
-  definition: EnemyDefinition,
-): boolean {
-  return content.classes.get(player.classId)?.towersOver?.includes(definition.behaviour) === true;
+  if (enemy.target === 'core' && lures(state.dancer, lureRadius, enemy, definition)) {
+    enemy.target = 'dancer';
+  }
 }
 
 function separate(state: SimState, grid: StepContext['enemyGrid'], enemy: EnemyState): void {
@@ -171,7 +167,7 @@ function separate(state: SimState, grid: StepContext['enemyGrid'], enemy: EnemyS
   separation.y = y * scale;
 }
 
-function pushTraps(state: SimState, content: ResolvedContent, enemy: EnemyState): void {
+function pushTraps({ state, content, shore }: StepContext, enemy: EnemyState): void {
   for (const trap of state.traps) {
     const radius = lookup(content.traps, trap.kind, 'trap').radius;
     const dx = trap.x - enemy.x;
@@ -185,5 +181,6 @@ function pushTraps(state: SimState, content: ResolvedContent, enemy: EnemyState)
     const awayY = distance === 0 ? 0 : dy / distance;
     trap.x = clamp(trap.x + awayX * overlap, radius, state.arena.width - radius);
     trap.y = clamp(trap.y + awayY * overlap, radius, state.arena.height - radius);
+    trap.x = ashore(shore, trap, radius).x;
   }
 }

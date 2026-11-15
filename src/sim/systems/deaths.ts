@@ -3,12 +3,14 @@ import { lookup } from '../content';
 import { playerById } from '../damage';
 import { drawRelics } from '../draw';
 import { recruitFallen } from '../recruits';
+import { ashore } from '../shore';
 import { SPECIALS } from '../specials';
 import type { EnemyState, PickupKind, SimState, Vec2 } from '../state';
 import { dropBattery } from './battery';
 import { dropBomb } from './bomb';
 import { dropDie } from './dice';
 import { dropBossTrap, dropCarriedTrap } from './carriers';
+import { unmaskFallen } from './dancers';
 import { tallyOf } from '../tally';
 import { dropTwinVibes, vibesDoubled } from './twin-vibes';
 import { bossLeft, isLastTier } from './set-progress';
@@ -16,6 +18,8 @@ import type { StepContext } from './types';
 
 const DROP_SPACING = 40;
 const TWIN_GAP = 7;
+// The widest of a drop's radii: a bomb, the twin vibes, a battery.
+const DRY_GAP = 20;
 
 export function deaths(ctx: StepContext): void {
   const { state, content, set } = ctx;
@@ -68,23 +72,27 @@ export function deaths(ctx: StepContext): void {
     if (enemy.called === true) {
       state.stats.calledDown = (state.stats.calledDown ?? 0) + 1;
     }
-    recruitFallen(ctx, enemy, definition);
+    if (!unmaskFallen(ctx, enemy, definition)) {
+      recruitFallen(ctx, enemy, definition);
+    }
     bossFell ||= enemy.isBoss;
     dropCarriedTrap(ctx, enemy);
+    // What a bad vibe drops in the lake washes up on the shore, where players walk.
+    const at = ashore(ctx.shore, enemy, DRY_GAP);
     if (enemy.carriesBomb === true) {
-      dropBomb(ctx, enemy.x, enemy.y);
+      dropBomb(ctx, at.x, at.y);
     }
     if (enemy.carriesTwinVibes === true) {
-      dropTwinVibes(ctx, enemy.x, enemy.y);
+      dropTwinVibes(ctx, at.x, at.y);
     }
     if (enemy.carriesBattery === true) {
-      dropBattery(ctx, enemy.x, enemy.y);
+      dropBattery(ctx, at.x, at.y);
     }
     if (enemy.isBoss) {
-      dropBossRows(ctx, enemy);
+      dropBossRows(ctx, enemy, at);
     }
     if (vibesDrop > 0) {
-      dropVibes(state, vibesDrop, enemy, set.pickups.lifetimeTicks);
+      dropVibes(state, vibesDrop, at, set.pickups.lifetimeTicks);
     }
   }
   state.enemies.length = kept;
@@ -95,14 +103,20 @@ export function deaths(ctx: StepContext): void {
 }
 
 // A placed trap and a die per player, in two rows under the boss, kept whole inside the arena.
-function dropBossRows(ctx: StepContext, boss: EnemyState): void {
+function dropBossRows(ctx: StepContext, boss: EnemyState, at: Vec2): void {
   const { width, height } = ctx.state.arena;
   const players = ctx.state.players;
   const half = ((players.length - 1) / 2) * DROP_SPACING;
   const margin = DROP_SPACING / 2;
-  const left = clamp(boss.x - half, margin, width - margin - 2 * half);
-  const y = clamp(boss.y, margin, height - margin);
+  const y = clamp(at.y, margin, height - margin);
   const dieY = y + DROP_SPACING <= height - margin ? y + DROP_SPACING : y - DROP_SPACING;
+  // The rows run east from their west end: it starts on the shore of a lake, where players walk.
+  const west = Math.max(
+    at.x - half,
+    ashore(ctx.shore, { x: at.x - half, y }, DRY_GAP).x,
+    ashore(ctx.shore, { x: at.x - half, y: dieY }, DRY_GAP).x,
+  );
+  const left = clamp(west, margin, width - margin - 2 * half);
   players.forEach((player, index) => {
     const x = left + index * DROP_SPACING;
     dropBossTrap(ctx, player.id, { x, y });

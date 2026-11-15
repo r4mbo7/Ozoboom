@@ -205,6 +205,24 @@ export function healPlayersOnBar(
       healPlayer(state, player, amount);
     }
   }
+  if (amount > 0) {
+    soothe(state, (dancer) => touches(dancer, at, radius));
+  }
+}
+
+// A zone heal that reaches the dancer pushes his mask a notch back, once a tick whatever the heals.
+export function soothe(state: SimState, reaches: (dancer: Circle) => boolean): void {
+  const { dancer } = state;
+  if (
+    dancer === undefined ||
+    dancer.notches === 0 ||
+    !reaches(dancer) ||
+    state.events.some((event) => event.type === 'dancerSoothed')
+  ) {
+    return;
+  }
+  dancer.notches -= 1;
+  state.events.push({ type: 'dancerSoothed', id: dancer.id, notches: dancer.notches });
 }
 
 // The grid holds the bad vibes where they stand, and is rebuilt where the wave knocked them.

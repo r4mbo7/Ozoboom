@@ -1,4 +1,5 @@
-import type { PlayerId, PlayerState, SimState } from './state';
+import type { Circle } from './spatial-hash';
+import type { EnemyState, PlayerId, PlayerState, SimState } from './state';
 
 export function damagePlayer(state: SimState, player: PlayerState, amount: number): void {
   if (player.downed || (player.invulnerableTicks ?? 0) > 0) {
@@ -24,4 +25,15 @@ export function playerById(state: SimState, id: PlayerId): PlayerState | undefin
     }
   }
   return undefined;
+}
+
+// What a bad vibe goes for: the core once its player or dancer is gone.
+export function targetOf(state: SimState, enemy: EnemyState): Circle {
+  if (enemy.target === 'core') {
+    return state.core;
+  }
+  if (enemy.target === 'dancer') {
+    return state.dancer ?? state.core;
+  }
+  return playerById(state, enemy.target) ?? state.core;
 }

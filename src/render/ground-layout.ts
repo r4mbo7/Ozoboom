@@ -1,4 +1,5 @@
 import { nextFloat, seedRng } from '../shared/prng';
+import { type Shore, drawShore, shoreAt } from '../sim/shore';
 import type { Arena } from '../sim/state';
 
 export interface Tree {
@@ -7,54 +8,27 @@ export interface Tree {
   radius: number;
 }
 
-interface Wave {
-  amplitude: number;
-  frequency: number;
-  phase: number;
-}
-
-export interface Layout {
-  readonly arena: Arena;
+export interface Layout extends Shore {
   readonly floorRadius: number;
-  readonly shoreBase: number;
-  readonly waves: readonly Wave[];
   readonly trees: readonly Tree[];
 }
+
+export const LAKE_DECOR = 'lake';
 
 const TREE_COUNT = 10;
 export const SOL_CLAIR_SHARE = { lawn: 0.3, tufts: 0.5, floor: 0.6 } as const;
 export const LAKE_SKY_MIX = 0.5;
 // For a screen up to 32:9 at the usual scale.
 export const OVERFLOW = 640;
-const LAKE_SHARE = 0.17;
 const SHORE_MARGIN = 70;
 const FLOOR_SHARE = 0.34;
 const EDGE_MARGIN = 60;
 const TREE_RADIUS = [26, 40] as const;
 
-export function shoreAt(layout: Layout, y: number): number {
-  let x = layout.shoreBase;
-  for (const { amplitude, frequency, phase } of layout.waves) {
-    x += amplitude * Math.sin((y / layout.arena.height) * frequency + phase);
-  }
-  return x;
-}
-
 export function layoutGround(seed: number, arena: Arena, clearings: readonly Tree[] = []): Layout {
   const rng = seedRng(seed >>> 0);
-  const waves = [
-    { amplitude: arena.width * 0.035, frequency: 5.2, phase: nextFloat(rng) * Math.PI * 2 },
-    { amplitude: arena.width * 0.018, frequency: 11.7, phase: nextFloat(rng) * Math.PI * 2 },
-    { amplitude: arena.width * 0.008, frequency: 23.1, phase: nextFloat(rng) * Math.PI * 2 },
-  ];
   const floorRadius = Math.min(arena.width, arena.height) * FLOOR_SHARE;
-  const base: Layout = {
-    arena,
-    floorRadius,
-    shoreBase: arena.width * LAKE_SHARE,
-    waves,
-    trees: [],
-  };
+  const base: Layout = { ...drawShore(rng, arena), floorRadius, trees: [] };
   const trees: Tree[] = [];
   const cx = arena.width / 2;
   const cy = arena.height / 2;

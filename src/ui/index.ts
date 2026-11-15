@@ -123,7 +123,7 @@ function screenMenus(
   return {
     title(edges, frame) {
       screens.title.handle(edges);
-      screens.title.follow(calm() ? null : (frame.menuPosition ?? null));
+      screens.title.follow(frame.menuPosition ?? null, calm());
     },
     class(edges) {
       screens.classPicker.update(edges);
@@ -141,7 +141,7 @@ function screenMenus(
     },
     end(edges) {
       if (grace.over()) {
-        screens.end.menu.handle(edges);
+        screens.end.handle(edges);
       }
     },
   };
@@ -226,6 +226,7 @@ export function createUi(
     });
     const end = createEnd(
       prompts,
+      { calm: isCalm, graceOver: () => grace.over() },
       shown.once(() => {
         callbacks.onRestart();
       }),

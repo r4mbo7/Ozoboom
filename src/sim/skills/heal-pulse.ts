@@ -1,4 +1,4 @@
-import { healPlayer, touches } from '../effects';
+import { healPlayer, soothe, touches } from '../effects';
 import type { SkillModule, SkillOf } from './types';
 
 export const healPulse: SkillModule<SkillOf<'healPulse'>> = {
@@ -8,6 +8,7 @@ export const healPulse: SkillModule<SkillOf<'healPulse'>> = {
         healPlayer(state, ally, effect.amount * power);
       }
     }
+    soothe(state, (dancer) => touches(dancer, player, effect.radius));
     const { core } = state;
     const cap = set.coreRepairPerBar;
     const room = cap === undefined ? Infinity : cap - (core.repairedThisBar ?? 0);

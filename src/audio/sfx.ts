@@ -63,7 +63,6 @@ export type SfxName =
   | 'pinceClack'
   | 'giantWoken'
   | 'vibesStolen'
-  | 'playerShoved'
   | 'bystanderHelped'
   | 'bystanderLost'
   | 'trapDropped'
@@ -250,7 +249,6 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     pinceClack: { perFrame: 1, concurrent: 3, seconds: 0.1 },
     giantWoken: { perFrame: 1, concurrent: 2, seconds: 1 },
     vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
-    playerShoved: { perFrame: 1, concurrent: 2, seconds: 0.2 },
     bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
     bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     trapDropped: { perFrame: 1, concurrent: 2, seconds: 0.4 },
@@ -317,7 +315,6 @@ export function sfxOf(
     case 'weaponGained':
     case 'weaponEvolved':
     case 'vibesStolen':
-    case 'playerShoved':
     case 'bystanderHelped':
     case 'bystanderLost':
     case 'taunted':
@@ -375,6 +372,10 @@ export function sfxOf(
       return 'enemyBabble';
     case 'enemyRevived':
       return 'enemyGrowl';
+    case 'dancerUnmasked':
+      return 'bystanderHelped';
+    case 'dancerMasked':
+      return 'bystanderLost';
     case 'volumeChanged':
       return 'volumeUp';
     case 'trapFired': {
@@ -1735,25 +1736,6 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       attack: 0.003,
       hold: 0.03,
       release: 0.18,
-    });
-  },
-  playerShoved: (out, at, _variant, key) => {
-    playTone(out, at, {
-      wave: 'sine',
-      hz: keyHz(key, 0, 1),
-      toHz: keyHz(key, 0, 0),
-      glide: 0.1,
-      gain: 0.3,
-      attack: 0.002,
-      hold: 0.02,
-      release: 0.1,
-    });
-    playNoise(out, at, {
-      gain: 0.22,
-      attack: 0.002,
-      hold: 0.01,
-      release: 0.07,
-      filter: { type: 'lowpass', hz: 500 },
     });
   },
   bystanderHelped: (out, at, _variant, key) => {

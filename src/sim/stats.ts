@@ -48,6 +48,7 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   recruitPowerMul: false,
   dishPowerMul: false,
   offerCardsAdd: true,
+  oneLoveHealMul: false,
 };
 
 export function statValue(

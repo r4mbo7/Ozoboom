@@ -29,8 +29,8 @@ const DASH_ARC_REACH = 23 / 14;
 // Where the outline asks to put down a trap of `radius` taken at `from`: further from the stage,
 // inside the arena, on the nearest spot a trap can stand, as the sim would put it there.
 export function dropSpot(
-  state: Pick<SimState, 'arena' | 'core' | 'traps'>,
-  set: Pick<SetDefinition, 'obstacles'>,
+  state: Pick<SimState, 'arena' | 'core' | 'traps' | 'seed'>,
+  set: Pick<SetDefinition, 'obstacles' | 'lake' | 'arena'>,
   from: Vec2,
   radius: number,
   radiusOf: (trap: TrapState) => number,

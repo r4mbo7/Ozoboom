@@ -1,3 +1,4 @@
+import { freeClassId, isFreeClass } from '../shared/class-choice';
 import { trimPlayerName } from '../shared/player-name';
 import type { PlayerSlot } from '../sim/initial-state';
 import { PLAYER_IDS, type PlayerId } from '../sim/state';
@@ -12,7 +13,7 @@ export interface RoomProfile {
   version: string;
   name: string;
   classId: string;
-  // Known classes: an unknown one becomes the first of the list.
+  // Known classes: an unknown or taken one becomes the first one left.
   classIds: readonly string[];
   // Host only.
   setId?: string;
@@ -91,8 +92,6 @@ export function sendToGuests(
 }
 
 export function createRoom(transport: Transport, role: Role, profile: RoomProfile): Room {
-  const knownClass = (classId: string): string =>
-    profile.classIds.includes(classId) ? classId : (profile.classIds[0] ?? classId);
   const changeListeners = new Set<(seats: readonly Seat[]) => void>();
   const refusedListeners = new Set<(reason: RefusalReason, hostVersion: string) => void>();
   const startListeners = new Set<(start: StartMessage) => void>();
@@ -104,7 +103,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
             playerId: 0,
             peer: transport.id,
             name: trimPlayerName(profile.name),
-            classId: knownClass(profile.classId),
+            classId: freeClassId(profile.classIds, new Set(), profile.classId),
           },
         ]
       : [];
@@ -145,13 +144,21 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
     transport.send(peer, { type: 'refused', reason, version: profile.version });
   };
 
+  const takenClasses = (except?: PeerId): Set<string> =>
+    new Set(seats.filter((seat) => seat.peer !== except).map((seat) => seat.classId));
+
+  // The host has the last word: a class another player has, or one it does not know, is refused.
   const updateSeat = (peer: PeerId, change: { name?: string; classId?: string }): void => {
     seats = seats.map((seat) =>
       seat.peer === peer
         ? {
             ...seat,
             name: change.name === undefined ? seat.name : trimPlayerName(change.name),
-            classId: change.classId === undefined ? seat.classId : knownClass(change.classId),
+            classId:
+              change.classId !== undefined &&
+              isFreeClass(profile.classIds, takenClasses(peer), change.classId)
+                ? change.classId
+                : seat.classId,
           }
         : seat,
     );
@@ -189,7 +196,7 @@ export function createRoom(transport: Transport, role: Role, profile: RoomProfil
               playerId,
               peer: from,
               name: trimPlayerName(message.name),
-              classId: knownClass(message.classId),
+              classId: freeClassId(profile.classIds, takenClasses(), message.classId),
             },
           ].sort((a, b) => a.playerId - b.playerId);
           publish();

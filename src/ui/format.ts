@@ -1,7 +1,6 @@
 import { locale, t } from '../shared/i18n';
 import { clamp01 } from '../shared/scalar';
 import { TICK_RATE_HZ } from '../shared/tempo';
-import type { SimState } from '../sim/state';
 
 const formats = new Map<string, Intl.NumberFormat>();
 
@@ -25,6 +24,11 @@ export function formatNumber(value: number): string {
 
 export function formatTenth(value: number): string {
   return format(1, value);
+}
+
+// A multiplier, to the hundredth: « × 1,25 ».
+export function formatFactor(value: number): string {
+  return t('× {factor}', { factor: format(2, value) });
 }
 
 export function formatTempo(bpm: number): string {
@@ -51,18 +55,4 @@ export function ratio(value: number, max: number): number {
 
 export function formatPercent(fraction: number): string {
   return t('{percent}\u202f%', { percent: formatNumber(Math.round(fraction * 100)) });
-}
-
-export interface EndStat {
-  label: string;
-  value: string;
-}
-
-export function endStats(state: SimState): EndStat[] {
-  return [
-    { label: t('Phrases tenues'), value: formatNumber(state.stats.phrasesHeld) },
-    { label: t('Temps'), value: formatDuration(state.tick) },
-    { label: t('Bad vibes dissipées'), value: formatNumber(state.stats.kills) },
-    { label: t('Vie de la scène'), value: formatPercent(ratio(state.core.hp, state.core.maxHp)) },
-  ];
 }

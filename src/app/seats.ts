@@ -1,4 +1,5 @@
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
+import { freeClassId, isFreeClass } from '../shared/class-choice';
 import { trimPlayerName } from '../shared/player-name';
 import type { PlayerSlot } from '../sim/initial-state';
 import { PLAYER_IDS, type PlayerId } from '../sim/state';
@@ -36,12 +37,8 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
   const sorted = () => [...seats].sort((a, b) => a.playerId - b.playerId);
   const find = (playerId: PlayerId) => seats.find((seat) => seat.playerId === playerId);
 
-  // A class not yet in the lobby, so that two friends do not both start on the same one.
-  function freshClass(): string {
-    const taken = new Set(seats.map((seat) => seat.classId));
-    const order = seats.length === 0 ? [firstClassId, ...classIds] : classIds;
-    return order.find((id) => !taken.has(id)) ?? order[0] ?? firstClassId;
-  }
+  const takenClasses = (except?: PlayerId) =>
+    new Set(seats.filter((seat) => seat.playerId !== except).map((seat) => seat.classId));
 
   return {
     get count() {
@@ -55,7 +52,12 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
       if (playerId === undefined) {
         return false;
       }
-      seats.push({ playerId, device, name: defaultName(playerId), classId: freshClass() });
+      seats.push({
+        playerId,
+        device,
+        name: defaultName(playerId),
+        classId: freeClassId(classIds, takenClasses(), firstClassId),
+      });
       return true;
     },
     leave(playerId) {
@@ -65,7 +67,7 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
     },
     setClass(playerId, classId) {
       const seat = find(playerId);
-      if (seat !== undefined && classIds.includes(classId)) {
+      if (seat !== undefined && isFreeClass(classIds, takenClasses(playerId), classId)) {
         seat.classId = classId;
       }
     },

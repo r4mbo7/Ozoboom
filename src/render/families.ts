@@ -1,6 +1,7 @@
 import { createBatterieAPlat } from './batterie';
 import { createBystanders } from './bystanders';
 import { createCore } from './core';
+import { createDancer } from './dancer';
 import { createCouvreFeu } from './couvre-feu';
 import { createClassEffects } from './class-effects';
 import { createEffects } from './effects';
@@ -63,6 +64,7 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
     createBattery(ctx),
     createDice(ctx),
     createBystanders(ctx),
+    createDancer(ctx),
     enemies,
     createRecruits(ctx, enemies.burst.bind(enemies)),
     createWounds(ctx, poseOf),

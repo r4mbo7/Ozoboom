@@ -4,6 +4,7 @@ import type { EntityId, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
 import type { EnemyPose } from './enemies';
 import type { Frame } from './frame';
+import { cutAt, uncut } from './crop';
 import { crackStage } from './hit-marks';
 import { add } from './util';
 import { ViewPool } from './views';
@@ -53,14 +54,22 @@ export function createWounds(
         if (stage !== view.stage) {
           view.since = stage > view.stage ? frame.now : Number.NEGATIVE_INFINITY;
           view.stage = stage;
-          sprite.texture = shape.texture;
         }
         const age = (frame.now - view.since) / POP_TICKS;
         const pop = frame.calm || age < 0 || age >= 1 ? 0 : POP * (1 - age) * (1 - age);
+        const scale = (enemy.radius / shape.radius) * (1 + pop);
         sprite.visible = true;
         sprite.position.set(pose.x, pose.y);
-        sprite.rotation = pose.tilt + enemy.id * TURN_PER_VIBE;
-        sprite.scale.set((enemy.radius / shape.radius) * (1 + pop));
+        sprite.scale.set(scale);
+        // A swimmer's cracks stop at its waterline, which stays level: they no longer turn.
+        if (pose.waterline === null) {
+          uncut(sprite, shape.texture);
+          sprite.rotation = pose.tilt + enemy.id * TURN_PER_VIBE;
+        } else {
+          const line = 0.5 + pose.waterline / (scale * shape.texture.frame.height);
+          cutAt(sprite, shape.texture, line, 'above');
+          sprite.rotation = pose.tilt;
+        }
       }
       views.end();
     },

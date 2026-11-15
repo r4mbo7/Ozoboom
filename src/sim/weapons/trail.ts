@@ -1,6 +1,6 @@
 import { isBarTick } from '../../shared/tempo';
 import { lookup } from '../content';
-import { healPlayer, touches } from '../effects';
+import { healPlayer, soothe, touches } from '../effects';
 import { applyModifiers, refreshDerivedStats } from '../stats';
 import type { PlayerState, WeaponSlot } from '../state';
 import type { WeaponModule } from './types';
@@ -39,6 +39,7 @@ export const trail: WeaponModule = {
           healPlayer(state, ally, effect.healPerBar * power);
         }
       }
+      soothe(state, on);
     }
     return true;
   },

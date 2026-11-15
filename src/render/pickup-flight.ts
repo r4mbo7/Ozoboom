@@ -31,7 +31,7 @@ export function flightPose(pickup: PickupState, alpha: number, calm: boolean): F
   const bell = Math.sin(Math.PI * progress);
   return {
     x: lerp(flight.fromX, pickup.x, progress),
-    y: lerp(flight.fromY, pickup.y, progress) - ARC_HEIGHT * bell,
+    y: lerp(flight.fromY, pickup.y, progress) - (flight.arc ?? ARC_HEIGHT) * bell,
     scale: 1 + ARC_GROWTH * bell,
     alpha: Math.min(1, progress / FADE_IN),
     progress,

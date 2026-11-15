@@ -5,6 +5,7 @@ import { playerById } from '../damage';
 import { lookup, type ResolvedContent } from '../content';
 import { touches } from '../effects';
 import { clearOfObstacles, type Obstacles } from '../obstacles';
+import { ashore, type Shore } from '../shore';
 import type { BystanderState, SimState } from '../state';
 import { reviveMulOf } from './revive';
 import { edgePosition } from './spawning';
@@ -18,7 +19,7 @@ export function bystanders(ctx: StepContext): void {
   updateBystanders(ctx);
 }
 
-function spawnBystanders({ state, content, set, tempo, obstacles }: StepContext): void {
+function spawnBystanders({ state, content, set, tempo, obstacles, shore }: StepContext): void {
   const tier = set.tiers[state.set.tier];
   if (tier === undefined || state.set.segment !== 'buildup' || !isBarTick(state.tick, tempo)) {
     return;
@@ -33,7 +34,7 @@ function spawnBystanders({ state, content, set, tempo, obstacles }: StepContext)
     }
     const definition = lookup(content.bystanders, rule.bystanderId, 'bystander');
     for (let i = 0; i < rule.count; i++) {
-      spawnBystander(state, definition, tempo, obstacles);
+      spawnBystander(state, definition, tempo, obstacles, shore);
     }
   }
 }
@@ -43,11 +44,18 @@ function spawnBystander(
   definition: BystanderDefinition,
   tempo: Tempo,
   obstacles: Obstacles,
+  shore: Shore | null,
 ): void {
   const edge = edgePosition(state.rng, state.arena, definition.radius);
   const { x, y } = clearOfObstacles(edge, definition.radius, obstacles);
   const { core } = state;
   const fraction = WANDER_FRACTION_MIN + nextFloat(state.rng) * WANDER_FRACTION_SPAN;
+  // Players stay on the shore of a lake: a Festivalier stops there, within their reach.
+  const target = ashore(
+    shore,
+    { x: x + (core.x - x) * fraction, y: y + (core.y - y) * fraction },
+    definition.radius,
+  );
   const bystander: BystanderState = {
     id: state.nextEntityId,
     kind: definition.id,
@@ -56,8 +64,8 @@ function spawnBystander(
     prevX: x,
     prevY: y,
     radius: definition.radius,
-    targetX: x + (core.x - x) * fraction,
-    targetY: y + (core.y - y) * fraction,
+    targetX: target.x,
+    targetY: target.y,
     helpTicks: 0,
     ticksLeft: definition.lifetimeBars * tempo.ticksPerBar,
   };

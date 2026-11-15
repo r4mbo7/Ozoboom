@@ -1,8 +1,9 @@
 import type { GameContent } from '../data/types';
-import { layoutGround, shoreAt } from '../render/ground-layout';
+import { layoutGround } from '../render/ground-layout';
 import { clamp } from '../shared/scalar';
 import { hashState } from '../sim/replay';
 import { setTempo } from '../sim/lineup';
+import { shoreAt } from '../sim/shore';
 import { spawnEnemy } from '../sim/systems/spawning';
 import type { PlayerSlot } from '../sim/initial-state';
 import { PLAYER_IDS, type SimState } from '../sim/state';

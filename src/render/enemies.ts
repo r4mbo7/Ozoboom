@@ -1,12 +1,13 @@
 import { Container, Sprite } from 'pixi.js';
-import type { PaletteToken } from '../shared/palette';
 import { lerp } from '../shared/scalar';
 import type { EntityId, SimEvent, SimState } from '../sim/state';
 import { createBossStage } from './bosses';
 import type { Family, RenderContext } from './context';
 import { Farewells, type FarewellHooks } from './enemy-deaths';
 import { createBurst } from './enemy-burst';
-import { picker, warnUnknown } from './faces';
+import { createDreams } from './enemy-dreams';
+import { type Swimmer, createSwim, dryLand, paintWake } from './enemy-swim';
+import { type Face, picker, warnUnknown } from './faces';
 import { frontGlintOf, glintAlpha, glintStart, placeGlint } from './front-glint';
 import { type Frame, createFrame } from './frame';
 import { blinkLit } from './motion';
@@ -15,7 +16,6 @@ import { Tosses } from './tossed';
 import { add, byId, hide, keepIn, setTint } from './util';
 import { ViewPool } from './views';
 
-const TAU = Math.PI * 2;
 const LEAN = 0.5;
 const BOSS_LEAN = 0.12;
 const POP = 0.18;
@@ -23,10 +23,10 @@ const FLAT = 0.6;
 const BEAT_SWELL = 0.05;
 const DOWN_GRAY = 0xd0d0d8;
 const DOWN_MIX = 0.55;
-const ZS = 3;
 const BLINK_MIX = { normal: 0.65, calm: 0.35 };
 const GLINT_SIZE = 1.2;
 const GUARD_GRAY = 0.4;
+const UNTINTED = 0xffffff;
 
 export interface EnemyPose {
   readonly x: number;
@@ -35,6 +35,8 @@ export interface EnemyPose {
   readonly radius: number;
   readonly boss: boolean;
   readonly sprite: Sprite;
+  // Below the centre, where the lake cuts a swimming bad vibe; null on land.
+  readonly waterline: number | null;
 }
 
 interface EnemyView {
@@ -50,6 +52,8 @@ interface EnemyView {
   blinkUntil: number;
   glint: Sprite | null;
   glintStart: number;
+  readonly swimmer: Swimmer;
+  waterline: number | null;
 }
 
 export type PoseOf = (id: EntityId) => EnemyPose | undefined;
@@ -72,7 +76,11 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
   const smiles = new Container();
   const sleepers = new Container();
   const tosses = new Tosses(layers.enemies, textures.halo);
-  layers.enemies.addChild(bosses.under, bodies, bosses.over, guards, smiles, sleepers);
+  const wake = paintWake();
+  const swim = createSwim({ ring: textures.ring, wake });
+  layers.enemies.addChild(bosses.under, swim.under, bodies, swim.over);
+  layers.enemies.addChild(bosses.over, guards, smiles, sleepers);
+  const dreams = createDreams(sleepers, masks.drowsy);
 
   const views = new ViewPool<EnemyView>(
     () => ({
@@ -88,8 +96,11 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       blinkUntil: Number.NEGATIVE_INFINITY,
       glint: null,
       glintStart: Number.NEGATIVE_INFINITY,
+      swimmer: dryLand(),
+      waterline: null,
     }),
     (view) => {
+      swim.forget(view.swimmer);
       view.blinkUntil = view.glintStart = view.holdUntil = Number.NEGATIVE_INFINITY;
       hide(view.sprite, ...(view.zs ?? []));
       if (view.glint !== null) {
@@ -104,23 +115,6 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
   });
   const colors = createBurst(layers, textures);
 
-  function dreams(view: EnemyView, x: number, y: number, strength: number, frame: Frame): void {
-    const zs = (view.zs ??= Array.from({ length: ZS }, () => add(sleepers, textures.masks.drowsy)));
-    const size = (view.radius * 0.2) / textures.masks.drowsy.radius;
-    zs.forEach((z, index) => {
-      const progress = (frame.now / frame.tempo.ticksPerBar + index / ZS) % 1;
-      z.visible = true;
-      setTint(z, frame.palette.texte);
-      z.position.set(
-        x + view.radius * (0.55 + 0.4 * progress),
-        y - view.radius * (0.8 + 2.2 * progress),
-      );
-      z.scale.set(size * (0.6 + 0.6 * progress));
-      z.alpha = strength * Math.sin(progress * Math.PI);
-      z.rotation = 0.25 * Math.sin(progress * TAU);
-    });
-  }
-
   function guard(view: EnemyView, x: number, y: number, strength: number, tint: number): void {
     const glint = (view.glint ??= add(guards, textures.guard));
     glint.visible = true;
@@ -131,16 +125,16 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
     glint.alpha = strength;
   }
 
-  function tintOf(palette: PixiPalette, tone: { token: PaletteToken; amount: number } | undefined) {
+  function tintOf(palette: PixiPalette, { lit, tone }: Face): number {
+    if (lit === true) {
+      return UNTINTED;
+    }
     return tone === undefined
       ? palette.badVibeRim
       : mixColor(palette.badVibeRim, palette[tone.token], tone.amount);
   }
 
   let latest: Frame = createFrame();
-  const hideSprite = (sprite: Sprite): void => {
-    sprite.visible = false;
-  };
   const hooks: FarewellHooks<Sprite> = {
     show(farewell, smile, fade) {
       const sprite = farewell.view;
@@ -153,7 +147,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       sprite.rotation = farewell.tilt;
       sprite.alpha = 1 - fade;
     },
-    hide: hideSprite,
+    hide,
     burst(farewell) {
       colors.burst(farewell.x, farewell.y, farewell.id, false, latest.now, latest);
     },
@@ -183,6 +177,7 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       views.begin();
       tosses.begin();
       bosses.begin();
+      swim.begin(state, frame);
       for (const enemy of state.enemies) {
         const mask = maskOf(enemy.kind);
         const view = views.acquire(enemy.id);
@@ -201,12 +196,9 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         const loop = mask.face.loopBeats * frame.tempo.ticksPerBeat;
         const index =
           frames === 1 || calm ? 0 : Math.floor((frame.now / loop) * frames + stagger) % frames;
-        sprite.texture = down
-          ? mask.down
-          : asleep
-            ? mask.asleep
-            : (mask.awake[index] ?? mask.asleep);
-        const tint = down ? downTint : tintOf(palette, mask.face.tone);
+        const full = down ? mask.down : asleep ? mask.asleep : (mask.awake[index] ?? mask.asleep);
+        sprite.texture = full;
+        const tint = down ? downTint : tintOf(palette, mask.face);
         setTint(
           sprite,
           blinkLit(frame.now, view.blinkUntil, calm)
@@ -222,8 +214,15 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         const size = (enemy.radius / mask.radius) * swell;
         sprite.scale.set(size, down ? size * FLAT : size);
         const lean = enemy.isBoss ? BOSS_LEAN : LEAN;
-        sprite.rotation = view.tilt = down ? 0 : lean * Math.cos(view.heading);
+        sprite.rotation = down ? 0 : lean * Math.cos(view.heading);
         view.radius = enemy.radius;
+        if (enemy.isBoss || flight !== null || mask.face.flies === true) {
+          swim.dry(view, full);
+          view.waterline = null;
+        } else {
+          view.waterline = swim.swim(view, full, Math.hypot(dx, dy), frame);
+        }
+        view.tilt = sprite.rotation;
         if (flight !== null) {
           tosses.lift(enemy.id, sprite, flight, enemy.radius, calm);
         }
@@ -263,8 +262,8 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
         }
         return;
       }
-      if (event.type === 'recruited') {
-        farewells.cancel(event.id, hideSprite);
+      if (event.type === 'recruited' || event.type === 'dancerUnmasked') {
+        farewells.cancel(event.type === 'recruited' ? event.id : event.enemyId, hide);
         return;
       }
       if (event.type !== 'enemyDied') {
@@ -287,12 +286,13 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
       });
     },
     reset(): void {
-      farewells.clear(hideSprite);
+      farewells.clear(hide);
       colors.clear();
       bosses.reset();
     },
     destroy(): void {
       bosses.destroy();
+      wake.texture.destroy(true);
       layers.enemies.destroy({ children: true });
     },
   };

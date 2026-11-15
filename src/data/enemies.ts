@@ -1,6 +1,7 @@
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from '../shared/tempo';
 import { COUP_DE_VENT } from './coup-de-vent';
 import { FULL_ENEMIES } from './full';
+import { NEON } from './neon';
 import { POGO } from './pogo';
 import type { EnemyDefinition } from './types';
 
@@ -25,7 +26,7 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   {
     id: 'desagreable',
     name: 'Le Désagréable',
-    description: 'Il fonce droit sur la scène et bouscule qui se met en travers.',
+    description: 'Il fonce droit sur la scène, plus vite que tout le monde.',
     behaviour: 'rusher',
     maxHp: 18,
     speed: 2.3,
@@ -35,7 +36,6 @@ export const ENEMIES: readonly EnemyDefinition[] = [
     aggroRadius: 140,
     vibesDrop: 1,
     scalingPerPhrase: GROWING,
-    special: { kind: 'shove', knockback: 30 },
   },
   {
     id: 'meprisant',
@@ -176,6 +176,7 @@ export const ENEMIES: readonly EnemyDefinition[] = [
     scalingPerPhrase: GROWING,
     special: { kind: 'revive', times: 1, hpRatio: 0.5, downBars: 2 },
   },
+  NEON,
   {
     id: 'couvre-feu',
     name: 'Le Couvre-feu',

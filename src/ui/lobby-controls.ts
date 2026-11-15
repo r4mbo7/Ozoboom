@@ -81,7 +81,12 @@ export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
     if (seat === null || row !== 'class') {
       return;
     }
-    const next = stepClass(classes, seat.classId, direction);
+    const taken = new Set(
+      current()
+        .seats.filter((other) => other.playerId !== seat.playerId)
+        .map((other) => other.classId),
+    );
+    const next = stepClass(classes, seat.classId, direction, taken);
     if (next !== null) {
       actions.seatClass(seat.playerId, next);
     }

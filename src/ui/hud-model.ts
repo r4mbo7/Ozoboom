@@ -135,7 +135,12 @@ export function levelReading(
   return { fill, gained, levelled, near: fill >= NEAR_LEVEL };
 }
 
-export const VIBE_CHAIN_MAX = 6;
+export const VIBE_CHAIN_MAX = 10;
+const VIBE_HOTTEST_CHAIN = 6;
+
+export function vibeHeat(chain: number): number {
+  return Math.min(chain, VIBE_HOTTEST_CHAIN) / VIBE_HOTTEST_CHAIN;
+}
 
 export interface VibeCounterShown {
   readonly raw: number;
@@ -148,10 +153,12 @@ export interface VibeCounterReading {
   readonly shown: VibeCounterShown;
   // A first look or a jump over skipped steps: the counter takes the total without a show.
   readonly reseeded: boolean;
+  // How long the chain that just lapsed ran, even on a step that starts the next one; 0 otherwise.
+  readonly broken: number;
 }
 
-// The team's vibes since the start of the game, and how hot their chain runs: a notch per vibe
-// picked up within VIBE_STREAK_BEATS of the last one, up to VIBE_CHAIN_MAX.
+// The team's vibes since the start of the game, and their chain: a notch per vibe picked up within
+// VIBE_STREAK_BEATS of the last one, up to VIBE_CHAIN_MAX.
 export function vibeCounterReading(
   shown: VibeCounterShown | null,
   raw: number,
@@ -160,14 +167,15 @@ export function vibeCounterReading(
   ticksPerBeat: number,
 ): VibeCounterReading {
   if (shown === null || tick - shown.tick > ticksPerBeat) {
-    return { shown: { raw, tick, risenAt: -Infinity, chain: 0 }, reseeded: true };
+    return { shown: { raw, tick, risenAt: -Infinity, chain: 0 }, reseeded: true, broken: 0 };
   }
   const kept = tick - shown.risenAt <= VIBE_STREAK_BEATS * ticksPerBeat ? shown.chain : 0;
+  const broken = kept === 0 ? shown.chain : 0;
   if (picked === 0) {
-    return { shown: { ...shown, raw, tick, chain: kept }, reseeded: false };
+    return { shown: { ...shown, raw, tick, chain: kept }, reseeded: false, broken };
   }
   const chain = Math.min(VIBE_CHAIN_MAX, kept + picked);
-  return { shown: { raw, tick, risenAt: tick, chain }, reseeded: false };
+  return { shown: { raw, tick, risenAt: tick, chain }, reseeded: false, broken };
 }
 
 export interface TwinVibesReading {

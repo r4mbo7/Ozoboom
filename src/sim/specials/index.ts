@@ -7,15 +7,14 @@ import { frontGuard } from './front-guard';
 import { gust } from './gust';
 import { moshRing } from './mosh-ring';
 import { revive } from './revive';
-import { shove } from './shove';
 import { bottle } from './bottle';
 import { steal, stealSteering } from './steal';
 import { suppress } from './suppress';
+import { unmask } from './unmask';
 import type { SpecialModule, SteeringTarget } from './types';
 import { yawn } from './yawn';
 
 export const SPECIALS: Record<SpecialEffect['kind'], SpecialModule> = {
-  shove,
   bottle,
   cling,
   suppress,
@@ -27,6 +26,7 @@ export const SPECIALS: Record<SpecialEffect['kind'], SpecialModule> = {
   frontGuard,
   gust,
   moshRing,
+  unmask,
   ...FULL_SPECIALS,
 };
 

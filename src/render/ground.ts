@@ -7,7 +7,7 @@ import type { Frame } from './frame';
 import { FULL_CLEARINGS, FULL_LOOKS } from './full';
 import { releaseDrawing } from './util';
 import { createFireflies } from './ground-fireflies';
-import { type Layout, layoutGround } from './ground-layout';
+import { LAKE_DECOR, type Layout, layoutGround } from './ground-layout';
 import { createLake } from './ground-lake';
 
 export interface Ground {
@@ -29,7 +29,7 @@ export interface StageLook {
 export function createGround(ctx: RenderContext): Family {
   const parent = ctx.layers.ground;
   const grounds = new Map<DecorId, Ground>([
-    ['lake', createLake(ctx, parent)],
+    [LAKE_DECOR, createLake(ctx, parent)],
     ...FULL_LOOKS.map((look): [DecorId, Ground] => [look.decor, look.ground(parent)]),
   ]);
   const fireflies = createFireflies(ctx, parent);

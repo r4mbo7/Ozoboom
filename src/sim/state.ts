@@ -189,7 +189,7 @@ export interface EnemyState extends Positioned {
   maxHp: number;
   speed: number;
   damage: number;
-  target: 'core' | PlayerId;
+  target: 'core' | 'dancer' | PlayerId;
   attackCooldown: number;
   slowFactor: number;
   stunTicks: number;
@@ -412,7 +412,8 @@ export interface PickupState extends Positioned {
   amount: number;
   ticksLeft: number;
   // Lobbed by a speaker: `x`, `y` is where it lands, and nobody can take it before.
-  flight?: { ticksLeft: number; ticks: number; fromX: number; fromY: number };
+  // `arc`: how high it flies, absent the render's own height.
+  flight?: { ticksLeft: number; ticks: number; fromX: number; fromY: number; arc?: number };
   // Swept to this player whatever the distance: the Bénévole's Grand ménage.
   drawnBy?: PlayerId;
 }
@@ -482,6 +483,17 @@ export interface BystanderState extends Positioned {
   targetY: number;
   helpTicks: number;
   ticksLeft: number;
+}
+
+// The festival-goer under a chased Néon's mask, dancing where it fell; `kind` is the bad vibe he
+// was, `notches` the hits that brought his mask nearer, less the heals that pushed it back.
+export interface DancerState {
+  id: EntityId;
+  kind: string;
+  x: number;
+  y: number;
+  radius: number;
+  notches: number;
 }
 
 // Compounded on the bad vibes spawned from then on; the optional factors are 1 when missing.
@@ -644,6 +656,10 @@ export type SimEvent =
   | { type: 'eclipseBurst'; playerId: PlayerId; x: number; y: number }
   // The Éclat of a bubble of the Somnam’bulle, hurting all within `radius`.
   | { type: 'bubbleBurst'; id: EntityId; playerId: PlayerId; x: number; y: number; radius: number }
+  // The Reggae's full One love healed the players around him.
+  | { type: 'oneLove'; playerId: PlayerId; x: number; y: number; radius: number }
+  // A blast of the Reggae's air horn rang out to `radius` round (x, y); `left` blasts follow it.
+  | { type: 'hornBlasted'; playerId: PlayerId; x: number; y: number; radius: number; left: number }
   // Déchaîné is cast: `element` is the one of its bar, in the order of the Avatar's cycle.
   | { type: 'unleashed'; playerId: PlayerId; element: number }
   | { type: 'stiltLanded'; playerId: PlayerId }
@@ -691,7 +707,6 @@ export type SimEvent =
       x: number;
       y: number;
     }
-  | { type: 'playerShoved'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   | { type: 'enemyStatusStarted'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
   | { type: 'enemyStatusEnded'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
   | { type: 'playerBoostStarted'; playerId: PlayerId; boost: string }
@@ -709,6 +724,12 @@ export type SimEvent =
   | { type: 'bystanderSpawned'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderHelped'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderLost'; id: EntityId; kind: string; x: number; y: number }
+  // `enemyId`: the chased bad vibe he was.
+  | { type: 'dancerUnmasked'; id: EntityId; enemyId: EntityId; x: number; y: number }
+  | { type: 'dancerHit'; id: EntityId; notches: number }
+  | { type: 'dancerSoothed'; id: EntityId; notches: number }
+  // His mask snapped back on and burst into vibes: he is gone.
+  | { type: 'dancerMasked'; id: EntityId; x: number; y: number }
   | { type: 'levelUp'; playerId: PlayerId; level: number }
   // `trapKind`: the trap a card that gives one put above the head.
   | { type: 'upgradeChosen'; playerId: PlayerId; upgradeId: string; trapKind?: string }
@@ -789,6 +810,8 @@ export interface SimState {
   pickups: PickupState[];
   // Created with the first Festivalier, so a game without one keeps its replay fingerprint.
   bystanders?: BystanderState[];
+  // Optional like `bystanders`: one at most.
+  dancer?: DancerState;
   // The first trap drawn is `CarrierRules.first`.
   trapsDrawn?: number;
   nextCarrierBar?: number;

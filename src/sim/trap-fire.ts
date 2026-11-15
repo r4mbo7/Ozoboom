@@ -11,6 +11,7 @@ import {
   markEnemy,
   shockwave,
   slowEnemies,
+  soothe,
   wholeTicks,
 } from './effects';
 import { lookup } from './lookup';
@@ -165,6 +166,7 @@ export function fire(firing: Firing): boolean {
             healPlayer(state, player, effect.healPerBeat * power);
           }
         }
+        soothe(state, blows);
       }
       // The strongest slow wins, in any order.
       const found = grid.query(at.x, at.y, length);

@@ -119,15 +119,17 @@ export function createPogo(
           if (pose === undefined || enemy.ringOf === undefined) {
             continue;
           }
-          pose.sprite.position.y -= lift * pose.radius;
-          const place = { x: pose.x, y: pose.y - lift * pose.radius, radius: pose.radius };
+          // A swimmer stays at its waterline.
+          const hop = pose.waterline === null ? lift * pose.radius : 0;
+          pose.sprite.position.y -= hop;
+          const place = { x: pose.x, y: pose.y - hop, radius: pose.radius };
           const far = centre === undefined ? 0 : Math.hypot(pose.x - centre.x, pose.y - centre.y);
           if (far > enemy.ringOf.orbit * IN_PLACE) {
             continue;
           }
           ring.set(enemy.ringOf.slot, place);
           ids.set(enemy.ringOf.slot, enemy.id);
-          if (landing !== undefined) {
+          if (landing !== undefined && pose.waterline === null) {
             puffs(place, landing);
           }
         }

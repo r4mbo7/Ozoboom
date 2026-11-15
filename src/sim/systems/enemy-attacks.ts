@@ -1,6 +1,7 @@
 import type { EnemyDefinition } from '../../data/types';
 import { lookup } from '../content';
-import { damageCore, damagePlayer, playerById } from '../damage';
+import { hitDancer } from '../dancer';
+import { damageCore, damagePlayer, playerById, targetOf } from '../damage';
 import { canStrike, strikeCooldownMul } from '../enemy-status';
 import type { EnemyState, SimState } from '../state';
 import type { StepContext } from './types';
@@ -40,6 +41,14 @@ function strike(state: SimState, enemy: EnemyState, passable: boolean): boolean 
     damageCore(state, enemy.damage);
     return true;
   }
+  if (enemy.target === 'dancer') {
+    const { dancer } = state;
+    if (dancer === undefined || !inContact(enemy, dancer)) {
+      return false;
+    }
+    hitDancer(state, dancer);
+    return true;
+  }
   const player = playerById(state, enemy.target);
   if (passable || player === undefined || player.downed || !inContact(enemy, player)) {
     return false;
@@ -56,10 +65,7 @@ function shoot(
   if (enemy.damage === 0) {
     return false;
   }
-  const target = enemy.target === 'core' ? state.core : playerById(state, enemy.target);
-  if (target === undefined) {
-    return false;
-  }
+  const target = targetOf(state, enemy);
   const dx = target.x - enemy.x;
   const dy = target.y - enemy.y;
   const distance = Math.sqrt(dx * dx + dy * dy);

@@ -32,16 +32,18 @@ export function stepClass(
   classes: readonly { id: string }[],
   current: string,
   delta: number,
+  taken: ReadonlySet<string> = new Set(),
 ): string | null {
-  if (classes.length < 2) {
+  const free = classes.filter((entry) => entry.id === current || !taken.has(entry.id));
+  if (free.length < 2) {
     return null;
   }
   const index = Math.max(
-    classes.findIndex((entry) => entry.id === current),
+    free.findIndex((entry) => entry.id === current),
     0,
   );
-  const next = (((index + delta) % classes.length) + classes.length) % classes.length;
-  return classes[next]?.id ?? null;
+  const next = (((index + delta) % free.length) + free.length) % free.length;
+  return free[next]?.id ?? null;
 }
 
 export type LobbyView = 'local' | 'entry' | 'room';

@@ -6,7 +6,8 @@ import { onMouseMove } from './pointer';
 
 export interface Menu {
   readonly index: number;
-  setItems(items: readonly HTMLElement[]): void;
+  // `selected` stays the current item; the first one is by default.
+  setItems(items: readonly HTMLElement[], selected?: number): void;
   select(index: number): void;
   handle(edges: MenuIntents): void;
 }
@@ -23,11 +24,12 @@ export function createMenu(
 
   function select(next: number): void {
     index = clamp(next, 0, Math.max(items.length - 1, 0));
+    // Only what changes is written: a menu settled again on the same item moves nothing.
     items.forEach((item, position) => {
-      if (position === index) {
-        item.setAttribute('aria-current', 'true');
-      } else {
+      if (position !== index) {
         item.removeAttribute('aria-current');
+      } else if (item.getAttribute('aria-current') !== 'true') {
+        item.setAttribute('aria-current', 'true');
       }
     });
   }
@@ -36,7 +38,7 @@ export function createMenu(
     get index() {
       return index;
     },
-    setItems(next) {
+    setItems(next, selected = 0) {
       items = next;
       for (const item of items) {
         item.tabIndex = -1;
@@ -59,7 +61,7 @@ export function createMenu(
           onActivate(position);
         });
       }
-      select(0);
+      select(selected);
     },
     select,
     handle(edges) {

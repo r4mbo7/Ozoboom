@@ -3,7 +3,7 @@ import { clamp } from '../shared/scalar';
 import { isBeatTick, isOffbeatTick, type Tempo } from '../shared/tempo';
 import { normalize, type Vec2 } from '../shared/vec';
 import { applyEnemyStatus } from './enemy-status';
-import { drawTo, healPlayer, hurtEnemy, keepWhere, knockBack, touches } from './effects';
+import { drawTo, healPlayer, hurtEnemy, keepWhere, knockBack, soothe, touches } from './effects';
 import type { PlayerState, SimState, ZoneState } from './state';
 import { statValue } from './stats';
 import type { StepContext } from './systems/types';
@@ -106,6 +106,7 @@ export function zones({ state, tempo, enemyObstacles, enemyGrid }: StepContext):
           healPlayer(state, player, definition.heal * power);
         }
       }
+      soothe(state, (dancer) => touches(dancer, nearestOnAxis(zone, dancer), zone.radius));
     }
   }
   keepWhere(laid, (zone) => zone.ticksLeft > 0 || goOut(state, zone));

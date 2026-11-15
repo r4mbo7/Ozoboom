@@ -39,13 +39,20 @@ export function spawning(ctx: StepContext): void {
       continue;
     }
     const definition = lookup(content.enemies, rule.enemyId, 'enemy');
-    const count = Math.ceil(
-      scaledCount(state, set, rule.count) * volumeMul(state) * (state.enemyScale?.count ?? 1),
-    );
+    const count =
+      definition.oneAtATime === true
+        ? Number(!isOut(state, definition.id))
+        : Math.ceil(
+            scaledCount(state, set, rule.count) * volumeMul(state) * (state.enemyScale?.count ?? 1),
+          );
     for (let i = 0; i < count; i++) {
       spawnAtEdge(ctx, definition, false);
     }
   }
+}
+
+function isOut(state: SimState, kind: string): boolean {
+  return state.dancer?.kind === kind || state.enemies.some((enemy) => enemy.kind === kind);
 }
 
 export function spawnEnemy(

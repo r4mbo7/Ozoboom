@@ -15,6 +15,7 @@ import { bombCarriers, bombs } from './systems/bomb';
 import { twinVibes, twinVibesCarriers } from './systems/twin-vibes';
 import { dice } from './systems/dice';
 import { bystanders } from './systems/bystanders';
+import { dancers } from './systems/dancers';
 import { dashes } from './systems/dashes';
 import { emotes } from './systems/emotes';
 import { deaths } from './systems/deaths';
@@ -100,6 +101,7 @@ const RUNNING: readonly System[] = [
   recruits,
   walls,
   enemyAttacks,
+  dancers,
   enemyStatuses,
   bombs,
   twinVibes,
@@ -146,7 +148,13 @@ export function createSimulation(
     options.endless === true,
   );
   const commands = new Map<PlayerId, PlayerCommand>();
-  const ctx: StepContext = { state, content, commands, mode, ...setBindings(set, content, 0) };
+  const ctx: StepContext = {
+    state,
+    content,
+    commands,
+    mode,
+    ...setBindings(set, content, 0, state.seed),
+  };
   const steps = pipelines(mode);
   placeStartingTraps(ctx);
 

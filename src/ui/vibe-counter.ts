@@ -2,11 +2,11 @@ import { tn } from '../shared/i18n';
 import type { SimState, VibeMilestone } from '../sim/state';
 import { el, icon, replay, setVar } from './dom';
 import { formatNumber } from './format';
-import { VIBE_CHAIN_MAX, type VibeCounterShown, vibeCounterReading } from './hud-model';
+import { VIBE_CHAIN_MAX, type VibeCounterShown, vibeCounterReading, vibeHeat } from './hud-model';
 import { VIBE } from './icons';
 
 const CROWN_SPARKS = 12;
-const CRACKLES = 6;
+const FLASH_MIN_CHAIN = 3;
 // A character rolls for a quarter beat (--vibe-roll in ui.css); a vibe landing meanwhile changes it
 // without starting over.
 const ROLL_BEATS = 0.25;
@@ -39,15 +39,28 @@ function pickedUp(events: SimState['events']): { count: number; milestone: VibeM
   return { count, milestone };
 }
 
-// The team's vibes since the start of the game: its digits roll, it heats while vibes chain and a
-// crown of sparks greets each hundred (revue `.lavish/compteur-vibes` du 2026-11-14).
+function orbit(className: string, index: number): HTMLElement {
+  const spark = icon(className, VIBE);
+  setVar(spark, '--i', String(index));
+  return spark;
+}
+
+// The team's vibes since the start of the game: its digits roll and it thumps on each vibe, a spark
+// turns around it at rest and one more per vibe of a chain, sinking into it when the chain lapses,
+// and a crown of sparks greets each hundred (revues `.lavish/compteur-vibes` du 2026-11-14 et
+// `.lavish/vibes` du 2026-11-15).
 export function createVibeCounter(): VibeCounter {
   const element = el('section', 'ui-hud__vibes');
   const counter = el('span', 'ui-vibes');
   const number = el('span', 'ui-vibes__number');
+  const chainSparks = Array.from({ length: VIBE_CHAIN_MAX }, (_, index) =>
+    orbit('ui-vibes__orbit', index),
+  );
   counter.append(
     ...sparks('ui-vibes__crown', CROWN_SPARKS),
-    ...sparks('ui-vibes__crackle', CRACKLES),
+    el('span', 'ui-vibes__flash'),
+    orbit('ui-vibes__rest', 0),
+    ...chainSparks,
     icon('ui-vibes__spark', VIBE),
     number,
   );
@@ -58,6 +71,50 @@ export function createVibeCounter(): VibeCounter {
   let text = '';
   let characters: HTMLElement[] = [];
   const rolledAt: number[] = [];
+  let lit = 0;
+  let sunkAt: number | null = null;
+
+  // Lights the chain's first `count` sparks, each newly lit one born out of the number.
+  function light(count: number): void {
+    chainSparks.forEach((spark, index) => {
+      const on = index < count;
+      if (on === (spark.dataset.on !== undefined)) {
+        return;
+      }
+      if (on) {
+        spark.dataset.on = '';
+        replay(spark, 'born');
+      } else {
+        delete spark.dataset.on;
+      }
+    });
+    lit = count;
+  }
+
+  function endSink(): void {
+    sunkAt = null;
+    delete counter.dataset.sink;
+    light(0);
+  }
+
+  // The sparks of a lapsed chain spiral into the number for a beat; a vibe meanwhile cuts it short.
+  function follow(chain: number, broken: number, tick: number, ticksPerBeat: number): void {
+    if (broken >= FLASH_MIN_CHAIN) {
+      replay(counter, 'flash');
+    }
+    if (broken > 0 && chain === 0) {
+      sunkAt = tick;
+      replay(counter, 'sink');
+    } else if (broken > 0) {
+      light(0);
+    }
+    if (sunkAt !== null && (chain > 0 || tick - sunkAt >= ticksPerBeat)) {
+      endSink();
+    }
+    if (sunkAt === null && chain !== lit) {
+      light(chain);
+    }
+  }
 
   // Writes the new total, its changed characters rolling in unless `roll` is off.
   function write(whole: number, roll: boolean, tick: number, ticksPerBeat: number): void {
@@ -119,7 +176,12 @@ export function createVibeCounter(): VibeCounter {
         }
       }
       if (before?.chain !== shown.chain) {
-        setVar(counter, '--vibe-heat', String(shown.chain / VIBE_CHAIN_MAX));
+        setVar(counter, '--vibe-heat', String(vibeHeat(shown.chain)));
+      }
+      if (reading.reseeded) {
+        endSink();
+      } else {
+        follow(shown.chain, reading.broken, state.tick, ticksPerBeat);
       }
       // A frame that catches up more than a beat keeps the hundred it crossed, but crowns nothing.
       if (picked.milestone !== null) {
@@ -131,11 +193,13 @@ export function createVibeCounter(): VibeCounter {
       if (reading.reseeded) {
         delete counter.dataset.gain;
         delete counter.dataset.crown;
+        delete counter.dataset.flash;
       }
     },
     reset() {
       shown = null;
       rolledAt.length = 0;
+      endSink();
     },
   };
 }

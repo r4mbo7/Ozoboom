@@ -7,6 +7,7 @@ export const MAIN_STAGE: SetDefinition = {
   name: 'Main stage',
   style: 'Psytrance full-on',
   decor: 'lake',
+  lake: true,
   trackIds: ['soiree-ouverture', 'brume-du-lac', 'grenouille-acide', 'goa-des-etoiles'],
   arena: { width: 1600, height: 1000 },
   core: { radius: 56, maxHp: 660 },
@@ -113,6 +114,7 @@ export const MAIN_STAGE: SetDefinition = {
         { enemyId: 'desagreable', everyBars: 1, count: 2, fromPhrase: 3 },
         { enemyId: 'male-alpha', everyBars: 4, count: 1, fromPhrase: 3 },
         { enemyId: 'zombie', everyBars: 8, count: 1, fromPhrase: 3 },
+        { enemyId: 'neon', everyBars: 4, count: 1, fromPhrase: 3 },
       ],
       dropSpawns: [
         { enemyId: 'desagreable', everyBars: 1, count: 5, fromPhrase: 0 },

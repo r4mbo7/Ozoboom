@@ -4,6 +4,7 @@ import type { ResolvedContent } from './content';
 import { lookup } from './lookup';
 import type { CarriedTrap, PlayerId, PlayerState, SimState, TrapState, Vec2 } from './state';
 import { statValue } from './stats';
+import { shoreOf, wet } from './shore';
 import type { StepContext } from './systems/types';
 
 // How far past the two bodies' edges the place key reaches a trap, the Banane further, and a
@@ -234,12 +235,16 @@ function outward(state: SimState, from: Vec2): Vec2 {
 
 // The spot itself if it takes the trap, else the nearest of rings of eight around it.
 export function trapSpot(
-  state: Pick<SimState, 'arena' | 'core' | 'traps'>,
-  set: Pick<SetDefinition, 'obstacles'>,
+  state: Pick<SimState, 'arena' | 'core' | 'traps' | 'seed'>,
+  set: Pick<SetDefinition, 'obstacles' | 'lake' | 'arena'>,
   footprint: { x: number; y: number; radius: number },
   radiusOf: (trap: TrapState) => number,
 ): Vec2 | undefined {
-  if (trapFits(state, set, footprint, radiusOf)) {
+  const shore = shoreOf(set, state.seed);
+  const fits = (spot: Vec2): boolean =>
+    trapFits(state, set, { ...spot, radius: footprint.radius }, radiusOf) &&
+    !wet(shore, spot, footprint.radius);
+  if (fits(footprint)) {
     return { x: footprint.x, y: footprint.y };
   }
   const step = footprint.radius;
@@ -248,7 +253,7 @@ export function trapSpot(
     let side = { x: 1, y: 0 };
     for (let turn = 0; turn < 8; turn++) {
       const spot = { x: footprint.x + side.x * ring * step, y: footprint.y + side.y * ring * step };
-      if (trapFits(state, set, { ...spot, radius: footprint.radius }, radiusOf)) {
+      if (fits(spot)) {
         return spot;
       }
       side = { x: (side.x - side.y) * EIGHTH_TURN, y: (side.x + side.y) * EIGHTH_TURN };

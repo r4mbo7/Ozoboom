@@ -4,6 +4,7 @@ import { createFlowFields } from './flow-field';
 import { createCore, createSpeakers } from './initial-state';
 import { setTempo } from './lineup';
 import { Obstacles } from './obstacles';
+import { shoreOf } from './shore';
 import { SpatialHash } from './spatial-hash';
 import type { PlayerState, SimEvent, SimState, Vec2 } from './state';
 import { clearBattery } from './systems/battery';
@@ -18,9 +19,10 @@ export function setBindings(
   set: SetDefinition,
   content: ResolvedContent,
   startTick: number,
+  seed: number,
 ): Pick<
   StepContext,
-  'set' | 'tempo' | 'enemyGrid' | 'obstacles' | 'enemyObstacles' | 'flowFields'
+  'set' | 'tempo' | 'enemyGrid' | 'obstacles' | 'enemyObstacles' | 'flowFields' | 'shore'
 > {
   const { width, height } = set.arena;
   const obstacles = set.obstacles ?? [];
@@ -45,6 +47,7 @@ export function setBindings(
       enemyObstacles,
       [...content.enemies.values()].map((enemy) => enemy.radius),
     ),
+    shore: shoreOf(set, seed),
   };
 }
 
@@ -71,6 +74,7 @@ export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly V
   state.pickups = [];
   state.placed = [];
   delete state.bystanders;
+  delete state.dancer;
   delete state.trapsDrawn;
   delete state.nextCarrierBar;
   delete state.carrierDue;
@@ -92,7 +96,7 @@ export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly V
     }
     carry(state, player, spot);
   });
-  Object.assign(ctx, setBindings(set, ctx.content, state.tick));
+  Object.assign(ctx, setBindings(set, ctx.content, state.tick, state.seed));
   placeStartingTraps(ctx);
 
   removeGridEvents(state.events);

@@ -1,11 +1,11 @@
 import type { AuraAttack } from '../../data/kiffeur';
 import { angleOf } from '../../shared/angle';
 import { beatOfTick, isBeatTick, isOffbeatTick, type Tempo } from '../../shared/tempo';
-import { distanceSquared } from '../../shared/vec';
+import { spilledOn } from './spill';
 import type { AttackModule, Upgraded } from './types';
 import { hurtEnemy, touches } from '../effects';
 import { gaugeValue } from '../gauges';
-import type { EnemyState, PlayerState } from '../state';
+import type { PlayerState } from '../state';
 import { statValue } from '../stats';
 
 export const aura: AttackModule<AuraAttack> = {
@@ -37,7 +37,7 @@ export const aura: AttackModule<AuraAttack> = {
         hit = true;
       }
     }
-    for (const enemy of spilledOn(state.enemies, player, attack, radius)) {
+    for (const enemy of spilledOn(state.enemies, player, radius, attack.overflow)) {
       hurtEnemy(state, enemy, damage, player.id, from);
       state.events.push({
         type: 'moodSpilled',
@@ -87,29 +87,4 @@ function pulsesOn(player: Upgraded, tick: number, tempo: Tempo): boolean {
     isBeatTick(tick, tempo) ||
     (isOffbeatTick(tick, tempo) && pulsesOffbeat(player, beatOfTick(tick, tempo)))
   );
-}
-
-// Each extra shot and each pierce spills the good mood onto one more bad vibe past the rim, the
-// closest first; faster shots carry it further.
-function spilledOn(
-  enemies: readonly EnemyState[],
-  player: PlayerState,
-  attack: AuraAttack,
-  radius: number,
-): EnemyState[] {
-  const count =
-    Math.floor(statValue(player, 'projectileCountAdd', 0)) +
-    Math.floor(statValue(player, 'pierceAdd', 0));
-  if (count <= 0) {
-    return [];
-  }
-  const reach = radius + statValue(player, 'projectileSpeedMul', attack.overflow);
-  return enemies
-    .filter(
-      (enemy) => enemy.hp > 0 && !touches(enemy, player, radius) && touches(enemy, player, reach),
-    )
-    .map((enemy) => ({ enemy, gap: distanceSquared(enemy, player) }))
-    .sort((a, b) => a.gap - b.gap || a.enemy.id - b.enemy.id)
-    .slice(0, count)
-    .map(({ enemy }) => enemy);
 }

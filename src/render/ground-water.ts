@@ -3,17 +3,19 @@ import { nextFloat, seedRng } from '../shared/prng';
 import { lerp } from '../shared/scalar';
 import type { SimState } from '../sim/state';
 import type { RenderContext } from './context';
-import { DOME_LOOK, coreLookOf } from './core-look';
-import { MAIN_CORE_LOOKS } from './core-main-looks';
 import type { Frame } from './frame';
-import { LAKE_SKY_MIX, type Layout, OVERFLOW, shoreAt } from './ground-layout';
-import { mixColor } from './palette';
+import { shoreAt } from '../sim/shore';
+import { LAKE_SKY_MIX, type Layout, OVERFLOW } from './ground-layout';
+import { type PixiPalette, mixColor } from './palette';
 import { add, lookup, setTint } from './util';
-import { litShare, stageColor } from './vu-meter';
 
 const WHITE = 0xffffff;
 const REFLECT_REACH = 240;
 const REFLECTED_PLAYERS = 4;
+
+export function lakeTint(palette: PixiPalette): number {
+  return mixColor(palette.turquoise, palette.solClair, LAKE_SKY_MIX);
+}
 
 export function createWater(ctx: RenderContext, parent: Container) {
   const { textures: t } = ctx;
@@ -21,12 +23,11 @@ export function createWater(ctx: RenderContext, parent: Container) {
   const ripples = new Graphics();
   const shore = new Graphics();
   parent.addChild(lake, ripples, shore);
-  const coreReflection = add(parent, t.core);
   const playerReflections: Sprite[] = [];
   for (let index = 0; index < REFLECTED_PLAYERS; index += 1) {
     playerReflections.push(add(parent, t.players.shoulders));
   }
-  for (const sprite of [coreReflection, ...playerReflections]) {
+  for (const sprite of playerReflections) {
     sprite.visible = false;
   }
   let layout: Layout | null = null;
@@ -59,7 +60,7 @@ export function createWater(ctx: RenderContext, parent: Container) {
     },
     style(frame: Frame): void {
       const { palette } = frame;
-      lake.tint = mixColor(palette.turquoise, palette.solClair, LAKE_SKY_MIX);
+      lake.tint = lakeTint(palette);
       lake.alpha = 0.92;
       shore.tint = palette.turquoise;
       ripples.tint = palette.texte;
@@ -71,20 +72,6 @@ export function createWater(ctx: RenderContext, parent: Container) {
       }
       const quiet = frame.calm;
       const shimmer = quiet ? 1 : 0.85 + 0.15 * Math.sin(frame.now * 0.09);
-      const { core } = state;
-      const domed = coreLookOf(MAIN_CORE_LOOKS, state.seed, frame.set.id) === DOME_LOOK;
-      const shape = domed ? t.core : t.halo;
-      const heart = core.radius / shape.radius;
-      coreReflection.texture = shape.texture;
-      coreReflection.visible = true;
-      setTint(coreReflection, stageColor(frame.palette, litShare(core)));
-      coreReflection.position.set(
-        shoreAt(layout, core.y) * 0.5,
-        core.y + (quiet ? 0 : Math.sin(frame.now * 0.05) * 3),
-      );
-      coreReflection.scale.set(heart * 0.9, -heart * 0.9);
-      coreReflection.alpha = (0.24 + (quiet ? 0 : 0.12 * frame.pulse)) * shimmer;
-
       let used = 0;
       for (const player of state.players) {
         const sprite = playerReflections[used];

@@ -2,11 +2,12 @@ import { clamp } from '../../shared/scalar';
 import { normalize } from '../../shared/vec';
 import { touches } from '../effects';
 import { moveUntilBlocked } from '../obstacles';
+import { keepAshore } from '../shore';
 import type { PlayerState, SimState } from '../state';
 import type { SkillModule, SkillOf } from './types';
 
 export const dash: SkillModule<SkillOf<'dash'>> = {
-  cast({ state, obstacles }, player, effect, input, power) {
+  cast({ state, obstacles, shore }, player, effect, input, power) {
     const move = normalize(input.move);
     const direction = move.x === 0 && move.y === 0 ? player.aim : move;
     const distance = effect.distance * power;
@@ -14,6 +15,8 @@ export const dash: SkillModule<SkillOf<'dash'>> = {
     const x = clamp(player.x + direction.x * distance, player.radius, width - player.radius);
     const y = clamp(player.y + direction.y * distance, player.radius, height - player.radius);
     moveUntilBlocked(player, x - player.x, y - player.y, obstacles);
+    // A charge into the lake stops on its shore, as a walk does, before it draws the bad vibes.
+    keepAshore(shore, player);
     player.invulnerableTicks = Math.max(player.invulnerableTicks ?? 0, effect.invulnerableTicks);
     if (effect.tauntRadius !== undefined) {
       taunt(state, player, effect.tauntRadius);

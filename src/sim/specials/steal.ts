@@ -1,5 +1,6 @@
 import { distanceSquared } from '../../shared/vec';
 import { touches } from '../effects';
+import { ashore } from '../shore';
 import type { Circle } from '../spatial-hash';
 import type { EnemyState, PickupState, SimState } from '../state';
 import type { StepContext } from '../systems/types';
@@ -54,14 +55,15 @@ function dropCarried(ctx: StepContext, enemy: EnemyState): void {
   const { state, set } = ctx;
   const amount = enemy.carrying ?? 0;
   if (amount > 0) {
+    const { x, y } = ashore(ctx.shore, enemy, 0);
     state.pickups.push({
       id: state.nextEntityId,
       kind: 'vibes',
       amount,
-      x: enemy.x,
-      y: enemy.y,
-      prevX: enemy.x,
-      prevY: enemy.y,
+      x,
+      y,
+      prevX: x,
+      prevY: y,
       ticksLeft: set.pickups.lifetimeTicks,
     });
     state.nextEntityId += 1;

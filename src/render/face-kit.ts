@@ -33,6 +33,8 @@ export interface Face {
   readonly drowsy?: boolean;
   readonly glad?: (ctx: Ctx) => void;
   readonly flies?: boolean;
+  // Drawn in its own colours: never tinted to the hour.
+  readonly lit?: true;
 }
 
 export function wave(pose: Pose, turns = 1, shift = 0): number {

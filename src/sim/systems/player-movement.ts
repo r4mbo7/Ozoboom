@@ -5,6 +5,7 @@ import { length, normalize } from '../../shared/vec';
 import { IDLE_INPUT } from '../commands';
 import { gustDrift } from '../gusts';
 import { resolveObstacles } from '../obstacles';
+import { keepAshore } from '../shore';
 import type { Vec2 } from '../state';
 import { holdsItsPlayer } from '../walls';
 import type { StepContext } from './types';
@@ -14,7 +15,7 @@ import type { StepContext } from './types';
 const HALF_TURN_SECONDS = 0.2;
 const MAX_TURN_PER_TICK = Math.PI / (HALF_TURN_SECONDS * TICK_RATE_HZ);
 
-export function playerMovement({ state, content, commands, obstacles }: StepContext): void {
+export function playerMovement({ state, content, commands, obstacles, shore }: StepContext): void {
   const { arena } = state;
   const drift = gustDrift(state) ?? { x: 0, y: 0 };
   for (const player of state.players) {
@@ -47,6 +48,7 @@ export function playerMovement({ state, content, commands, obstacles }: StepCont
       player.dash.ticksLeft -= 1;
     }
     resolveObstacles(player, fromX, fromY, obstacles);
+    keepAshore(shore, player);
   }
 }
 
