@@ -1845,6 +1845,7 @@ svg.ui-title__moon-glint {
 /* The script sets the width of a card and the inset that wraps the cards in even rows. */
 .ui-classpicker[data-many] .ui-classcards {
   --card-least: 86px;
+  --card-most: 120px;
   display: flex;
   box-sizing: border-box;
   flex-wrap: wrap;
@@ -1875,7 +1876,7 @@ svg.ui-title__moon-glint {
   container-type: inline-size;
 }
 
-@container (max-width: 92px) {
+@container (max-width: 108px) {
   .ui-classpicker[data-many] .ui-classcard__name {
     font-size: 12px;
   }
@@ -2096,12 +2097,6 @@ svg.ui-title__moon-glint {
 .ui-stepper[aria-current] {
   border-color: var(--turquoise);
   box-shadow: 0 0 0 2px var(--turquoise);
-}
-
-.ui-lobby__field[aria-current][data-quiet],
-.ui-stepper[aria-current][data-quiet] {
-  border-color: color-mix(in srgb, var(--turquoise) 70%, transparent);
-  box-shadow: none;
 }
 
 .ui-lobby__entry .ui-button:not(.ui-action) {
@@ -4985,6 +4980,11 @@ svg.ui-title__moon-glint {
   white-space: nowrap;
 }
 
+/* The weapon a fusion replaces can be long: it wraps rather than leave the card. */
+.ui-card[data-kind='fusion'] .ui-card__rank {
+  white-space: normal;
+}
+
 .ui-card__pearls {
   display: inline-flex;
   flex: none;
@@ -6479,6 +6479,126 @@ svg.ui-title__moon-glint {
   .ui-offers__panels[data-multi] :is(.ui-key__arrow, .ui-key__arrow svg) {
     width: calc(14 * var(--panel-unit));
     height: calc(14 * var(--panel-unit));
+  }
+}
+
+/* Two players of one screen know they are levelling up: the level and the title are read, not shown,
+   and the cards take their height. */
+.ui-offers__panels[data-count='2']
+  .ui-offer:has(> .ui-cards[data-offer='levelUp'])
+  > :is(.ui-kicker, .ui-heading) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Two players' level cards side by side take the screen's width, and grow in type and head to fill its
+   height; a boss's six relics keep their own layout. */
+@media (min-width: 1101px) {
+  .ui-offers__panels[data-count='2']:not(:has([data-offer='relic'])) {
+    --panel-unit: clamp(1px, min(100vw / 1280, 100vh / 720), 2px);
+
+    gap: calc(16 * var(--panel-unit));
+  }
+
+  .ui-offers__panels[data-count='2']:not(:has([data-offer='relic'])) .ui-offer {
+    padding-inline: calc(14 * var(--panel-unit));
+  }
+
+  /* The levels, then the button under them: every card's foot has the same height, focused or not. */
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-card__foot {
+    flex-direction: column;
+  }
+
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-card__rank {
+    text-align: center;
+  }
+
+  .ui-offers__panels[data-count='2'] .ui-cards[data-offer='levelUp']:not([data-count='4']) {
+    --card-head: calc(170 * var(--card-unit));
+
+    flex-grow: 1;
+    gap: calc(10 * var(--card-unit));
+    margin-top: calc(22 * var(--card-unit));
+  }
+
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-card {
+    --card-pad-x: calc(12 * var(--card-unit));
+  }
+
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-card__family {
+    font-size: calc(14 * var(--card-unit));
+  }
+
+  /* Kept off the card's edges: a swash of the title font overhangs its box. */
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-card__name {
+    --name-size: calc(22 * var(--card-unit));
+
+    padding-inline: calc(6 * var(--card-unit));
+  }
+
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-card__desc {
+    font-size: calc(17 * var(--card-unit));
+  }
+
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    :is(.ui-card__recipe, .ui-card__fuse, .ui-card__rank, .ui-card__cta) {
+    font-size: calc(15 * var(--card-unit));
+  }
+
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-role {
+    font-size: calc(13 * var(--card-unit));
+  }
+
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-role__icon {
+    width: calc(15 * var(--card-unit));
+    height: calc(15 * var(--card-unit));
+  }
+
+  .ui-offers__panels[data-count='2']
+    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-path__level {
+    width: calc(22 * var(--card-unit));
+    height: calc(22 * var(--card-unit));
+    font-size: calc(12 * var(--card-unit));
+  }
+
+  /* Four cards keep their two rows at the first size, each row as tall as its cards, the button beside
+     the levels. */
+  .ui-offers__panels[data-count='2'] .ui-cards[data-offer='levelUp'][data-count='4'] {
+    --card-head: calc(76 * var(--card-unit));
+
+    flex-grow: 1;
+    grid-auto-rows: auto;
+    margin-top: calc(22 * var(--card-unit));
+    /* A new weapon's bracelet wraps round its card's sides: the columns leave it room. */
+    gap: calc(8 * var(--card-unit)) calc(18 * var(--card-unit));
+  }
+
+  .ui-offers__panels[data-count='2'] .ui-cards[data-offer='levelUp'][data-count='4'] .ui-card {
+    --card-gap: calc(5 * var(--card-unit));
+
+    padding-bottom: calc(10 * var(--card-unit));
   }
 }
 

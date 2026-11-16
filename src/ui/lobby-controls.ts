@@ -31,6 +31,8 @@ export interface LobbyControlsSetup {
   readonly classes: readonly { id: string }[];
   readonly nights: Pick<NightTabs, 'handle'>;
   readonly activate: (row: Row, seat: LobbySeat | null) => void;
+  // The seat typing its name pressed up, down or back.
+  readonly stopTyping: () => void;
 }
 
 export interface LitRow {
@@ -38,18 +40,15 @@ export interface LitRow {
   readonly seat: LobbySeat | null;
 }
 
-export interface CursorMarks {
-  readonly lit: readonly LitRow[];
-  readonly quiet: ReadonlySet<PlayerId>;
-}
-
 export interface LobbyControls {
   open(): void;
   follow(): void;
   hover(row: Row): boolean;
-  marks(typing: PlayerId | undefined): CursorMarks;
+  // Every local seat rings its own row, as brightly as the others.
+  marks(): readonly LitRow[];
   stepChoice(seat: LobbySeat | null, row: Row | undefined, direction: -1 | 1): void;
-  update(frame: UiFrame, edges: MenuIntents): void;
+  // Locally, the seat typing its name, if any: only its own gestures end the typing.
+  update(frame: UiFrame, edges: MenuIntents, typing?: PlayerId): void;
 }
 
 // Made when a seat or a device shows: a key still held from before waits for its release.
@@ -61,11 +60,10 @@ function openedInput(): MenuInput {
 
 // Online, one cursor for the one device of this screen; locally, one cursor per seat.
 export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
-  const { current, actions, classes, nights, activate } = setup;
+  const { current, actions, classes, nights, activate, stopTyping } = setup;
   let cursor = 0;
   let cursorView = lobbyView(current());
   const seatCursors = new Map<PlayerId, number>();
-  let activeSeat: PlayerId | null = null;
   const seatInputs = new Map<PlayerId, MenuInput>();
   const deviceInputs = new Map<DeviceId, MenuInput>();
 
@@ -119,10 +117,13 @@ export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
     }
   }
 
-  function driveSeat(seat: LobbySeat, snapshot: InputSnapshot): boolean {
+  function driveSeat(seat: LobbySeat, snapshot: InputSnapshot, typing: boolean): boolean {
     const own = seatInput(seat.playerId).edges(snapshot.menu, snapshot.gameplay.move);
-    if (Object.values(own).some(Boolean)) {
-      activeSeat = seat.playerId;
+    if (typing) {
+      if (own.up || own.down || own.back) {
+        stopTyping();
+      }
+      return false;
     }
     if (seat.host && nights.handle(own)) {
       return false;
@@ -145,11 +146,12 @@ export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
     return false;
   }
 
-  function driveSeats(frame: UiFrame): boolean {
+  function driveSeats(frame: UiFrame, typing: PlayerId | undefined): boolean {
     let acted = false;
     for (const seat of current().seats) {
       const player = frame.players.find((entry) => entry.playerId === seat.playerId);
-      if (!seat.remote && player !== undefined && driveSeat(seat, player.snapshot)) {
+      const own = seat.playerId === typing;
+      if (!seat.remote && player !== undefined && driveSeat(seat, player.snapshot, own)) {
         acted = true;
       }
     }
@@ -171,8 +173,8 @@ export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
     }
   }
 
-  function updateLocal(frame: UiFrame, edges: MenuIntents): void {
-    if (driveSeats(frame)) {
+  function updateLocal(frame: UiFrame, edges: MenuIntents, typing: PlayerId | undefined): void {
+    if (driveSeats(frame, typing)) {
       return;
     }
     if (edges.back && current().seats.length === 0) {
@@ -226,30 +228,21 @@ export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
       cursor = index;
       return true;
     },
-    marks(typing) {
+    marks() {
       const model = current();
       if (model.mode !== 'local') {
         const row = rowsOf(model)[cursor];
-        return {
-          lit: row === undefined ? [] : [{ row, seat: ownSeat(model) }],
-          quiet: new Set(),
-        };
+        return row === undefined ? [] : [{ row, seat: ownSeat(model) }];
       }
-      const lead = typing ?? activeSeat ?? model.seats[0]?.playerId;
-      const lit = model.seats.flatMap((seat) => {
+      return model.seats.flatMap((seat) => {
         const row = seatRows(seat, model)[seatCursors.get(seat.playerId) ?? 0];
         return row === undefined ? [] : [{ row, seat }];
       });
-      const others = model.seats.filter((seat) => seat.playerId !== lead);
-      return {
-        lit,
-        quiet: new Set(model.seats.length > 1 ? others.map((seat) => seat.playerId) : []),
-      };
     },
     stepChoice,
-    update(frame, edges) {
+    update(frame, edges, typing) {
       if (lobbyView(current()) === 'local') {
-        updateLocal(frame, edges);
+        updateLocal(frame, edges, typing);
       } else {
         updateOnline(edges);
       }

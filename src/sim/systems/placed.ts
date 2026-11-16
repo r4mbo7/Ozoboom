@@ -32,7 +32,14 @@ export function placedZones(ctx: StepContext): void {
         built = true;
       }
       slowEnemies(state, ctx.enemyGrid, zone, zone.radius, effect.slowFactor);
-      healPlayersOnBar(state, ctx.tempo, zone, zone.radius, effect.healPerBar * power);
+      healPlayersOnBar(
+        state,
+        ctx.tempo,
+        zone,
+        zone.radius,
+        effect.healPerBar * power,
+        zone.playerId,
+      );
     }
     zone.ticksLeft -= 1;
   }

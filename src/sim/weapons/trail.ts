@@ -36,7 +36,7 @@ export const trail: WeaponModule = {
     if (isBarTick(state.tick, tempo)) {
       for (const ally of state.players) {
         if (!ally.downed && on(ally)) {
-          healPlayer(state, ally, effect.healPerBar * power);
+          healPlayer(state, ally, effect.healPerBar * power, player.id);
         }
       }
       soothe(state, on);

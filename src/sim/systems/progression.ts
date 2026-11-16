@@ -1,7 +1,7 @@
-import type { SetDefinition } from '../../data/types';
 import { drawOffer } from '../draw';
 import { finishWins } from '../mode';
 import type { PlayerState } from '../state';
+import { vibesToReach } from '../team';
 import { isLastBossDown } from './set-progress';
 import type { StepContext } from './types';
 
@@ -11,7 +11,10 @@ export function progression(ctx: StepContext): void {
     while (player.vibes >= player.vibesToNextLevel) {
       player.vibes -= player.vibesToNextLevel;
       player.level += 1;
-      player.vibesToNextLevel = vibesToReach(set, player.level);
+      player.vibesToNextLevel = vibesToReach(set, player.level, state.players.length);
+      if (set.powerPerLevel !== undefined) {
+        player.levelPower = 1 + set.powerPerLevel * (player.level - 1);
+      }
       player.pendingLevelUps = (player.pendingLevelUps ?? 0) + 1;
       state.events.push({ type: 'levelUp', playerId: player.id, level: player.level });
     }
@@ -37,14 +40,4 @@ export function presentNextOffer(ctx: StepContext, player: PlayerState): void {
       return;
     }
   }
-}
-
-// Rounded to a whole vibe, so the level ring shows the exact threshold whatever the curve.
-function vibesToReach(set: SetDefinition, level: number): number {
-  const { baseVibes, vibesPerLevel } = set.levelCurve;
-  const vibes = Math.floor(baseVibes + vibesPerLevel * (level - 1) + 0.5);
-  if (!(vibes > 0)) {
-    throw new RangeError(`set "${set.id}" asks ${String(vibes)} vibes for level ${String(level)}`);
-  }
-  return vibes;
 }

@@ -4,6 +4,7 @@ import { IDLE_INPUT } from './commands';
 import type { ResolvedContent } from './content';
 import { lookup } from './lookup';
 import type { CoreState, PlayerId, PlayerState, SimState, SpeakerState, Vec2 } from './state';
+import { vibesToReach } from './team';
 
 export interface PlayerSlot {
   id: PlayerId;
@@ -56,7 +57,14 @@ export function createInitialState(
     },
     core,
     players: slots.map((slot, index) =>
-      createPlayer(slot, lookup(content.classes, slot.classId, 'class'), core, index, set),
+      createPlayer(
+        slot,
+        lookup(content.classes, slot.classId, 'class'),
+        core,
+        index,
+        set,
+        slots.length,
+      ),
     ),
     enemies: [],
     projectiles: [],
@@ -99,6 +107,7 @@ function createPlayer(
   core: CoreState,
   index: number,
   set: SetDefinition,
+  teamSize: number,
 ): PlayerState {
   const direction = SPAWN_DIRECTIONS[index] ?? { x: 0, y: 0 };
   const distance = core.radius + definition.radius * SPAWN_GAP_IN_PLAYER_RADII;
@@ -118,7 +127,7 @@ function createPlayer(
     aim: IDLE_INPUT.aim,
     level: 1,
     vibes: 0,
-    vibesToNextLevel: set.levelCurve.baseVibes,
+    vibesToNextLevel: vibesToReach(set, 1, teamSize),
     pendingLevelUps: 0,
     attackCooldown: 0,
     skillCooldown: 0,

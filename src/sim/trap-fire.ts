@@ -30,6 +30,8 @@ export function trapSilenced(state: SimState, trap: TrapState): boolean {
 
 // Marks the lure does not renew lapse after the next tick, whose earlier systems still see it.
 const LURE_MARK_TICKS = 2;
+// A trap has upgrades of its own: its owner's levels do not raise it.
+const TRAP_LEVEL_POWER = 1;
 
 export interface Emitter extends Vec2 {
   direction: Vec2;
@@ -90,6 +92,7 @@ export function fire(firing: Firing): boolean {
         effect.knockback * power,
         by,
         obstacles,
+        TRAP_LEVEL_POWER,
       );
     case 'beam': {
       const direction = trapPointing(effect, at.direction, state.tick, tempo);
@@ -116,7 +119,7 @@ export function fire(firing: Firing): boolean {
           (inBeam(enemy, at, direction, length, effect.width / 2) ||
             sweptOver(enemy, at, before, direction, length))
         ) {
-          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, by, at);
+          hurtEnemy(state, enemy, effect.damagePerTick * damageMul, by, at, TRAP_LEVEL_POWER);
           reached = true;
         }
       }
@@ -124,7 +127,7 @@ export function fire(firing: Firing): boolean {
     }
     case 'mist': {
       const radius = effect.radius * radiusMul;
-      healPlayersOnBar(state, tempo, at, radius, effect.healPerBar * power);
+      healPlayersOnBar(state, tempo, at, radius, effect.healPerBar * power, null);
       return slowEnemies(state, grid, at, radius, weakened(effect.slowFactor, power));
     }
     case 'lure': {
@@ -163,7 +166,7 @@ export function fire(firing: Firing): boolean {
       if (isBeatTick(state.tick, tempo)) {
         for (const player of state.players) {
           if (!player.downed && blows(player)) {
-            healPlayer(state, player, effect.healPerBeat * power);
+            healPlayer(state, player, effect.healPerBeat * power, null);
           }
         }
         soothe(state, blows);

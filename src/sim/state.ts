@@ -103,6 +103,8 @@ export interface PlayerState extends Positioned {
   speed: number;
   aim: Vec2;
   level: number;
+  // 1 plus `SetDefinition.powerPerLevel` per level past the first. Absent at level 1, or without it.
+  levelPower?: number;
   vibes: number;
   vibesToNextLevel: number;
   attackCooldown: number;

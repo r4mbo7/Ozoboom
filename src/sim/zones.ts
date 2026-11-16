@@ -103,7 +103,7 @@ export function zones({ state, tempo, enemyObstacles, enemyGrid }: StepContext):
     if (strikes && definition.heal !== undefined) {
       for (const player of state.players) {
         if (!player.downed && touches(player, nearestOnAxis(zone, player), zone.radius)) {
-          healPlayer(state, player, definition.heal * power);
+          healPlayer(state, player, definition.heal * power, playerId);
         }
       }
       soothe(state, (dancer) => touches(dancer, nearestOnAxis(zone, dancer), zone.radius));

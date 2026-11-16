@@ -127,7 +127,7 @@ function flewHome(state: SimState, projectile: ProjectileState): boolean {
   const distance = Math.sqrt(dx * dx + dy * dy);
   const speed = Math.sqrt(projectile.vx * projectile.vx + projectile.vy * projectile.vy);
   if (distance <= speed + ally.radius) {
-    healPlayer(state, ally, projectile.heal ?? 0);
+    healPlayer(state, ally, projectile.heal ?? 0, creditedPlayer(state, projectile));
     if (projectile.owner.kind === 'weapon') {
       state.events.push({
         type: 'weaponCaught',

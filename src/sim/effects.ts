@@ -87,12 +87,21 @@ function markDamageMul({ marks }: EnemyState): number {
   );
 }
 
+// What the levels of the player a hit or a heal comes from multiply it by.
+function levelPowerOf(state: SimState, by: PlayerId | null): number {
+  if (by === null) {
+    return 1;
+  }
+  return state.players.find((player) => player.id === by)?.levelPower ?? 1;
+}
+
 export function hurtEnemy(
   state: SimState,
   enemy: EnemyState,
   damage: number,
   by: PlayerId | null,
   from: Point | null,
+  levelPower = levelPowerOf(state, by),
 ): void {
   if (enemy.hp <= 0) {
     return;
@@ -100,7 +109,7 @@ export function hurtEnemy(
   const marked = damage * markDamageMul(enemy);
   const frontMul = from === null ? 1 : frontDamageMul(enemy, from);
   const armorMul = enemy.armor === undefined || enemy.armor.open ? 1 : enemy.armor.damageMul;
-  const dealt = marked * frontMul * armorMul;
+  const dealt = marked * frontMul * armorMul * levelPower;
   enemy.hp -= dealt;
   if (by !== null) {
     enemy.lastHitBy = by;
@@ -181,8 +190,14 @@ export function slowEnemies(
   return reached;
 }
 
-export function healPlayer(state: SimState, player: PlayerState, amount: number): void {
-  const healed = Math.min(player.maxHp - player.hp, amount);
+// `by` is the player the heal comes from, null for a trap or a speaker.
+export function healPlayer(
+  state: SimState,
+  player: PlayerState,
+  amount: number,
+  by: PlayerId | null,
+): void {
+  const healed = Math.min(player.maxHp - player.hp, amount * levelPowerOf(state, by));
   if (healed <= 0) {
     return;
   }
@@ -196,13 +211,14 @@ export function healPlayersOnBar(
   at: Point,
   radius: number,
   amount: number,
+  by: PlayerId | null,
 ): void {
   if (!isBarTick(state.tick, tempo)) {
     return;
   }
   for (const player of state.players) {
     if (!player.downed && touches(player, at, radius)) {
-      healPlayer(state, player, amount);
+      healPlayer(state, player, amount, by);
     }
   }
   if (amount > 0) {
@@ -235,13 +251,14 @@ export function shockwave(
   knockback: number,
   by: PlayerId | null,
   obstacles: Obstacles,
+  levelPower = levelPowerOf(state, by),
 ): boolean {
   let reached = false;
   const found = grid.queryInListOrder(at.x, at.y, radius);
   for (let i = 0; i < found; i++) {
     const enemy = state.enemies[grid.result(i)];
     if (enemy !== undefined && enemy.hp > 0) {
-      hurtEnemy(state, enemy, damage, by, at);
+      hurtEnemy(state, enemy, damage, by, at, levelPower);
       knockBack(enemy, at, knockback, obstacles);
       reached = true;
     }

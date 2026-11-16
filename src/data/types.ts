@@ -522,7 +522,12 @@ export interface SetDefinition {
   // Renews traps that wear: a set with it has `trapWear`.
   battery?: BatteryRules;
   dice?: DiceRules;
-  levelCurve: { baseVibes: number; vibesPerLevel: number };
+  // Level n asks baseVibes + vibesPerLevel x (n - 1) vibes, times `growth` compounded n - 1 times: the
+  // bad vibes grow denser along a set, and the levels would come faster without it. Absent means 1.
+  levelCurve: { baseVibes: number; vibesPerLevel: number; growth?: number };
+  // Each level past the first adds this share of their base to the player's hits and heals (not their
+  // traps'), so the late bad vibes, denser and tougher, ask no more upgrades. Absent means none.
+  powerPerLevel?: number;
   pickups: { lifetimeTicks: number; speed: number };
   tiers: readonly TierDefinition[];
   speakers?: readonly SpeakerDefinition[];
@@ -533,6 +538,10 @@ export interface SetDefinition {
   // Most the core can be repaired per bar, all sources together. Absent means no cap.
   coreRepairPerBar?: number;
   perPlayer?: { spawnMul: number; enemyHpMul: number };
+  // A game's first phrase sends its bad vibes `count` times as many, with `hp` of their life and none of the
+  // life added per player; they come back whole bar by bar over the next `phrases`. A later festival
+  // stage starts whole.
+  warmup?: { phrases: number; count: number; hp: number };
   // Per minute past the last boss, on top of each bad vibe's own; absent, endless replays the last tier.
   endlessPerMinute?: { hp: number; damage: number };
   // A window comes from one or two sides by `chance`; `randomShare` of its spawns still from anywhere.

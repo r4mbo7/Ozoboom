@@ -47,7 +47,33 @@ export interface ClassPickerScreen {
   update(edges: MenuIntents): void;
 }
 
-// The cards keep the width the row fits them at; its padding narrows it to even rows, centred.
+// A short article holds on to the word after it: « Le » never stands alone on the first line.
+export function keepArticle(name: string): string {
+  return name.replace(/^(\S{1,3}) /u, '$1\u00a0');
+}
+
+const MIN_NAME_SIZE = 9;
+
+// A name whose words still overflow its card steps its size down, half a pixel at a time.
+function fitNames(row: HTMLElement): void {
+  for (const name of row.querySelectorAll<HTMLElement>('.ui-classcard__name')) {
+    const card = name.parentElement;
+    if (card === null) {
+      continue;
+    }
+    const frame = getComputedStyle(card);
+    const room = card.clientWidth - parseFloat(frame.paddingLeft) - parseFloat(frame.paddingRight);
+    name.style.removeProperty('font-size');
+    let size = parseFloat(getComputedStyle(name).fontSize);
+    while (name.scrollWidth > room && size > MIN_NAME_SIZE) {
+      size -= 0.5;
+      name.style.fontSize = `${String(size)}px`;
+    }
+  }
+}
+
+// The cards widen to fill their even rows, up to --card-most: a long name keeps its words on one
+// line. The padding centres the rows of cards that stop there.
 function spreadCards(row: HTMLElement): void {
   const width = row.clientWidth;
   if (width === 0) {
@@ -56,15 +82,17 @@ function spreadCards(row: HTMLElement): void {
   const style = getComputedStyle(row);
   const gap = parseFloat(style.columnGap);
   const least = parseFloat(style.getPropertyValue('--card-least'));
+  const most = parseFloat(style.getPropertyValue('--card-most'));
   const fit = Math.max(1, Math.floor((width + gap) / (least + gap)));
-  const card = (width - (fit - 1) * gap) / fit;
   const columns = evenColumns(row.children.length, fit);
+  const card = Math.min((width - (columns - 1) * gap) / columns, Math.max(least, most));
   setVar(row, '--card-width', `${String(card)}px`);
   setVar(
     row,
     '--cards-inset',
     `${String(Math.floor((width - columns * card - (columns - 1) * gap) / 2))}px`,
   );
+  fitNames(row);
 }
 
 export function createClassPicker(
@@ -118,7 +146,7 @@ export function createClassPicker(
     thumb.setClass(entry.id);
     const frame = el('span', 'ui-classcard__portrait');
     frame.append(thumb.element);
-    card.append(frame, el('span', 'ui-classcard__name', t(entry.name)));
+    card.append(frame, el('span', 'ui-classcard__name', keepArticle(t(entry.name))));
     const go = goes[index];
     if (go !== undefined) {
       card.append(go.element);

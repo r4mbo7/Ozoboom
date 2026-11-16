@@ -3,7 +3,7 @@ import { t } from '../shared/i18n';
 import { PLAYER_IDS, type PlayerId } from '../sim/state';
 import { type ClassInfo, ROW_CARDS, landscapeNotice } from './class-picker';
 import { openDiscord } from './discord';
-import { el, fillHint, onPointerClick, setFlag, setText } from './dom';
+import { el, fillHint, onPointerClick, setText } from './dom';
 import { type LobbyControls, createLobbyControls } from './lobby-controls';
 import { type Row, lobbyHint, lobbyView, ownSeat, roomCodeFromHash, seatAt } from './lobby-model';
 import {
@@ -207,19 +207,14 @@ function markCurrent(node: HTMLElement, current: boolean): void {
   }
 }
 
-function paintCursors(parts: LobbyParts, model: LobbyModel, controls: LobbyControls): void {
-  const typing = model.seats.find(
-    (seat) => parts.cards[seat.playerId]?.input === document.activeElement,
-  );
-  const marks = controls.marks(typing?.playerId);
-  const lit = new Set(marks.lit.map(({ row, seat }) => rowElement(parts, row, seat)));
+function paintCursors(parts: LobbyParts, controls: LobbyControls): void {
+  const lit = new Set(controls.marks().map(({ row, seat }) => rowElement(parts, row, seat)));
   for (const node of [...hoverRows(parts).map(([target]) => target), parts.stage.cards.element]) {
     markCurrent(node, lit.has(node));
   }
   for (const card of parts.cards) {
     for (const node of [card.field, card.stepper.element]) {
       markCurrent(node, lit.has(node));
-      setFlag(node, 'quiet', marks.quiet.has(card.playerId));
     }
   }
 }
@@ -311,6 +306,9 @@ export function createLobby(
     classes,
     nights,
     activate,
+    stopTyping: () => {
+      blurFocused(inputs);
+    },
   });
 
   function joinWithKeyboard(): void {
@@ -371,7 +369,7 @@ export function createLobby(
     paintLaunch(nights, footer, model);
     controls.follow();
     paintHint(parts, model, prompts, device);
-    paintCursors(parts, model, controls);
+    paintCursors(parts, controls);
   }
 
   onPointerClick(footer.launch, launchNow);
@@ -381,7 +379,7 @@ export function createLobby(
   for (const [node, row] of hoverRows(parts)) {
     onMouseMove(node, () => {
       if (controls.hover(row)) {
-        paintCursors(parts, model, controls);
+        paintCursors(parts, controls);
       }
     });
   }
@@ -402,17 +400,22 @@ export function createLobby(
     open() {
       controls.open();
       blurFocused(inputs);
-      paintCursors(parts, model, controls);
+      paintCursors(parts, controls);
     },
     update(frame, edges) {
-      if (isTyping(inputs)) {
+      // Locally, the others keep their own cursors while one seat types its name.
+      const typing =
+        lobbyView(model) === 'local'
+          ? model.seats.find((seat) => cards[seat.playerId]?.input === document.activeElement)
+          : undefined;
+      if (typing === undefined && isTyping(inputs)) {
         if (edges.back || edges.up || edges.down) {
           blurFocused(inputs);
         }
         return;
       }
-      controls.update(frame, edges);
-      paintCursors(parts, model, controls);
+      controls.update(frame, edges, typing?.playerId);
+      paintCursors(parts, controls);
     },
   };
 }

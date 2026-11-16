@@ -5,7 +5,7 @@ export const healPulse: SkillModule<SkillOf<'healPulse'>> = {
   cast({ state, set }, player, effect, _input, power) {
     for (const ally of state.players) {
       if (!ally.downed && touches(ally, player, effect.radius)) {
-        healPlayer(state, ally, effect.amount * power);
+        healPlayer(state, ally, effect.amount * power, player.id);
       }
     }
     soothe(state, (dancer) => touches(dancer, player, effect.radius));

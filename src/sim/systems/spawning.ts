@@ -4,6 +4,7 @@ import { BARS_PER_PHRASE, barOfTick, isBarTick, type Tempo } from '../../shared/
 import { lookup } from '../lookup';
 import { compound } from '../effects';
 import { clearOfObstacles } from '../obstacles';
+import { teamMul } from '../team';
 import { volumeMul } from '../volume';
 import type { Arena, EdgeSide, EnemyScale, EnemyState, SimState, Vec2 } from '../state';
 import { endlessMinutes } from './set-progress';
@@ -42,8 +43,14 @@ export function spawning(ctx: StepContext): void {
     const count =
       definition.oneAtATime === true
         ? Number(!isOut(state, definition.id))
-        : Math.ceil(
-            scaledCount(state, set, rule.count) * volumeMul(state) * (state.enemyScale?.count ?? 1),
+        : warmedCount(
+            state,
+            set,
+            Math.ceil(
+              scaledCount(state, set, rule.count) *
+                volumeMul(state) *
+                (state.enemyScale?.count ?? 1),
+            ),
           );
     for (let i = 0; i < count; i++) {
       spawnAtEdge(ctx, definition, false);
@@ -117,13 +124,15 @@ function spawnScaled(
   const { x, y } = clearOfObstacles(at, definition.radius, obstacles);
   const minutes = endlessMinutes(state);
   const scale = state.enemyScale ?? NO_SCALE;
+  const warmed = isBoss ? 1 : warmth(state, set);
   return spawnEnemy(
     state,
     definition,
     x,
     y,
     isBoss,
-    perPlayerMul(state, set.perPlayer?.enemyHpMul) *
+    warm(set.warmup?.hp ?? 1, warmed) *
+      teamMul((set.perPlayer?.enemyHpMul ?? 0) * warmed, state.players.length) *
       compound(set.endlessPerMinute?.hp ?? 1, minutes) *
       scale.hp *
       (isBoss ? (scale.bossHp ?? 1) : 1),
@@ -134,12 +143,32 @@ function spawnScaled(
   );
 }
 
-function perPlayerMul(state: SimState, mul: number | undefined): number {
-  return 1 + (mul ?? 0) * (state.players.length - 1);
+// 0 through a game's first phrase, 1 once its warmup is over; a later festival stage starts at 1.
+function warmth(state: SimState, set: SetDefinition): number {
+  const { warmup } = set;
+  if (warmup === undefined || (state.festival?.scenes.length ?? 1) > 1) {
+    return 1;
+  }
+  const warming = state.set.bar - BARS_PER_PHRASE;
+  return Math.min(1, Math.max(0, warming / (warmup.phrases * BARS_PER_PHRASE)));
+}
+
+// The share of `count` the warmup lets through, its fraction drawn from the seed: a rule of one bad vibe
+// sends one now and then, more and more often.
+function warmedCount(state: SimState, set: SetDefinition, count: number): number {
+  const warmed = count * warm(set.warmup?.count ?? 1, warmth(state, set));
+  const whole = Math.floor(warmed);
+  const rest = warmed - whole;
+  return rest > 0 && nextFloat(state.rng) < rest ? whole + 1 : whole;
+}
+
+// From `cold` at warmth 0 to 1 at warmth 1.
+function warm(cold: number, warmth: number): number {
+  return cold + (1 - cold) * warmth;
 }
 
 function scaledCount(state: SimState, set: SetDefinition, count: number): number {
-  const scaled = Math.floor(count * perPlayerMul(state, set.perPlayer?.spawnMul) + 0.5);
+  const scaled = Math.floor(count * teamMul(set.perPlayer?.spawnMul, state.players.length) + 0.5);
   return Math.max(count, scaled);
 }
 
