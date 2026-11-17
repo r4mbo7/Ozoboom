@@ -15,11 +15,13 @@ import { createGearPlaces } from './gear-places';
 import type { WeaponPlace } from './cards';
 import {
   type Roster,
+  type PotionReading,
   type TwinVibesReading,
   allDown,
   classToken,
   inDanger,
   rosterOf,
+  potionReading,
   twinVibesReading,
 } from './hud-model';
 import { PAUSE } from './icons';
@@ -91,7 +93,19 @@ export function createHud(prompts: Prompts): Hud {
   twinsFrame.setAttribute('aria-hidden', 'true');
   const watched = el('p', 'ui-hud__watched');
   watched.setAttribute('role', 'status');
-  element.append(danger, twinsFrame, watched, top, banner.element, bracelets.element, bar);
+  const potionFrame = el('div', 'ui-hud__potion');
+  potionFrame.setAttribute('aria-hidden', 'true');
+
+  element.append(
+    danger,
+    twinsFrame,
+    potionFrame,
+    watched,
+    top,
+    banner.element,
+    bracelets.element,
+    bar,
+  );
   const parts = Object.values(FULL_HUD).map((create) =>
     create({ ribbon: ribbon.element, overlay: element }),
   );
@@ -143,6 +157,12 @@ export function createHud(prompts: Prompts): Hud {
     setVar(twinsFrame, '--twins-left', String(twins?.left ?? 0));
   }
 
+  function showPotion(potion: PotionReading | null): void {
+    setFlag(element, 'potion', potion !== null);
+    setFlag(element, 'potion-ending', potion?.ending === true);
+    setVar(potionFrame, '--potion-left', String(potion?.left ?? 0));
+  }
+
   function showPlayer(
     player: PlayerState,
     state: SimState,
@@ -190,6 +210,7 @@ export function createHud(prompts: Prompts): Hud {
     const player = shownPlayer(state, frame);
     setFlag(element, 'no-player', player === undefined);
     shownId = player?.id ?? null;
+    showPotion(player === undefined ? null : potionReading(player, set, tempo.ticksPerBar));
     if (player !== undefined) {
       showPlayer(player, state, frame, content, set, tempo, twins);
     }

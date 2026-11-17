@@ -19,6 +19,7 @@ import { ShowClock, isBossLanding } from './boss-moments';
 import { type Family, type RenderContent, createRenderContext } from './context';
 import { createFamilies } from './families';
 import { createDropTrails } from './drop-trails';
+import { createPotionAura } from './potion-aura';
 import { type InsetScene, type Insets, createInsets } from './insets';
 import { type Frame, advanceFrame, createFrame } from './frame';
 import { type Layers, applyLight, createLayers } from './layers';
@@ -47,7 +48,6 @@ export class Scene implements Renderer, InsetScene {
   private readonly layers: Layers;
   private readonly frame: Frame = createFrame();
   private readonly families: readonly Family[];
-  private readonly dropTrails: ReturnType<typeof createDropTrails>;
   private lastState: SimState | null = null;
   private lastStage = '';
   private lastTick = -1;
@@ -84,9 +84,11 @@ export class Scene implements Renderer, InsetScene {
     this.camera = frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, width, height);
     this.layers = createLayers(this.stage);
     this.frame.resolution = pixi.resolution;
-    this.dropTrails = createDropTrails(pixi, this.layers);
+    const dropTrails = createDropTrails(pixi, this.layers);
     const ctx = createRenderContext(this.textures, this.layers, this.options, content);
-    this.families = createFamilies(ctx, this.borrowed);
+    const { families, potion } = createFamilies(ctx, this.borrowed);
+    const aura = createPotionAura(pixi, potion, this.layers.bubbles, this.layers.world);
+    this.families = [...families, aura, dropTrails];
   }
 
   render(state: SimState, alpha: number, still = false): void {
@@ -152,7 +154,6 @@ export class Scene implements Renderer, InsetScene {
     for (const family of this.families) {
       family.update(state, alpha, frame);
     }
-    this.dropTrails.update(frame, this.camera.screenWidth, this.camera.screenHeight);
     if (target !== null) {
       this.pixi.render({
         container: this.stage,
@@ -202,7 +203,6 @@ export class Scene implements Renderer, InsetScene {
     for (const family of this.families) {
       family.destroy();
     }
-    this.dropTrails.destroy();
     this.stage.destroy({ children: true });
     if (!this.borrowed) {
       destroyTextures(this.textures);

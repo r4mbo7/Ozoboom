@@ -75,6 +75,8 @@ export type SfxName =
   | 'dieCollected'
   | 'twinVibesTaken'
   | 'batteryTaken'
+  | 'potionTaken'
+  | 'potionBounced'
   | 'batteryPlugged'
   | 'bombExploded'
   | 'volumeUp'
@@ -198,6 +200,16 @@ const RECHARGE_NOTES_BEATS = [
   [3, TRAP_WEAR.plugInBeats + TRAP_WEAR.pluggedBeats / 2],
 ] as const;
 const RECHARGE_NOTE_SECONDS = 0.18;
+// `level` keeps the take's stacked voices under what the master takes in one instant.
+const POTION = {
+  thunder: 1.8,
+  level: 0.95,
+  bodyAfter: 0.025,
+  chordAfter: 0.2,
+  aftershock: 0.38,
+  sparkle: { after: 0.14, every: 0.05, degrees: [0, 4, 7, 0, 4, 7], octaves: [5, 5, 5, 6, 6, 6] },
+  bounceDegrees: [0, 3, 1, 4, 2],
+} as const;
 // The charge-up's rise, then the chord it lands on.
 const CHARGE = { rise: 0.24, chord: [0, 4, 7] } as const;
 
@@ -265,6 +277,9 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     dieCollected: { perFrame: 1, concurrent: 2, seconds: 0.35 },
     twinVibesTaken: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     batteryTaken: { perFrame: 1, concurrent: 1, seconds: 0.6 },
+    // Up to a beat more breath lands the BANG on a beat.
+    potionTaken: { perFrame: 1, concurrent: 1, seconds: POTION.thunder },
+    potionBounced: { perFrame: 1, concurrent: 2, seconds: 0.25 },
     batteryPlugged: {
       perFrame: 1,
       concurrent: 2,
@@ -333,7 +348,11 @@ export function sfxOf(
       return 'bombDropped';
     case 'batteryTaken':
     case 'batteryPlugged':
+    case 'potionTaken':
+    case 'potionBounced':
       return event.type;
+    case 'potionDropped':
+      return 'bombDropped';
     case 'pickupCollected':
       return 'vibesCollected';
     case 'vibesMilestone':
@@ -1267,6 +1286,184 @@ const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'highpass', hz: 7000, q: 1 },
     });
   },
+  // A dry crack, the BANG's body a flam later, then a second blow: spread so the voices never
+  // stack at one instant. Most of the gain sits in the mids, where the ear and a small speaker
+  // hear it loudest, with a lighter sub for the weight.
+  potionTaken: (out, at, _variant, key) => {
+    const { level, bodyAfter, chordAfter, aftershock, sparkle } = POTION;
+    const body = at + bodyAfter;
+    playNoise(out, at, {
+      gain: 0.35 * level,
+      attack: 0.001,
+      hold: 0.006,
+      release: 0.04,
+      filter: { type: 'highpass', hz: 2500 },
+    });
+    playNoise(out, at, {
+      gain: 0.25 * level,
+      attack: 0.001,
+      hold: 0.01,
+      release: 0.25,
+      filter: { type: 'bandpass', hz: 3000, toHz: 1200, glide: 0.25, q: 0.8 },
+    });
+    const brass = { type: 'lowpass', hz: 6000, toHz: 900, glide: 0.4, q: 1.5 } as const;
+    playTone(out, body, {
+      wave: 'square',
+      hz: keyHz(key, 0, 3),
+      toHz: keyHz(key, 0, 2),
+      glide: 0.2,
+      gain: 0.2 * level,
+      attack: 0.002,
+      hold: 0.1,
+      release: 0.5,
+      filter: brass,
+    });
+    [-1, 1].forEach((side) => {
+      playTone(out, body, {
+        wave: 'sawtooth',
+        hz: keyHz(key, 4, 3),
+        toHz: keyHz(key, 4, 2),
+        glide: 0.2,
+        detune: 12 * side,
+        gain: 0.12 * level,
+        attack: 0.002,
+        hold: 0.1,
+        release: 0.5,
+        filter: brass,
+        pan: 0.35 * side,
+      });
+    });
+    playTone(out, body, {
+      wave: 'sawtooth',
+      hz: keyHz(key, 0, 4),
+      toHz: keyHz(key, 0, 3),
+      glide: 0.2,
+      gain: 0.1 * level,
+      attack: 0.002,
+      hold: 0.08,
+      release: 0.45,
+      filter: { type: 'lowpass', hz: 7000, toHz: 1200, glide: 0.4, q: 1.5 },
+    });
+    playTone(out, body, {
+      wave: 'sine',
+      hz: 190,
+      toHz: keyHz(key, 0, 0),
+      glide: 0.4,
+      gain: 0.25 * level,
+      attack: 0.002,
+      hold: 0.15,
+      release: 0.8,
+    });
+    playNoise(out, body, {
+      gain: 0.2 * level,
+      attack: 0.002,
+      hold: 0.05,
+      release: 1,
+      filter: { type: 'lowpass', hz: 6000, toHz: 400, glide: 0.8 },
+    });
+    for (const [after, gain, pan] of [
+      [0.05, 0.15, 0],
+      [0.22, 0.1, 0.3],
+      [0.45, 0.08, -0.3],
+    ] as const) {
+      playNoise(out, at + after, {
+        gain: gain * level,
+        attack: 0.04,
+        hold: 0.12,
+        release: 1.1,
+        filter: { type: 'bandpass', hz: 900, toHz: 250, glide: 1, q: 1.2 },
+        pan,
+      });
+    }
+    playTone(out, at + aftershock, {
+      wave: 'square',
+      hz: keyHz(key, 0, 2),
+      toHz: keyHz(key, 0, 1),
+      glide: 0.25,
+      gain: 0.2 * level,
+      attack: 0.003,
+      hold: 0.08,
+      release: 0.6,
+      filter: { type: 'lowpass', hz: 3000, toHz: 300, glide: 0.5 },
+    });
+    playNoise(out, at + aftershock, {
+      gain: 0.15 * level,
+      attack: 0.002,
+      hold: 0.03,
+      release: 0.4,
+      filter: { type: 'bandpass', hz: 1500, toHz: 400, glide: 0.4, q: 0.8 },
+    });
+    [keyHz(key, 0, 3), keyHz(key, 4, 3), keyHz(key, 0, 4)].forEach((hz) => {
+      [-1, 1].forEach((side) => {
+        playTone(out, at + chordAfter, {
+          wave: 'sawtooth',
+          hz,
+          detune: 7 * side,
+          gain: 0.06 * level,
+          attack: 0.05,
+          hold: 0.45,
+          release: 0.9,
+          filter: { type: 'lowpass', hz: 4000, toHz: 1200, glide: 0.6, q: 1.2 },
+          pan: 0.4 * side,
+        });
+      });
+    });
+    sparkle.degrees.forEach((degree, index) => {
+      playTone(out, at + sparkle.after + index * sparkle.every, {
+        wave: 'triangle',
+        hz: keyHz(key, degree, sparkle.octaves[index] ?? 5),
+        gain: 0.12 * level,
+        attack: 0.003,
+        hold: 0.03,
+        release: 0.35,
+        pan: index % 2 === 0 ? -0.4 : 0.4,
+      });
+    });
+  },
+  potionBounced: (out, at, variant, key) => {
+    const degree = POTION.bounceDegrees[variant % POTION.bounceDegrees.length] ?? 0;
+    const hz = keyHz(key, degree, 1);
+    const pan = 0.5 * Math.cos(variant);
+    playTone(out, at, {
+      wave: 'sine',
+      hz: hz * 2.2,
+      toHz: hz,
+      glide: 0.07,
+      gain: 0.2,
+      attack: 0.002,
+      hold: 0.025,
+      release: 0.16,
+      pan,
+    });
+    playTone(out, at, {
+      wave: 'square',
+      hz: hz * 1.5,
+      toHz: hz * 0.7,
+      glide: 0.06,
+      gain: 0.045,
+      attack: 0.002,
+      hold: 0.01,
+      release: 0.1,
+      filter: { type: 'lowpass', hz: 1400, toHz: 250, glide: 0.08 },
+      pan,
+    });
+    playNoise(out, at, {
+      gain: 0.07,
+      attack: 0.001,
+      hold: 0.004,
+      release: 0.03,
+      filter: { type: 'bandpass', hz: 3200, q: 1.2 },
+      pan,
+    });
+    playNoise(out, at, {
+      gain: 0.06,
+      attack: 0.001,
+      hold: 0.01,
+      release: 0.08,
+      filter: { type: 'lowpass', hz: 700, toHz: 200, glide: 0.08 },
+      pan,
+    });
+  },
   // A warning more than a reward.
   bombDropped: (out, at, _variant, key) => {
     playNoise(out, at, {
@@ -2042,6 +2239,9 @@ function variantOf(event: SimEvent, core: SfxCore, enemies: readonly SfxEnemy[])
   }
   if (event.type === 'batteryPlugged') {
     return event.index;
+  }
+  if (event.type === 'potionBounced') {
+    return event.enemyId;
   }
   return 'id' in event ? event.id : 0;
 }

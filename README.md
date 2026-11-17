@@ -34,7 +34,7 @@ The full game, with more stages, will come out on Steam. The name comes from _Oz
 
 ## Playing together
 
-- **Local co-op**: "Same screen" opens the lobby. Keyboard and mouse take a seat with Enter, each gamepad with A; everyone picks a name and a class, and the first player starts the set.
+- **Local co-op**: "Play" opens the stage, then the characters. A friend joins by holding A or Enter for a second; everyone picks with their own cursor, and the set starts once all are ready.
 - **Online**: "Online" then "Create a room" gives a six-character code and a link to copy. Friends open the link or type the code, enter their name and class, and the host starts the set.
 
 ## Playing on a phone
@@ -72,4 +72,4 @@ This repository receives the demo by synchronization: the game is developed else
 
 ## License
 
-The code and content of this repository are under [GPL-3.0](LICENSE): anyone who redistributes the game, modified or not, publishes its sources under the same license. The Ozoboom name and logo are not covered: a derived version goes by another name. The fonts keep their OFL license ([public/fonts/](public/fonts/)). The content of the full game is not in this repository and is not under this license.
+The code and content of this repository are under [GPL-3.0](LICENSE): anyone who redistributes the game, modified or not, publishes its sources under the same license. The Ozoboom name and logo are not covered: a derived version goes by another name. The fonts keep their OFL license ([public/fonts/](public/fonts/)). The music of the menus belongs to Timo Lissy, all rights reserved ([public/music/](public/music/LICENSE.txt)). The content of the full game is not in this repository and is not under this license.

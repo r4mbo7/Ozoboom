@@ -15,6 +15,8 @@ export function parseHexColor(hex: string): number {
   return Number.parseInt(hex.slice(1), 16);
 }
 
+export const WHITE = 0xffffff;
+
 export function mixColor(from: number, to: number, amount: number): number {
   const channel = (shift: number): number => {
     const a = (from >> shift) & 0xff;

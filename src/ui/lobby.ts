@@ -1,4 +1,4 @@
-import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
+import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
 import { PLAYER_IDS, type PlayerId } from '../sim/state';
 import { type ClassInfo, ROW_CARDS, landscapeNotice } from './class-picker';
@@ -33,13 +33,11 @@ import {
 import { onMouseMove } from './pointer';
 import type { Prompts } from './prompts';
 import { showsStageChoice } from './teaser';
-import type { CreatePortrait, LobbyModel, LobbySeat, Night, UiFrame } from './types';
+import type { CreatePortrait, LobbyModel, LobbySeat, Night } from './types';
 
 export interface LobbyActions {
-  joinSeat(device: DeviceId): void;
-  leaveSeat(playerId: PlayerId): void;
   seatClass(playerId: PlayerId, classId: string): void;
-  seatName(playerId: PlayerId, name: string): void;
+  seatName(name: string): void;
   chooseStage(setId: string): void;
   chooseNight(night: Night): void;
   createRoom(): void;
@@ -54,7 +52,7 @@ export interface LobbyScreen {
   setDevice(device: InputDevice): void;
   // A fresh opening: cursors back on top, and what is held waits for its release.
   open(): void;
-  update(frame: UiFrame, edges: MenuIntents): void;
+  update(edges: MenuIntents): void;
 }
 
 interface LobbyParts {
@@ -98,16 +96,13 @@ function waitsForHost(model: LobbyModel): boolean {
 function paintRoom(parts: LobbyParts, model: LobbyModel): void {
   const view = lobbyView(model);
   const hosting = hostsRoom(model);
-  setText(parts.header.heading, model.mode === 'online' ? t('Salon en ligne') : t('Salon local'));
   setText(
     parts.header.lead,
-    view === 'local'
-      ? t('Chacun prend une place avec son clavier ou sa manette.')
-      : view === 'entry'
-        ? t('Crée un salon pour inviter tes amis, ou rejoins le leur avec son code.')
-        : hosting
-          ? t('Envoie le code ou le lien à tes amis, puis lance le set.')
-          : t('Tu as rejoint le salon {code}.', { code: model.code ?? '' }),
+    view === 'entry'
+      ? t('Crée un salon pour inviter tes amis, ou rejoins le leur avec son code.')
+      : hosting
+        ? t('Envoie le code ou le lien à tes amis, puis lance le set.')
+        : t('Tu as rejoint le salon {code}.', { code: model.code ?? '' }),
   );
   setText(parts.error, model.error ?? '');
   parts.error.hidden = model.error === null;
@@ -208,13 +203,14 @@ function markCurrent(node: HTMLElement, current: boolean): void {
 }
 
 function paintCursors(parts: LobbyParts, controls: LobbyControls): void {
-  const lit = new Set(controls.marks().map(({ row, seat }) => rowElement(parts, row, seat)));
+  const mark = controls.lit();
+  const lit = mark === null ? null : rowElement(parts, mark.row, mark.seat);
   for (const node of [...hoverRows(parts).map(([target]) => target), parts.stage.cards.element]) {
-    markCurrent(node, lit.has(node));
+    markCurrent(node, node === lit);
   }
   for (const card of parts.cards) {
     for (const node of [card.field, card.stepper.element]) {
-      markCurrent(node, lit.has(node));
+      markCurrent(node, node === lit);
     }
   }
 }
@@ -238,7 +234,6 @@ export function createLobby(
   portrait: CreatePortrait,
 ): LobbyScreen {
   let model: LobbyModel = {
-    mode: 'local',
     role: 'host',
     code: null,
     link: null,
@@ -270,9 +265,8 @@ export function createLobby(
         controls.stepChoice(seatAt(model, playerId), 'class', side);
       },
       rename: (name) => {
-        actions.seatName(playerId, name);
+        actions.seatName(name);
       },
-      join: joinWithKeyboard,
     }),
   );
   seatList.append(...cards.map((card) => card.element));
@@ -306,16 +300,7 @@ export function createLobby(
     classes,
     nights,
     activate,
-    stopTyping: () => {
-      blurFocused(inputs);
-    },
   });
-
-  function joinWithKeyboard(): void {
-    if (!model.seats.some((seat) => seat.device === 'keyboardMouse')) {
-      actions.joinSeat('keyboardMouse');
-    }
-  }
 
   function launchNow(): void {
     if (model.canLaunch) {
@@ -402,19 +387,14 @@ export function createLobby(
       blurFocused(inputs);
       paintCursors(parts, controls);
     },
-    update(frame, edges) {
-      // Locally, the others keep their own cursors while one seat types its name.
-      const typing =
-        lobbyView(model) === 'local'
-          ? model.seats.find((seat) => cards[seat.playerId]?.input === document.activeElement)
-          : undefined;
-      if (typing === undefined && isTyping(inputs)) {
+    update(edges) {
+      if (isTyping(inputs)) {
         if (edges.back || edges.up || edges.down) {
           blurFocused(inputs);
         }
         return;
       }
-      controls.update(frame, edges, typing?.playerId);
+      controls.update(edges);
       paintCursors(parts, controls);
     },
   };

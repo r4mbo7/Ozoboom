@@ -21,7 +21,7 @@ export type Drawings = ReadonlyMap<string, Later<PaintedDrawing>>;
 
 export interface Drawn {
   readonly textures: LookTextures;
-  readonly make: () => Look;
+  readonly make: (body: Container) => Look;
 }
 
 const LOOKS: ReadonlyMap<string, PlayerLook> = new Map(Object.entries(PLAYER_LOOKS));
@@ -37,17 +37,17 @@ export function checkDrawings(
   }
 }
 
+// Each player's look is drawn into its own body, which the potion's aura captures alone.
 export function createDrawn(
   textures: Textures,
-  bodies: Container,
   glow: Container,
   spawn: Spawn,
 ): (classId: string) => Drawn {
   const t = textures.players;
-  const makers: Readonly<Record<PlayerLook, () => Look>> = {
-    poi: () => createPoiLook(bodies, textures, spawn),
-    bag: () => createBagLook(bodies, textures, spawn),
-    parasol: () => createParasolLook(bodies, glow, textures, spawn),
+  const makers: Readonly<Record<PlayerLook, (body: Container) => Look>> = {
+    poi: (body) => createPoiLook(body, textures, spawn),
+    bag: (body) => createBagLook(body, textures, spawn),
+    parasol: (body) => createParasolLook(body, glow, textures, spawn),
   };
   const drawn = new Map<string, Drawn>();
 
@@ -60,7 +60,7 @@ export function createDrawn(
     if (painted === undefined) {
       throw new Error(`Class "${classId}" has no drawing`);
     }
-    return { textures: painted, make: () => painted.create(bodies, glow, textures, spawn) };
+    return { textures: painted, make: (body) => painted.create(body, glow, textures, spawn) };
   }
 
   return (classId) => {

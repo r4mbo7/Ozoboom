@@ -6,6 +6,7 @@ import type { Frame } from './frame';
 import { easeOutQuad } from './motion';
 import { mixColor } from './palette';
 import { drawCable, drawWaves, ofSpeaker, speakerToken, speakerTurn } from './speaker-kit';
+import { BOLT_TAIL, drawRepair } from './speaker-repair';
 import { type LedView, createLedViews, drawLeds } from './speaker-leds';
 import { add, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
@@ -36,6 +37,8 @@ interface SpeakerView extends LedView {
   readonly beams: readonly Sprite[];
   readonly shock: Sprite;
   readonly flash: Sprite;
+  readonly bolt: Sprite;
+  readonly tail: readonly Sprite[];
   readonly marks: readonly Sprite[];
   readonly waves: Graphics;
   cableKey: string;
@@ -46,6 +49,7 @@ export function createSpeakers(ctx: RenderContext): Family {
   const { textures: t, layers } = ctx;
   const beats = { last: Number.NEGATIVE_INFINITY };
   const flashes = new Map<string, number>();
+  const repairs = new Map<string, number>();
 
   const views = new ViewPool<SpeakerView>(
     () => {
@@ -74,6 +78,8 @@ export function createSpeakers(ctx: RenderContext): Family {
         beams,
         shock: add(layers.fx, t.ring),
         flash: add(layers.fx, t.ring),
+        bolt: add(layers.fx, t.halo),
+        tail: Array.from({ length: BOLT_TAIL }, () => add(layers.fx, t.halo)),
         marks,
         waves,
         cableKey: '',
@@ -89,6 +95,8 @@ export function createSpeakers(ctx: RenderContext): Family {
         view.halo,
         view.shock,
         view.flash,
+        view.bolt,
+        ...view.tail,
         ...view.beams,
         ...view.marks,
       );
@@ -245,9 +253,18 @@ export function createSpeakers(ctx: RenderContext): Family {
         if (lit) {
           drawAura(view, speaker, look, color, frame);
           drawFlash(view, speaker, color, frame);
+          drawRepair(view, speaker, state.core, repairs.get(speaker.id), color, frame, t.halo);
           drawWaves(view, speaker, body, swell, color, frame);
         } else {
-          hide(view.halo, view.shock, view.flash, ...view.beams, ...view.marks);
+          hide(
+            view.halo,
+            view.shock,
+            view.flash,
+            view.bolt,
+            ...view.tail,
+            ...view.beams,
+            ...view.marks,
+          );
           view.waves.visible = false;
         }
       }
@@ -258,11 +275,14 @@ export function createSpeakers(ctx: RenderContext): Family {
         beats.last = state.tick;
       } else if (event.type === 'speakerPlugged') {
         flashes.set(event.speakerId, state.tick);
+      } else if (event.type === 'coreRepaired' && event.speakerId !== undefined) {
+        repairs.set(event.speakerId, state.tick);
       }
     },
     reset(): void {
       beats.last = Number.NEGATIVE_INFINITY;
       flashes.clear();
+      repairs.clear();
     },
     destroy(): void {
       layers.speakers.destroy({ children: true });

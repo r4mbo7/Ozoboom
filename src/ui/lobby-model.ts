@@ -1,11 +1,10 @@
 import type { SetDefinition } from '../data/types';
-import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
+import type { MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
 import { wrap } from '../shared/scalar';
 import { setTempo, stageMinutes } from '../sim/lineup';
-import { PLAYER_IDS, type PlayerId } from '../sim/state';
+import type { PlayerId } from '../sim/state';
 import type { HintPart } from './dom';
-import { formatNumber } from './format';
 import type { DevicePrompts, KeyStyle } from './prompts';
 import type { LobbyModel, LobbySeat, StageCard } from './types';
 
@@ -46,12 +45,9 @@ export function stepClass(
   return free[next]?.id ?? null;
 }
 
-export type LobbyView = 'local' | 'entry' | 'room';
+export type LobbyView = 'entry' | 'room';
 
 export function lobbyView(model: LobbyModel): LobbyView {
-  if (model.mode === 'local') {
-    return 'local';
-  }
   return model.code === null ? 'entry' : 'room';
 }
 
@@ -63,41 +59,11 @@ export function seatAt(model: LobbyModel, playerId: PlayerId): LobbySeat | null 
   return model.seats.find((seat) => seat.playerId === playerId) ?? null;
 }
 
-// The merged snapshot only says which kind of device spoke: a pad is the first one until the frame
-// says more.
-export function deviceOf(device: InputDevice): DeviceId | null {
-  if (device === 'keyboardMouse') {
-    return 'keyboardMouse';
-  }
-  return device === 'gamepad' ? 'gamepad:0' : null;
-}
-
-export function deviceLabel(device: DeviceId | null): string {
-  if (device === null) {
-    return t('À distance');
-  }
-  if (device === 'keyboardMouse') {
-    return t('Clavier et souris');
-  }
-  return t('Manette {number}', {
-    number: formatNumber(Number(device.slice('gamepad:'.length)) + 1),
-  });
-}
-
-export function seatTag(seat: LobbySeat, mode: LobbyModel['mode']): string {
-  if (mode === 'local') {
-    return deviceLabel(seat.device);
-  }
+export function seatTag(seat: LobbySeat): string {
   if (seat.remote) {
     return seat.host ? t('Hôte') : t('Invité');
   }
   return seat.host ? t('Toi · hôte') : t('Toi');
-}
-
-export function canTakeSeat(model: LobbyModel, device: DeviceId): boolean {
-  return (
-    model.seats.length < PLAYER_IDS.length && !model.seats.some((seat) => seat.device === device)
-  );
 }
 
 export interface LobbyHint {
@@ -115,25 +81,12 @@ export function lobbyHint(model: LobbyModel, prompts: DevicePrompts): LobbyHint 
     keys: prompts.navigateRow,
     label: hasStageChoice(model) ? t('classe, scène') : t('classe'),
   };
-  const confirm = { keys: [prompts.confirm], label: t('valider') };
-  if (model.mode === 'local') {
-    return {
-      parts: [
-        { keys: [t('Entrée'), 'A'], label: t('rejoindre') },
-        ...tabs,
-        choice,
-        confirm,
-        { keys: [t('Échap'), 'B'], label: t('quitter sa place') },
-      ],
-      style: 'key',
-    };
-  }
   return {
     parts: [
       { keys: prompts.navigate, label: t('naviguer') },
       ...tabs,
       ...(view === 'entry' ? [] : [choice]),
-      confirm,
+      { keys: [prompts.confirm], label: t('valider') },
       { keys: [prompts.back], label: t('quitter') },
     ],
     style: prompts.style,
@@ -159,13 +112,12 @@ function hasStageChoice(model: LobbyModel): boolean {
 }
 
 export function rowsOf(model: LobbyModel): readonly Row[] {
-  const view = lobbyView(model);
-  if (view === 'entry') {
+  if (lobbyView(model) === 'entry') {
     return ['create', 'discord', 'code', 'join', 'leave'];
   }
   const own = ownSeat(model);
   const rows: Row[] = [];
-  if (view === 'room' && own?.host === true) {
+  if (own?.host === true) {
     rows.push('copy');
   }
   if (own !== null) {
@@ -179,13 +131,6 @@ export function rowsOf(model: LobbyModel): readonly Row[] {
   }
   rows.push('leave');
   return rows;
-}
-
-export function seatRows(seat: LobbySeat, model: LobbyModel): readonly Row[] {
-  if (!seat.host) {
-    return ['name', 'class'];
-  }
-  return hasStageChoice(model) ? ['name', 'class', 'stage', 'launch'] : ['name', 'class', 'launch'];
 }
 
 export interface RowStep {

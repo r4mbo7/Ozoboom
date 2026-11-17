@@ -40,7 +40,6 @@ export function lobbyModel(
   const { room, role, code } = lobby;
   const seats = room?.seats ?? [];
   return {
-    mode: 'online',
     role: role ?? 'host',
     code,
     link: code === null ? null : `${shareBase(page.origin, page.pathname)}${joinHash(code)}`,
@@ -48,7 +47,6 @@ export function lobbyModel(
       playerId: seat.playerId,
       name: seat.name,
       classId: seat.classId,
-      device: null,
       remote: seat.peer !== lobby.localPeer,
       host: seat.playerId === 0,
     })),

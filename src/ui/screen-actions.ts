@@ -10,10 +10,7 @@ import type { UiCallbacks } from './types';
 type Once = Pick<ShownScreen, 'once'>;
 
 export function titleActions(
-  callbacks: Pick<
-    UiCallbacks,
-    'onStart' | 'onPlayTogether' | 'onPlayOnline' | 'onControls' | 'onChooseLocale'
-  >,
+  callbacks: Pick<UiCallbacks, 'onStart' | 'onPlayOnline' | 'onControls' | 'onChooseLocale'>,
   shown: Once,
   options: TitleOptionActions,
   menuInput: Pick<MenuInput, 'open'>,
@@ -25,9 +22,6 @@ export function titleActions(
     start: shown.once(() => {
       callbacks.onStart();
     }),
-    playTogether() {
-      callbacks.onPlayTogether();
-    },
     playOnline() {
       callbacks.onPlayOnline();
     },
@@ -44,7 +38,15 @@ export function titleActions(
 export function classActions(
   callbacks: Pick<
     UiCallbacks,
-    'onChooseClass' | 'onToggleEndless' | 'onConfirmClass' | 'onLeaveClassPicker'
+    | 'onChooseClass'
+    | 'onSeatClass'
+    | 'onJoinSeat'
+    | 'onLeaveSeat'
+    | 'onHandOverSeat'
+    | 'onToggleEndless'
+    | 'onConfirmClass'
+    | 'onLearn'
+    | 'onLeaveClassPicker'
   >,
   shown: Once,
 ): ClassPickerActions {
@@ -52,11 +54,26 @@ export function classActions(
     choose(classId) {
       callbacks.onChooseClass(classId);
     },
+    seatClass(playerId, classId) {
+      callbacks.onSeatClass(playerId, classId);
+    },
+    joinSeat(device) {
+      callbacks.onJoinSeat(device);
+    },
+    leaveSeat(playerId) {
+      callbacks.onLeaveSeat(playerId);
+    },
+    handOverSeat(playerId, device) {
+      callbacks.onHandOverSeat(playerId, device);
+    },
     toggleEndless(enabled) {
       callbacks.onToggleEndless(enabled);
     },
     confirm: shown.once(() => {
       callbacks.onConfirmClass();
+    }),
+    learn: shown.once(() => {
+      callbacks.onLearn();
     }),
     leave: shown.once(() => {
       callbacks.onLeaveClassPicker();
@@ -67,7 +84,7 @@ export function classActions(
 export function stageActions(
   callbacks: Pick<
     UiCallbacks,
-    'onChooseStage' | 'onChooseNight' | 'onConfirmStage' | 'onLearn' | 'onLeaveStagePicker'
+    'onChooseStage' | 'onChooseNight' | 'onConfirmStage' | 'onLeaveStagePicker'
   >,
   shown: Once,
 ): StagePickerActions {
@@ -81,9 +98,6 @@ export function stageActions(
     confirm: shown.once(() => {
       callbacks.onConfirmStage();
     }),
-    learn: shown.once(() => {
-      callbacks.onLearn();
-    }),
     leave: shown.once(() => {
       callbacks.onLeaveStagePicker();
     }),
@@ -93,8 +107,6 @@ export function stageActions(
 export function lobbyActions(
   callbacks: Pick<
     UiCallbacks,
-    | 'onJoinSeat'
-    | 'onLeaveSeat'
     | 'onSeatClass'
     | 'onSeatName'
     | 'onChooseStage'
@@ -107,17 +119,11 @@ export function lobbyActions(
   shown: Once,
 ): LobbyActions {
   return {
-    joinSeat(device) {
-      callbacks.onJoinSeat(device);
-    },
-    leaveSeat(playerId) {
-      callbacks.onLeaveSeat(playerId);
-    },
     seatClass(playerId, classId) {
       callbacks.onSeatClass(playerId, classId);
     },
-    seatName(playerId, name) {
-      callbacks.onSeatName(playerId, name);
+    seatName(name) {
+      callbacks.onSeatName(name);
     },
     chooseStage(setId) {
       callbacks.onChooseStage(setId);

@@ -3,8 +3,10 @@ import type { EnemyState, PlayerState, Vec2, WeaponSlot } from '../state';
 import type { StepContext } from '../systems/types';
 
 export interface WeaponShot {
-  // `compound(levelMul, level - 1)`: scales the effect's damage and healing.
+  // `compound(levelMul, level - 1)`, times the player's weapon damage: scales the effect's damage.
   power: number;
+  // `compound(levelMul, level - 1)` alone: scales the effect's healing.
+  healPower: number;
   target: EnemyState | null;
   // Along the player's aim without a target.
   direction: Vec2;

@@ -8,23 +8,22 @@ import {
   Sprite,
   extensions,
 } from 'pixi.js';
-import { echoAlpha } from './drop-filter';
+import type { SimState } from '../sim/state';
+import type { Family } from './context';
+import { KEEP_PER_TICK, MAX_STEP_TICKS, echoAlpha } from './drop-filter';
 import type { Frame } from './frame';
 import type { Layers } from './layers';
 
 extensions.add(FilterSystem, FilterPipe);
 
 const BUFFER_SCALE = 0.5;
-// The same at every intensity: a weaker drop leaves fainter echoes, not shorter trails.
-const KEEP_PER_TICK = 0.88;
-const MAX_STEP_TICKS = 4;
 const HUE_TURN_TICKS = 192;
 
 function hueChannel(turn: number, offset: number): number {
   return 0.5 + 0.5 * Math.cos(2 * Math.PI * (turn + offset));
 }
 
-export function createDropTrails(pixi: Renderer, layers: Layers) {
+export function createDropTrails(pixi: Renderer, layers: Layers): Family {
   const sources = new Set<Container>([layers.core, layers.shots, layers.weapons, layers.players]);
   const display = layers.echoes.addChild(new Sprite());
   const compose = new Container();
@@ -79,7 +78,8 @@ export function createDropTrails(pixi: Renderer, layers: Layers) {
   }
 
   return {
-    update(frame: Frame, width: number, height: number): void {
+    update(_state: SimState, _alpha: number, frame: Frame): void {
+      const { screenWidth: width, screenHeight: height } = frame.camera;
       const active = frame.dropFilter > 0 && !frame.calm;
       const step = Math.min(frame.now - lastNow, MAX_STEP_TICKS);
       lastNow = frame.now;

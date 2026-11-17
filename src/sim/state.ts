@@ -225,6 +225,9 @@ export interface EnemyState extends Positioned {
   carriesBomb?: boolean;
   carriesTwinVibes?: true;
   carriesBattery?: true;
+  carriesPotion?: true;
+  // The tick it last bounced off a player under the Potion magique.
+  potionBounceTick?: number;
   // Called into the drop by a fire or a giant.
   called?: true;
   // Mâle alpha: its last step; the hits it faces count `damageMul`.
@@ -472,6 +475,13 @@ export type BatteryState =
     })
   | { stage: 'over' };
 
+// The stage's Potion magique, from due to its taking; `over` once taken, its power then rides the taker's boosts.
+export type PotionState =
+  | { stage: 'due' }
+  | { stage: 'carried' }
+  | (Vec2 & { stage: 'lying'; id: EntityId })
+  | { stage: 'over' };
+
 export interface DieState extends Positioned {
   id: EntityId;
 }
@@ -670,7 +680,8 @@ export type SimEvent =
   | { type: 'dashBack'; playerId: PlayerId }
   | { type: 'emoted'; playerId: PlayerId; emote: Emote }
   | { type: 'coreHit'; damage: number }
-  | { type: 'coreRepaired'; amount: number }
+  // speakerId: repaired by that speaker plugging in, 0 when the stage was already full.
+  | { type: 'coreRepaired'; amount: number; speakerId?: string }
   // Put down by a player.
   | { type: 'trapPlaced'; id: EntityId; kind: string; playerId: PlayerId; x: number; y: number }
   // Dropped already placed by its dying carrier.
@@ -709,6 +720,10 @@ export type SimEvent =
       x: number;
       y: number;
     }
+  | { type: 'potionDropped'; id: EntityId; x: number; y: number }
+  | { type: 'potionTaken'; id: EntityId; playerId: PlayerId; x: number; y: number }
+  // A bad vibe touched a player under the potion and bounced off: `x`, `y` where they met.
+  | { type: 'potionBounced'; playerId: PlayerId; enemyId: EntityId; x: number; y: number }
   | { type: 'enemyStatusStarted'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
   | { type: 'enemyStatusEnded'; id: EntityId; status: EnemyStatusKind; x: number; y: number }
   | { type: 'playerBoostStarted'; playerId: PlayerId; boost: string }
@@ -830,6 +845,8 @@ export interface SimState {
   twinVibes?: TwinVibesState;
   // Optional like `twinVibes`: created when the stage's Batterie falls due.
   battery?: BatteryState;
+  // Optional like `battery`: created when the stage's Potion magique falls due.
+  potion?: PotionState;
   // Optional like `bombs`, and created with the first die dropped.
   dice?: DieState[];
   volume?: number;

@@ -1,11 +1,12 @@
 import { MAIN_STAGE } from './main-stage';
 import type { SetDefinition } from './types';
 
-// The Main stage without its doubled vibes and its Batterie, bonuses that would muddle the gestures the banner asks.
+// The Main stage without its doubled vibes, its Batterie and its Potion magique, bonuses that would muddle the gestures the banner asks.
 function withoutStageBonuses(set: SetDefinition): SetDefinition {
   const rules = { ...set };
   delete rules.twinVibes;
   delete rules.battery;
+  delete rules.potion;
   return rules;
 }
 

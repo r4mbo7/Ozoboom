@@ -1,5 +1,6 @@
 import { touches } from '../effects';
 import { playerById } from '../damage';
+import { potionShielded } from '../potion-shield';
 import type { EnemyState, PlayerState, SimState } from '../state';
 import type { SpecialModule, SteeringTarget } from './types';
 
@@ -14,7 +15,12 @@ export const cling: SpecialModule = (ctx, enemy, effect) => {
   if (enemy.clingingTo !== undefined) {
     const hit = (enemy.hpWatermark ?? enemy.hp) - enemy.hp;
     const player = playerById(state, enemy.clingingTo);
-    if (hit >= effect.detachDamage || player === undefined || player.downed) {
+    if (
+      hit >= effect.detachDamage ||
+      player === undefined ||
+      player.downed ||
+      potionShielded(player)
+    ) {
       detachCling(enemy, ctx.tempo.ticksPerBar);
     } else {
       slow(player, effect.slowFactor);
@@ -43,6 +49,7 @@ function attachIfFree(
   if (
     player === undefined ||
     player.downed ||
+    potionShielded(player) ||
     !touches(enemy, player, player.radius) ||
     state.enemies.some((other) => other !== enemy && other.clingingTo === playerId)
   ) {

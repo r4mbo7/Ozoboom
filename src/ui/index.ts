@@ -40,9 +40,9 @@ export type {
   CreatePortrait,
   EndSession,
   LobbyModel,
-  LobbySeat,
   LocalPlayer,
   Notice,
+  PickerSeat,
   StageCard,
   StagePickerModel,
   Ui,
@@ -125,14 +125,14 @@ function screenMenus(
       screens.title.handle(edges);
       screens.title.follow(frame.menuPosition ?? null, calm());
     },
-    class(edges) {
-      screens.classPicker.update(edges);
+    class(edges, frame) {
+      screens.classPicker.update(edges, frame);
     },
     stage(edges) {
       screens.stagePicker.update(edges);
     },
-    lobby(edges, frame) {
-      screens.lobby.update(frame, edges);
+    lobby(edges) {
+      screens.lobby.update(edges);
     },
     notice(edges) {
       if (grace.over()) {
@@ -203,6 +203,7 @@ export function createUi(
       classes,
       portrait,
       classActions(callbacks, shown),
+      () => performance.now(),
     );
     const hud = createHud(prompts);
     const upgrade = createUpgradeOverlay({
@@ -301,9 +302,11 @@ export function createUi(
     showVisits(count) {
       title.setVisits(count);
     },
+    // The screen first: a seat leaving beside friends all ready launches from setModel, and the game
+    // it shows must stay on screen.
     showClassPicker(model) {
-      classPicker.setModel(model);
       openMenu('class', classPicker);
+      classPicker.setModel(model);
     },
     showStagePicker(model: StagePickerModel) {
       stagePicker.setModel(model);

@@ -1,7 +1,9 @@
 import type { MusicTrack } from '../data/types';
+import type { MenuHeard } from '../shared/menu-score';
 import type { SimState } from '../sim/state';
 
-export type Mood = 'set' | 'menu';
+// The menus play the menu track once it is decoded; the pause keeps the ambience.
+export type Mood = 'set' | 'menu' | 'pause';
 
 export type Cue =
   | 'seatTaken'
@@ -26,8 +28,8 @@ export interface AudioEngine {
   // On until told otherwise.
   setHitSound(enabled: boolean): void;
   setMood(mood: Mood): void;
-  // In eighths since the first note of the menu ambience; null while it is silent or the sound is off.
-  menuPosition(): number | null;
+  // null while the menus are silent or the sound is off.
+  menuPosition(): MenuHeard | null;
   // Called when a game begins.
   setTrack(track: MusicTrack): void;
   // The variant picks among the notes of a cue that has several.

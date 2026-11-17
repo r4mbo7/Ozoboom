@@ -34,6 +34,7 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   dashRechargeMul: false,
   dashChargesAdd: true,
   weaponRateMul: false,
+  weaponDamageMul: false,
   kiffDamageAdd: true,
   zoneCountAdd: true,
   rootsGrowthMul: false,

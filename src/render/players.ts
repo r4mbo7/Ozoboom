@@ -14,9 +14,12 @@ import { createDashBursts } from './dash-bursts';
 import { createDrawn } from './drawings';
 import type { Frame } from './frame';
 import { TAU } from './paint';
+import { PotionBodies, PoweredBody } from './potion-aura-model';
 import { Downed } from './player-downed';
 import { PlayerGlow } from './player-glow';
+import { placePlayerHalo } from './player-halo';
 import { type Look, type LookInput, type Spawn, createLookInput, teintOf } from './player-look';
+import { placePlayerShadow } from './player-shadow';
 import { PlayerTag, ReviveLog } from './player-tags';
 import { CONTOUR_RING, REFERENCE_RADIUS } from './textures-players';
 import { DOWNED_REACH } from './textures-players-downed';
@@ -39,6 +42,7 @@ interface PlayerView {
   moving: number;
   heading: number;
   readonly looks: Map<string, Look>;
+  readonly powered: PoweredBody;
   readonly halo: Sprite;
   readonly glow: PlayerGlow;
   readonly tag: PlayerTag;
@@ -52,10 +56,14 @@ interface PlayerView {
   readonly carried: PlayerCarriedTraps;
 }
 
-export function createPlayers(ctx: RenderContext): Family {
+export function createPlayers(ctx: RenderContext): Family & { readonly potion: PotionBodies } {
   const { textures, layers } = ctx;
   const t = textures.players;
-  const ground = layers.players.addChild(new Container());
+  // The arcs over the potion's flames, to stay readable.
+  const under = layers.players.addChild(new Container());
+  const ground = under.addChild(new Container());
+  const potion = new PotionBodies(under.addChild(new Container()));
+  const arcs = under.addChild(new Container());
   const bodies = layers.players.addChild(new Container());
   const marks = layers.players.addChild(new Container());
   const tags = layers.players.addChild(new Container());
@@ -68,7 +76,7 @@ export function createPlayers(ctx: RenderContext): Family {
   let beatTick = NEVER;
   let beatIndex = 0;
 
-  const drawnOf = createDrawn(textures, bodies, layers.glow, spawn);
+  const drawnOf = createDrawn(textures, layers.glow, spawn);
 
   const views = new ViewPool(
     (): PlayerView => ({
@@ -81,10 +89,11 @@ export function createPlayers(ctx: RenderContext): Family {
       tag: new PlayerTag(ctx, tags),
       shadow: add(ground, t.looks.poi.shadow),
       lying: new Downed(ctx, bodies, marks),
+      powered: new PoweredBody(bodies.addChild(new Container())),
       aim: add(marks, t.aim),
       contour: add(marks, t.contour),
-      dashArc: new DashArc(ground, () => ctx.options.tutorialCall?.gesture === 'dash'),
-      lifeArc: new LifeArc(ctx, ground, lifeLabels),
+      dashArc: new DashArc(arcs, () => ctx.options.tutorialCall?.gesture === 'dash'),
+      lifeArc: new LifeArc(ctx, arcs, lifeLabels),
       emote: new PlayerEmote(ctx, gestures, ground),
       carried: new PlayerCarriedTraps(ctx),
     }),
@@ -115,6 +124,7 @@ export function createPlayers(ctx: RenderContext): Family {
   );
 
   return {
+    potion,
     onEvent(event: SimEvent, state: SimState, frame: Frame): void {
       revives.onEvent(event, state.tick);
       switch (event.type) {
@@ -163,13 +173,14 @@ export function createPlayers(ctx: RenderContext): Family {
       moments.clear();
       burster.bursts.clear();
       beatTick = NEVER;
+      potion.powered.length = 0;
       views.releaseAll();
     },
     update(state: SimState, alpha: number, frame: Frame): void {
-      const { palette, light, pulse, now } = frame;
+      const { palette, now } = frame;
       const sun = shadowAt(frame.fraction);
-      const [sunX, sunY] = [Math.cos(sun.angle), Math.sin(sun.angle)];
       views.begin();
+      potion.powered.length = 0;
       for (const player of state.players) {
         const view = views.acquire(player.id);
         const { textures: lookTextures, make } = drawnOf(player.classId);
@@ -180,25 +191,13 @@ export function createPlayers(ctx: RenderContext): Family {
         const angle = Math.atan2(player.aim.y, player.aim.x);
         let look = view.looks.get(player.classId);
         if (look === undefined) {
-          look = make();
+          look = make(view.powered.body);
           view.looks.set(player.classId, look);
         }
         const { halo, tag, shadow, lying, aim, contour } = view;
-        const dazzled = (player.dazzledTicks ?? 0) > 0;
         const share = revives.share(player.id, player.downed, now);
         const burst = revives.burst(player.id, now);
-        halo.visible = share > 0 || (!player.downed && !((player.suppressedTicks ?? 0) > 0));
-        setTint(halo, dazzled ? palette.texte : color);
-        halo.position.set(x, y);
-        halo.scale.set(
-          ((player.radius * (dazzled ? 4.6 : 3.2)) / textures.halo.radius) * (1 + 0.1 * pulse),
-        );
-        const kept = 1 - (frame.drained.players.get(player.id) ?? 0);
-        halo.alpha = (dazzled ? Math.min(1, light.haloAlpha * 1.6) : light.haloAlpha) * kept;
-        if (player.downed) {
-          halo.scale.set(((player.radius * 2.6) / textures.halo.radius) * (1 + 0.1 * pulse));
-          halo.alpha = light.haloAlpha * 0.8 * share * kept;
-        }
+        placePlayerHalo(halo, textures.halo.radius, player, x, y, color, share, frame);
 
         const top = tag.place(
           player,
@@ -254,6 +253,7 @@ export function createPlayers(ctx: RenderContext): Family {
           input.sinceHit = now - moment.hit;
           input.sinceSkill = now - moment.skill;
           lift = look.place(input);
+          potion.expose(view.powered, input, lookTextures.extent * scale);
         }
 
         view.dashArc.place(player, x, y, color, ctx.dash, frame);
@@ -263,14 +263,7 @@ export function createPlayers(ctx: RenderContext): Family {
         if (player.downed) {
           continue;
         }
-        const reach = sun.length * lookTextures.height * 3 + lift * 6 * scale;
-        shadow.texture = lookTextures.shadow.texture;
-        setTint(shadow, 0x000000);
-        shadow.alpha = sun.alpha;
-        shadow.rotation = sun.angle - Math.PI / 2;
-        shadow.position.set(x + sunX * reach, y + sunY * reach);
-        const shrink = 1 - 0.14 * lift;
-        shadow.scale.set(scale * shrink, scale * (0.85 + 0.1 * sun.length) * shrink);
+        placePlayerShadow(shadow, sun, lookTextures, x, y, scale, lift);
 
         aim.visible = lookTextures.aimless !== true;
         setTint(aim, color);

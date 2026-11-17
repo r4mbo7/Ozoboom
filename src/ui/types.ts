@@ -1,5 +1,6 @@
 import type { DecorId, GameContent } from '../data/types';
 import type { Locale } from '../shared/i18n';
+import type { MenuHeard } from '../shared/menu-score';
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
 import type { PlayerId, SimState, Vec2 } from '../sim/state';
 import type { TutorialStep } from './tutorial';
@@ -14,8 +15,8 @@ export interface UiFrame {
   players: readonly LocalPlayer[];
   // The lobby lets each device without a seat take one.
   devices?: readonly { device: DeviceId; snapshot: InputSnapshot }[];
-  // In eighths since the first note of the menu ambience; absent or null while it is silent.
-  menuPosition?: number | null;
+  // What the menus play as it is heard; absent or null while they are silent.
+  menuPosition?: MenuHeard | null;
   // Where a point of the arena shows, in pixels of the game's view.
   toScreen?: (point: Vec2) => Vec2;
 }
@@ -42,12 +43,21 @@ export interface StagePickerModel {
   festival?: boolean;
 }
 
-// Solo: confirming launches the set, or leads to the scene picker.
+// A player of this screen, who picks with their own device.
+export interface PickerSeat {
+  readonly playerId: PlayerId;
+  readonly classId: string;
+  readonly device: DeviceId | null;
+}
+
+// Confirming launches the night picked on the scene screen, which it names.
 export interface ClassPickerModel {
+  // The class of a touch screen's one player, who has no seat.
   classId: string;
-  launches: boolean;
-  // Only asked where confirming launches.
+  // Null in a game of one scene: there is no scene screen, so this one asks for the endless night.
+  stage: StagePickerModel | null;
   endless: boolean;
+  seats: readonly PickerSeat[];
 }
 
 // A class drawn alive by the game: the ui places it, the app makes it (the ui cannot draw the game).
@@ -64,13 +74,11 @@ export interface LobbySeat {
   // Empty when the player typed none: the lobby shows `defaultName` in the screen's language.
   name: string;
   classId: string;
-  device: DeviceId | null;
   remote: boolean;
   host: boolean;
 }
 
 export interface LobbyModel {
-  mode: 'local' | 'online';
   role: 'host' | 'guest';
   code: string | null;
   link: string | null;
@@ -108,7 +116,7 @@ export interface UiCallbacks {
   onRestart(): void;
   // Solo: a short set that asks the gestures of the game one by one.
   onLearn(): void;
-  // A team's: the lobby shows again with the same players.
+  // A team's: on one screen the class picker shows again with the same players, online the room.
   onBackToLobby(): void;
   onQuit(): void;
   onChooseUpgrade(playerId: PlayerId, upgradeId: string): void;
@@ -136,24 +144,27 @@ export interface UiCallbacks {
   onToggleAutoAim(enabled: boolean): void;
   // The game reloads in it (ADR 0017).
   onChooseLocale(locale: Locale): void;
-  onPlayTogether(): void;
   onPlayOnline(): void;
   onChooseClass(classId: string): void;
-  // Solo only.
+  // Launches the game.
   onConfirmClass(): void;
+  // Back to the scene picker, or to the title in a game of one scene.
   onLeaveClassPicker(): void;
   onJoinSeat(device: DeviceId): void;
   onLeaveSeat(playerId: PlayerId): void;
+  // A player alone plays on with the device they hold.
+  onHandOverSeat(playerId: PlayerId, device: DeviceId): void;
   onSeatClass(playerId: PlayerId, classId: string): void;
-  onSeatName(playerId: PlayerId, name: string): void;
+  // The name of this screen's own seat online: only online seats have one.
+  onSeatName(name: string): void;
   onCreateRoom(): void;
   onJoinRoom(code: string): void;
   onChooseStage(setId: string): void;
   onToggleEndless(enabled: boolean): void;
   onChooseNight(night: Night): void;
-  // Solo only.
+  // On to the class picker.
   onConfirmStage(): void;
-  // Solo: back to the class picker.
+  // Back to the title.
   onLeaveStagePicker(): void;
   onLaunch(): void;
   onLeaveLobby(): void;

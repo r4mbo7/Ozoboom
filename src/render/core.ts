@@ -16,16 +16,11 @@ import { FULL_LOOKS } from './full';
 import type { Frame } from './frame';
 import { scramble } from './hash';
 import { easeOutQuad } from './motion';
+import { mixColor } from './palette';
+import { createStageRepair } from './stage-repair';
 import { DOME_FACETS, type Facet } from './textures';
 import { add, placeOutline, setTint } from './util';
-import {
-  SEGMENTS,
-  createLifePill,
-  drawSegments,
-  litSegments,
-  litShare,
-  stageColor,
-} from './vu-meter';
+import { SEGMENTS, createLifePill, drawSegments, litSegments, stageColor } from './vu-meter';
 
 const TAU = Math.PI * 2;
 const FLASH_TICKS = TICKS_PER_BEAT / 2;
@@ -41,6 +36,9 @@ const BLINK_TICKS = 2 * TICKS_PER_BEAT;
 const BLINK_PERIOD = TICKS_PER_BEAT / 2;
 const RAYS = 8;
 const LIT_FACETS = 3;
+// The green the stage breathes after a speaker's repair, and its swell on the beat.
+const REPAIR_WASH = 0.5;
+const REPAIR_SWELL = 0.08;
 
 export function litFacets(beat: number): Facet[] {
   const lit: Facet[] = [];
@@ -93,8 +91,9 @@ export function createCore(ctx: RenderContext): CoreFamily {
   const rim = new Graphics();
   const lit = new Graphics();
   const lost = new Graphics();
-  layers.core.addChild(track, rim, lit, lost);
-  const rings = [track, rim, lit, lost];
+  const repair = createStageRepair(ctx);
+  layers.core.addChild(track, rim, lit, repair.ring, lost);
+  const rings = [track, rim, lit, repair.ring, lost];
   const percent = createLifePill(layers.coreLabel);
   const flash = add(layers.fx, t.ring);
   flash.visible = false;
@@ -104,7 +103,11 @@ export function createCore(ctx: RenderContext): CoreFamily {
   let lookView: CoreLookView | null = null;
   let segments = 0;
   let facetBeat = Number.NaN;
-  let drawn = { radius: Number.NaN, segments: Number.NaN };
+  let drawn = {
+    radius: Number.NaN,
+    segments: Number.NaN,
+    held: { from: Number.NaN, to: Number.NaN },
+  };
   let loss = { from: 0, to: 0, tick: Number.NEGATIVE_INFINITY };
 
   function showLook(look: CoreLook): void {
@@ -142,20 +145,31 @@ export function createCore(ctx: RenderContext): CoreFamily {
       }
       const { pulse, palette, light } = frame;
       segments = litSegments(core);
+      const held = repair.heldFor(segments, frame.now);
       const ringRadius = core.radius * RING_REACH;
-      if (drawn.radius !== ringRadius || drawn.segments !== segments) {
+      if (
+        drawn.radius !== ringRadius ||
+        drawn.segments !== segments ||
+        drawn.held.from !== held.from ||
+        drawn.held.to !== held.to
+      ) {
         if (segments < drawn.segments) {
           loss = { from: segments, to: drawn.segments, tick: frame.now };
         } else if (segments > drawn.segments) {
           loss = { from: 0, to: 0, tick: Number.NEGATIVE_INFINITY };
         }
-        drawn = { radius: ringRadius, segments };
+        drawn = { radius: ringRadius, segments, held };
         drawSegments(track, ringRadius, 0, SEGMENTS, SEGMENT_WIDTH);
-        drawSegments(lit, ringRadius, 0, segments, SEGMENT_WIDTH);
-        drawSegments(rim, ringRadius, 0, segments, SEGMENT_WIDTH + RIM_GROW);
+        drawSegments(lit, ringRadius, 0, segments, SEGMENT_WIDTH, held);
+        drawSegments(rim, ringRadius, 0, segments, SEGMENT_WIDTH + RIM_GROW, held);
         drawSegments(lost, ringRadius, loss.from, loss.to, SEGMENT_WIDTH);
       }
-      const color = stageColor(palette, litShare(core));
+      const wash = repair.washOf(frame.now);
+      const color = mixColor(
+        stageColor(palette, repair.shareOf(core, frame.now)),
+        palette.healer,
+        REPAIR_WASH * wash,
+      );
       const swell = 1 + (MAX_SWELL - 1) * pulse;
       for (const ring of rings) {
         ring.position.set(core.x, core.y);
@@ -167,7 +181,8 @@ export function createCore(ctx: RenderContext): CoreFamily {
       setTint(rim, palette.texte);
       track.alpha = 0.2;
       lit.alpha = 0.75 + 0.25 * pulse;
-      rim.visible = !light.additive && segments > 0;
+      rim.visible = !light.additive && segments > held.to - held.from;
+      repair.update(state, frame, ringRadius, color);
       lost.visible = lostSegmentShown(frame.now - loss.tick, frame.calm);
 
       const below = core.y + ringRadius * MAX_SWELL + (SEGMENT_WIDTH + RIM_GROW) / 2;
@@ -177,7 +192,8 @@ export function createCore(ctx: RenderContext): CoreFamily {
       showLook(coreLookOf(looks.get(frame.set.decor) ?? [], state.seed, frame.set.id));
       const textureRadius = lookView === null ? t.core.radius : LOOK_TEXTURE_RADIUS;
       body.position.set(core.x, core.y);
-      body.scale.set((core.radius / textureRadius) * swell);
+      const breath = frame.calm ? 0 : REPAIR_SWELL * wash * pulse;
+      body.scale.set((core.radius / textureRadius) * swell * (1 + breath));
       setTint(body, color);
       placeOutline(outline, body, t.core.texture, textureRadius, frame);
 
@@ -218,6 +234,12 @@ export function createCore(ctx: RenderContext): CoreFamily {
 
       setTint(flash, palette.or);
       drawFlash(core.radius, core.x, core.y, frame);
+    },
+    onEvent(event, state): void {
+      repair.onEvent(event, state);
+    },
+    reset(): void {
+      repair.reset();
     },
     destroy(): void {
       lookView?.destroy();

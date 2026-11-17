@@ -11,6 +11,7 @@ import {
   touches,
 } from '../effects';
 import type { PlacedState, SimState } from '../state';
+import { statValue } from '../stats';
 import type { StepContext } from './types';
 
 const TOTEM_BODY_RADIUS = 14;
@@ -25,7 +26,6 @@ export function placedZones(ctx: StepContext): void {
   let built = false;
   for (const zone of placed) {
     const { effect } = definitionOf(ctx, zone);
-    const power = powerOf(ctx, zone);
     if (effect.kind === 'plate') {
       if (!built) {
         ctx.enemyGrid.rebuild(state.enemies);
@@ -37,7 +37,7 @@ export function placedZones(ctx: StepContext): void {
         ctx.tempo,
         zone,
         zone.radius,
-        effect.healPerBar * power,
+        effect.healPerBar * levelPowerOf(ctx, zone),
         zone.playerId,
       );
     }
@@ -68,7 +68,7 @@ export function placedTotems(ctx: StepContext): void {
         ctx.enemyGrid,
         zone,
         zone.radius,
-        effect.damage * powerOf(ctx, zone),
+        effect.damage * damagePowerOf(ctx, zone),
         effect.knockback,
         zone.playerId,
         ctx.enemyObstacles,
@@ -81,13 +81,19 @@ function definitionOf({ content }: StepContext, zone: PlacedState): WeaponDefini
   return lookup(content.weapons, zone.weaponId, 'weapon');
 }
 
-function powerOf({ state, content }: StepContext, zone: PlacedState): number {
+function levelPowerOf({ state, content }: StepContext, zone: PlacedState): number {
   const owner = state.players.find((player) => player.id === zone.playerId);
   const slot = owner?.weapons?.find((candidate) => candidate.id === zone.weaponId);
   const definition = content.weapons.get(zone.weaponId);
   return slot === undefined || definition === undefined
     ? 1
     : compound(definition.levelMul, slot.level - 1);
+}
+
+function damagePowerOf(ctx: StepContext, zone: PlacedState): number {
+  const owner = ctx.state.players.find((player) => player.id === zone.playerId);
+  const weaponDamage = owner === undefined ? 1 : statValue(owner, 'weaponDamageMul', 1);
+  return levelPowerOf(ctx, zone) * weaponDamage;
 }
 
 function removeExpired(state: SimState): void {

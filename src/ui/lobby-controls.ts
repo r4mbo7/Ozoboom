@@ -1,25 +1,12 @@
-import type { DeviceId, InputSnapshot, MenuIntents } from '../input/intents';
+import type { MenuIntents } from '../input/intents';
 import type { PlayerId } from '../sim/state';
-import {
-  type Row,
-  canTakeSeat,
-  deviceOf,
-  lobbyView,
-  ownSeat,
-  rowsOf,
-  seatAt,
-  seatRows,
-  stepClass,
-  stepRow,
-} from './lobby-model';
-import { type MenuInput, createMenuInput } from './navigation';
+import { type Row, lobbyView, ownSeat, rowsOf, stepRow } from './lobby-model';
 import type { NightTabs } from './night';
+import { stepFreeClass } from './seat-input';
 import { stepStage } from './stage';
-import type { LobbyModel, LobbySeat, UiFrame } from './types';
+import type { LobbyModel, LobbySeat } from './types';
 
 export interface LobbyControlActions {
-  joinSeat(device: DeviceId): void;
-  leaveSeat(playerId: PlayerId): void;
   seatClass(playerId: PlayerId, classId: string): void;
   chooseStage(setId: string): void;
   leave(): void;
@@ -31,8 +18,6 @@ export interface LobbyControlsSetup {
   readonly classes: readonly { id: string }[];
   readonly nights: Pick<NightTabs, 'handle'>;
   readonly activate: (row: Row, seat: LobbySeat | null) => void;
-  // The seat typing its name pressed up, down or back.
-  readonly stopTyping: () => void;
 }
 
 export interface LitRow {
@@ -44,28 +29,16 @@ export interface LobbyControls {
   open(): void;
   follow(): void;
   hover(row: Row): boolean;
-  // Every local seat rings its own row, as brightly as the others.
-  marks(): readonly LitRow[];
+  lit(): LitRow | null;
   stepChoice(seat: LobbySeat | null, row: Row | undefined, direction: -1 | 1): void;
-  // Locally, the seat typing its name, if any: only its own gestures end the typing.
-  update(frame: UiFrame, edges: MenuIntents, typing?: PlayerId): void;
+  update(edges: MenuIntents): void;
 }
 
-// Made when a seat or a device shows: a key still held from before waits for its release.
-function openedInput(): MenuInput {
-  const input = createMenuInput();
-  input.open();
-  return input;
-}
-
-// Online, one cursor for the one device of this screen; locally, one cursor per seat.
+// One cursor, for the one device of this screen.
 export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
-  const { current, actions, classes, nights, activate, stopTyping } = setup;
+  const { current, actions, classes, nights, activate } = setup;
   let cursor = 0;
   let cursorView = lobbyView(current());
-  const seatCursors = new Map<PlayerId, number>();
-  const seatInputs = new Map<PlayerId, MenuInput>();
-  const deviceInputs = new Map<DeviceId, MenuInput>();
 
   function stepChoice(seat: LobbySeat | null, row: Row | undefined, direction: -1 | 1): void {
     if (row === 'stage') {
@@ -79,122 +52,15 @@ export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
     if (seat === null || row !== 'class') {
       return;
     }
-    const taken = new Set(
-      current()
-        .seats.filter((other) => other.playerId !== seat.playerId)
-        .map((other) => other.classId),
-    );
-    const next = stepClass(classes, seat.classId, direction, taken);
+    const next = stepFreeClass(classes, current().seats, seat, direction);
     if (next !== null) {
       actions.seatClass(seat.playerId, next);
-    }
-  }
-
-  function seatInput(playerId: PlayerId): MenuInput {
-    let input = seatInputs.get(playerId);
-    if (input === undefined) {
-      input = openedInput();
-      seatInputs.set(playerId, input);
-    }
-    return input;
-  }
-
-  function updateOnline(edges: MenuIntents): void {
-    if (lobbyView(current()) !== 'entry' && nights.handle(edges)) {
-      return;
-    }
-    const rows = rowsOf(current());
-    const step = stepRow(rows.length, Math.min(cursor, rows.length - 1), edges);
-    const row = rows[step.index];
-    if (step.side !== 0) {
-      stepChoice(ownSeat(current()), row, step.side);
-    }
-    cursor = step.index;
-    if (step.back) {
-      actions.leave();
-    } else if (step.confirmed && row !== undefined) {
-      activate(row, ownSeat(current()));
-    }
-  }
-
-  function driveSeat(seat: LobbySeat, snapshot: InputSnapshot, typing: boolean): boolean {
-    const own = seatInput(seat.playerId).edges(snapshot.menu, snapshot.gameplay.move);
-    if (typing) {
-      if (own.up || own.down || own.back) {
-        stopTyping();
-      }
-      return false;
-    }
-    if (seat.host && nights.handle(own)) {
-      return false;
-    }
-    const rows = seatRows(seat, current());
-    const step = stepRow(rows.length, seatCursors.get(seat.playerId) ?? 0, own);
-    const row = rows[step.index];
-    seatCursors.set(seat.playerId, step.index);
-    if (step.side !== 0) {
-      stepChoice(seat, row, step.side);
-    }
-    if (step.back) {
-      actions.leaveSeat(seat.playerId);
-      return true;
-    }
-    if (step.confirmed && row !== undefined) {
-      activate(row, seat);
-      return true;
-    }
-    return false;
-  }
-
-  function driveSeats(frame: UiFrame, typing: PlayerId | undefined): boolean {
-    let acted = false;
-    for (const seat of current().seats) {
-      const player = frame.players.find((entry) => entry.playerId === seat.playerId);
-      const own = seat.playerId === typing;
-      if (!seat.remote && player !== undefined && driveSeat(seat, player.snapshot, own)) {
-        acted = true;
-      }
-    }
-    return acted;
-  }
-
-  function joinByDevice(devices: NonNullable<UiFrame['devices']>): void {
-    for (const { device, snapshot } of devices) {
-      let input = deviceInputs.get(device);
-      if (input === undefined) {
-        input = openedInput();
-        deviceInputs.set(device, input);
-      }
-      const pressed = input.edges(snapshot.menu, snapshot.gameplay.move).confirm;
-      if (pressed && canTakeSeat(current(), device)) {
-        actions.joinSeat(device);
-        break;
-      }
-    }
-  }
-
-  function updateLocal(frame: UiFrame, edges: MenuIntents, typing: PlayerId | undefined): void {
-    if (driveSeats(frame, typing)) {
-      return;
-    }
-    if (edges.back && current().seats.length === 0) {
-      actions.leave();
-    } else if (frame.devices !== undefined) {
-      joinByDevice(frame.devices);
-    } else if (edges.confirm) {
-      const taker = deviceOf(frame.snapshot.device);
-      if (taker !== null && canTakeSeat(current(), taker)) {
-        actions.joinSeat(taker);
-      }
     }
   }
 
   return {
     open() {
       cursor = 0;
-      seatCursors.clear();
-      seatInputs.clear();
-      deviceInputs.clear();
     },
     follow() {
       const model = current();
@@ -204,47 +70,36 @@ export function createLobbyControls(setup: LobbyControlsSetup): LobbyControls {
         cursor = 0;
       }
       cursor = Math.min(cursor, Math.max(rowsOf(model).length - 1, 0));
-      for (const playerId of [...seatCursors.keys()]) {
-        if (seatAt(model, playerId) === null) {
-          seatCursors.delete(playerId);
-          seatInputs.delete(playerId);
-        }
-      }
-      for (const seat of model.seats) {
-        if (!seat.remote) {
-          seatInput(seat.playerId);
-        }
-      }
     },
     hover(row) {
-      const model = current();
-      if (model.mode !== 'online') {
-        return false;
-      }
-      const index = rowsOf(model).indexOf(row);
+      const index = rowsOf(current()).indexOf(row);
       if (index < 0 || index === cursor) {
         return false;
       }
       cursor = index;
       return true;
     },
-    marks() {
+    lit() {
       const model = current();
-      if (model.mode !== 'local') {
-        const row = rowsOf(model)[cursor];
-        return row === undefined ? [] : [{ row, seat: ownSeat(model) }];
-      }
-      return model.seats.flatMap((seat) => {
-        const row = seatRows(seat, model)[seatCursors.get(seat.playerId) ?? 0];
-        return row === undefined ? [] : [{ row, seat }];
-      });
+      const row = rowsOf(model)[cursor];
+      return row === undefined ? null : { row, seat: ownSeat(model) };
     },
     stepChoice,
-    update(frame, edges, typing) {
-      if (lobbyView(current()) === 'local') {
-        updateLocal(frame, edges, typing);
-      } else {
-        updateOnline(edges);
+    update(edges) {
+      if (lobbyView(current()) !== 'entry' && nights.handle(edges)) {
+        return;
+      }
+      const rows = rowsOf(current());
+      const step = stepRow(rows.length, Math.min(cursor, rows.length - 1), edges);
+      const row = rows[step.index];
+      if (step.side !== 0) {
+        stepChoice(ownSeat(current()), row, step.side);
+      }
+      cursor = step.index;
+      if (step.back) {
+        actions.leave();
+      } else if (step.confirmed && row !== undefined) {
+        activate(row, ownSeat(current()));
       }
     },
   };

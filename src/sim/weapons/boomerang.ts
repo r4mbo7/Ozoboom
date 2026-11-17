@@ -5,7 +5,7 @@ const FRISBEE_RADIUS = 10;
 const HITS_EVERY_BAD_VIBE = 999;
 
 export const boomerang: WeaponModule = {
-  fire(ctx, player, slot, definition, { power, target }) {
+  fire(ctx, player, slot, definition, { power, healPower, target }) {
     const { effect } = definition;
     if (effect.kind !== 'boomerang' || target === null) {
       return false;
@@ -29,7 +29,7 @@ export const boomerang: WeaponModule = {
         ticksLeft: Math.ceil(effect.range / effect.speed),
         pierceLeft: HITS_EVERY_BAD_VIBE,
         returnTo: player.id,
-        heal: effect.heal * power,
+        heal: effect.heal * healPower,
       },
     );
     return true;

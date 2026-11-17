@@ -13,6 +13,7 @@ import { createGroundWaves } from './ground-waves';
 import { createBombs } from './bombs';
 import { createTwinVibes } from './twin-vibes';
 import { createBattery } from './battery';
+import { createPotion } from './potion';
 import { createDice } from './dice';
 import { createCarriers } from './carried-traps';
 import { createMood } from './mood';
@@ -35,19 +36,25 @@ import { createWeapons } from './weapons';
 import { createWounds } from './wounds';
 import type { EntityId } from '../sim/state';
 import type { Family, RenderContext } from './context';
+import type { PotionBodies } from './potion-aura-model';
 import { createPogo } from './pogo';
 import { createCoupDeVent } from './vent';
 
 const BOSSES = [createCouvreFeu, createBatterieAPlat, createCoupDeVent, createPogo];
 
-export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
+export interface Families {
+  readonly families: Family[];
+  readonly potion: PotionBodies;
+}
+
+export function createFamilies(ctx: RenderContext, inset: boolean): Families {
   if (inset) {
     return createInsetFamilies(ctx);
   }
   const traps = createTraps(ctx);
   const enemies = createEnemies(ctx);
   const poseOf = (id: EntityId) => enemies.poseOf(id);
-  return [
+  const beforePlayers = [
     createGround(ctx),
     ...FULL_LOOKS.flatMap((look) => look.families(ctx)),
     createGroundWaves(ctx),
@@ -62,6 +69,7 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
     createBombs(ctx),
     createTwinVibes(ctx),
     createBattery(ctx),
+    createPotion(ctx),
     createDice(ctx),
     createBystanders(ctx),
     createDancer(ctx),
@@ -74,7 +82,11 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
     createMood(ctx),
     ...FULL_FAMILIES.map((create) => create(ctx, poseOf)),
     createWeapons(ctx),
-    createPlayers(ctx),
+  ];
+  const players = createPlayers(ctx);
+  const families = [
+    ...beforePlayers,
+    players,
     createDownedScreen(ctx),
     createSpeakerCards(ctx),
     createMarkers(ctx),
@@ -87,14 +99,16 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Family[] {
       enemies.blink(id, untilTick);
     }),
   ];
+  return { families, potion: players.potion };
 }
 
-function createInsetFamilies(ctx: RenderContext): Family[] {
-  return [
+function createInsetFamilies(ctx: RenderContext): Families {
+  const beforePlayers = [
     createGround(ctx),
     createEnemies(ctx),
     createProjectiles(ctx),
     createWeapons(ctx),
-    createPlayers(ctx),
   ];
+  const players = createPlayers(ctx);
+  return { families: [...beforePlayers, players], potion: players.potion };
 }

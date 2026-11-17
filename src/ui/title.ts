@@ -3,10 +3,11 @@ import { el, fillHint, icon, setText } from './dom';
 import { formatNumber } from './format';
 import { createActionButton, createControlsButton, createFeedbackButton } from './feedback-button';
 import { openDiscord } from './discord';
-import { DISCORD, GEAR, GLOBE, PAD } from './icons';
+import { DISCORD, GEAR, GLOBE } from './icons';
 import { type Menu, createMenu } from './menu';
 import type { Prompts } from './prompts';
-import { TITLE_AT_REST, type TitleLight, heardFrom, titleLightAt } from './title-light';
+import type { MenuHeard } from '../shared/menu-score';
+import { TITLE_AT_REST, type TitleLight, heardFrom, titleLightOf } from './title-light';
 import {
   createAutoAimToggle,
   createAutoFireToggle,
@@ -22,7 +23,6 @@ import { createThanksPainter } from './title-thanks-paint';
 
 export interface TitleActions {
   start(): void;
-  playTogether(): void;
   playOnline(): void;
   toggleCalmMode(): void;
   toggleMute(): void;
@@ -44,7 +44,7 @@ export interface TitleOptions {
   readonly autoAim: boolean;
 }
 
-export type TitleView = 'main' | 'together' | 'settings' | 'credits';
+export type TitleView = 'main' | 'settings' | 'credits';
 
 export interface TitleScreen {
   readonly element: HTMLElement;
@@ -55,8 +55,8 @@ export interface TitleScreen {
   setOptions(options: TitleOptions): void;
   setDevice(device: InputDevice): void;
   setVisits(count: number): void;
-  // The ambience position in eighths, null when there is none; calm or null stills the title.
-  follow(position: number | null, calm: boolean): void;
+  // What the menus play as it is heard, null when nothing; calm or null stills the title.
+  follow(heard: MenuHeard | null, calm: boolean): void;
 }
 
 // The scene is drawn in hundredths of the title's em, so the sun keeps its size against the logo.
@@ -274,11 +274,8 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
 
   const play = el('button', 'ui-button ui-button--primary', t('Jouer'));
   play.type = 'button';
-  const together = createActionButton(t('À plusieurs'), t('Même écran ou en ligne'), PAD);
+  const online = createActionButton(t('En ligne'), t('Avec des amis, sur internet'), GLOBE);
   const settings = createActionButton(t('Réglages'), t('Mode calme, commandes, langue'), GEAR);
-
-  const same = createActionButton(t('Même écran'), t('Jusqu’à 4 joueurs'), PAD);
-  const online = createActionButton(t('En ligne'), t('Avec tes amis'), GLOBE);
 
   const calm = createToggle(
     t('Mode calme'),
@@ -296,11 +293,8 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   const language = createLanguageControl(locale());
   const feedback = actions.feedback === undefined ? null : createFeedbackButton();
 
-  const backButton = () => {
-    const button = el('button', 'ui-button ui-title__back', t('Retour'));
-    button.type = 'button';
-    return button;
-  };
+  const settingsBack = el('button', 'ui-button ui-title__back', t('Retour'));
+  settingsBack.type = 'button';
 
   const credits = createCredits();
   const creditsButton = el('button', 'ui-title__credits', t('Crédits'));
@@ -318,17 +312,12 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   const views: Record<TitleView, { title: string; items: HTMLElement[]; nav: HTMLElement }> = {
     main: {
       title: '',
-      items: [play, together, sound.element, settings, discord, creditsButton],
+      items: [play, online, sound.element, settings, discord, creditsButton],
       nav: el('nav', 'ui-menu'),
     },
     credits: {
       title: t('Crédits'),
       items: [creditsBack, credits.link],
-      nav: el('nav', 'ui-menu'),
-    },
-    together: {
-      title: t('À plusieurs'),
-      items: [same, online, backButton()],
       nav: el('nav', 'ui-menu'),
     },
     settings: {
@@ -341,23 +330,22 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
         keys,
         language,
         ...(feedback === null ? [] : [feedback]),
-        backButton(),
+        settingsBack,
       ],
       nav: el('nav', 'ui-menu ui-menu--settings'),
     },
   };
   views.main.nav.setAttribute('aria-label', t('Menu principal'));
-  views.main.nav.append(play, together, sound.element, settings);
-  for (const name of ['together', 'settings', 'credits'] as const) {
+  views.main.nav.append(play, online, sound.element, settings);
+  for (const name of ['settings', 'credits'] as const) {
     views[name].nav.setAttribute('aria-label', views[name].title);
   }
-  views.together.nav.append(...views.together.items);
   views.settings.nav.append(...views.settings.items);
   views.credits.nav.append(creditsBack);
 
   const hint = el('p', 'ui-hint');
   const deck = el('div', 'ui-title__deck');
-  deck.append(views.main.nav, views.together.nav, views.settings.nav, views.credits.nav);
+  deck.append(views.main.nav, views.settings.nav, views.credits.nav);
 
   const meta = el('p', 'ui-title__meta', `v${__APP_RELEASE__}`);
   const corner = el('div', 'ui-title__corner');
@@ -385,12 +373,6 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       },
     ],
     [
-      together,
-      () => {
-        open('together');
-      },
-    ],
-    [
       settings,
       () => {
         open('settings');
@@ -401,12 +383,6 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       creditsButton,
       () => {
         open('credits');
-      },
-    ],
-    [
-      same,
-      () => {
-        actions.playTogether();
       },
     ],
     [
@@ -469,18 +445,12 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   activations.set(credits.link, () => {
     window.open(credits.link.href, '_blank', 'noopener');
   });
-  for (const name of ['together', 'settings'] as const) {
-    const back = views[name].items.at(-1);
-    if (back !== undefined) {
-      activations.set(back, () => {
-        open('main');
-      });
-    }
-  }
+  activations.set(settingsBack, () => {
+    open('main');
+  });
 
   // Back on the title, the selection is the entry the player left it by.
   const openers: Partial<Record<TitleView, HTMLElement>> = {
-    together,
     settings,
     credits: creditsButton,
   };
@@ -524,7 +494,6 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     if (next === 'credits') {
       body.style.setProperty('--credits-roll', `${credits.open().toFixed(1)}s`);
     }
-    thanks.wake();
     showHint();
   }
 
@@ -533,11 +502,6 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   let calmNow = false;
   const thanks = createThanksClock(thanksOf());
   const painter = createThanksPainter(lake, views.main.nav);
-  for (const type of ['pointermove', 'pointerdown', 'wheel'] as const) {
-    element.addEventListener(type, () => {
-      thanks.wake();
-    });
-  }
 
   function showHint(): void {
     if (device === null) {
@@ -567,9 +531,6 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
         languages.handle(edges);
         return;
       }
-      if (Object.values(edges).includes(true)) {
-        thanks.wake();
-      }
       if (edges.back && view !== 'main') {
         open('main');
         return;
@@ -580,20 +541,20 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       }
       menu.handle(edges);
     },
-    follow(position, still) {
+    follow(heard, still) {
       calmNow = still;
       painter.paint(
-        position === null || view !== 'main' || languages.isOpen ? null : thanks.at(position),
+        heard === null || view !== 'main' || languages.isOpen ? null : thanks.at(heard.beats),
         still,
-        position ?? 0,
+        heard?.beats ?? 0,
       );
-      if (position === null || still) {
+      if (heard === null || still) {
         origin = null;
         show(TITLE_AT_REST);
         return;
       }
-      origin = heardFrom(origin, position);
-      show(titleLightAt(position, position - origin));
+      origin = heardFrom(origin, heard.beats);
+      show(titleLightOf(heard, heard.beats - origin));
     },
     setOptions(options) {
       calm.set(options.calmMode);

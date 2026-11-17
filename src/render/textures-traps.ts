@@ -21,7 +21,7 @@ function outlined(ctx: Ctx): void {
   doubleStroke(ctx, OUTER, GAP);
 }
 
-export function trap(look: TrapLook): Shape {
+function trap(look: TrapLook): Shape {
   const r = 32;
   return paint(r * 3, r * 3, r, (ctx) => {
     glow(ctx, WHITE, 10);
@@ -94,6 +94,17 @@ export function trap(look: TrapLook): Shape {
     circle(ctx, r * 0.16);
     ctx.fill();
   });
+}
+
+export function trapShapes(): Readonly<Record<TrapLook, Shape>> {
+  return {
+    shockwave: trap('shockwave'),
+    beam: trap('beam'),
+    mist: trap('mist'),
+    lure: trap('lure'),
+    strobe: trap('strobe'),
+    breeze: trap('breeze'),
+  };
 }
 
 export const BOMB_FUSE_TIP = { x: 16, y: -23 } as const;

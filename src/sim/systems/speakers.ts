@@ -49,6 +49,7 @@ export function speakers(ctx: StepContext): void {
       state.events.push({ type: 'speakerPlugged', speakerId: speaker.id });
       state.events.push({ type: 'volumeChanged', volume: state.volume });
       dropSpeakerDie(ctx, speaker);
+      repairCore(state, set.speakerCoreRepair, speaker.id);
     } else if (beat) {
       state.events.push({
         type: 'speakerPlugging',
@@ -57,6 +58,17 @@ export function speakers(ctx: StepContext): void {
       });
     }
   }
+}
+
+// On a full stage the repair is lost, and still said: the event carries 0.
+function repairCore(state: SimState, share: number | undefined, speakerId: string): void {
+  if (share === undefined) {
+    return;
+  }
+  const { core } = state;
+  const repaired = Math.min(core.maxHp - core.hp, share * core.maxHp);
+  core.hp += repaired;
+  state.events.push({ type: 'coreRepaired', amount: repaired, speakerId });
 }
 
 function cadence(aura: TrapEffect): TrapCadence {

@@ -91,7 +91,10 @@ function shoot(
   return true;
 }
 
-function inContact(enemy: EnemyState, target: { x: number; y: number; radius: number }): boolean {
+export function inContact(
+  enemy: EnemyState,
+  target: { x: number; y: number; radius: number },
+): boolean {
   const dx = target.x - enemy.x;
   const dy = target.y - enemy.y;
   const reach = enemy.radius + target.radius + CONTACT_SLACK;

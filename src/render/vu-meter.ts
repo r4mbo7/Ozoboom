@@ -72,21 +72,43 @@ function pillKick(sinceLoss: number): number {
   return sinceLoss >= 0 && sinceLoss < KICK_TICKS ? 1 - sinceLoss / KICK_TICKS : 0;
 }
 
+// The angle of the boundary before segment `index`, from the top, clockwise.
+export function ringAngle(index: number): number {
+  return RING_START + (index * TAU) / SEGMENTS;
+}
+
+// One segment's arc, its gaps cut on both sides; the stroke is the caller's.
+export function traceSegment(ring: Graphics, radius: number, index: number): Graphics {
+  const step = TAU / SEGMENTS;
+  const gap = (step * SEGMENT_GAP) / 2;
+  const start = ringAngle(index) + gap;
+  return ring
+    .moveTo(Math.cos(start) * radius, Math.sin(start) * radius)
+    .arc(0, 0, radius, start, start + step - 2 * gap);
+}
+
+// A run of the ring's segments, from included to excluded.
+export interface SegmentSpan {
+  readonly from: number;
+  readonly to: number;
+}
+
+const NO_SEGMENTS: SegmentSpan = { from: 0, to: 0 };
+
 export function drawSegments(
   ring: Graphics,
   radius: number,
   from: number,
   to: number,
   width: number,
+  skipped: SegmentSpan = NO_SEGMENTS,
 ): void {
   ring.clear();
-  const step = TAU / SEGMENTS;
-  const gap = (step * SEGMENT_GAP) / 2;
   for (let index = from; index < to; index += 1) {
-    const start = RING_START + index * step + gap;
-    ring.moveTo(Math.cos(start) * radius, Math.sin(start) * radius);
-    ring.arc(0, 0, radius, start, start + step - 2 * gap);
-    ring.stroke({ width, color: 0xffffff, cap: 'butt' });
+    if (index >= skipped.from && index < skipped.to) {
+      continue;
+    }
+    traceSegment(ring, radius, index).stroke({ width, color: 0xffffff, cap: 'butt' });
   }
 }
 

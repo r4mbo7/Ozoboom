@@ -62,6 +62,45 @@ export function plugShare(
   return needed > 0 ? clamp01(plugTicks / needed) : 0;
 }
 
+export interface CablePath {
+  readonly x0: number;
+  readonly y0: number;
+  readonly bendX: number;
+  readonly bendY: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+
+export function cablePath(
+  speaker: { x: number; y: number },
+  core: { x: number; y: number; radius: number },
+): CablePath {
+  const dx = core.x - speaker.x;
+  const dy = core.y - speaker.y;
+  const length = Math.hypot(dx, dy);
+  const ux = length > 0 ? dx / length : 1;
+  const uy = length > 0 ? dy / length : 0;
+  const x1 = core.x - ux * core.radius * CABLE_REACH;
+  const y1 = core.y - uy * core.radius * CABLE_REACH;
+  return {
+    x0: speaker.x,
+    y0: speaker.y,
+    bendX: (speaker.x + x1) / 2 - uy * length * CABLE_BEND,
+    bendY: (speaker.y + y1) / 2 + ux * length * CABLE_BEND,
+    x1,
+    y1,
+  };
+}
+
+export function alongCable(path: CablePath, fromSpeaker: number): { x: number; y: number } {
+  const s = fromSpeaker;
+  const r = 1 - s;
+  return {
+    x: r * r * path.x0 + 2 * r * s * path.bendX + s * s * path.x1,
+    y: r * r * path.y0 + 2 * r * s * path.bendY + s * s * path.y1,
+  };
+}
+
 export function drawCable(
   view: { cable: Graphics; cableGlow: Graphics; cableKey: string },
   speaker: SpeakerState,
@@ -73,21 +112,13 @@ export function drawCable(
     return;
   }
   view.cableKey = key;
-  const dx = core.x - speaker.x;
-  const dy = core.y - speaker.y;
-  const length = Math.hypot(dx, dy);
-  const ux = length > 0 ? dx / length : 1;
-  const uy = length > 0 ? dy / length : 0;
-  const endX = core.x - ux * core.radius * CABLE_REACH;
-  const endY = core.y - uy * core.radius * CABLE_REACH;
-  const bendX = (speaker.x + endX) / 2 - uy * length * CABLE_BEND;
-  const bendY = (speaker.y + endY) / 2 + ux * length * CABLE_BEND;
+  const path = cablePath(speaker, core);
   for (const [line, width] of [
     [view.cable, 3],
     [view.cableGlow, 9],
   ] as const) {
     line.clear();
-    line.moveTo(speaker.x, speaker.y).quadraticCurveTo(bendX, bendY, endX, endY);
+    line.moveTo(path.x0, path.y0).quadraticCurveTo(path.bendX, path.bendY, path.x1, path.y1);
     line.stroke({ width, color: 0xffffff, cap: 'round' });
   }
 }

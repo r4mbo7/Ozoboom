@@ -2,15 +2,7 @@ import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
 import { type GoMark, el, fillHint, findAll, goMark, setText } from './dom';
 import { PLAY } from './icons';
-import {
-  createNightTabs,
-  launchDetail,
-  launchLabel,
-  nightLength,
-  nightNote,
-  nightOf,
-  stageQuestion,
-} from './night';
+import { createNightTabs, nightLength, nightNote, nightOf, stageQuestion } from './night';
 import { formatTempo } from './format';
 import { createButtonRow } from './button-row';
 import { stepClass } from './lobby-model';
@@ -138,7 +130,6 @@ export interface StagePickerActions {
   choose(setId: string): void;
   chooseNight(night: Night): void;
   confirm(): void;
-  learn(): void;
   leave(): void;
 }
 
@@ -161,7 +152,7 @@ export function createStagePicker(
   element.setAttribute('aria-label', t('Choix de la scène'));
   const header = el('header', 'ui-lobby__header');
   const title = el('h2', 'ui-lobby__title');
-  header.append(el('p', 'ui-kicker', t('Avant de lancer')), title);
+  header.append(title);
   const nights = createNightTabs((night) => {
     actions.chooseNight(night);
   });
@@ -173,30 +164,22 @@ export function createStagePicker(
     }
   });
   const note = el('p', 'ui-stagepicker__note');
-  const launch = el('button', 'ui-button ui-button--primary ui-launch');
-  launch.type = 'button';
-  launch.tabIndex = -1;
-  const launchText = el('span', 'ui-launch__label');
-  const launchMore = el('span', 'ui-launch__detail');
-  launch.append(launchText, launchMore);
-  const learn = el('button', 'ui-button', t('Apprendre à jouer'));
-  learn.type = 'button';
-  learn.tabIndex = -1;
-  const back = el('button', 'ui-button', t('Retour au perso'));
+  const toClasses = el('button', 'ui-button ui-button--primary', t('Choisir les persos'));
+  toClasses.type = 'button';
+  toClasses.tabIndex = -1;
+  const back = el('button', 'ui-button', t('Retour au titre'));
   back.type = 'button';
   back.tabIndex = -1;
-  launch.addEventListener('click', () => {
+  toClasses.addEventListener('click', () => {
     actions.confirm();
-  });
-  learn.addEventListener('click', () => {
-    actions.learn();
   });
   back.addEventListener('click', () => {
     actions.leave();
   });
-  const buttons = createButtonRow(cards.element, [launch, learn, back]);
+  cards.setGo(t('Choisir les persos'));
+  const buttons = createButtonRow(cards.element, [toClasses, back]);
   const footer = el('div', 'ui-lobby__actions');
-  footer.append(launch, learn, back);
+  footer.append(toClasses, back);
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-lobby__body');
   body.append(header, nights.element, cards.element, note, footer, hint);
@@ -204,12 +187,9 @@ export function createStagePicker(
 
   let device: InputDevice | null = null;
 
-  // What a validation does on the button in focus: the cards launch the set.
+  // What a validation does on the button in focus: the cards lead to the characters.
   function confirmLabel(focused: HTMLButtonElement | null): string {
-    if (focused === back) {
-      return t('valider');
-    }
-    return focused === learn ? t('apprendre') : t('lancer');
+    return focused === back ? t('valider') : t('persos');
   }
 
   function paintHint(): void {
@@ -241,12 +221,9 @@ export function createStagePicker(
       const night = nightOf(next);
       setText(title, stageQuestion(night));
       nights.set(night, nightLength(night, next.stages, next.stageId));
-      cards.setGo(launchLabel(night));
       cards.set(next.stages, next.stageId, night === 'festival');
       setText(note, nightNote(night));
       note.hidden = nightNote(night) === '';
-      setText(launchText, launchLabel(night));
-      setText(launchMore, launchDetail(night, next.stages, next.stageId));
     },
     setDevice(next) {
       if (next !== device) {

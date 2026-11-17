@@ -132,8 +132,10 @@ export function weapons(ctx: StepContext): void {
       }
       const target = closestEnemy(ctx, player);
       const aim = normalize(player.aim);
+      const level = compound(definition.levelMul, slot.level - 1);
       const shot = {
-        power: compound(definition.levelMul, slot.level - 1),
+        power: level * statValue(player, 'weaponDamageMul', 1),
+        healPower: level,
         target,
         direction: target === null ? aim : directionTo(player, target, aim),
       };

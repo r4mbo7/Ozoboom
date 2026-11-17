@@ -26,6 +26,7 @@ export type StatKey =
   | 'dashRechargeMul'
   | 'dashChargesAdd'
   | 'weaponRateMul'
+  | 'weaponDamageMul'
   | 'kiffDamageAdd'
   | 'zoneCountAdd'
   | 'rootsGrowthMul'
@@ -473,6 +474,16 @@ export interface BatteryRules {
   radius: number;
 }
 
+// Dropped `chance` a stage: its taker is shielded `bars`, hits `damageMul` harder, fires `rateMul` faster, bounces `bounce`.
+export interface PotionRules {
+  chance: number;
+  radius: number;
+  bars: number;
+  damageMul: number;
+  rateMul: number;
+  bounce: number;
+}
+
 // A die on the ground until taken: whoever walks on it gains a reroll of an offer. A boss drops one per player.
 export interface DiceRules {
   radius: number;
@@ -521,6 +532,7 @@ export interface SetDefinition {
   twinVibes?: TwinVibesRules;
   // Renews traps that wear: a set with it has `trapWear`.
   battery?: BatteryRules;
+  potion?: PotionRules;
   dice?: DiceRules;
   // Level n asks baseVibes + vibesPerLevel x (n - 1) vibes, times `growth` compounded n - 1 times: the
   // bad vibes grow denser along a set, and the levels would come faster without it. Absent means 1.
@@ -537,6 +549,9 @@ export interface SetDefinition {
   reviveBars?: number;
   // Most the core can be repaired per bar, all sources together. Absent means no cap.
   coreRepairPerBar?: number;
+  // Share of the core's max life a speaker gives back the moment it plugs, outside the per-bar cap.
+  // Absent means none.
+  speakerCoreRepair?: number;
   perPlayer?: { spawnMul: number; enemyHpMul: number };
   // A game's first phrase sends its bad vibes `count` times as many, with `hp` of their life and none of the
   // life added per player; they come back whole bar by bar over the next `phrases`. A later festival

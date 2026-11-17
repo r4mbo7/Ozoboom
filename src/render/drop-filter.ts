@@ -7,6 +7,9 @@ export type DropClock = Pick<SimState, 'status'> & {
 
 const FIRST_DROP_PEAK = 0.75;
 const ECHO_ALPHA = { night: 0.9, day: 0.45 };
+// The same at every intensity: a weaker drop leaves fainter echoes, not shorter trails.
+export const KEEP_PER_TICK = 0.88;
+export const MAX_STEP_TICKS = 4;
 
 // Falls after its phrase even if a boss keeps the drop going.
 export function dropFilterIntensity(

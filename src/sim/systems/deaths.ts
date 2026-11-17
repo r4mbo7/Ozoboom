@@ -7,6 +7,7 @@ import { ashore } from '../shore';
 import { SPECIALS } from '../specials';
 import type { EnemyState, PickupKind, SimState, Vec2 } from '../state';
 import { dropBattery } from './battery';
+import { dropPotion } from './potion';
 import { dropBomb } from './bomb';
 import { dropDie } from './dice';
 import { dropBossTrap, dropCarriedTrap } from './carriers';
@@ -87,6 +88,9 @@ export function deaths(ctx: StepContext): void {
     }
     if (enemy.carriesBattery === true) {
       dropBattery(ctx, at.x, at.y);
+    }
+    if (enemy.carriesPotion === true) {
+      dropPotion(ctx, at.x, at.y);
     }
     if (enemy.isBoss) {
       dropBossRows(ctx, enemy, at);

@@ -1,4 +1,5 @@
-import { createAudioEngine } from '../audio';
+import { createAudioEngine, type AudioEngineOptions } from '../audio';
+import { MENU_RECORDING, loadRecording, prefetchRecording } from '../audio/menu-track';
 import type { AudioEngine } from '../audio/types';
 import { TRACKS } from '../data/tracks';
 import type { GameContent, SetDefinition } from '../data/types';
@@ -17,8 +18,14 @@ export interface PlayedGame {
 }
 
 export function createGameAudio(content: GameContent, game: PlayedGame): AudioEngine {
+  const menuTrack = (): NonNullable<AudioEngineOptions['menuTrack']> => {
+    const fetchFile = prefetchRecording(MENU_RECORDING);
+    return (context) => loadRecording(context, MENU_RECORDING, fetchFile);
+  };
   return createAudioEngine({
-    ...(game.film === undefined ? {} : { createContext: game.film, stems: true }),
+    ...(game.film === undefined
+      ? { menuTrack: menuTrack() }
+      : { createContext: game.film, stems: true }),
     setOf: (setId) => playedSets(content).find((candidate) => candidate.id === setId),
     // Every peer of a festival walks into the same track of the stage ahead.
     trackFor: (set) =>

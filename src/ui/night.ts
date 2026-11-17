@@ -37,17 +37,6 @@ function nameOf(night: Night): string {
   }
 }
 
-function lineOf(night: Night): string {
-  switch (night) {
-    case 'stage':
-      return t('Un set, jusqu’au sunrise');
-    case 'endless':
-      return t('Après le dernier boss, la nuit continue');
-    case 'festival':
-      return t('Les quatre scènes, d’un chemin à l’autre');
-  }
-}
-
 const ICONS: Readonly<Record<Night, string>> = {
   stage: SUNRISE,
   endless: INFINITY,
@@ -119,6 +108,7 @@ export function launchDetail(night: Night, stages: readonly StageCard[], stageId
 
 export interface NightTabs {
   readonly element: HTMLElement;
+  // The length shows in the tab of the night picked.
   set(night: Night, length: string): void;
   // None on a touch screen.
   setKeys(keys: readonly string[], style: 'key' | 'button'): void;
@@ -144,33 +134,32 @@ export function createNightTabs(onChoose: (night: Night) => void): NightTabs {
     tab.type = 'button';
     tab.tabIndex = -1;
     tab.setAttribute('role', 'tab');
-    tab.dataset.night = one;
-    tab.append(icon('ui-nights__icon', ICONS[one]), el('span', 'ui-nights__name', nameOf(one)));
+    const length = el('span', 'ui-nights__length');
+    tab.append(
+      icon('ui-nights__icon', ICONS[one]),
+      el('span', 'ui-nights__name', nameOf(one)),
+      length,
+    );
     tab.addEventListener('click', (event) => {
       event.stopPropagation();
       if (!locked && one !== night) {
         onChoose(one);
       }
     });
-    return tab;
+    return { one, tab, length };
   });
-  list.append(...tabs);
+  list.append(...tabs.map(({ tab }) => tab));
   row.append(before, list, after);
-  const line = el('p', 'ui-nights__line');
-  const what = el('span', 'ui-nights__what');
-  const length = el('span', 'ui-nights__length');
-  line.append(what, length);
-  element.append(row, line);
+  element.append(row);
 
   return {
     element,
     set(next, lasts) {
       night = next;
-      for (const tab of tabs) {
-        tab.setAttribute('aria-selected', String(tab.dataset.night === night));
+      for (const { one, tab, length } of tabs) {
+        tab.setAttribute('aria-selected', String(one === night));
+        setText(length, one === night ? lasts : '');
       }
-      setText(what, lineOf(night));
-      setText(length, lasts);
     },
     setKeys(keys, style) {
       const [previous, next] = keys;

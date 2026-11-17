@@ -1,8 +1,9 @@
+import { potionShielded } from './potion-shield';
 import type { Circle } from './spatial-hash';
 import type { EnemyState, PlayerId, PlayerState, SimState } from './state';
 
 export function damagePlayer(state: SimState, player: PlayerState, amount: number): void {
-  if (player.downed || (player.invulnerableTicks ?? 0) > 0) {
+  if (player.downed || (player.invulnerableTicks ?? 0) > 0 || potionShielded(player)) {
     return;
   }
   player.hp = Math.max(0, player.hp - amount);

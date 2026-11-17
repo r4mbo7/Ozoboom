@@ -8,8 +8,9 @@ import type {
   WeaponDefinition,
 } from '../data/types';
 import { t, tn } from '../shared/i18n';
-import { NIGHT_END, NIGHT_START, type PaletteToken, isClassToken } from '../shared/palette';
-import { VIBE_STREAK_BEATS } from '../shared/tempo';
+import { type PaletteToken, isClassToken } from '../shared/palette';
+import { TICK_RATE_HZ, VIBE_STREAK_BEATS } from '../shared/tempo';
+import { POTION_BOOST, potionShielded } from '../sim/potion-shield';
 import { setTempo, ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState } from '../sim/state';
 import { gaugeValue } from '../sim/gauges';
@@ -199,6 +200,32 @@ export function twinVibesReading(
   };
 }
 
+export interface PotionReading {
+  left: number;
+  ending: boolean;
+}
+
+export function potionReading(
+  player: Pick<PlayerState, 'boosts' | 'suppressedTicks' | 'downed'>,
+  set: SetDefinition,
+  ticksPerBar: number,
+): PotionReading | null {
+  const boost = player.boosts?.find((entry) => entry.id === POTION_BOOST);
+  if (
+    player.downed ||
+    boost === undefined ||
+    boost.ticksLeft <= 0 ||
+    set.potion === undefined ||
+    !potionShielded(player)
+  ) {
+    return null;
+  }
+  return {
+    left: ratio(boost.ticksLeft, set.potion.bars * ticksPerBar),
+    ending: boost.ticksLeft <= ticksPerBar,
+  };
+}
+
 const GEAR_SLOTS = 3;
 
 function speakerToken(id: string, index: number): PaletteToken {
@@ -367,11 +394,13 @@ export function gearSlots(
   });
 }
 
-export function isNight(fraction: number): boolean {
-  return fraction >= NIGHT_START && fraction < NIGHT_END;
-}
-
 export type SetMoment = 'buildup' | 'break' | 'drop' | 'sunrise';
+
+// Over its last seconds the countdown strikes each beat, harder at the very end.
+export type CountdownStrike = 'none' | 'beat' | 'hard';
+
+const STRIKE_SECONDS = 8;
+const HARD_STRIKE_SECONDS = 3;
 
 // The moment of the set in one word, and the countdown to the drop while it is coming.
 export interface MomentReading {
@@ -379,11 +408,28 @@ export interface MomentReading {
   tier: string;
   word: string;
   countdown: string;
+  strike: CountdownStrike;
+  // Changes on each beat of the countdown: the drop lands on the beat it reaches 0.
+  beatsToDrop: number;
+}
+
+function strikeOf(ticks: number): CountdownStrike {
+  if (ticks <= HARD_STRIKE_SECONDS * TICK_RATE_HZ) {
+    return 'hard';
+  }
+  return ticks <= STRIKE_SECONDS * TICK_RATE_HZ ? 'beat' : 'none';
 }
 
 export function momentReading(set: SetDefinition, state: SimState): MomentReading {
   if (state.status === 'won' || set.tiers[state.set.tier] === undefined) {
-    return { moment: 'sunrise', tier: '', word: t('Sunrise'), countdown: '' };
+    return {
+      moment: 'sunrise',
+      tier: '',
+      word: t('Sunrise'),
+      countdown: '',
+      strike: 'none',
+      beatsToDrop: 0,
+    };
   }
   const tier = t('Palier {tier} / {count}', {
     tier: formatNumber(state.set.tier + 1),
@@ -391,32 +437,35 @@ export function momentReading(set: SetDefinition, state: SimState): MomentReadin
   });
   const moment = state.set.segment;
   const word = { buildup: t('Montée'), break: t('Break'), drop: t('Drop') }[moment];
-  const countdown = moment === 'drop' ? '' : formatDuration(ticksToDrop(set, state) ?? 0);
-  return { moment, tier, word, countdown };
+  const ticks = ticksToDrop(set, state);
+  if (ticks === null) {
+    return { moment, tier, word, countdown: '', strike: 'none', beatsToDrop: 0 };
+  }
+  return {
+    moment,
+    tier,
+    word,
+    countdown: formatDuration(ticks),
+    strike: strikeOf(ticks),
+    beatsToDrop: Math.ceil(ticks / setTempo(set).ticksPerBeat),
+  };
+}
+
+// The countdown strikes as it reaches a beat: never as its last seconds or a new build-up begin.
+export function strikesNow(reading: MomentReading, beatsBefore: number): boolean {
+  return reading.strike !== 'none' && reading.beatsToDrop < beatsBefore;
 }
 
 export type TierStage = 'done' | 'current' | 'dropping' | 'next';
 
-export interface TierReading {
-  stage: TierStage;
-  // How far the tier has gone towards its drop.
-  fill: number;
-}
-
-export function tierReadings(set: SetDefinition, state: SimState): TierReading[] {
-  const { ticksPerBar, ticksPerPhrase } = setTempo(set);
-  const won = state.status === 'won';
-  return set.tiers.map((tier, index) => {
-    if (won || index < state.set.tier) {
-      return { stage: 'done', fill: 1 };
+export function tierStages(set: SetDefinition, state: SimState): TierStage[] {
+  return set.tiers.map((_, index) => {
+    if (state.status === 'won' || index < state.set.tier) {
+      return 'done';
     }
     if (index > state.set.tier) {
-      return { stage: 'next', fill: 0 };
+      return 'next';
     }
-    if (state.set.segment === 'drop') {
-      return { stage: 'dropping', fill: 1 };
-    }
-    const length = tier.buildupPhrases * ticksPerPhrase + tier.breakBars * ticksPerBar;
-    return { stage: 'current', fill: 1 - ratio(ticksToDrop(set, state) ?? 0, length) };
+    return state.set.segment === 'drop' ? 'dropping' : 'current';
   });
 }

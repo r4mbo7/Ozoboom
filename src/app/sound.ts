@@ -17,7 +17,7 @@ export interface Sound {
 // A lost set dies out on its own before the ambience comes in.
 export function soundOf({ screen, paused, muted, hidden }: SoundScene): Sound {
   return {
-    mood: screen !== 'game' || paused ? 'menu' : 'set',
+    mood: screen !== 'game' ? 'menu' : paused ? 'pause' : 'set',
     muted: muted || hidden,
   };
 }

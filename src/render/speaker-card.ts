@@ -10,6 +10,13 @@ import type { Frame } from './frame';
 import { paintGlyph } from './glyph';
 import type { Shape } from './paint';
 import { CORNER, TAIL, TAIL_HALF, bubble, paintVolume } from './speaker-bubble';
+import {
+  type HealLine,
+  createHealLine,
+  offersRepair,
+  placeHealLine,
+  riseHealLine,
+} from './speaker-heal-line';
 import { speakerToken } from './speaker-kit';
 import { LABEL_FONT_PX, LABEL_PAD, NAME_TEXTURE_SCALE, createLineTextures } from './textures-names';
 import { lookup, setTint } from './util';
@@ -34,6 +41,7 @@ const VOLUME_WEIGHT = 700;
 const GAIN_SCALE = 1.3;
 const VOLUME_TEXT = '+1';
 const GLYPH_DENSITY = 2;
+const HEAL_WEIGHT = 700;
 
 type CardDefinition = Pick<SpeakerDefinition, 'description' | 'unlocksWeaponId'>;
 
@@ -80,6 +88,7 @@ interface CardView {
   readonly weapon: Sprite;
   readonly name: Sprite;
   readonly phrase: Sprite;
+  readonly heal: HealLine;
   id: string;
   width: number;
   height: number;
@@ -142,6 +151,7 @@ export function createSpeakerCards(ctx: RenderContext): Family {
         weapon: sprite(Texture.EMPTY),
         name: big(Texture.EMPTY),
         phrase: text(Texture.EMPTY),
+        heal: createHealLine(card, text(texts.get(t('Rebooste la scène'), HEAL_WEIGHT))),
         id: '',
         width: 0,
         height: 0,
@@ -154,9 +164,9 @@ export function createSpeakerCards(ctx: RenderContext): Family {
     },
   );
 
-  // The pictos on top, the gain then the weapon it opens and its name, and the phrase of the aura
-  // under them.
-  function layOut(view: CardView, definition: CardDefinition) {
+  // The pictos on top, the gain then the weapon it opens and its name, the phrase of the aura
+  // under them, and the stage repair while the stage has life to take back.
+  function layOut(view: CardView, definition: CardDefinition, healing: boolean) {
     const phrase = texts.get(t(definition.description), PHRASE_WEIGHT);
     view.phrase.texture = phrase;
     const gainWidth = textWidth(view.gain.texture) * GAIN_SCALE;
@@ -167,8 +177,11 @@ export function createSpeakerCards(ctx: RenderContext): Family {
     const nameWidth = style === null ? 0 : textWidth(view.name.texture) * GAIN_SCALE;
     const row =
       VOLUME + ROW_GAP + gainWidth + (style === null ? 0 : 2 * GAP + ICON + NAME_GAP + nameWidth);
-    const width = Math.ceil(Math.max(row, textWidth(phrase))) + 2 * PAD;
-    const height = PAD + ICON + ROW_GAP + LABEL_FONT_PX + PAD;
+    const width =
+      Math.ceil(Math.max(row, textWidth(phrase), healing ? view.heal.width : 0)) + 2 * PAD;
+    const phraseBottom = PAD + ICON + ROW_GAP + LABEL_FONT_PX;
+    const healBottom = placeHealLine(view.heal, healing, width, phraseBottom + ROW_GAP);
+    const height = Math.round(healing ? healBottom + PAD : phraseBottom + PAD);
     const rowY = PAD + ICON / 2;
     let x = (width - row) / 2;
     view.volume.position.set(x + VOLUME / 2, rowY);
@@ -227,10 +240,12 @@ export function createSpeakerCards(ctx: RenderContext): Family {
         }
         const definition = lookup(looks, speaker.id, 'speaker');
         const view = views.acquire(index);
-        if (view.id !== speaker.id) {
+        const healing = offersRepair(frame.set, state.core);
+        if (view.id !== speaker.id || view.heal.shown !== healing) {
           view.id = speaker.id;
-          layOut(view, definition);
+          layOut(view, definition, healing);
         }
+        riseHealLine(view.heal, frame);
         const color = palette[speakerToken(speaker.id)];
         setTint(view.panel, palette.solClair);
         view.panel.alpha = light.additive ? 0.88 : 0.94;

@@ -1,0 +1,7 @@
+"Ozoboom" (ozoboom.webm, ozoboom.m4a, and its intro ozoboom-intro.webm, ozoboom-intro.m4a)
+Copyright Timo Lissy (FuTurum SonaT), https://soundcloud.com/futurum-sonat-psytrance
+All rights reserved.
+
+These recordings are not covered by the GPL-3.0 license of this repository. The author allows
+them to be distributed with the game Ozoboom only: they may not be copied, modified or used
+elsewhere without the written permission of the author.

@@ -10,7 +10,6 @@ import { DISCORD } from './icons';
 import {
   NAME_LENGTH,
   defaultName,
-  lobbyView,
   normalizeRoomCode,
   seatAt,
   seatName,
@@ -34,16 +33,14 @@ function blurOnEnterOrEscape(input: HTMLInputElement, onEnter?: () => void): voi
 
 export interface LobbyHeader {
   readonly element: HTMLElement;
-  readonly heading: HTMLElement;
   readonly lead: HTMLElement;
 }
 
 export function createLobbyHeader(): LobbyHeader {
-  const heading = el('h2', 'ui-lobby__title');
   const lead = el('p', 'ui-lobby__lead');
   const element = el('header', 'ui-lobby__header');
-  element.append(el('p', 'ui-kicker', t('À plusieurs')), heading, lead);
-  return { element, heading, lead };
+  element.append(el('h2', 'ui-lobby__title', t('Salon en ligne')), lead);
+  return { element, lead };
 }
 
 export function createLobbyError(): HTMLElement {
@@ -173,17 +170,14 @@ export interface SeatCard {
   readonly stepper: ClassStepper;
   readonly portrait: ClassPortrait;
   readonly tag: HTMLElement;
-  readonly host: HTMLElement;
   readonly name: HTMLElement;
   readonly sheet: ClassSheet;
-  readonly join: HTMLButtonElement;
   readonly wait: HTMLElement;
 }
 
 export interface SeatHandlers {
   readonly stepClass: (side: -1 | 1) => void;
   readonly rename: (name: string) => void;
-  readonly join: () => void;
 }
 
 export function createSeatCard(
@@ -196,11 +190,8 @@ export function createSeatCard(
   const number = el('span', 'ui-seat__number', String(playerId + 1));
   number.setAttribute('aria-hidden', 'true');
   const tag = el('p', 'ui-seat__tag');
-  const host = el('p', 'ui-seat__host', t('Lance le set'));
-  const who = el('div', 'ui-seat__who');
-  who.append(tag, host);
   const head = el('div', 'ui-seat__head');
-  head.append(number, who);
+  head.append(number, tag);
 
   const input = el('input', 'ui-lobby__input');
   input.type = 'text';
@@ -218,17 +209,15 @@ export function createSeatCard(
 
   const stepper = createClassStepper(classes, handlers.stepClass);
   const sheet = createClassSheet(classes);
-  const join = button('ui-seat__join', t('Appuie sur Entrée ou sur A pour rejoindre'));
   const wait = el('p', 'ui-seat__wait', t('En attente d’un joueur'));
   const drawn = portrait();
   const frame = el('div', 'ui-seat__portrait');
   frame.append(drawn.element);
-  item.append(head, frame, join, wait, field, name, stepper.element, ...sheet.parts);
+  item.append(head, frame, wait, field, name, stepper.element, ...sheet.parts);
 
   input.addEventListener('input', () => {
     handlers.rename(seatName(input.value));
   });
-  onPointerClick(join, handlers.join);
   blurOnEnterOrEscape(input);
   return {
     playerId,
@@ -238,10 +227,8 @@ export function createSeatCard(
     stepper,
     portrait: drawn,
     tag,
-    host,
     name,
     sheet,
-    join,
     wait,
   };
 }
@@ -252,12 +239,10 @@ export function paintSeatCard(
   classes: readonly ClassInfo[],
 ): void {
   const seat = seatAt(model, card.playerId);
-  const view = lobbyView(model);
   const editable = seat !== null && !seat.remote;
   card.element.dataset.state = seat === null ? 'empty' : 'taken';
   setFlag(card.element, 'own', editable);
-  card.join.hidden = !(seat === null && view === 'local');
-  card.wait.hidden = !(seat === null && view !== 'local');
+  card.wait.hidden = seat !== null;
   card.field.hidden = !editable;
   card.name.hidden = seat === null || editable;
   card.stepper.element.hidden = seat === null;
@@ -265,13 +250,12 @@ export function paintSeatCard(
     part.hidden = seat === null;
   }
   card.tag.hidden = seat === null;
-  card.host.hidden = seat === null || !seat.host || view !== 'local';
   card.stepper.element.toggleAttribute('data-readonly', !editable);
   card.portrait.setClass(seat?.classId ?? classes[0]?.id ?? '');
   if (seat === null) {
     return;
   }
-  setText(card.tag, seatTag(seat, model.mode));
+  setText(card.tag, seatTag(seat));
   const name = seat.name === '' ? defaultName(card.playerId) : seat.name;
   setText(card.name, name);
   if (document.activeElement !== card.input && card.input.value !== name) {

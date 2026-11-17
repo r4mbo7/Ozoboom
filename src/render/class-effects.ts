@@ -52,7 +52,8 @@ export function createClassEffects(
           break;
         }
         case 'coreRepaired':
-          if (event.amount > 0) {
+          // A speaker's repair has its own sign on the stage (stage-repair.ts).
+          if (event.amount > 0 && event.speakerId === undefined) {
             care.repairGlow(state, frame);
           }
           break;

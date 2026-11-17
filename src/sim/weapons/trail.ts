@@ -9,7 +9,7 @@ const point = { x: 0, y: 0 };
 const NONE: readonly number[] = [];
 
 export const trail: WeaponModule = {
-  fire({ state, content, tempo }, player, slot, { effect }, { power }) {
+  fire({ state, content, tempo }, player, slot, { effect }, { healPower }) {
     if (effect.kind !== 'trail') {
       return false;
     }
@@ -36,7 +36,7 @@ export const trail: WeaponModule = {
     if (isBarTick(state.tick, tempo)) {
       for (const ally of state.players) {
         if (!ally.downed && on(ally)) {
-          healPlayer(state, ally, effect.healPerBar * power, player.id);
+          healPlayer(state, ally, effect.healPerBar * healPower, player.id);
         }
       }
       soothe(state, on);

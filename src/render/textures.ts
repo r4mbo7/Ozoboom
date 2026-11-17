@@ -21,7 +21,8 @@ import { type ClassFxTextures, createClassFxTextures } from './textures-class';
 import { type NameTextures, createNameTextures } from './textures-names';
 import { createSpeakerShapes } from './textures-speakers';
 import { comet } from './textures-pickups';
-import { battery, batteryBolt, bomb, cone, die, droplet, trap } from './textures-traps';
+import { potion, potionShine } from './textures-potion';
+import { battery, batteryBolt, bomb, cone, die, droplet, trapShapes } from './textures-traps';
 import {
   type WeaponTextures,
   createWeaponTextures,
@@ -46,6 +47,8 @@ export interface Textures {
   readonly bomb: Shape;
   readonly battery: Shape;
   readonly batteryBolt: Shape;
+  readonly potion: Shape;
+  readonly potionShine: Shape;
   readonly die: Shape;
   readonly players: PlayerTextures;
   readonly names: NameTextures;
@@ -167,6 +170,8 @@ export function createTextures(density = 1): Textures {
     bomb: bomb(),
     battery: battery(),
     batteryBolt: batteryBolt(),
+    potion: potion(density),
+    potionShine: potionShine(density),
     die: die(),
     players: playerTextures(density),
     recruit: paint(144, 144, FACE_RADIUS, recruit),
@@ -264,14 +269,7 @@ export function createTextures(density = 1): Textures {
     }),
     ...createSpeakerShapes(),
     masks: createMasks(),
-    traps: {
-      shockwave: trap('shockwave'),
-      beam: trap('beam'),
-      mist: trap('mist'),
-      lure: trap('lure'),
-      strobe: trap('strobe'),
-      breeze: trap('breeze'),
-    },
+    traps: trapShapes(),
     specials: createSpecialTextures(),
     weapons: createWeaponTextures(),
     classFx: createClassFxTextures(density),

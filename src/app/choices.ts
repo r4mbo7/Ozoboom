@@ -26,21 +26,24 @@ export interface ChoicesEnv {
   inRoom(): boolean;
   screen(): Screen;
   pickStage(setId: string): void;
-  showLobby(): void;
   showStagePicker(): void;
   showClassPicker(): void;
   launch(seated: LaunchedSeats): void;
+  // Solo: the merged input, the class remembered, no name.
+  playAlone(): void;
 }
 
 export type ChoiceCallbacks = Pick<
   UiCallbacks,
   | 'onJoinSeat'
   | 'onLeaveSeat'
+  | 'onHandOverSeat'
   | 'onSeatClass'
   | 'onSeatName'
   | 'onCreateRoom'
   | 'onJoinRoom'
   | 'onLaunch'
+  | 'onConfirmClass'
   | 'onChooseStage'
   | 'onToggleEndless'
   | 'onChooseNight'
@@ -56,7 +59,16 @@ export function choiceCallbacks(env: ChoicesEnv): ChoiceCallbacks {
     } else if (env.inRoom()) {
       tellRoom(env.room());
     } else {
-      env.showLobby();
+      env.showClassPicker();
+    }
+  }
+
+  // The class of the only seat is the one solo plays, and the next newcomer's favourite: its pick
+  // while others sat beside it included.
+  function rememberAlone(): void {
+    const [alone, ...others] = seats.list();
+    if (alone !== undefined && others.length === 0) {
+      settings.remember('classId', alone.classId);
     }
   }
 
@@ -68,13 +80,18 @@ export function choiceCallbacks(env: ChoicesEnv): ChoiceCallbacks {
     onJoinSeat(device) {
       if (seats.join(device)) {
         audio.cue('seatTaken');
-        env.showLobby();
+        env.showClassPicker();
       }
     },
     onLeaveSeat(playerId) {
       if (seats.leave(playerId)) {
         audio.cue('seatFreed');
-        env.showLobby();
+        env.showClassPicker();
+      }
+    },
+    onHandOverSeat(playerId, device) {
+      if (seats.handOver(playerId, device)) {
+        env.showClassPicker();
       }
     },
     onSeatClass(playerId, classId) {
@@ -84,15 +101,11 @@ export function choiceCallbacks(env: ChoicesEnv): ChoiceCallbacks {
         return;
       }
       seats.setClass(playerId, classId);
-      env.showLobby();
+      rememberAlone();
+      env.showClassPicker();
     },
-    onSeatName(playerId, name) {
-      if (env.inRoom()) {
-        env.room().setSeatName(name);
-        return;
-      }
-      seats.setName(playerId, name);
-      env.showLobby();
+    onSeatName(name) {
+      env.room().setSeatName(name);
     },
     onCreateRoom() {
       void audio.start();
@@ -103,11 +116,16 @@ export function choiceCallbacks(env: ChoicesEnv): ChoiceCallbacks {
       env.room().joinRoom(code);
     },
     onLaunch() {
-      if (env.inRoom()) {
-        void audio.start();
-        env.room().launch();
-      } else if (seats.count > 0) {
+      void audio.start();
+      env.room().launch();
+    },
+    // One player, or none on a touch screen, plays as solo plays; two or more play together.
+    onConfirmClass() {
+      if (seats.count > 1) {
         env.launch(seats.launch());
+      } else {
+        rememberAlone();
+        env.playAlone();
       }
     },
     onChooseStage(setId) {

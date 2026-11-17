@@ -1,11 +1,9 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { LOCALES, type Locale, t } from '../shared/i18n';
 import { el, fillHint, icon } from './dom';
+import { CHECK } from './icons';
 import { createMenu } from './menu';
 import type { Prompts } from './prompts';
-
-const CHECK =
-  '<path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>';
 
 const nameOf = (locale: Locale): string =>
   LOCALES.find((entry) => entry.id === locale)?.name ?? locale;

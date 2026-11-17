@@ -1,12 +1,11 @@
 import type { SetDefinition, TrapWear } from '../../data/types';
-import { nextFloat, nextU32, seedRng } from '../../shared/prng';
 import { isBarTick, isBeatTick } from '../../shared/tempo';
 import { distanceSquared } from '../../shared/vec';
 import { touches } from '../effects';
 import type { BatteryPlug, BatteryState, EntityId, PlayerState, SimState } from '../state';
 import { carriedTraps } from '../trap-moves';
 import { cordTicks } from '../trap-wear';
-import { drawBuildupPhrase, freeCarrier, inDrawnPhrase, type DrawnPhrase } from './stage-bonus';
+import { freeCarrier, inDrawnPhrase, saltedPhrase, type DrawnPhrase } from './stage-bonus';
 import type { StepContext } from './types';
 
 type Charging = Extract<BatteryState, { stage: 'charging' }>;
@@ -16,20 +15,15 @@ type BatteryContext = Pick<StepContext, 'state' | 'set' | 'tempo'>;
 
 const BATTERY_TAG = 0x42415454;
 
-// The seed goes through the generator before the stage's start joins it: the twin vibes' draw, from seed + start,
-// stays as it was, and the two never share one.
 export function batteryPhrase(
   seed: number,
   stageStartTick: number,
   set: SetDefinition,
 ): DrawnPhrase | null {
   const rules = set.battery;
-  if (rules === undefined) {
-    return null;
-  }
-  const salt = nextU32(seedRng((seed ^ BATTERY_TAG) >>> 0));
-  const rng = seedRng((salt ^ stageStartTick) >>> 0);
-  return nextFloat(rng) < rules.chance ? drawBuildupPhrase(rng, set) : null;
+  return rules === undefined
+    ? null
+    : saltedPhrase(BATTERY_TAG, rules.chance, seed, stageStartTick, set);
 }
 
 // A bomb or twin vibes due go first, and no two bonuses ride the same bad vibe.

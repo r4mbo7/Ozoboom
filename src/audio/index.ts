@@ -4,8 +4,15 @@ import type { SimState } from '../sim/state';
 import { createAmbience, type Ambience } from './ambience';
 import { FULL_MUSIC } from './full';
 import { createMasterChain, type MasterChain } from './master';
+import {
+  MENU_RECORDING,
+  createRecordingVoice,
+  type RecordingLoad,
+  type RecordingVoice,
+} from './menu-track';
 import { createMusic, type Music } from './music';
 import { createSfx, type Sfx, type SfxLookups, type TrapEffectOf } from './sfx';
+import type { MenuHeard } from '../shared/menu-score';
 import type { AudioEngine, Mood } from './types';
 
 export interface AudioEngineOptions {
@@ -23,6 +30,9 @@ export interface AudioEngineOptions {
   readonly onKickScheduled?: (tick: number, time: number) => void;
   // The offline bench drives it from the audio clock.
   readonly repeat?: (callback: () => void) => () => void;
+  // The menu track (MENU_RECORDING), loaded in the background: the menus wait for it in silence, and
+  // play the ambience only when it is absent or does not decode.
+  readonly menuTrack?: (context: BaseAudioContext) => RecordingLoad;
 }
 
 interface Running {
@@ -31,6 +41,10 @@ interface Running {
   music: Music;
   sfx: Sfx;
   ambience: Ambience;
+  // What the menus play: their track, silent until its first part decodes, or the ambience.
+  menus: RecordingVoice | 'ambience';
+  // The track given up when its whole does not decode, pumped until its fade has stopped it.
+  dropped: RecordingVoice | null;
 }
 
 const DEFAULT_BREAK_BARS = 4;
@@ -88,13 +102,26 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     if (menuAt !== null && context.currentTime >= menuAt) {
       menuAt = null;
       const tempo = music.tempo();
-      ambience.enter(music.fadeOut(context.currentTime), tempo);
+      const origin = music.fadeOut(context.currentTime);
+      menuVoice(running).enter(origin, tempo);
     }
-    if (!ambience.pump() && menuAt === null) {
+    const ambienceSounds = ambience.pump();
+    const trackSounds = trackOf(running)?.pump() ?? false;
+    const droppedSounds = running.dropped?.pump() ?? false;
+    if (!droppedSounds) {
+      running.dropped = null;
+    }
+    if (!ambienceSounds && !trackSounds && !droppedSounds && menuAt === null) {
       stopPumping?.();
       stopPumping = null;
     }
   };
+
+  const trackOf = ({ menus }: Running): RecordingVoice | null =>
+    menus === 'ambience' ? null : menus;
+
+  const menuVoice = (opened: Running): Ambience =>
+    mood === 'menu' ? (trackOf(opened) ?? opened.ambience) : opened.ambience;
 
   // A mood asked in the same frame as an update waits for it: the menu ambience must know the ending has begun.
   const applyMood = () => {
@@ -103,12 +130,19 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     }
     heard = mood;
     const { context, music, ambience } = running;
-    if (mood === 'menu') {
-      menuAt = music.menuAt(context.currentTime);
-    } else {
+    if (mood === 'set') {
       menuAt = null;
       ambience.leave();
+      trackOf(running)?.leave();
       music.fadeIn();
+    } else {
+      const voice = menuVoice(running);
+      for (const other of [ambience, trackOf(running)]) {
+        if (other !== null && other !== voice) {
+          other.leave();
+        }
+      }
+      menuAt = music.menuAt(context.currentTime);
     }
     stopPumping ??= repeat(pump);
     pump();
@@ -135,12 +169,31 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     applyMood();
   };
 
+  // Menus already waiting for it hear each part at once; the ambience when the whole does not decode.
+  const takeMenus = (opened: Running, part: 'intro' | 'whole', buffer: AudioBuffer | null) => {
+    const voice = trackOf(opened);
+    if (running !== opened || voice === null) {
+      return;
+    }
+    if (buffer !== null) {
+      voice.take(buffer, part);
+    } else if (part === 'whole') {
+      voice.leave();
+      opened.dropped = voice;
+      opened.menus = 'ambience';
+      if (heard === 'menu' && menuAt === null) {
+        opened.ambience.enter(opened.context.currentTime);
+      }
+    }
+    stopPumping ??= repeat(pump);
+  };
+
   const open = (): Running => {
     const context = (options.createContext ?? (() => new AudioContext()))();
     const master = createMasterChain(context, muted, volume, options.stems === true);
     const sfx = createSfx(master.sfx, trapEffectOf, options.sfxLookups, track);
     sfx.setHitSound(hitSound);
-    return {
+    const opened: Running = {
       context,
       master,
       music: (FULL_MUSIC.festival ?? createMusic)(
@@ -150,7 +203,20 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       ),
       sfx,
       ambience: createAmbience(master.music),
+      menus:
+        options.menuTrack === undefined
+          ? 'ambience'
+          : createRecordingVoice(master.music, MENU_RECORDING),
+      dropped: null,
     };
+    const load = options.menuTrack?.(context);
+    void load?.intro.then((buffer) => {
+      takeMenus(opened, 'intro', buffer);
+    });
+    void load?.whole.then((buffer) => {
+      takeMenus(opened, 'whole', buffer);
+    });
+    return opened;
   };
 
   return {
@@ -217,7 +283,13 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         return null;
       }
       const now = heardNow(running.context);
-      return now === null ? null : running.ambience.position(now);
+      if (now === null) {
+        return null;
+      }
+      const voice = menuVoice(running);
+      const beats = voice.position(now);
+      const heardMusic: MenuHeard['music'] = voice === running.ambience ? 'ambience' : 'track';
+      return beats === null ? null : { music: heardMusic, beats };
     },
     destroy() {
       stopPumping?.();

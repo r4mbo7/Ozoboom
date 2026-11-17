@@ -8,6 +8,7 @@ import { shoreOf } from './shore';
 import { SpatialHash } from './spatial-hash';
 import type { PlayerState, SimEvent, SimState, Vec2 } from './state';
 import { clearBattery } from './systems/battery';
+import { clearPotion } from './systems/potion';
 import { tempo } from './systems/tempo';
 import { placeStartingTraps } from './trap-moves';
 import type { StepContext } from './systems/types';
@@ -83,6 +84,7 @@ export function enterSet(ctx: StepContext, set: SetDefinition, spots: readonly V
   delete state.bombDue;
   delete state.twinVibes;
   clearBattery(state);
+  clearPotion(ctx);
   delete state.dice;
   delete state.vibeRainTicks;
   takeDownWalls(state);

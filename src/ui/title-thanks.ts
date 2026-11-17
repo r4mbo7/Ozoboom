@@ -17,14 +17,12 @@ export interface ThanksShown {
 }
 
 export interface ThanksClock {
-  // Each frame on the title, with the ambience position in eighths.
+  // Each frame on the title, with the ambience position in eighths. Nothing interrupts them.
   at(position: number): ThanksShown | null;
-  // Any input erases the thanks and starts the wait again.
-  wake(): void;
 }
 
-// An eighth of the menu ambience lasts a beat of the set: 20 s without a touch, then a name every 4 bars.
-export const IDLE_EIGHTHS = (20 * DEFAULT_BPM) / 60;
+// An eighth of the menu ambience lasts a beat of the set: 20 s on the title, then a name every 4 bars.
+export const WAIT_EIGHTHS = (20 * DEFAULT_BPM) / 60;
 export const SLOT_EIGHTHS = 32;
 // A frame lasts a fraction of an eighth: a longer leap is another clock, the audio's or its silent
 // stand-in, which the wait carries over.
@@ -38,39 +36,30 @@ export function thanksOf(credits: Credits = CREDITS): Thanks[] {
 }
 
 export function createThanksClock(thanks: readonly Thanks[]): ThanksClock {
-  let idleFrom: number | null = null;
+  let waitFrom: number | null = null;
   let last: number | null = null;
-  let next = 0;
-  let begun = 0;
 
   return {
     at(position) {
-      if (idleFrom === null || last === null) {
-        idleFrom = position;
+      if (waitFrom === null || last === null) {
+        waitFrom = position;
       } else if (Math.abs(position - last) > LEAP_EIGHTHS) {
-        idleFrom += position - last;
+        waitFrom += position - last;
       }
       last = position;
-      const first = Math.ceil((idleFrom + IDLE_EIGHTHS) / SLOT_EIGHTHS);
+      const first = Math.ceil((waitFrom + WAIT_EIGHTHS) / SLOT_EIGHTHS);
       const slot = Math.floor(position / SLOT_EIGHTHS);
       const passed = slot - first;
-      const shown = thanks[(next + passed) % thanks.length];
+      const shown = thanks[passed % thanks.length];
       if (passed < 0 || shown === undefined) {
         return null;
       }
-      begun = passed + 1;
       return {
         thanks: shown,
         side: passed % 2 === 0 ? 'left' : 'right',
         slot,
         at: position - slot * SLOT_EIGHTHS,
       };
-    },
-    wake() {
-      next = (next + begun) % Math.max(thanks.length, 1);
-      begun = 0;
-      idleFrom = null;
-      last = null;
     },
   };
 }

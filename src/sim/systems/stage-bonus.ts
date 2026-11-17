@@ -1,5 +1,5 @@
 import type { SetDefinition } from '../../data/types';
-import { nextInt, type RngState } from '../../shared/prng';
+import { nextFloat, nextInt, nextU32, seedRng, type RngState } from '../../shared/prng';
 import type { Tempo } from '../../shared/tempo';
 import type { EnemyState, SimState } from '../state';
 
@@ -10,6 +10,20 @@ export interface DrawnPhrase {
 
 // A stage bonus's draw of the phrase it falls due in, from the seed and the stage's start.
 type PhraseDraw = (seed: number, stageStartTick: number, set: SetDefinition) => DrawnPhrase | null;
+
+// The seed goes through the generator before the stage's start joins it: the twin vibes' draw, from seed + start,
+// stays as it was, and two bonuses of different tags never share one.
+export function saltedPhrase(
+  tag: number,
+  chance: number,
+  seed: number,
+  stageStartTick: number,
+  set: SetDefinition,
+): DrawnPhrase | null {
+  const salt = nextU32(seedRng((seed ^ tag) >>> 0));
+  const rng = seedRng((salt ^ stageStartTick) >>> 0);
+  return nextFloat(rng) < chance ? drawBuildupPhrase(rng, set) : null;
+}
 
 // The build-up phrase a stage bonus falls due in, never the first of a tier.
 export function drawBuildupPhrase(rng: RngState, set: SetDefinition): DrawnPhrase | null {
@@ -60,7 +74,8 @@ export function freeCarrier(state: SimState): EnemyState | undefined {
       enemy.carriesTrap === undefined &&
       enemy.carriesBomb !== true &&
       enemy.carriesTwinVibes !== true &&
-      enemy.carriesBattery !== true
+      enemy.carriesBattery !== true &&
+      enemy.carriesPotion !== true
     ) {
       return enemy;
     }

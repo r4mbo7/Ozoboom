@@ -56,9 +56,6 @@ export const STAGES =
   '<g fill="none" stroke="currentColor" stroke-width="1.8">' +
   '<circle cx="9.5" cy="12.5" r="2"/><circle cx="14.5" cy="11" r="2"/><circle cx="20" cy="6.5" r="2"/></g>';
 
-export const MOON =
-  '<path d="M19.5 14.6A8.2 8.2 0 0 1 9.4 4.5a8.2 8.2 0 1 0 10.1 10.1z" fill="currentColor"/>';
-
 export const PLAY =
   '<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/>';
 
@@ -94,6 +91,9 @@ export const DISCORD =
 export const EYE =
   '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
   '<circle cx="12" cy="12" r="3" fill="currentColor"/>';
+
+export const CHECK =
+  '<path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>';
 
 export const SENT =
   '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/>' +

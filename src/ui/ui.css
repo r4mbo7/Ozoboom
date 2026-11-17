@@ -1822,10 +1822,6 @@ svg.ui-title__moon-glint {
   font-size: 15px;
 }
 
-.ui-classpicker[data-many] .ui-lobby__body {
-  gap: 14px;
-}
-
 .ui-classpicker[data-many] .ui-hero {
   width: min(100%, 1080px);
 }
@@ -1842,48 +1838,898 @@ svg.ui-title__moon-glint {
   text-wrap: pretty;
 }
 
-/* The script sets the width of a card and the inset that wraps the cards in even rows. */
+/* The character screen holds whole, alone or together: the cards share the height the rest leaves,
+   all of one size, the largest that fits (the script sets it), each keeping its proportions. */
+.ui-classpicker[data-many] {
+  overflow: hidden;
+}
+
+.ui-classpicker[data-many] .ui-lobby__body {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  padding-block: clamp(10px, 2.2vh, 32px);
+  gap: clamp(8px, 1.6vh, 22px);
+}
+
+.ui-classpicker[data-many] .ui-picks {
+  flex: 1 1 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+/* The script sets the width of a card and the inset that centres the rows of cards. */
 .ui-classpicker[data-many] .ui-classcards {
-  --card-least: 86px;
-  --card-most: 120px;
+  --card-ratio: 0.92;
+  --card-most: 240px;
+
   display: flex;
   box-sizing: border-box;
   flex-wrap: wrap;
+  align-content: center;
   justify-content: center;
-  gap: 8px 10px;
+  gap: 14px;
   width: min(100%, 1080px);
+  min-height: 0;
+  /* Room for the rings of the first and the last row. */
+  padding-block: 10px;
   padding-inline: var(--cards-inset, 0);
 }
 
 .ui-classpicker[data-many] .ui-classcard {
-  flex: 0 0 var(--card-width, var(--card-least));
+  box-sizing: border-box;
+  flex: 0 0 var(--card-width, 0);
   flex-direction: column;
+  justify-content: center;
   gap: 2px;
-  padding: 6px 2px 8px;
+  aspect-ratio: 1 / var(--card-ratio);
+  padding: 4px 2px 6px;
   border-radius: 18px;
-  font-size: 13px;
   text-align: center;
   text-wrap: balance;
-}
-
-.ui-classpicker[data-many] .ui-classcard__portrait {
-  width: 48px;
-  height: 48px;
-}
-
-/* A narrow card sets its name a size smaller: the longest word, Somnam’bulle, stays whole. */
-.ui-classpicker[data-many] .ui-classcard {
+  /* A narrow card sets its name smaller: the longest word, Somnam’bulle, stays whole. */
   container-type: inline-size;
 }
 
-@container (max-width: 108px) {
-  .ui-classpicker[data-many] .ui-classcard__name {
-    font-size: 12px;
-  }
+.ui-classpicker[data-many] .ui-classcard__portrait {
+  width: 46cqi;
+  height: 46cqi;
+}
+
+.ui-classpicker[data-many] .ui-classcard__name {
+  font-size: clamp(9px, 10.5cqi, 21px);
+}
+
+.ui-classpicker[data-many]:not([data-together]) .ui-classcard__name {
+  font-size: clamp(10px, 12.5cqi, 21px);
 }
 
 .ui-classpicker[data-many] .ui-classcards[aria-current] .ui-classcard[aria-checked='true']::before {
   content: none;
+}
+
+/* The hero and the cards of one player; with several, a sheet each around the shared cards. */
+.ui-picks {
+  display: grid;
+  grid-template-areas:
+    'hero'
+    'cards';
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.ui-classpicker[data-many] .ui-picks {
+  gap: 14px;
+}
+
+.ui-picks > .ui-hero {
+  grid-area: hero;
+}
+
+.ui-picks > .ui-classcards {
+  grid-area: cards;
+}
+
+.ui-picks > [data-slot='s0'] {
+  grid-area: s0;
+}
+
+.ui-picks > [data-slot='s1'] {
+  grid-area: s1;
+}
+
+.ui-picks > [data-slot='s2'] {
+  grid-area: s2;
+}
+
+.ui-picks > [data-slot='s3'] {
+  grid-area: s3;
+}
+
+/* Alone at a keyboard or a pad, the place of a second player waits in the corner of the screen,
+   beside the hero where the screen is wide enough. */
+.ui-classpicker:not([data-together]) .ui-lobby__body {
+  position: relative;
+}
+
+.ui-classpicker:not([data-together]) .ui-picks > .ui-invite {
+  position: absolute;
+  top: 20px;
+  inset-inline-end: var(--ui-gap);
+  flex-direction: row;
+  gap: 10px;
+  max-width: 230px;
+  padding: 8px 18px 8px 10px;
+  border-radius: 34px;
+  text-align: start;
+}
+
+.ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__plus {
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+}
+
+.ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__text {
+  font-size: 15px;
+}
+
+.ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__keys {
+  display: none;
+}
+
+@media (min-width: 1600px) {
+  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite {
+    position: static;
+    flex-direction: column;
+    justify-self: start;
+    gap: 12px;
+    width: min(100%, 260px);
+    max-width: none;
+    padding: 16px;
+    border-radius: var(--ui-radius);
+    text-align: center;
+  }
+
+  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__plus {
+    width: 44px;
+    height: 44px;
+    font-size: 26px;
+  }
+
+  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__text {
+    font-size: 20px;
+  }
+
+  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__keys {
+    display: flex;
+  }
+
+  .ui-classpicker:not([data-together]) .ui-picks:has(> .ui-invite:not([hidden])) {
+    grid-template-areas:
+      '. hero s1'
+      'cards cards cards';
+    grid-template-columns: minmax(0, 1fr) minmax(0, 980px) minmax(0, 1fr);
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-picks:has(> .ui-invite:not([hidden])) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1080px) minmax(0, 1fr);
+  }
+
+  .ui-classpicker:not([data-together]):has(.ui-invite:not([hidden])) .ui-lobby__body {
+    width: min(100%, 1640px);
+  }
+}
+
+.ui-picks > .ui-invite {
+  align-self: stretch;
+}
+
+.ui-invite {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  border: 2px dashed color-mix(in srgb, var(--texte) 28%, transparent);
+  border-radius: var(--ui-radius);
+  background: color-mix(in srgb, var(--sol-clair) 35%, transparent);
+  color: var(--texte);
+  text-align: center;
+}
+
+.ui-invite[hidden] {
+  display: none;
+}
+
+.ui-invite__plus {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 2px dashed color-mix(in srgb, var(--turquoise) 60%, transparent);
+  border-radius: 50%;
+  color: var(--turquoise);
+  font-size: 26px;
+  line-height: 1;
+}
+
+/* Holding A or Entrée fills a ring over the dashed circle, from the top: whole, the player joins. */
+.ui-invite__plus::after {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(var(--turquoise) calc(var(--hold, 0) * 1turn), transparent 0);
+  content: '';
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+}
+
+.ui-invite[data-knock='a'] {
+  animation: ui-invite-knock-a 320ms ease-out;
+}
+
+.ui-invite[data-knock='b'] {
+  animation: ui-invite-knock-b 320ms ease-out;
+}
+
+.calm > .ui .ui-invite {
+  animation: none;
+}
+
+.ui-invite__text {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.ui-invite__keys {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ui-muted);
+  font-size: 15px;
+}
+
+/* Together, the sheets take the place of the hero, around the cards. */
+.ui-classpicker[data-together] .ui-lobby__body {
+  width: 100%;
+}
+
+.ui-classpicker[data-together] .ui-picks {
+  --side: clamp(250px, 26vw, 680px);
+
+  justify-items: stretch;
+  align-items: stretch;
+  gap: clamp(10px, 1.2vw, 28px);
+}
+
+.ui-classpicker[data-seats='2'] .ui-picks {
+  grid-template-areas:
+    's0 s1 s2'
+    'cards cards cards';
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(170px, 0.36fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-picks {
+  grid-template-areas:
+    's0 cards s1'
+    's2 cards s3';
+  grid-template-columns: var(--side) minmax(0, 1fr) var(--side);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.ui-classpicker[data-together] .ui-classcards {
+  width: 100%;
+}
+
+/* The launch waits for a named player: the whole name on one line. */
+.ui-classpicker[data-together] .ui-lobby__actions .ui-launch {
+  width: auto;
+  min-width: 320px;
+  white-space: nowrap;
+}
+
+/* A seat's cursor: a dashed ring in its colour while it picks, solid once it is ready, when its
+   card dims for the others. */
+[data-seat='1'] {
+  --seat-color: var(--turquoise);
+}
+
+[data-seat='2'] {
+  --seat-color: var(--mage);
+}
+
+[data-seat='3'] {
+  --seat-color: var(--or);
+}
+
+[data-seat='4'] {
+  --seat-color: var(--healer);
+}
+
+.ui-classcard[data-seat] {
+  border-color: var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 18%, var(--ui-panel));
+}
+
+.ui-classcard[data-seat]::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border: 3px dashed var(--seat-color);
+  border-radius: calc(var(--ui-radius) - 2px);
+  box-shadow: 0 0 calc(22px * var(--ui-halo)) color-mix(in srgb, var(--seat-color) 55%, transparent);
+  pointer-events: none;
+}
+
+.ui-classcard[data-seat][data-ready]::after {
+  border-style: solid;
+  box-shadow: none;
+}
+
+.ui-classcard[data-seat][data-ready] {
+  background: color-mix(in srgb, var(--sol) 70%, var(--ui-panel));
+}
+
+.ui-classcard[data-seat][data-ready] > :is(.ui-classcard__portrait, .ui-classcard__name) {
+  opacity: 0.4;
+  filter: saturate(0.5);
+}
+
+.ui-classcard[data-seat]::before {
+  content: attr(data-seat);
+  position: absolute;
+  top: -14px;
+  inset-inline-end: -12px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--sol);
+  border-radius: 50%;
+  background: var(--seat-color);
+  color: var(--sol);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* A player's sheet: the character under their cursor. Its texts follow its width. */
+.ui-seatsheet {
+  --sheet-text: clamp(13px, 1.9cqi, 26px);
+  --sheet-small: clamp(11px, 1.4cqi, 19px);
+
+  container-type: inline-size;
+  display: grid;
+  box-sizing: border-box;
+  grid-template-areas:
+    'head head'
+    'stage name'
+    'stage role'
+    'stage stats'
+    'stage skill';
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  grid-template-rows: auto auto auto auto 1fr;
+  align-content: start;
+  gap: clamp(4px, 0.8cqi, 12px) clamp(12px, 2cqi, 28px);
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(10px, 1.6cqi, 22px) clamp(12px, 2cqi, 26px);
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--seat-color) 50%, transparent);
+  border-radius: var(--ui-radius);
+  background: color-mix(in srgb, var(--seat-color) 8%, var(--ui-panel));
+  box-shadow: var(--ui-lift);
+}
+
+.ui-seatsheet[data-ready] {
+  border-color: var(--seat-color);
+  background: color-mix(in srgb, var(--seat-color) 16%, var(--ui-panel));
+  box-shadow:
+    0 0 0 2px var(--sol),
+    0 0 0 4px var(--seat-color),
+    0 0 calc(26px * var(--ui-halo)) color-mix(in srgb, var(--seat-color) 40%, transparent);
+}
+
+.ui-seatsheet__head {
+  display: flex;
+  grid-area: head;
+  align-items: center;
+  gap: 0.7em;
+  min-width: 0;
+  font-size: var(--sheet-small);
+}
+
+.ui-seatsheet__number {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  background: var(--seat-color);
+  color: var(--sol);
+  font-weight: 800;
+}
+
+.ui-seatsheet__who {
+  color: var(--texte);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ui-seatsheet__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  margin-inline-start: auto;
+  padding: 0.25em 0.8em;
+  border-radius: 999px;
+  color: var(--seat-color);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ui-seatsheet__check {
+  display: none;
+  width: 1.15em;
+  height: 1.15em;
+}
+
+.ui-seatsheet[data-ready] .ui-seatsheet__state {
+  background: var(--seat-color);
+  color: var(--sol);
+}
+
+.ui-seatsheet[data-ready] .ui-seatsheet__check {
+  display: block;
+}
+
+.ui-seatsheet__stage {
+  position: relative;
+  display: grid;
+  grid-area: stage;
+  align-self: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1.5px solid var(--ui-line);
+  border-radius: calc(var(--ui-radius) - 8px);
+  background: radial-gradient(
+    circle at 50% 55%,
+    color-mix(in srgb, var(--class-color) 16%, var(--sol-clair)),
+    var(--sol) 72%
+  );
+}
+
+.ui-seatsheet__name {
+  grid-area: name;
+  margin: 0;
+  color: var(--class-color);
+  font-family: var(--font-title);
+  font-size: clamp(20px, 3.4cqi, 46px);
+  font-weight: 900;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.ui-seatsheet .ui-sheet__role {
+  grid-area: role;
+  font-size: var(--sheet-text);
+  text-wrap: pretty;
+}
+
+.ui-seatsheet .ui-sheet__stats {
+  grid-area: stats;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 0.35em 0.8em;
+}
+
+.ui-seatsheet .ui-sheet__stat {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+.ui-seatsheet :is(.ui-sheet__label, .ui-sheet__value) {
+  font-size: var(--sheet-text);
+}
+
+.ui-seatsheet .ui-sheet__step {
+  height: 0.45em;
+}
+
+.ui-seatsheet .ui-sheet__skill {
+  grid-area: skill;
+  align-self: start;
+  padding: 0.5em 0.8em;
+  border-radius: 14px;
+}
+
+.ui-seatsheet .ui-sheet__skillhead {
+  font-size: var(--sheet-small);
+}
+
+.ui-seatsheet .ui-sheet__skillname {
+  font-size: calc(var(--sheet-text) * 1.15);
+}
+
+.ui-seatsheet .ui-sheet__skilltext {
+  font-size: var(--sheet-text);
+  text-wrap: pretty;
+}
+
+/* On both sides of the cards a sheet is narrow: the portrait beside the name and the stats, the
+   special under them. */
+.ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-seatsheet {
+  --sheet-text: clamp(12px, 3.1cqi, 26px);
+  --sheet-small: clamp(10px, 2.4cqi, 19px);
+
+  grid-template-areas:
+    'head head'
+    'stage name'
+    'stage stats'
+    'skill skill';
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+  grid-template-rows: auto auto auto 1fr;
+  gap: clamp(4px, 1.4cqi, 12px) clamp(10px, 3cqi, 22px);
+  padding: clamp(8px, 2.6cqi, 22px) clamp(10px, 3cqi, 24px);
+}
+
+.ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-seatsheet .ui-sheet__role {
+  display: none;
+}
+
+.ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-seatsheet__stage {
+  aspect-ratio: 1;
+}
+
+.ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-seatsheet__name {
+  font-size: clamp(16px, 5.4cqi, 40px);
+}
+
+/* Under the portrait, the special sits in the middle of the room the tallest character leaves. */
+.ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-seatsheet .ui-sheet__skill {
+  align-self: center;
+}
+
+/* On a laptop screen the cards keep their room: the title and the buttons give way, the sheets of two
+   players leave out the description, and the narrow ones shrink their portrait. */
+@media (max-height: 820px) {
+  .ui-classpicker[data-many] .ui-lobby__title {
+    font-size: 28px;
+  }
+
+  .ui-classpicker[data-many] .ui-lobby__actions .ui-button {
+    min-height: 46px;
+    padding-block: 6px;
+  }
+
+  .ui-classpicker[data-many] .ui-hint {
+    font-size: 14px;
+  }
+
+  .ui-classpicker[data-seats='2'] .ui-seatsheet .ui-sheet__role {
+    display: none;
+  }
+
+  .ui-classpicker[data-seats='2'] .ui-seatsheet {
+    grid-template-areas:
+      'head head'
+      'stage name'
+      'stage stats'
+      'skill skill';
+    grid-template-columns: minmax(0, 0.45fr) minmax(0, 1.55fr);
+    grid-template-rows: auto auto auto 1fr;
+  }
+
+  .ui-classpicker[data-seats='2'] .ui-seatsheet__stage {
+    aspect-ratio: 3 / 2;
+  }
+
+  .ui-classpicker[data-seats='2'] .ui-seatsheet .ui-sheet__skill {
+    align-self: center;
+  }
+
+  .ui-classpicker[data-together] .ui-invite {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .ui-classpicker[data-together] .ui-invite__plus {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .ui-classpicker[data-together] .ui-invite__text {
+    font-size: 16px;
+  }
+
+  .ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-seatsheet {
+    grid-template-columns: minmax(0, 0.5fr) minmax(0, 1.5fr);
+  }
+}
+
+@media (max-height: 640px) {
+  .ui-classpicker[data-many] .ui-lobby__title {
+    font-size: 24px;
+  }
+
+  .ui-classpicker[data-many] .ui-lobby__actions .ui-button {
+    min-height: 40px;
+    padding-block: 4px;
+  }
+
+  .ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-picks {
+    --side: clamp(250px, 28vw, 680px);
+  }
+
+  .ui-classpicker[data-together] .ui-seatsheet .ui-sheet__skillhead {
+    display: none;
+  }
+
+  .ui-classpicker[data-many] .ui-classcards {
+    gap: 12px;
+  }
+
+  .ui-classpicker[data-together] .ui-seatsheet .ui-sheet__skilltext {
+    line-height: 1.3;
+  }
+
+  .ui-classpicker[data-many] .ui-lobby__body {
+    padding-block: 8px;
+    gap: 6px;
+  }
+
+  .ui-classpicker[data-together] .ui-seatsheet {
+    gap: 4px 10px;
+    padding: 6px 10px;
+  }
+
+  .ui-classpicker[data-together] .ui-seatsheet .ui-sheet__stats {
+    row-gap: 2px;
+  }
+
+  .ui-classpicker[data-together] .ui-seatsheet .ui-sheet__skill {
+    padding: 4px 10px;
+  }
+
+  .ui-classpicker[data-seats='2'] .ui-picks {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(140px, 0.3fr);
+  }
+}
+
+/* Alone on a landscape screen short of height, the hero stands beside the cards: its portrait takes
+   what its sheet leaves of the column. */
+@media (max-height: 820px) and (min-aspect-ratio: 4 / 3) and (max-width: 1599px) {
+  .ui-classpicker[data-many]:not([data-together]) .ui-picks {
+    grid-template-areas: 'hero cards';
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    min-height: 0;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero__stage {
+    flex: 1 1 0;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero__name {
+    font-size: clamp(24px, 4.6vh, 36px);
+  }
+}
+
+/* On a short screen the invite keeps to the corner, over none of the cards. */
+@media (max-height: 640px) {
+  .ui-classpicker[data-many] .ui-lobby__lead {
+    display: none;
+  }
+
+  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite {
+    top: 8px;
+    max-width: none;
+    padding: 4px 14px 4px 6px;
+  }
+
+  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__plus {
+    width: 26px;
+    height: 26px;
+    font-size: 17px;
+  }
+
+  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__text {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+}
+
+/* A phone held upright asks to be turned: meanwhile the page scrolls, three cards a row. */
+@media (orientation: portrait) and (max-width: 720px) {
+  .ui-classpicker[data-many] {
+    overflow-y: auto;
+  }
+
+  .ui-classpicker[data-many] .ui-lobby__body {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .ui-classpicker[data-many] .ui-picks {
+    flex: none;
+    grid-template-rows: auto auto;
+  }
+
+  .ui-classpicker[data-many] .ui-classcards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding-inline: 0;
+  }
+}
+
+/* A phone held sideways: the portrait stands beside the name, and the cards show their portraits
+   alone, the hero naming the one picked. */
+@media (max-height: 520px) {
+  .ui-classpicker[data-many] .ui-lobby__title {
+    font-size: 22px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero {
+    position: relative;
+    gap: 6px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero__stage {
+    position: absolute;
+    top: 0;
+    inset-inline-start: 0;
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero__info {
+    gap: 6px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) :is(.ui-hero__name, .ui-hero .ui-sheet__role) {
+    margin-inline-start: 70px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero__name {
+    font-size: 22px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__role {
+    min-height: calc(2 * 1.25em);
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__stats {
+    gap: 2px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__stat {
+    grid-template-columns: 64px minmax(0, 1fr) 40px;
+    gap: 8px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero :is(.ui-sheet__label, .ui-sheet__value) {
+    font-size: 12px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__step {
+    height: 6px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__skill {
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__skillhead {
+    font-size: 11px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__skillname {
+    font-size: 14px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__skilltext {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-picks {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 12px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-classcards {
+    --card-ratio: 1;
+
+    gap: 6px;
+    padding-block: 6px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-classcard {
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-classcard__portrait {
+    width: 76cqi;
+    height: 76cqi;
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-classcard__name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  :is(.ui-classpicker, .ui-stagepicker) .ui-lobby__actions {
+    flex-wrap: nowrap;
+    gap: 8px calc(var(--ui-chevron) + 8px);
+  }
+
+  :is(.ui-classpicker, .ui-stagepicker) .ui-lobby__actions .ui-button,
+  :is(.ui-classpicker, .ui-stagepicker) .ui-lobby__actions .ui-button:not(.ui-button--primary) {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    min-height: 40px;
+    padding: 4px 12px;
+    font-size: 14px;
+    line-height: 1.15;
+    /* A language longer than French takes a second line rather than leaving the button. */
+    text-wrap: balance;
+  }
+
+  :is(.ui-classpicker, .ui-stagepicker) .ui-lobby__actions .ui-button.ui-toggle--endless {
+    flex: none;
+    gap: 10px;
+  }
+
+  :is(.ui-classpicker, .ui-stagepicker) .ui-lobby__actions .ui-toggle__hint {
+    display: none;
+  }
+
+  :is(.ui-classpicker, .ui-stagepicker) .ui-lobby__actions .ui-button--primary {
+    flex-grow: 1.3;
+    font-size: 16px;
+    letter-spacing: 0.08em;
+  }
+
+  :is(.ui-classpicker, .ui-stagepicker) .ui-launch__detail {
+    font-size: 12px;
+  }
 }
 
 .ui-seat__portrait {
@@ -2214,17 +3060,6 @@ svg.ui-title__moon-glint {
   inset-inline-start: 18px;
 }
 
-.ui-seat__who {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ui-seat__host {
-  font-size: 13px;
-  font-weight: 700;
-}
-
 .ui-seat__tag {
   color: var(--ui-muted);
   font-size: 12px;
@@ -2288,36 +3123,6 @@ svg.ui-title__moon-glint {
 
 .ui-seat .ui-sheet__value {
   font-size: 14px;
-}
-
-.ui-seat__join {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border: 0;
-  background: none;
-  color: var(--texte);
-  font: inherit;
-  font-size: 17px;
-  font-weight: 700;
-  text-wrap: balance;
-  cursor: pointer;
-}
-
-.ui-seat__join::before {
-  content: '+';
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border: 2px dashed var(--ui-line);
-  border-radius: 50%;
-  color: var(--ui-turquoise);
-  font-size: 30px;
-  font-weight: 500;
-  line-height: 1;
 }
 
 .ui-seat__wait {
@@ -2675,23 +3480,18 @@ svg.ui-title__moon-glint {
   opacity: 0.6;
 }
 
-.ui-nights__line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 0;
-  font-size: 17px;
-}
-
+/* The length of the night picked, a chip inside its tab. */
 .ui-nights__length {
-  padding: 3px 12px;
-  border: 1.5px solid var(--ui-line);
+  padding: 2px 10px;
   border-radius: 20px;
-  color: var(--ui-or);
+  background: color-mix(in srgb, var(--ui-ink) 16%, transparent);
   font-size: 14px;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.ui-nights__length:empty {
+  display: none;
 }
 
 @media (max-width: 600px) {
@@ -2717,9 +3517,9 @@ svg.ui-title__moon-glint {
     height: 20px;
   }
 
-  .ui-nights__line {
-    gap: 8px;
-    font-size: 14px;
+  .ui-nights__length {
+    padding: 1px 8px;
+    font-size: 12px;
   }
 }
 
@@ -2752,8 +3552,8 @@ svg.ui-title__moon-glint {
   opacity: 0.6;
 }
 
-/* Three buttons in a row: the chevron of the middle one keeps clear of the launch button. */
-.ui-stagepicker .ui-lobby__actions {
+/* The chevron of a button after the first keeps clear of the one before. */
+:is(.ui-classpicker, .ui-stagepicker) .ui-lobby__actions {
   column-gap: calc(var(--ui-chevron) + 8px);
 }
 
@@ -2766,6 +3566,128 @@ svg.ui-title__moon-glint {
 
 .ui-stagepicker__note[hidden] {
   display: none;
+}
+
+/* A phone held sideways: the scenes lie two by two, their art beside their name, and the tabs and
+   the buttons slim down, so that the screen holds whole. */
+@media (max-height: 520px) {
+  .ui-stagepicker .ui-lobby__body {
+    padding-block: 8px;
+    gap: 8px;
+  }
+
+  .ui-stagepicker .ui-lobby__title {
+    font-size: 22px;
+  }
+
+  .ui-stagepicker .ui-nights__key {
+    display: none;
+  }
+
+  .ui-stagepicker .ui-nights__tabs {
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .ui-stagepicker .ui-nights__tab {
+    gap: 6px;
+    padding: 5px 12px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  .ui-stagepicker .ui-nights__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ui-stagepicker .ui-nights__length {
+    padding: 1px 8px;
+    font-size: 12px;
+  }
+
+  .ui-stagepicker .ui-stagecards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px calc(2 * var(--ui-chevron));
+  }
+
+  .ui-stagepicker .ui-stage {
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: 40% minmax(0, 1fr);
+    align-content: center;
+    gap: 4px 10px;
+    min-width: 0;
+    max-width: none;
+    padding: 6px 10px 6px 6px;
+  }
+
+  .ui-stagepicker .ui-stage__preview {
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+
+  .ui-stagepicker .ui-stage .ui-go {
+    inset: 6px auto 6px 6px;
+    width: 40%;
+    font-size: 11px;
+  }
+
+  .ui-stagepicker .ui-stage__name {
+    align-self: end;
+    padding-inline: 0;
+    font-size: 17px;
+  }
+
+  .ui-stagepicker .ui-stage__meta {
+    align-self: start;
+    gap: 4px;
+    padding-inline: 0;
+  }
+
+  .ui-stagepicker .ui-stage__chip {
+    padding: 1px 8px;
+    font-size: 11px;
+  }
+
+  .ui-stagepicker__note {
+    font-size: 13px;
+  }
+}
+
+/* On a short laptop screen the scene screen holds whole: its margins give way first. */
+@media (max-height: 700px) and (min-height: 521px) {
+  .ui-stagepicker .ui-lobby__body {
+    padding-block: 16px;
+  }
+}
+
+/* On a wide screen the scene screen grows as one picture rather than sitting small in an empty middle:
+   it holds in 1280x720, so it holds in a screen as many times larger. The scenes are drawn in SVG and
+   stay sharp. */
+@media (min-width: 1900px) and (min-height: 1000px) {
+  .ui-stagepicker .ui-lobby__body {
+    zoom: 1.4;
+  }
+}
+
+@media (min-width: 2400px) and (min-height: 1250px) {
+  .ui-stagepicker .ui-lobby__body {
+    zoom: 1.7;
+  }
+}
+
+/* Grown, a scene card keeps its style and its tempo on one line: the cards get the room they need. */
+@media (min-width: 1900px) and (min-height: 1000px) {
+  .ui-stagepicker .ui-lobby__body {
+    width: min(100%, 1360px);
+  }
+
+  .ui-stagepicker .ui-stagecards {
+    --stage-width: 330px;
+  }
 }
 
 .ui-launch {
@@ -2859,6 +3781,62 @@ svg.ui-title__moon-glint {
 
   100% {
     opacity: 0.75;
+  }
+}
+
+@property --potion-turn {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* The twin vibes' glow, in the flask's colours turning round the screen. */
+.ui-hud__potion {
+  --potion-left: 0;
+  --potion-reach: calc(var(--potion-left) * 60% + 8%);
+
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(
+    from var(--potion-turn),
+    #ff3fd0,
+    #ffc83a,
+    #a8ff2e,
+    #2ef2e6,
+    #9a5bff,
+    #ff3fd0
+  );
+  mask-image:
+    radial-gradient(var(--potion-reach) 6vh at 50% 0, #000, transparent),
+    radial-gradient(var(--potion-reach) 6vh at 50% 100%, #000, transparent),
+    radial-gradient(6vh var(--potion-reach) at 0 50%, #000, transparent),
+    radial-gradient(6vh var(--potion-reach) at 100% 50%, #000, transparent);
+  transition: opacity 0.6s ease;
+}
+
+.ui-hud[data-potion] .ui-hud__potion {
+  opacity: 1;
+  animation:
+    ui-twins-beat var(--beat) ease-out infinite,
+    ui-potion-turn 6s linear infinite;
+}
+
+.ui-hud[data-potion-ending] .ui-hud__potion {
+  animation:
+    ui-twins-ending var(--beat) ease-in-out infinite,
+    ui-potion-turn 6s linear infinite;
+}
+
+.calm > .ui .ui-hud[data-potion] .ui-hud__potion,
+.calm > .ui .ui-hud[data-potion-ending] .ui-hud__potion {
+  animation: none;
+}
+
+@keyframes ui-potion-turn {
+  to {
+    --potion-turn: 360deg;
   }
 }
 
@@ -3013,53 +3991,61 @@ svg.ui-title__moon-glint {
   }
 }
 
-/* The moment of the set in one word, then the countdown to its drop alone. */
+/* The tier row over the moment of the set in one word, then the countdown to its drop alone. */
 .ui-moment {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  white-space: nowrap;
-}
-
-.ui-moment__sky {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  color: var(--ui-or);
-  filter: drop-shadow(0 0 calc(7px * var(--ui-halo)) var(--or));
-}
-
-.ui-moment__glyph,
-.ui-moment__glyph svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.ui-moment__text {
   display: grid;
   gap: 3px;
   line-height: 1;
-}
-
-.ui-moment__tier {
-  color: var(--ui-or);
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .ui-moment__now {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 9px;
   font-size: 22px;
   font-weight: 800;
 }
 
+@property --strike {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+/* The countdown reads before the word: gold, bigger, with the halo of the vibes counter. Over the
+   last seconds it strikes each beat (--strike from 1 down to 0), harder at the very end. */
 .ui-moment__countdown {
+  --strike-k: 0.12;
+
+  color: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--or) 85%, var(--texte)),
+    #fff6dc calc(45% * var(--strike))
+  );
+  font-size: 29px;
   font-variant-numeric: tabular-nums;
+  line-height: 0.86;
+  text-shadow:
+    0 1px 0 rgb(4 6 18 / 90%),
+    0 0 calc(6px * var(--ui-halo)) color-mix(in srgb, var(--noyau) 55%, transparent),
+    0 0 calc(8px * var(--strike) * var(--ui-halo)) rgb(255 214 130 / var(--strike)),
+    0 0 calc(16px * var(--strike) * var(--ui-halo)) rgb(255 190 80 / var(--strike)),
+    0 0 calc(30px * var(--strike) * var(--ui-halo)) rgb(255 160 50 / calc(0.8 * var(--strike)));
+  transform: scale(calc(1 + var(--strike-k) * var(--strike)));
+  transform-origin: 50% 58%;
+}
+
+.ui-moment__countdown[data-strike='hard'] {
+  --strike-k: 0.2;
+}
+
+.ui-moment__countdown:not([data-strike='none'])[data-beat='a'] {
+  animation: ui-strike var(--beat) linear;
+}
+
+.ui-moment__countdown:not([data-strike='none'])[data-beat='b'] {
+  animation: ui-strike-b var(--beat) linear;
 }
 
 .ui-moment[data-moment='break'] .ui-moment__word {
@@ -3072,45 +4058,13 @@ svg.ui-title__moon-glint {
   text-transform: uppercase;
 }
 
-/* One bar per tier, filling up to its boss, then the sunrise. */
+/* One boss mask per tier, then the sunrise: the one coming in gold, the next ones in cream. */
 .ui-lineup {
   display: flex;
   align-items: center;
-  gap: 14px;
-  height: 22px;
-}
-
-.ui-lineup__tier {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.ui-lineup__bar {
-  --bar: var(--turquoise);
-  --fill: 0;
-
-  flex: none;
-  width: 66px;
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(
-    var(--ui-to-end),
-    var(--bar) calc(var(--fill) * 100%),
-    color-mix(in srgb, var(--texte) 16%, transparent) calc(var(--fill) * 100%)
-  );
-}
-
-.ui-lineup__bar[data-state='done'] {
-  opacity: 0.6;
-}
-
-.ui-lineup__bar[data-state='current'] {
-  box-shadow: 0 0 calc(8px * var(--ui-halo)) color-mix(in srgb, var(--bar) 60%, transparent);
-}
-
-.ui-lineup__bar[data-state='dropping'] {
-  --bar: var(--tank);
+  gap: 6px;
+  height: 16px;
+  margin-block: -1px -2px;
 }
 
 .ui-slot {
@@ -3118,10 +4072,11 @@ svg.ui-title__moon-glint {
   flex: none;
 }
 
-.ui-slot--drop {
-  width: 18px;
-  height: 18px;
-  color: color-mix(in srgb, var(--texte) 55%, transparent);
+.ui-slot--drop,
+.ui-slot--sunrise {
+  width: 17px;
+  height: 17px;
+  color: color-mix(in srgb, var(--texte) 78%, transparent);
 }
 
 .ui-slot--drop[data-state='done'] {
@@ -3129,6 +4084,13 @@ svg.ui-title__moon-glint {
 }
 
 .ui-slot--drop[data-state='current'] {
+  color: color-mix(in srgb, var(--or) 85%, var(--texte));
+  filter: drop-shadow(
+    0 0 calc(5px * var(--ui-halo)) color-mix(in srgb, var(--noyau) 75%, transparent)
+  );
+}
+
+.ui-slot--drop[data-state='dropping'] {
   color: var(--tank);
   filter: drop-shadow(0 0 calc(7px * var(--ui-halo)) var(--tank));
 }
@@ -3140,12 +4102,6 @@ svg.ui-title__moon-glint {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-.ui-slot--sunrise {
-  width: 18px;
-  height: 18px;
-  color: var(--ui-muted);
 }
 
 .ui-slot--sunrise[data-state='current'] {
@@ -3561,8 +4517,7 @@ svg.ui-title__moon-glint {
   border-radius: 999px;
 }
 
-/* A short screen draws the timeline, the status and the actions as panels of their own. */
-.ui-hud__timeline,
+/* A short screen draws the status and the actions as panels of their own. */
 .ui-hud__status,
 .ui-hud__actions {
   display: contents;
@@ -4885,13 +5840,14 @@ svg.ui-title__moon-glint {
   outline-offset: calc(-4 * var(--card-unit));
 }
 
-/* The name stays on one line, as small as it must to fit the tag: a long name, a narrow window, a language. */
+/* The name stays on one line, as small as it must to fit the tag: a long name, a narrow window, a language.
+   A letter of the title font in capitals is at most 0.8 em wide (Monocycle, the widest, 0.78). */
 .ui-card__tag .ui-card__name {
   display: block;
   white-space: nowrap;
   font-size: min(
     var(--name-size),
-    (var(--tag-room) - 32 * var(--card-unit)) / (var(--name-length) * 0.72)
+    (var(--tag-room) - 32 * var(--card-unit)) / (var(--name-length) * 0.8)
   );
   color: #3a1858;
   text-shadow:
@@ -5009,8 +5965,10 @@ svg.ui-title__moon-glint {
   animation: ui-pearl var(--beat) steps(1) infinite;
 }
 
+/* A role keeps its word, icon and star together: a row too narrow for every role wraps. */
 .ui-card__roles {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: calc(6 * var(--card-unit));
 }
@@ -6271,8 +7229,9 @@ svg.ui-title__moon-glint {
 }
 
 .ui-offers__panels[data-multi] {
-  /* Sized for 1280x720, the panels grow with a larger screen as one picture. */
-  --panel-unit: clamp(1px, min(100vw / 1280, 100vh / 720), 1.6px);
+  /* Sized for 1280x720, the panels grow with a larger screen as one picture, up to twice that size: on a
+     2560x1440 screen they leave no wide band empty around them. */
+  --panel-unit: clamp(1px, min(100vw / 1280, 100vh / 720), 2px);
 
   display: grid;
   grid-template-columns: repeat(2, minmax(0, calc(620 * var(--panel-unit))));
@@ -6495,33 +7454,33 @@ svg.ui-title__moon-glint {
   white-space: nowrap;
 }
 
-/* Two players' level cards side by side take the screen's width, and grow in type and head to fill its
-   height; a boss's six relics keep their own layout. */
+/* Two players' cards side by side, levels or a boss's relics, take the screen's width, and grow in type and
+   head to fill its height; five or six relics keep their own layout. */
 @media (min-width: 1101px) {
-  .ui-offers__panels[data-count='2']:not(:has([data-offer='relic'])) {
-    --panel-unit: clamp(1px, min(100vw / 1280, 100vh / 720), 2px);
-
+  .ui-offers__panels[data-count='2']:not(:has(.ui-cards:is([data-count='5'], [data-count='6']))) {
     gap: calc(16 * var(--panel-unit));
   }
 
-  .ui-offers__panels[data-count='2']:not(:has([data-offer='relic'])) .ui-offer {
+  .ui-offers__panels[data-count='2']:not(:has(.ui-cards:is([data-count='5'], [data-count='6'])))
+    .ui-offer {
     padding-inline: calc(14 * var(--panel-unit));
   }
 
   /* The levels, then the button under them: every card's foot has the same height, focused or not. */
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-card__foot {
     flex-direction: column;
   }
 
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-card__rank {
     text-align: center;
   }
 
-  .ui-offers__panels[data-count='2'] .ui-cards[data-offer='levelUp']:not([data-count='4']) {
+  .ui-offers__panels[data-count='2']
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6']) {
     --card-head: calc(170 * var(--card-unit));
 
     flex-grow: 1;
@@ -6530,53 +7489,59 @@ svg.ui-title__moon-glint {
   }
 
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-card {
     --card-pad-x: calc(12 * var(--card-unit));
   }
 
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-card__family {
     font-size: calc(14 * var(--card-unit));
   }
 
-  /* Kept off the card's edges: a swash of the title font overhangs its box. */
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-card__name {
     --name-size: calc(22 * var(--card-unit));
+  }
 
+  /* Kept off the card's edges: a swash of the title font overhangs its box. A bracelet's name is sized to
+     its tag, which already keeps it off the edges. */
+  .ui-offers__panels[data-count='2']
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
+    .ui-card__body
+    > .ui-card__name {
     padding-inline: calc(6 * var(--card-unit));
   }
 
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-card__desc {
     font-size: calc(17 * var(--card-unit));
   }
 
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     :is(.ui-card__recipe, .ui-card__fuse, .ui-card__rank, .ui-card__cta) {
     font-size: calc(15 * var(--card-unit));
   }
 
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-role {
     font-size: calc(13 * var(--card-unit));
   }
 
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-role__icon {
     width: calc(15 * var(--card-unit));
     height: calc(15 * var(--card-unit));
   }
 
   .ui-offers__panels[data-count='2']
-    .ui-cards[data-offer='levelUp']:not([data-count='4'])
+    .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6'])
     .ui-path__level {
     width: calc(22 * var(--card-unit));
     height: calc(22 * var(--card-unit));
@@ -6585,7 +7550,7 @@ svg.ui-title__moon-glint {
 
   /* Four cards keep their two rows at the first size, each row as tall as its cards, the button beside
      the levels. */
-  .ui-offers__panels[data-count='2'] .ui-cards[data-offer='levelUp'][data-count='4'] {
+  .ui-offers__panels[data-count='2'] .ui-cards[data-count='4'] {
     --card-head: calc(76 * var(--card-unit));
 
     flex-grow: 1;
@@ -6595,7 +7560,7 @@ svg.ui-title__moon-glint {
     gap: calc(8 * var(--card-unit)) calc(18 * var(--card-unit));
   }
 
-  .ui-offers__panels[data-count='2'] .ui-cards[data-offer='levelUp'][data-count='4'] .ui-card {
+  .ui-offers__panels[data-count='2'] .ui-cards[data-count='4'] .ui-card {
     --card-gap: calc(5 * var(--card-unit));
 
     padding-bottom: calc(10 * var(--card-unit));
@@ -6624,7 +7589,8 @@ svg.ui-title__moon-glint {
   border-radius: calc(28 * var(--panel-unit));
 }
 
-.ui-offers__panels:is([data-count='3'], [data-count='4']) :is(.ui-heading, .ui-cards, .ui-hint) {
+.ui-offers__panels:is([data-count='3'], [data-count='4'])
+  :is(.ui-heading, .ui-cards, .ui-offer__foot) {
   flex-basis: 100%;
 }
 
@@ -6789,35 +7755,59 @@ svg.ui-title__moon-glint {
   display: none;
 }
 
-/* Two offers side by side or one above the other: the reroll takes the free corner of its panel. */
+/* Two offers or more: the reroll leads the row under the cards, where the eye drops after reading one, a
+   gold button taller than « Choisir ». */
 .ui-offers__panels[data-multi] .ui-offer__foot {
-  display: contents;
+  flex-wrap: nowrap;
+  gap: calc(20 * var(--panel-unit));
 }
 
 .ui-offers__panels[data-multi] .ui-reroll {
-  position: absolute;
-  top: 20px;
-  inset-inline-start: 24px;
+  flex: none;
+  order: -1;
+  gap: calc(8 * var(--panel-unit));
+  padding: calc(5 * var(--panel-unit)) calc(7 * var(--panel-unit)) calc(5 * var(--panel-unit))
+    calc(16 * var(--panel-unit));
+  border-width: 2px;
+  background: color-mix(in srgb, var(--or) 20%, var(--sol));
+  font-size: calc(15 * var(--panel-unit));
+}
+
+.ui-offers__panels[data-multi] .ui-reroll__die {
+  width: calc(22 * var(--panel-unit));
+  height: calc(22 * var(--panel-unit));
+}
+
+.ui-offers__panels[data-multi] .ui-reroll__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: calc(28 * var(--panel-unit));
+  height: calc(28 * var(--panel-unit));
+  padding: 0;
+  font-size: calc(15 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-offer__foot {
+  gap: calc(14 * var(--panel-unit));
 }
 
 .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-reroll {
-  top: calc(7 * var(--panel-unit));
-  inset-inline-start: calc(16 * var(--panel-unit));
-  gap: calc(4 * var(--panel-unit));
-  padding: calc(2 * var(--panel-unit)) calc(3 * var(--panel-unit)) calc(2 * var(--panel-unit))
-    calc(8 * var(--panel-unit));
-  font-size: calc(11 * var(--panel-unit));
+  gap: calc(5 * var(--panel-unit));
+  padding: calc(3 * var(--panel-unit)) calc(4 * var(--panel-unit)) calc(3 * var(--panel-unit))
+    calc(11 * var(--panel-unit));
+  border-width: 1.5px;
+  font-size: calc(12 * var(--panel-unit));
 }
 
 .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-reroll__die {
-  width: calc(14 * var(--panel-unit));
-  height: calc(14 * var(--panel-unit));
+  width: calc(16 * var(--panel-unit));
+  height: calc(16 * var(--panel-unit));
 }
 
 .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-reroll__count {
-  min-width: calc(18 * var(--panel-unit));
-  height: calc(18 * var(--panel-unit));
-  font-size: calc(11 * var(--panel-unit));
+  min-width: calc(21 * var(--panel-unit));
+  height: calc(21 * var(--panel-unit));
+  font-size: calc(12 * var(--panel-unit));
 }
 
 .ui-reroll[aria-current] {
@@ -7026,7 +8016,7 @@ svg.ui-title__moon-glint {
 
 /* Beat and motion */
 
-.ui-slot--drop[data-open] {
+.ui-slot--drop[data-state='dropping'] {
   animation: ui-glow var(--beat) ease-out infinite;
 }
 
@@ -7041,6 +8031,50 @@ svg.ui-title__moon-glint {
 
   to {
     filter: brightness(1);
+  }
+}
+
+@keyframes ui-strike {
+  0% {
+    --strike: 1;
+  }
+
+  12% {
+    --strike: 0.55;
+  }
+
+  30% {
+    --strike: 0.22;
+  }
+
+  60% {
+    --strike: 0.05;
+  }
+
+  100% {
+    --strike: 0;
+  }
+}
+
+@keyframes ui-strike-b {
+  0% {
+    --strike: 1;
+  }
+
+  12% {
+    --strike: 0.55;
+  }
+
+  30% {
+    --strike: 0.22;
+  }
+
+  60% {
+    --strike: 0.05;
+  }
+
+  100% {
+    --strike: 0;
   }
 }
 
@@ -7177,6 +8211,20 @@ svg.ui-title__moon-glint {
     top: var(--to-y);
     left: var(--to-x);
     opacity: 0;
+  }
+}
+
+@keyframes ui-invite-knock-a {
+  from {
+    border-color: var(--turquoise);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes ui-invite-knock-b {
+  from {
+    border-color: var(--turquoise);
+    transform: scale(1.06);
   }
 }
 
@@ -7854,23 +8902,12 @@ svg.ui-title__moon-glint {
     border-radius: 22px;
   }
 
-  .ui-hud__ribbon .ui-lineup {
-    flex-basis: 100%;
-    justify-content: center;
-    order: 1;
-    gap: 6px;
-  }
-
-  .ui-hud__ribbon .ui-lineup__tier {
-    gap: 5px;
-  }
-
-  .ui-hud__ribbon .ui-lineup__bar {
-    width: 48px;
-  }
-
   .ui-moment__now {
     font-size: 18px;
+  }
+
+  .ui-moment__countdown {
+    font-size: 24px;
   }
 
   .ui-plugs {
@@ -8985,7 +10022,6 @@ svg.ui-title__moon-glint {
     align-items: flex-end;
   }
 
-  .ui-hud__timeline,
   .ui-hud__status,
   .ui-hud__actions {
     display: flex;
@@ -8994,9 +10030,21 @@ svg.ui-title__moon-glint {
     border-radius: 999px;
   }
 
-  .ui-hud__timeline {
-    max-width: 40vw;
+  /* The boss masks then the countdown, in a panel of their own: the word of the moment stays off. */
+  .ui-moment {
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 12px;
     padding: 4px 16px 5px;
+    border: 1px solid var(--ui-line);
+    border-radius: 999px;
+    background: var(--ui-panel);
+    box-shadow: var(--ui-lift);
+    backdrop-filter: blur(10px);
+  }
+
+  .ui-moment .ui-lineup {
+    margin-block: 0;
   }
 
   .ui-hud__status {
@@ -9050,7 +10098,7 @@ svg.ui-title__moon-glint {
   }
 
   .ui-hud[data-multi] .ui-hud__status,
-  .ui-moment,
+  .ui-moment__word,
   .ui-plugs,
   .ui-traps__name,
   .ui-hud__skills .ui-skill__text,
@@ -9064,27 +10112,6 @@ svg.ui-title__moon-glint {
     background: var(--ui-panel);
     box-shadow: var(--ui-lift);
     backdrop-filter: blur(10px);
-  }
-
-  .ui-hud__ribbon .ui-lineup {
-    flex-basis: auto;
-    order: 0;
-    gap: 9px;
-    height: 16px;
-  }
-
-  .ui-hud__ribbon .ui-lineup__tier {
-    gap: 4px;
-  }
-
-  .ui-hud__ribbon .ui-lineup__bar {
-    width: 44px;
-    height: 5px;
-  }
-
-  .ui-hud__ribbon :is(.ui-slot--drop, .ui-slot--sunrise) {
-    width: 14px;
-    height: 14px;
   }
 
   .ui-hud__bar section:not(.ui-hud__level, .ui-hud__vibes) {
@@ -9141,20 +10168,6 @@ svg.ui-title__moon-glint {
   .ui-dash__pearls {
     top: 40px;
     inset-inline-start: 24px;
-  }
-}
-
-@media (max-height: 520px) and (min-width: 600px) and (max-width: 720px) {
-  .ui-hud__timeline {
-    padding-inline: 14px;
-  }
-
-  .ui-hud__ribbon .ui-lineup {
-    gap: 6px;
-  }
-
-  .ui-hud__ribbon .ui-lineup__bar {
-    width: 32px;
   }
 }
 

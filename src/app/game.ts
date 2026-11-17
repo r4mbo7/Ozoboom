@@ -18,6 +18,7 @@ import { createPlayerKeys } from '../input/profile';
 import { createPortraits, createRenderer } from '../render';
 import { NO_ARENA_GUIDE, arenaGuide } from './arena-guide';
 import type { GameEvent, GameMode } from '../shared/stats';
+import type { MenuHeard } from '../shared/menu-score';
 import { TICK_MS } from '../shared/tempo';
 import { scoreOf } from '../sim/score';
 import { setOf, setTempo } from '../sim/lineup';
@@ -31,7 +32,6 @@ import type { PlayerId, SimState } from '../sim/state';
 import {
   type ClassPickerModel,
   type EndSession,
-  type LobbyModel,
   type StagePickerModel,
   type LocalPlayer,
   type StageCard,
@@ -185,7 +185,7 @@ export async function startGame(
   let onlineLobby = false;
   let interruption: Interruption | null = null;
   let catchUp = 0;
-  const seats = createSeats(classIds, prefs.classId);
+  const seats = createSeats(classIds, () => prefs.classId);
   let lobbySeats: LaunchedSeats | null = null;
   let view: InputView = { devices: new Map(), merged: IDLE_SNAPSHOT };
   let uiSnapshot: InputSnapshot | null = null;
@@ -232,9 +232,6 @@ export async function startGame(
         pickStage(setId) {
           stageId = setId;
         },
-        showLobby() {
-          ui.updateLobby(localLobby());
-        },
         showStagePicker() {
           ui.showStagePicker(stagePicker());
         },
@@ -242,6 +239,7 @@ export async function startGame(
           ui.showClassPicker(classPicker());
         },
         launch,
+        playAlone: play,
       }),
     },
     prompts,
@@ -339,7 +337,7 @@ export async function startGame(
 
   function menuCallbacks() {
     return {
-      onStart: openClassPicker,
+      onStart: openStart,
       onChooseClass(classId: string) {
         if (classIds.includes(classId)) {
           settings.remember('classId', classId);
@@ -349,12 +347,16 @@ export async function startGame(
           }
         }
       },
-      onConfirmClass: openStagePicker,
-      onLeaveClassPicker: toTitle,
-      onConfirmStage: play,
+      onLeaveClassPicker() {
+        if (showsStageChoice(stages.length)) {
+          openStagePicker();
+        } else {
+          toTitle();
+        }
+      },
+      onConfirmStage: openClassPicker,
       onLearn: learn,
-      onLeaveStagePicker: openClassPicker,
-      onPlayTogether: openLobby,
+      onLeaveStagePicker: toTitle,
       onPlayOnline: openOnline,
       onLeaveLobby: toTitle,
     };
@@ -514,21 +516,12 @@ export async function startGame(
     return drawTrack(stageTracks(TRACKS, setNamed(setId).trackIds), prefs.trackId, Math.random).id;
   }
 
-  function localLobby(): LobbyModel {
-    return {
-      ...seats.model(),
-      stages,
-      stageId,
-      endless: prefs.endless,
-      festival: prefs.festival,
-    };
-  }
-
   function classPicker(): ClassPickerModel {
     return {
       classId: prefs.classId,
-      launches: !showsStageChoice(stages.length),
+      stage: showsStageChoice(stages.length) ? stagePicker() : null,
       endless: prefs.endless,
+      seats: seats.list(),
     };
   }
 
@@ -543,10 +536,6 @@ export async function startGame(
   }
 
   function openStagePicker(): void {
-    if (!showsStageChoice(stages.length)) {
-      play();
-      return;
-    }
     screen = 'stage';
     applySound();
     ui.showStagePicker(stagePicker());
@@ -636,16 +625,18 @@ export async function startGame(
     applySound();
   }
 
-  function openLobby(): void {
-    void audio.start();
+  // The scene first when there is one to pick, then the characters.
+  function openStart(): void {
     seats.clear();
     const opener = openerOf(view.devices, view.merged.device);
     if (opener !== null) {
       seats.join(opener);
     }
-    screen = 'lobby';
-    applySound();
-    ui.showLobby(localLobby());
+    if (showsStageChoice(stages.length)) {
+      openStagePicker();
+    } else {
+      openClassPicker();
+    }
   }
 
   function toTitle(): void {
@@ -681,9 +672,7 @@ export async function startGame(
       return;
     }
     leaveMatch();
-    screen = 'lobby';
-    applySound();
-    ui.showLobby(localLobby());
+    openClassPicker();
   }
 
   function showOnlineLobby(): void {
@@ -713,8 +702,8 @@ export async function startGame(
     }
     uiSnapshot = merged;
     uiPlayers = [{ playerId: 0, snapshot: merged }];
-    if (screen === 'lobby') {
-      uiPlayers = seatedPlayers(seats.model().seats, view.devices);
+    if (screen === 'class' && seats.count > 0) {
+      uiPlayers = seatedPlayers(seats.list(), view.devices);
     } else if (screen === 'game') {
       playFrame(merged);
     }
@@ -1057,8 +1046,8 @@ function padPressed(): boolean {
   );
 }
 
-function silentMenuPosition(): number {
-  return performance.now() / 1000 / EIGHTH_SECONDS;
+function silentMenuPosition(): MenuHeard {
+  return { music: 'ambience', beats: performance.now() / 1000 / EIGHTH_SECONDS };
 }
 
 function stillView(view: InputView): InputView {

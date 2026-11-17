@@ -26,6 +26,8 @@ export interface InputSnapshot {
   device: InputDevice;
   gameplay: GameplayIntents;
   menu: MenuIntents;
+  // A or Entrée still down: menu.confirm is only the poll it went down on.
+  confirmHeld: boolean;
   pointerScreen: Vec2 | null;
   aimFromPointer: boolean;
 }

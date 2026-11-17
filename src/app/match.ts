@@ -79,6 +79,7 @@ export const IDLE_SNAPSHOT: InputSnapshot = {
   device: 'none',
   gameplay: IDLE_GAMEPLAY,
   menu: NO_MENU,
+  confirmHeld: false,
   pointerScreen: null,
   aimFromPointer: false,
 };

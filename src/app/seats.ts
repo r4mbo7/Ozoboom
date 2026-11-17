@@ -1,14 +1,12 @@
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
 import { freeClassId, isFreeClass } from '../shared/class-choice';
-import { trimPlayerName } from '../shared/player-name';
 import type { PlayerSlot } from '../sim/initial-state';
 import { PLAYER_IDS, type PlayerId } from '../sim/state';
-import { defaultName, type LobbyModel, type LobbySeat } from '../ui';
+import { defaultName, type PickerSeat } from '../ui';
 
 interface Seat {
   playerId: PlayerId;
   device: DeviceId;
-  name: string;
   classId: string;
 }
 
@@ -22,19 +20,27 @@ export interface Seats {
   readonly count: number;
   join(device: DeviceId): boolean;
   leave(playerId: PlayerId): boolean;
+  // The same place, class and cursor, played from another device that has no place.
+  handOver(playerId: PlayerId, device: DeviceId): boolean;
   setClass(playerId: PlayerId, classId: string): void;
-  setName(playerId: PlayerId, name: string): void;
   clear(): void;
-  deviceOf(playerId: PlayerId): DeviceId | null;
-  model(): LobbyModel;
+  // In place order, the same list until a seat changes.
+  list(): readonly PickerSeat[];
   // Players numbered 0 to n - 1 in seat order, as the sim wants them.
   launch(): LaunchedSeats;
 }
 
-export function createSeats(classIds: readonly string[], firstClassId: string): Seats {
+// A newcomer gets the favourite class, read as they join, when nobody has it.
+export function createSeats(classIds: readonly string[], favourite: () => string): Seats {
   let seats: Seat[] = [];
+  // Read on every frame of the character screen: made again only when a seat changes.
+  let listed: readonly Readonly<Seat>[] = [];
 
-  const sorted = () => [...seats].sort((a, b) => a.playerId - b.playerId);
+  const relist = () => {
+    listed = [...seats]
+      .sort((a, b) => a.playerId - b.playerId)
+      .map(({ playerId, classId, device }) => ({ playerId, classId, device }));
+  };
   const find = (playerId: PlayerId) => seats.find((seat) => seat.playerId === playerId);
 
   const takenClasses = (except?: PlayerId) =>
@@ -52,62 +58,47 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
       if (playerId === undefined) {
         return false;
       }
-      seats.push({
-        playerId,
-        device,
-        name: defaultName(playerId),
-        classId: freeClassId(classIds, takenClasses(), firstClassId),
-      });
+      seats.push({ playerId, device, classId: freeClassId(classIds, takenClasses(), favourite()) });
+      relist();
       return true;
     },
     leave(playerId) {
       const before = seats.length;
       seats = seats.filter((seat) => seat.playerId !== playerId);
+      relist();
       return seats.length < before;
+    },
+    handOver(playerId, device) {
+      const seat = find(playerId);
+      if (seat === undefined || seats.some((other) => other.device === device)) {
+        return false;
+      }
+      seat.device = device;
+      relist();
+      return true;
     },
     setClass(playerId, classId) {
       const seat = find(playerId);
       if (seat !== undefined && isFreeClass(classIds, takenClasses(playerId), classId)) {
         seat.classId = classId;
-      }
-    },
-    setName(playerId, name) {
-      const seat = find(playerId);
-      if (seat !== undefined) {
-        seat.name = trimPlayerName(name) || defaultName(playerId);
+        relist();
       }
     },
     clear() {
       seats = [];
+      relist();
     },
-    deviceOf: (playerId) => find(playerId)?.device ?? null,
-    model() {
-      const lobbySeats: LobbySeat[] = sorted().map((seat, index) => ({
-        playerId: seat.playerId,
-        name: seat.name,
-        classId: seat.classId,
-        device: seat.device,
-        remote: false,
-        host: index === 0,
-      }));
-      return {
-        mode: 'local',
-        role: 'host',
-        code: null,
-        link: null,
-        seats: lobbySeats,
-        canLaunch: lobbySeats.length > 0,
-        error: null,
-      };
+    list() {
+      return listed;
     },
     launch() {
-      const ordered = sorted();
       const slots: PlayerSlot[] = [];
       const locals = new Map<PlayerId, DeviceId>();
-      for (const [index, seat] of ordered.entries()) {
+      for (const [index, seat] of listed.entries()) {
         const id = PLAYER_IDS[index];
         if (id !== undefined) {
-          slots.push({ id, classId: seat.classId, name: seat.name });
+          // The name of the place the seat sat in, not of the number it plays under.
+          slots.push({ id, classId: seat.classId, name: defaultName(seat.playerId) });
           locals.set(id, seat.device);
         }
       }
@@ -116,7 +107,7 @@ export function createSeats(classIds: readonly string[], firstClassId: string): 
   };
 }
 
-// Who opens the lobby takes the first place: the device that confirms on this frame, else a click,
+// Who opens the flow before a game takes the first place: the device that confirms on this frame, else a click,
 // which the frame does not see: the keyboard and mouse, unless the screen is played by touch, which
 // has no place of its own.
 export function openerOf(

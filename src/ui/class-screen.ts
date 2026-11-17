@@ -1,40 +1,37 @@
-import type { InputDevice, MenuIntents } from '../input/intents';
-import { t } from '../shared/i18n';
-import { type ClassInfo, ROW_CARDS, classColor, landscapeNotice } from './class-picker';
+import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
+import { defaultName, t } from '../shared/i18n';
+import { PLAYER_IDS, type PlayerId } from '../sim/state';
+import {
+  type ClassInfo,
+  ROW_CARDS,
+  classColor,
+  landscapeNotice,
+  swatchPortrait,
+} from './class-picker';
 import { CLASS_TEASERS, classTeaser } from './teaser';
-import { el, fillHint, goMark, setText, setVar } from './dom';
+import { el, fillHint, goMark, setText } from './dom';
+import { spreadCards } from './class-cards';
+import { launchDetail, launchLabel, nightOf } from './night';
 import { PLAY } from './icons';
 import { createEndlessToggle } from './endless';
 import { createButtonRow } from './button-row';
-import { createClassSheet } from './class-sheet';
-import { stepClass } from './lobby-model';
+import { NO_MENU_INTENTS } from './navigation';
+import { type DrivenSeat, createClassCursors } from './class-cursors';
+import { createSeatInputs, unplugged } from './seat-input';
+import { createClassHero, createInvite, createSeatSheet } from './seat-sheet';
 import type { Prompts } from './prompts';
-import type { ClassPickerModel, CreatePortrait } from './types';
-
-// The last card when the row below is shorter; null past the first or the last row.
-export function gridStep(
-  count: number,
-  columns: number,
-  index: number,
-  side: -1 | 1,
-): number | null {
-  const row = Math.floor(index / columns) + side;
-  if (row < 0 || row > Math.floor((count - 1) / columns)) {
-    return null;
-  }
-  return Math.min(index + side * columns, count - 1);
-}
-
-// As few rows as when each holds all it fits, the cards shared evenly between them.
-export function evenColumns(count: number, fit: number): number {
-  const rows = Math.ceil(count / Math.max(1, fit));
-  return Math.ceil(count / Math.max(1, rows));
-}
+import type { ClassPickerModel, CreatePortrait, PickerSeat, UiFrame } from './types';
 
 export interface ClassPickerActions {
+  // With no seat, on a touch screen.
   choose(classId: string): void;
+  seatClass(playerId: PlayerId, classId: string): void;
+  joinSeat(device: DeviceId): void;
+  leaveSeat(playerId: PlayerId): void;
+  handOverSeat(playerId: PlayerId, device: DeviceId): void;
   toggleEndless(enabled: boolean): void;
   confirm(): void;
+  learn(): void;
   leave(): void;
 }
 
@@ -44,7 +41,8 @@ export interface ClassPickerScreen {
   open(): void;
   setModel(model: ClassPickerModel): void;
   setDevice(device: InputDevice): void;
-  update(edges: MenuIntents): void;
+  // With no seat the merged edges drive the one cursor; otherwise each seat its own.
+  update(edges: MenuIntents, frame: UiFrame): void;
 }
 
 // A short article holds on to the word after it: « Le » never stands alone on the first line.
@@ -52,47 +50,24 @@ export function keepArticle(name: string): string {
   return name.replace(/^(\S{1,3}) /u, '$1\u00a0');
 }
 
-const MIN_NAME_SIZE = 9;
-
-// A name whose words still overflow its card steps its size down, half a pixel at a time.
-function fitNames(row: HTMLElement): void {
-  for (const name of row.querySelectorAll<HTMLElement>('.ui-classcard__name')) {
-    const card = name.parentElement;
-    if (card === null) {
-      continue;
-    }
-    const frame = getComputedStyle(card);
-    const room = card.clientWidth - parseFloat(frame.paddingLeft) - parseFloat(frame.paddingRight);
-    name.style.removeProperty('font-size');
-    let size = parseFloat(getComputedStyle(name).fontSize);
-    while (name.scrollWidth > room && size > MIN_NAME_SIZE) {
-      size -= 0.5;
-      name.style.fontSize = `${String(size)}px`;
-    }
-  }
+// The one player of a touch screen has no seat: the merged input drives their cursor.
+function unseated(model: ClassPickerModel): PickerSeat {
+  return { playerId: 0, classId: model.classId, device: null };
 }
 
-// The cards widen to fill their even rows, up to --card-most: a long name keeps its words on one
-// line. The padding centres the rows of cards that stop there.
-function spreadCards(row: HTMLElement): void {
-  const width = row.clientWidth;
-  if (width === 0) {
-    return;
+// Two players read their sheets side by side over the grid; three or four, on both sides of it,
+// each in the corner of their number. The invite takes the place of the next one to join.
+function slotOf(seats: readonly PickerSeat[], playerId: PlayerId): string {
+  const order = seats.findIndex((seat) => seat.playerId === playerId);
+  return `s${String(seats.length > 2 ? playerId : order)}`;
+}
+
+function inviteSlot(seats: readonly PickerSeat[]): string {
+  if (seats.length < 2) {
+    return 's1';
   }
-  const style = getComputedStyle(row);
-  const gap = parseFloat(style.columnGap);
-  const least = parseFloat(style.getPropertyValue('--card-least'));
-  const most = parseFloat(style.getPropertyValue('--card-most'));
-  const fit = Math.max(1, Math.floor((width + gap) / (least + gap)));
-  const columns = evenColumns(row.children.length, fit);
-  const card = Math.min((width - (columns - 1) * gap) / columns, Math.max(least, most));
-  setVar(row, '--card-width', `${String(card)}px`);
-  setVar(
-    row,
-    '--cards-inset',
-    `${String(Math.floor((width - columns * card - (columns - 1) * gap) / 2))}px`,
-  );
-  fitNames(row);
+  const free = PLAYER_IDS.find((id) => seats.every((seat) => seat.playerId !== id));
+  return seats.length === 2 ? 's2' : `s${String(free ?? 3)}`;
 }
 
 export function createClassPicker(
@@ -100,37 +75,35 @@ export function createClassPicker(
   classes: readonly ClassInfo[],
   portrait: CreatePortrait,
   actions: ClassPickerActions,
+  now: () => number,
 ): ClassPickerScreen {
   let model: ClassPickerModel = {
     classId: classes[0]?.id ?? '',
-    launches: false,
+    stage: null,
     endless: false,
+    seats: [],
   };
+  let device: InputDevice | null = null;
+  // The press on a button came from the first seat's cursor, not from the mouse.
+  let cursorPress = false;
 
   const element = el('section', 'ui-screen ui-classpicker');
   element.setAttribute('aria-label', t('Choix du perso'));
   const grid = classes.length > ROW_CARDS;
   element.toggleAttribute('data-many', classes.length + CLASS_TEASERS.length > ROW_CARDS);
+  const lead = el('p', 'ui-lobby__lead', t('Qui monte sur la piste ce soir ?'));
   const header = el('header', 'ui-lobby__header');
-  header.append(
-    el('p', 'ui-kicker', t('Avant de lancer')),
-    el('h2', 'ui-lobby__title', t('Choisis ton perso')),
-    el('p', 'ui-lobby__lead', t('Qui monte sur la piste ce soir ?')),
-  );
+  header.append(el('h2', 'ui-lobby__title', t('Choisis ton perso')), lead);
 
-  const big = portrait();
-  const stage = el('div', 'ui-hero__stage');
-  stage.append(big.element);
-  const name = el('h3', 'ui-hero__name');
-  const sheet = createClassSheet(classes);
-  const info = el('div', 'ui-hero__info');
-  info.setAttribute('aria-live', 'polite');
-  info.append(name, ...sheet.parts);
-  const hero = el('div', 'ui-hero');
-  hero.append(stage, info);
+  const hero = createClassHero(classes, portrait);
+  const sheets = PLAYER_IDS.map((playerId) => createSeatSheet(playerId, classes, portrait));
+  // Never seen: a disc stands in for their portraits.
+  const heroTwin = createClassHero(classes, () => swatchPortrait(classes));
+  const sheetTwin = createSeatSheet(0, classes, () => swatchPortrait(classes));
+  sheetTwin.element.dataset.slot = 's0';
+  const invite = createInvite();
 
   const row = el('div', 'ui-classcards');
-  row.setAttribute('role', 'radiogroup');
   row.setAttribute('aria-label', t('Classes'));
   const endless = createEndlessToggle((enabled) => {
     actions.toggleEndless(enabled);
@@ -140,7 +113,6 @@ export function createClassPicker(
     const card = el('button', 'ui-classcard');
     card.type = 'button';
     card.tabIndex = -1;
-    card.setAttribute('role', 'radio');
     card.style.setProperty('--class-color', classColor(entry));
     const thumb = portrait();
     thumb.setClass(entry.id);
@@ -153,7 +125,10 @@ export function createClassPicker(
     }
     card.addEventListener('click', (event) => {
       event.stopPropagation();
-      if (entry.id === model.classId) {
+      if (model.seats.length > 0) {
+        cursors.click(model.seats, entry.id);
+        paint();
+      } else if (entry.id === model.classId) {
         actions.confirm();
       } else {
         actions.choose(entry.id);
@@ -162,8 +137,7 @@ export function createClassPicker(
     return card;
   });
   row.append(...cards, ...CLASS_TEASERS.map(classTeaser));
-  // Its border box, which the padding leaves alone. On the next frame: taller cards can bring the
-  // scrollbar in, which narrows the row again.
+  // Its border box, which the padding leaves alone, measured on the next frame, once laid out.
   if (element.hasAttribute('data-many') && typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => {
       requestAnimationFrame(() => {
@@ -172,59 +146,121 @@ export function createClassPicker(
     }).observe(row, { box: 'border-box' });
   }
 
-  const confirm = el('button', 'ui-button ui-button--primary');
+  const confirm = el('button', 'ui-button ui-button--primary ui-launch');
   confirm.type = 'button';
   confirm.tabIndex = -1;
-  const back = el('button', 'ui-button', t('Retour au titre'));
+  const confirmText = el('span', 'ui-launch__label');
+  const confirmMore = el('span', 'ui-launch__detail');
+  confirm.append(confirmText, confirmMore);
+  const learn = el('button', 'ui-button', t('Apprendre à jouer'));
+  learn.type = 'button';
+  learn.tabIndex = -1;
+  const back = el('button', 'ui-button');
   back.type = 'button';
   back.tabIndex = -1;
   confirm.addEventListener('click', () => {
-    actions.confirm();
+    if (model.seats.length === 0) {
+      actions.confirm();
+    } else {
+      cursors.pressLaunch(model.seats, cursorPress ? 'cursor' : 'mouse');
+      paint();
+    }
+  });
+  learn.addEventListener('click', () => {
+    actions.learn();
   });
   back.addEventListener('click', () => {
     actions.leave();
   });
-  const buttons = createButtonRow(row, [endless.toggle.button, confirm, back]);
+  const buttons = createButtonRow(row, [endless.toggle.button, confirm, learn, back]);
   const footer = el('div', 'ui-lobby__actions');
   // In the row of the buttons: the picker already fills the height of a laptop screen.
-  footer.append(endless.toggle.button, confirm, back);
+  footer.append(endless.toggle.button, confirm, learn, back);
   const hint = el('p', 'ui-hint');
+  const picks = el('div', 'ui-picks');
+  picks.append(hero.element, invite.element, row);
   const body = el('div', 'ui-lobby__body');
-  body.append(header, landscapeNotice(), hero, row, footer, hint);
+  body.append(header, landscapeNotice(), picks, footer, hint);
   element.append(body);
-
-  let device: InputDevice | null = null;
-
-  function columns(): number {
-    const top = cards[0]?.offsetTop;
-    return Math.max(1, cards.filter((card) => card.offsetTop === top).length);
+  // On the next frame, as the cards: a sheet changes width with the screen, and a sheet joins.
+  if (typeof ResizeObserver !== 'undefined') {
+    const rooms = new ResizeObserver(() => {
+      requestAnimationFrame(keepSheetRooms);
+    });
+    for (const part of [hero.element, ...sheets.map((seatSheet) => seatSheet.element)]) {
+      rooms.observe(part);
+    }
   }
 
-  // Past the last row, down goes on to the buttons. True when the press was for the grid.
-  function stepRows(edges: MenuIntents): boolean {
-    const side = edges.down ? 1 : edges.up ? -1 : 0;
-    if (buttons.focused !== null || side === 0 || edges.back || edges.confirm) {
-      return false;
-    }
-    const count = columns();
-    if (count >= classes.length) {
-      return false;
-    }
-    const index = classes.findIndex((entry) => entry.id === model.classId);
-    const next = gridStep(classes.length, count, Math.max(index, 0), side);
-    if (next !== null) {
-      reveal(next);
-      return true;
-    }
-    return side < 0;
+  const inputs = createSeatInputs(now);
+  // A click of the mouse takes the lone seat back from a pad, as a key does, before the click acts.
+  element.addEventListener(
+    'pointerdown',
+    (event) => {
+      const alone = model.seats.length === 1 ? model.seats[0] : undefined;
+      if (
+        event.pointerType !== 'mouse' ||
+        alone === undefined ||
+        alone.device === 'keyboardMouse'
+      ) {
+        return;
+      }
+      inputs.handOver(alone.playerId, 'keyboardMouse');
+      actions.handOverSeat(alone.playerId, 'keyboardMouse');
+    },
+    { capture: true },
+  );
+  const cursors = createClassCursors(
+    classes,
+    {
+      columns() {
+        const top = cards[0]?.offsetTop;
+        return Math.max(1, cards.filter((card) => card.offsetTop === top).length);
+      },
+      inButtons: () => buttons.focused !== null,
+      buttons(edges) {
+        const focused = buttons.focused;
+        cursorPress = true;
+        const taken = buttons.handle(edges);
+        cursorPress = false;
+        if (buttons.focused !== focused) {
+          paintHint();
+        }
+        return taken;
+      },
+    },
+    {
+      pick(playerId, classId) {
+        if (model.seats.length === 0) {
+          actions.choose(classId);
+        } else {
+          actions.seatClass(playerId, classId);
+        }
+        if (model.seats.length < 2) {
+          cards[classes.findIndex((entry) => entry.id === classId)]?.scrollIntoView({
+            block: 'nearest',
+          });
+        }
+      },
+      leaveSeat(playerId) {
+        actions.leaveSeat(playerId);
+      },
+      launch() {
+        actions.confirm();
+      },
+      back() {
+        actions.leave();
+      },
+    },
+  );
+
+  function together(): boolean {
+    return model.seats.length > 1;
   }
 
-  function reveal(index: number): void {
-    const next = classes[index];
-    if (next !== undefined) {
-      actions.choose(next.id);
-      cards[index]?.scrollIntoView({ block: 'nearest' });
-    }
+  // Never on a touch screen, which has no device of its own to join with.
+  function joinable(): boolean {
+    return device !== 'touch' && model.seats.length < PLAYER_IDS.length;
   }
 
   function paintHint(): void {
@@ -254,28 +290,157 @@ export function createClassPicker(
     if (focused === endless.toggle.button) {
       return t('changer');
     }
-    return focused === null && model.launches ? t('lancer') : t('valider');
+    if (focused === learn) {
+      return t('apprendre');
+    }
+    if (focused === back) {
+      return t('valider');
+    }
+    return together() && (focused === null || focused === confirm) ? t('prêt') : t('lancer');
   }
 
-  function paint(): void {
-    const chosen = classes.find((entry) => entry.id === model.classId);
+  function paintHero(classId: string): void {
+    const chosen = classes.find((entry) => entry.id === classId);
     if (chosen === undefined) {
       return;
     }
-    big.setClass(chosen.id);
     element.style.setProperty('--class-color', classColor(chosen));
-    setText(name, t(chosen.name));
-    sheet.set(chosen);
-    classes.forEach((entry, index) => {
-      cards[index]?.setAttribute('aria-checked', String(entry.id === chosen.id));
+    hero.show(chosen);
+  }
+
+  // A twin standing where its sheet stands, unstretched, shows each class in turn.
+  function tallest(twin: HTMLElement, kept: HTMLElement, show: (info: ClassInfo) => void): string {
+    twin.style.alignSelf = 'start';
+    picks.prepend(twin);
+    const heights = classes.map((info) => {
+      show(info);
+      return kept.getBoundingClientRect().height;
     });
-    const next = model.launches ? t('Lancer le set') : t('Choisir la scène');
-    setText(confirm, next);
-    for (const go of goes) {
-      go.set(next);
+    twin.remove();
+    return `${String(Math.max(0, ...heights))}px`;
+  }
+
+  // Every sheet is as tall as its tallest class at its width: no cursor move resizes the cards.
+  function keepSheetRooms(): void {
+    if (!hero.element.hidden) {
+      hero.info.style.minHeight = tallest(heroTwin.element, heroTwin.info, (info) => {
+        heroTwin.show(info);
+      });
     }
-    endless.set(model.endless, model.launches);
+    if (together()) {
+      const room = tallest(sheetTwin.element, sheetTwin.element, (info) => {
+        sheetTwin.show(info, false);
+      });
+      for (const seatSheet of sheets) {
+        seatSheet.element.style.minHeight = room;
+      }
+    }
+  }
+
+  // Only the sheets of the seats taken are on the page: alone, it reads as it always did.
+  function paintSheets(): void {
+    const { seats } = model;
+    for (const [playerId, seatSheet] of sheets.entries()) {
+      const seat = seats.find((one) => one.playerId === playerId);
+      const chosen = classes.find((entry) => entry.id === seat?.classId);
+      if (!together() || seat === undefined || chosen === undefined) {
+        seatSheet.element.remove();
+        continue;
+      }
+      if (!seatSheet.element.isConnected) {
+        invite.element.before(seatSheet.element);
+      }
+      seatSheet.element.dataset.slot = slotOf(seats, seat.playerId);
+      seatSheet.show(chosen, cursors.isReady(seat.playerId));
+    }
+    paintInvite();
+  }
+
+  function paintInvite(): void {
+    invite.element.hidden = !joinable();
+    invite.element.dataset.slot = inviteSlot(model.seats);
+  }
+
+  // Alone, the cards are radios. Together, each card under a cursor wears its seat's ring and
+  // number, and is out of reach of the others.
+  function paintCards(): void {
+    const several = together();
+    row.setAttribute('role', several ? 'group' : 'radiogroup');
+    const shown = model.seats[0]?.classId ?? model.classId;
+    classes.forEach((entry, index) => {
+      const card = cards[index];
+      if (card === undefined) {
+        return;
+      }
+      const holder = several ? model.seats.find((seat) => seat.classId === entry.id) : undefined;
+      if (several) {
+        card.removeAttribute('role');
+        card.removeAttribute('aria-checked');
+      } else {
+        card.setAttribute('role', 'radio');
+        card.setAttribute('aria-checked', String(entry.id === shown));
+      }
+      if (holder === undefined) {
+        delete card.dataset.seat;
+        card.removeAttribute('aria-disabled');
+        card.removeAttribute('aria-label');
+      } else {
+        card.dataset.seat = String(holder.playerId + 1);
+        card.setAttribute('aria-disabled', 'true');
+        card.setAttribute('aria-label', `${t(entry.name)}, ${defaultName(holder.playerId)}`);
+      }
+      card.toggleAttribute('data-ready', holder !== undefined && cursors.isReady(holder.playerId));
+    });
+  }
+
+  function paintLaunch(): void {
+    const { stage } = model;
+    const oneScene = stage === null;
+    const night = oneScene ? 'stage' : nightOf(stage);
+    const waiting = cursors.waiting(model.seats);
+    setText(
+      confirmText,
+      waiting === null
+        ? launchLabel(night)
+        : t('En attente de {name}', { name: defaultName(waiting.playerId) }),
+    );
+    setText(
+      confirmMore,
+      oneScene || waiting !== null ? '' : launchDetail(night, stage.stages, stage.stageId),
+    );
+    confirm.setAttribute(
+      'aria-disabled',
+      String(
+        waiting !== null &&
+          cursors.presser(model.seats, 'cursor') === null &&
+          cursors.presser(model.seats, 'mouse') === null,
+      ),
+    );
+    for (const go of goes) {
+      go.set(launchLabel(night));
+    }
+    // The tutorial takes the place of the endless switch, which the scene screen asks for.
+    endless.set(model.endless, oneScene);
+    learn.hidden = oneScene || together();
+    setText(back, oneScene ? t('Retour au titre') : t('Retour à la scène'));
+  }
+
+  function paint(): void {
+    element.dataset.seats = String(model.seats.length);
+    element.toggleAttribute('data-together', together());
+    lead.hidden = together();
+    hero.element.hidden = together();
+    paintHero(model.seats[0]?.classId ?? model.classId);
+    paintSheets();
+    paintCards();
+    paintLaunch();
     paintHint();
+  }
+
+  function drive(driven: readonly DrivenSeat[]): void {
+    if (cursors.update(driven)) {
+      paint();
+    }
   }
 
   paint();
@@ -284,39 +449,57 @@ export function createClassPicker(
     element,
     open() {
       buttons.reset();
-      paintHint();
+      inputs.clear();
+      cursors.open();
+      paint();
     },
     setModel(next) {
       model = next;
+      inputs.keep(next.seats);
+      cursors.follow(next.seats);
       paint();
     },
     setDevice(next) {
       if (next !== device) {
         device = next;
+        paintInvite();
         paintHint();
       }
     },
-    update(edges) {
-      if (stepRows(edges)) {
+    update(edges, frame) {
+      const gone = unplugged(frame.devices, model.seats);
+      if (gone !== null) {
+        actions.leaveSeat(gone);
         return;
       }
-      const focused = buttons.focused;
-      const taken = buttons.handle(edges);
-      if (buttons.focused !== focused) {
-        paintHint();
-      }
-      if (taken) {
+      const newcomer = inputs.newcomer(frame.devices, model.seats);
+      invite.hold(inputs.holdToJoin());
+      const alone = model.seats[0];
+      if (newcomer?.does === 'takeOver' && alone !== undefined) {
+        inputs.handOver(alone.playerId, newcomer.device);
+        actions.handOverSeat(alone.playerId, newcomer.device);
+        drive(model.seats.map((seat) => ({ seat, edges: newcomer.edges })));
         return;
       }
-      const delta = (edges.right ? 1 : 0) - (edges.left ? 1 : 0);
-      const next = delta === 0 ? null : stepClass(classes, model.classId, delta);
-      if (edges.back) {
-        actions.leave();
-      } else if (edges.confirm) {
-        actions.confirm();
-      } else if (next !== null) {
-        reveal(classes.findIndex((entry) => entry.id === next));
+      if (newcomer?.does === 'join' && joinable()) {
+        actions.joinSeat(newcomer.device);
+        return;
       }
+      if (newcomer?.does === 'knock') {
+        invite.knock();
+      }
+      drive(
+        model.seats.length === 0
+          ? [{ seat: unseated(model), edges }]
+          : model.seats.map((seat) => {
+              const own = frame.players.find((player) => player.playerId === seat.playerId);
+              return {
+                seat,
+                edges:
+                  own === undefined ? NO_MENU_INTENTS : inputs.edges(seat.playerId, own.snapshot),
+              };
+            }),
+      );
     },
   };
 }

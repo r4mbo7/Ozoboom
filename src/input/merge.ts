@@ -104,6 +104,7 @@ export function mergeFrames(
         pause: pressed('pause'),
       },
       menu,
+      confirmHeld: held('confirm'),
       // A finger has no pointer to aim with.
       pointerScreen: touch.active ? null : keyboardMouse.pointer,
       aimFromPointer,
