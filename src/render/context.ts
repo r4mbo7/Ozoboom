@@ -15,6 +15,7 @@ import type {
 } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import type { SimEvent, SimState } from '../sim/state';
+import { DancedBodies } from './danced-bodies';
 import type { Frame } from './frame';
 import { classTokens } from './palette';
 import type { Layers } from './layers';
@@ -65,6 +66,7 @@ export interface RenderContext {
   readonly shadeRadii: ReadonlyMap<string, number>;
   readonly attacks: ReadonlyMap<string, AttackDefinition>;
   readonly dash: DashDefinition | null;
+  readonly bodies: DancedBodies;
 }
 
 export interface Family {
@@ -85,6 +87,7 @@ export function createRenderContext(
     layers,
     options,
     classTokens: classTokens(content.classes),
+    bodies: new DancedBodies(),
     behaviours: new Map(content.enemies.map((def) => [def.id, def.behaviour])),
     enemyRadii: new Map(content.enemies.map((def) => [def.id, def.radius])),
     trapLooks: new Map(content.traps.map((def) => [def.id, def])),

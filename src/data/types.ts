@@ -517,6 +517,8 @@ export interface SetDefinition {
   lake?: true;
   // Who dances under a chased Néon's mask. Absent, the kid who jumps.
   dancer?: DancerLook;
+  // How a player standing still dances: absent, a hop on every beat; `downbeat`, only on the 1.
+  danceHops?: 'downbeat';
   obstacles?: readonly ObstacleDefinition[];
   trackIds: readonly string[];
   // Absent, a dry stage; `lowCutHz` keeps the lows out of the room, `toneHz` darkens its tail.

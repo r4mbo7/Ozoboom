@@ -1,6 +1,7 @@
 import type { SkillEffect } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import type { RenderContext } from './context';
+import { DancedBodies } from './danced-bodies';
 import type { Layers } from './layers';
 import type { Textures } from './textures';
 
@@ -27,5 +28,6 @@ export function portraitContext(
     skillEffects,
     shadeRadii: new Map(),
     attacks: new Map(),
+    bodies: new DancedBodies(),
   };
 }

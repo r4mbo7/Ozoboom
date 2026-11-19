@@ -19,8 +19,8 @@ export const MENU_RECORDING: Recording = {
   files: ['music/ozoboom.webm', 'music/ozoboom.m4a'],
   intro: { files: ['music/ozoboom-intro.webm', 'music/ozoboom-intro.m4a'], bars: 8 },
   bpm: 145,
-  bars: 128,
-  lufs: -8.7,
+  bars: 136,
+  lufs: -11.6,
 };
 
 // The synthesized ambience where it joins the music bus, which a recording matches.

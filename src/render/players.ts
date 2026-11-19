@@ -11,6 +11,7 @@ import { shadowAt } from './ground-sun';
 import { LifeArc } from './life-arc';
 import { MomentLog } from './player-moments';
 import { createDashBursts } from './dash-bursts';
+import { WALKING } from './danced-bodies';
 import { createDrawn } from './drawings';
 import type { Frame } from './frame';
 import { TAU } from './paint';
@@ -220,7 +221,8 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
         if (moved > 1e-3) {
           view.heading = Math.atan2(player.y - player.prevY, player.x - player.prevX);
         }
-        view.moving += ((speed > 0.15 ? 1 : 0) - view.moving) * (1 - Math.exp(-dt * 0.5));
+        view.moving += ((speed > WALKING ? 1 : 0) - view.moving) * (1 - Math.exp(-dt * 0.5));
+        const body = ctx.bodies.of(state, player, alpha, frame);
 
         let lift = 0;
         lying.place(player.downed, x, y, angle, scale, color, share, burst, frame);
@@ -230,15 +232,16 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
           view.emote.reset();
         } else {
           const { cover } = lookTextures;
-          view.emote.place(x, y, angle, scale, top, color, teintOf(player), cover, frame);
+          const { x: bodyX, y: bodyY, facing } = body;
+          view.emote.place(bodyX, bodyY, facing, scale, top, color, teintOf(player), cover, frame);
           const moment = moments.of(player.id);
           input ??= createLookInput(state, player, frame);
           input.state = state;
           input.player = player;
-          input.x = x;
-          input.y = y;
-          input.angle = angle;
-          input.scale = scale * bounce;
+          input.x = bodyX;
+          input.y = bodyY;
+          input.angle = facing;
+          input.scale = scale * bounce * body.grow;
           input.color = color;
           input.teint = teintOf(player);
           input.frame = frame;
@@ -252,7 +255,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
           input.sinceFire = now - moment.fired;
           input.sinceHit = now - moment.hit;
           input.sinceSkill = now - moment.skill;
-          lift = look.place(input);
+          lift = look.place(input) + body.lift;
           potion.expose(view.powered, input, lookTextures.extent * scale);
         }
 
@@ -263,7 +266,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
         if (player.downed) {
           continue;
         }
-        placePlayerShadow(shadow, sun, lookTextures, x, y, scale, lift);
+        placePlayerShadow(shadow, sun, lookTextures, body.x, body.y, scale, lift);
 
         aim.visible = lookTextures.aimless !== true;
         setTint(aim, color);

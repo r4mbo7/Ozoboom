@@ -12,7 +12,7 @@ export function twinVibesPhrase(
   stageStartTick: number,
   set: SetDefinition,
 ): DrawnPhrase | null {
-  return drawBuildupPhrase(seedRng((seed + stageStartTick) >>> 0), set);
+  return drawBuildupPhrase(seedRng((seed + stageStartTick) >>> 0), set, stageStartTick);
 }
 
 // A bomb due goes first, and the two never ride the same bad vibe.

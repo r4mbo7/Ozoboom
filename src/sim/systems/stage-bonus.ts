@@ -1,6 +1,8 @@
+import { STAGE_BONUS_GRACE_SECONDS } from '../../data/sets';
 import type { SetDefinition } from '../../data/types';
 import { nextFloat, nextInt, nextU32, seedRng, type RngState } from '../../shared/prng';
-import type { Tempo } from '../../shared/tempo';
+import { TICK_RATE_HZ, type Tempo } from '../../shared/tempo';
+import { setTempo } from '../lineup';
 import type { EnemyState, SimState } from '../state';
 
 export interface DrawnPhrase {
@@ -22,24 +24,29 @@ export function saltedPhrase(
 ): DrawnPhrase | null {
   const salt = nextU32(seedRng((seed ^ tag) >>> 0));
   const rng = seedRng((salt ^ stageStartTick) >>> 0);
-  return nextFloat(rng) < chance ? drawBuildupPhrase(rng, set) : null;
+  return nextFloat(rng) < chance ? drawBuildupPhrase(rng, set, stageStartTick) : null;
 }
 
-// The build-up phrase a stage bonus falls due in, never the first of a tier.
-export function drawBuildupPhrase(rng: RngState, set: SetDefinition): DrawnPhrase | null {
-  const choices = set.tiers.reduce((sum, tier) => sum + Math.max(0, tier.buildupPhrases - 1), 0);
-  if (choices === 0) {
-    return null;
-  }
-  let left = nextInt(rng, choices);
+// The build-up phrase a stage bonus falls due in: never the first of a tier, nor one that may start
+// within the game's first minute. A tier's phrases start at the earliest after the build-ups before it.
+export function drawBuildupPhrase(
+  rng: RngState,
+  set: SetDefinition,
+  stageStartTick: number,
+): DrawnPhrase | null {
+  const { ticksPerPhrase } = setTempo(set, stageStartTick);
+  const graceTicks = STAGE_BONUS_GRACE_SECONDS * TICK_RATE_HZ;
+  const choices: DrawnPhrase[] = [];
+  let phrasesBefore = 0;
   for (const [tier, { buildupPhrases }] of set.tiers.entries()) {
-    const later = Math.max(0, buildupPhrases - 1);
-    if (left < later) {
-      return { tier, phrase: left + 1 };
+    for (let phrase = 1; phrase < buildupPhrases; phrase += 1) {
+      if (stageStartTick + (phrasesBefore + phrase) * ticksPerPhrase >= graceTicks) {
+        choices.push({ tier, phrase });
+      }
     }
-    left -= later;
+    phrasesBefore += buildupPhrases;
   }
-  return null;
+  return choices.length === 0 ? null : (choices[nextInt(rng, choices.length)] ?? null);
 }
 
 // From the drawn phrase to the end of its build-up; outside a build-up, nothing is drawn.

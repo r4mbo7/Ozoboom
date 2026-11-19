@@ -1,4 +1,3 @@
-import { lerp } from '../shared/scalar';
 import { TICKS_PER_BEAT } from '../shared/tempo';
 import type { PlayerState, SimEvent, SimState } from '../sim/state';
 import type { Family, RenderContext } from './context';
@@ -31,8 +30,7 @@ function swayAt(now: number): number {
   return SWING * Math.sin(2 * Math.PI * (now / TICKS_PER_BEAT - 0.125));
 }
 
-function poseAt(player: PlayerState, x: number, y: number, now: number): Pose {
-  const aim = Math.atan2(player.aim.y, player.aim.x);
+function poseAt(player: PlayerState, x: number, y: number, aim: number, now: number): Pose {
   return {
     x: x + Math.cos(aim) * player.radius * REACH,
     y: y + Math.sin(aim) * player.radius * REACH,
@@ -77,12 +75,8 @@ export function createDevilStick(
         if (player.downed || slot === undefined) {
           continue;
         }
-        const pose = poseAt(
-          player,
-          lerp(player.prevX, player.x, alpha),
-          lerp(player.prevY, player.y, alpha),
-          frame.now,
-        );
+        const body = ctx.bodies.of(state, player, alpha, frame);
+        const pose = poseAt(player, body.x, body.y, body.facing, frame.now);
         kit.place(
           sticks.acquire(player.id),
           t.weapons.devilStick.stick,
@@ -109,7 +103,8 @@ export function createDevilStick(
       if (player === undefined) {
         return;
       }
-      const pose = poseAt(player, event.x, event.y, state.tick);
+      const body = ctx.bodies.of(state, player, frame.now - state.tick, frame);
+      const pose = poseAt(player, body.x, body.y, body.facing, frame.now);
       const ahead = Math.sign(Math.cos(pose.axis - pose.aim)) * (pose.length / 2);
       kit.transients.spawn({
         shape: t.halo,
