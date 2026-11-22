@@ -11,7 +11,7 @@ import type { Night, StageCard } from './types';
 const PATH_MINUTES = 1 / 3;
 
 export function nightsOffered(): readonly Night[] {
-  return FULL_NIGHTS.festival === true ? ['stage', 'endless', 'festival'] : ['stage', 'endless'];
+  return FULL_NIGHTS.festival === true ? ['stage', 'festival', 'endless'] : ['stage', 'endless'];
 }
 
 export function nightOf(model: { endless?: boolean; festival?: boolean }): Night {
@@ -59,10 +59,6 @@ export function nightLength(night: Night, stages: readonly StageCard[], stageId:
         ),
       );
   }
-}
-
-export function stageQuestion(night: Night): string {
-  return night === 'festival' ? t('Where does the night start?') : t('Pick the stage');
 }
 
 export function nightNote(night: Night): string {

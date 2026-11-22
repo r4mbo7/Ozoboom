@@ -998,7 +998,7 @@ svg.ui-title__moon-glint {
   align-self: end;
   justify-self: center;
   padding: 24px var(--ui-gap) var(--title-rise);
-  color: color-mix(in srgb, var(--or) 60%, var(--texte));
+  color: color-mix(in srgb, var(--or) 50%, var(--texte));
   font-family: var(--font-title);
   font-size: clamp(28px, 4vw, 44px);
   font-weight: 900;
@@ -1764,6 +1764,587 @@ svg.ui-title__moon-glint {
   text-align: end;
 }
 
+/* A player's stats sheet: start steps in the class colour, what the cards added in green, the line
+   the previewed card changes lit with before and after. Pause size by default. */
+.ui-stats {
+  --who: var(--or);
+  --gain: var(--healer);
+  --lit: var(--mage);
+  --ui-lit: color-mix(in srgb, var(--lit) 60%, var(--texte));
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 480px;
+  padding: 18px 22px 20px;
+  border: 1.5px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--texte) 10%, var(--ui-panel)),
+    var(--ui-panel)
+  );
+  box-shadow: var(--ui-lift);
+  color: var(--texte);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-stats__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.ui-stats__who {
+  color: var(--who);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ui-stats__name {
+  color: var(--who);
+  font-family: var(--font-title);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-shadow: 0 0 calc(22px * var(--ui-halo)) color-mix(in srgb, var(--who) 45%, transparent);
+}
+
+/* One grid for every row, so a lit row's before and after widen the value column for all. */
+.ui-stats__rows {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content minmax(40px, max-content);
+  gap: 8px 12px;
+}
+
+.ui-stats__row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+.ui-stats__label {
+  color: var(--ui-muted);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ui-stats__steps {
+  display: flex;
+  gap: 5px;
+}
+
+.ui-stats__step {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--texte) 14%, transparent);
+}
+
+.ui-stats__step[data-on='start'] {
+  background: var(--who);
+  box-shadow: 0 0 calc(8px * var(--ui-halo)) color-mix(in srgb, var(--who) 50%, transparent);
+}
+
+.ui-stats__step[data-on='gain'] {
+  background: var(--gain);
+  box-shadow: 0 0 calc(8px * var(--ui-halo)) color-mix(in srgb, var(--gain) 50%, transparent);
+}
+
+.ui-stats__value {
+  font-size: 15px;
+  font-weight: 700;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.ui-stats__gain {
+  color: var(--gain);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ui-stats__unit {
+  margin-inline-start: 1px;
+  color: var(--ui-muted);
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+/* Lit in the room around it: a line lit or not, the sheet keeps its height. */
+.ui-stats :is(.ui-stats__row, .ui-stats__specialrow)[data-lit] {
+  margin: -3px -10px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--lit) 20%, transparent);
+  box-shadow:
+    inset 0 0 0 2px var(--lit),
+    0 0 calc(22px * var(--ui-halo)) color-mix(in srgb, var(--lit) 35%, transparent);
+}
+
+.ui-stats__before {
+  color: var(--ui-muted);
+}
+
+.ui-stats__to {
+  margin-inline: 6px;
+  color: var(--ui-lit);
+}
+
+.ui-stats__after,
+.ui-stats [data-lit] > .ui-stats__gain,
+.ui-stats__recharge[data-lit] {
+  color: var(--ui-lit);
+}
+
+.ui-stats__special {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 16px 10px;
+  border: 1.5px solid color-mix(in srgb, var(--who) 45%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--who) 9%, var(--ui-panel));
+}
+
+.ui-stats__specialhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  color: var(--ui-muted);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.ui-stats__speciallabel {
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ui-stats__recharge::before {
+  content: '·';
+  margin-inline-end: 8px;
+  font-weight: 800;
+}
+
+.ui-stats__specialrows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content max-content minmax(40px, max-content);
+  gap: 4px 12px;
+}
+
+.ui-stats__specialrow {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+}
+
+.ui-stats__specialname {
+  overflow: hidden;
+  color: var(--who);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-stats__props {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ui-stats__prop {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 5px;
+  max-width: 100%;
+  padding: 4px 11px;
+  border: 1.5px solid var(--ui-line);
+  border-radius: 999px;
+  color: var(--ui-muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ui-stats__level {
+  color: var(--texte);
+  font-weight: 800;
+}
+
+.ui-stats__prop[data-lit] {
+  border-color: var(--lit);
+  background: color-mix(in srgb, var(--lit) 20%, transparent);
+  color: var(--ui-lit);
+}
+
+.ui-stats__level:empty,
+.ui-stats__hit:empty {
+  display: none;
+}
+
+/* On the upgrade panel, in the cards' room, as short as the cards: the rows on the left; the name,
+   the special and the props on the right, in the middle of the rows' height. */
+.ui-stats--panel {
+  display: grid;
+  grid-template:
+    'rows .' 1fr
+    'rows head' auto
+    'rows special' auto
+    'rows props' auto
+    'rows .' 1fr
+    / minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 6px 20px;
+  max-width: 680px;
+  padding: 20px 22px 16px;
+}
+
+.ui-stats--panel .ui-stats__head {
+  grid-area: head;
+}
+
+.ui-stats--panel .ui-stats__name {
+  font-size: 22px;
+}
+
+.ui-stats--panel .ui-stats__rows {
+  grid-area: rows;
+  grid-template-columns: max-content minmax(0, 1fr) max-content minmax(32px, max-content);
+  align-self: center;
+  gap: 5px 10px;
+}
+
+.ui-stats--panel .ui-stats__special {
+  grid-area: special;
+  margin-block-start: 4px;
+}
+
+/* The special's name takes a line of its own, its stats under it. */
+.ui-stats--panel .ui-stats__specialrows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ui-stats--panel .ui-stats__specialrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 10px;
+}
+
+.ui-stats--panel .ui-stats__specialname {
+  flex-basis: 100%;
+}
+
+.ui-stats--panel .ui-stats__specialname:empty {
+  display: none;
+}
+
+.ui-stats--panel .ui-stats__specialrow .ui-stats__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-stats--panel .ui-stats__props {
+  grid-area: props;
+  gap: 6px;
+}
+
+.ui-stats--panel .ui-stats__prop {
+  padding-inline: 9px;
+  font-size: 12px;
+}
+
+/* A panel that names its player above, or a phone, which has no height to spare: the sheet leaves
+   out the name, its rows and props the room. */
+.ui-offer:has(> .ui-who:not([hidden])) .ui-stats--panel .ui-stats__head {
+  display: none;
+}
+
+@media (max-height: 520px) {
+  .ui-stats--panel .ui-stats__head {
+    display: none;
+  }
+}
+
+/* Four panels share the screen: the sheet gives up a little air. */
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-stats--panel {
+  padding-block: 16px 12px;
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-stats--panel .ui-stats__rows {
+  row-gap: 4px;
+}
+
+/* A player alone on a tall screen: one column, as the cards stand tall. */
+@media (min-height: 801px) {
+  .ui-offers__panels:not([data-multi]) .ui-offer__stats {
+    width: min(100%, 520px);
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel {
+    display: flex;
+    gap: 12px;
+    max-width: 520px;
+    padding: 24px 24px 18px;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__name {
+    font-size: 26px;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__special {
+    margin-block-start: 0;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__specialrows {
+    display: grid;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__specialrow {
+    display: grid;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__rows {
+    grid-template-columns: max-content minmax(0, 1fr) max-content minmax(40px, max-content);
+    align-self: stretch;
+    gap: 7px 12px;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__props {
+    gap: 8px;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__prop {
+    padding-inline: 11px;
+    font-size: 13px;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__label {
+    font-size: 15px;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__value {
+    font-size: 16px;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-stats--panel .ui-stats__gain {
+    font-size: 13px;
+  }
+}
+
+/* On a face of the end card, which draws the frame and names the player: the rows and the special,
+   the props already on its front. */
+.ui-stats--card {
+  container-type: inline-size;
+  gap: 6px;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.ui-stats--card .ui-stats__who {
+  color: color-mix(in srgb, var(--who) 80%, var(--texte));
+  font-size: 19px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ui-stats--card :is(.ui-stats__name, .ui-stats__props) {
+  display: none;
+}
+
+.ui-stats--card .ui-stats__rows {
+  grid-template-columns: minmax(0, 1fr) 26px max-content max-content;
+  gap: 1px 5px;
+}
+
+/* A build the cards never grew gives its gain column back to the values, up to the card's edge. */
+.ui-stats--card .ui-stats__rows:not(:has(.ui-stats__gain:not(:empty))) {
+  grid-template-columns: minmax(0, 1fr) 26px max-content;
+}
+
+.ui-stats--card .ui-stats__specialrows:not(:has(.ui-stats__gain:not(:empty))) {
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
+}
+
+.ui-stats--card
+  :is(.ui-stats__rows, .ui-stats__specialrows):not(:has(.ui-stats__gain:not(:empty)))
+  .ui-stats__gain {
+  display: none;
+}
+
+.ui-stats--card .ui-stats__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.ui-stats--card .ui-stats__steps {
+  justify-content: space-between;
+  gap: 0;
+}
+
+.ui-stats--card .ui-stats__step {
+  flex: none;
+  width: 4px;
+  height: 10px;
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.ui-stats--card .ui-stats__value {
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.ui-stats--card .ui-stats__unit {
+  font-size: 0.7em;
+}
+
+.ui-stats--card .ui-stats__gain {
+  font-size: 11px;
+  line-height: 16px;
+  text-align: end;
+}
+
+.ui-stats--card .ui-stats__special {
+  gap: 2px;
+  padding: 7px 0 0;
+  border: 0;
+  border-top: 1px solid var(--ui-line);
+  border-radius: 0;
+  background: none;
+}
+
+.ui-stats--card .ui-stats__specialhead {
+  font-size: 11.5px;
+}
+
+.ui-stats--card .ui-stats__specialrows {
+  grid-template-columns: minmax(0, 1fr) max-content max-content max-content;
+  gap: 2px 6px;
+}
+
+.ui-stats--card .ui-stats__specialname {
+  color: color-mix(in srgb, var(--who) 80%, var(--texte));
+  font-size: 13px;
+}
+
+.ui-stats--card .ui-stats__specialrow .ui-stats__label {
+  font-size: 11.5px;
+}
+
+/* A card narrower than its four columns, as on a phone or four cards on an upright tablet: each row
+   leads with its steps, which also say what the cards added; the special names itself and its
+   recharge on one line, then its stats, a line each. */
+@container (max-width: 175px) {
+  .ui-stats--card .ui-stats__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ui-stats--card .ui-stats__row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ui-stats--card .ui-stats__steps {
+    flex: none;
+    order: -1;
+    width: 19px;
+  }
+
+  .ui-stats--card .ui-stats__step {
+    width: 3px;
+    height: 9px;
+  }
+
+  .ui-stats--card :is(.ui-stats__label, .ui-stats__value) {
+    font-size: 11px;
+    line-height: 13px;
+  }
+
+  .ui-stats--card .ui-stats__label {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ui-stats--card .ui-stats__gain {
+    display: none;
+  }
+
+  /* One wrapping list: the name and the recharge share the first line when they fit, and each
+     label takes the room its value leaves, so that every stat starts a line of its own. */
+  .ui-stats--card .ui-stats__special {
+    flex-flow: row wrap;
+    align-items: baseline;
+    gap: 0 5px;
+    margin-block-start: -3px;
+    padding-block-start: 3px;
+  }
+
+  .ui-stats--card :is(.ui-stats__specialhead, .ui-stats__specialrows, .ui-stats__specialrow) {
+    display: contents;
+  }
+
+  .ui-stats--card :is(.ui-stats__speciallabel, .ui-stats__specialname:empty) {
+    display: none;
+  }
+
+  /* A name too long to share its line with the recharge ends in an ellipsis rather than push the
+     card taller. */
+  .ui-stats--card .ui-stats__specialname {
+    flex: 0 1 auto;
+    order: 0;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 14px;
+  }
+
+  .ui-stats--card .ui-stats__recharge {
+    flex: none;
+    order: 1;
+    margin-inline-start: auto;
+    color: var(--ui-muted);
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  .ui-stats--card .ui-stats__recharge::before {
+    content: none;
+  }
+
+  .ui-stats--card .ui-stats__specialrow > :is(.ui-stats__label, .ui-stats__value) {
+    order: 2;
+  }
+
+  .ui-stats--card .ui-stats__specialrow > .ui-stats__label {
+    flex: 1 0 calc(100% - 64px);
+  }
+}
+
 .ui-classcards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 220px));
@@ -2012,24 +2593,27 @@ svg.ui-title__moon-glint {
   inset-inline-end: var(--ui-gap);
   flex-direction: row;
   gap: 10px;
-  max-width: 230px;
-  padding: 8px 18px 8px 10px;
+  max-width: 280px;
+  padding: 10px 22px 10px 12px;
   border-radius: 34px;
   text-align: start;
 }
 
 .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__plus {
-  width: 32px;
-  height: 32px;
-  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  font-size: 24px;
 }
 
 .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__text {
-  font-size: 15px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.15;
 }
 
-.ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__keys {
-  display: none;
+.ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__body {
+  align-items: flex-start;
+  gap: 4px;
 }
 
 @media (min-width: 1600px) {
@@ -2037,26 +2621,27 @@ svg.ui-title__moon-glint {
     position: static;
     flex-direction: column;
     justify-self: start;
-    gap: 12px;
+    align-self: start;
+    gap: 8px;
     width: min(100%, 260px);
     max-width: none;
-    padding: 16px;
+    padding: 14px 16px;
     border-radius: var(--ui-radius);
     text-align: center;
   }
 
   .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__plus {
-    width: 44px;
-    height: 44px;
-    font-size: 26px;
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+  }
+
+  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__body {
+    align-items: center;
   }
 
   .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__text {
     font-size: 20px;
-  }
-
-  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__keys {
-    display: flex;
   }
 
   .ui-classpicker:not([data-together]) .ui-picks:has(> .ui-invite:not([hidden])) {
@@ -2089,11 +2674,12 @@ svg.ui-title__moon-glint {
   min-width: 0;
   min-height: 0;
   padding: 16px;
-  border: 2px dashed color-mix(in srgb, var(--texte) 28%, transparent);
+  border: 2px solid var(--turquoise);
   border-radius: var(--ui-radius);
-  background: color-mix(in srgb, var(--sol-clair) 35%, transparent);
-  color: var(--texte);
+  background: var(--turquoise);
+  color: var(--sol);
   text-align: center;
+  animation: ui-invite-pulse 1.4s ease-out infinite;
 }
 
 .ui-invite[hidden] {
@@ -2107,8 +2693,8 @@ svg.ui-title__moon-glint {
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 2px dashed color-mix(in srgb, var(--turquoise) 60%, transparent);
   border-radius: 50%;
+  background: var(--sol);
   color: var(--turquoise);
   font-size: 26px;
   line-height: 1;
@@ -2119,21 +2705,33 @@ svg.ui-title__moon-glint {
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  background: conic-gradient(var(--turquoise) calc(var(--hold, 0) * 1turn), transparent 0);
+  background: conic-gradient(var(--sol) calc(var(--hold, 0) * 1turn), transparent 0);
   content: '';
   mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
 }
 
 .ui-invite[data-knock='a'] {
-  animation: ui-invite-knock-a 320ms ease-out;
+  animation:
+    ui-invite-knock-a 320ms ease-out,
+    ui-invite-pulse 1.4s ease-out 320ms infinite;
 }
 
 .ui-invite[data-knock='b'] {
-  animation: ui-invite-knock-b 320ms ease-out;
+  animation:
+    ui-invite-knock-b 320ms ease-out,
+    ui-invite-pulse 1.4s ease-out 320ms infinite;
 }
 
 .calm > .ui .ui-invite {
   animation: none;
+}
+
+.ui-invite__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: inherit;
+  gap: 8px;
 }
 
 .ui-invite__text {
@@ -2143,11 +2741,19 @@ svg.ui-title__moon-glint {
   text-wrap: balance;
 }
 
+.ui-invite .ui-key {
+  border-color: var(--sol);
+  background: var(--sol);
+  color: var(--turquoise);
+}
+
 .ui-invite__keys {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
-  color: var(--ui-muted);
+  color: var(--sol);
   font-size: 15px;
 }
 
@@ -3613,11 +4219,10 @@ svg.ui-title__moon-glint {
   margin: 0;
   color: var(--ui-muted);
   font-size: 16px;
+  line-height: 1.4;
   text-align: center;
-}
-
-.ui-stagepicker__note[hidden] {
-  display: none;
+  /* One line stays reserved: the cards do not move when a mode has no description. */
+  min-height: 1.4em;
 }
 
 /* A phone held sideways: the scenes lie two by two, their art beside their name, and the tabs and
@@ -3626,10 +4231,6 @@ svg.ui-title__moon-glint {
   .ui-stagepicker .ui-lobby__body {
     padding-block: 8px;
     gap: 8px;
-  }
-
-  .ui-stagepicker .ui-lobby__title {
-    font-size: 22px;
   }
 
   .ui-stagepicker .ui-nights__key {
@@ -5679,6 +6280,8 @@ svg.ui-title__moon-glint {
   --card-radius: calc(36 * var(--card-unit));
   --strip-height: calc(10 * var(--card-unit));
   --strip-inset: calc(14 * var(--card-unit));
+  /* Above the strip, the damage of one hit: kept on every prop card, so that their strips line up. */
+  --hit-room: calc(14 * var(--card-unit));
   --card-gap: calc(12 * var(--card-unit));
 
   gap: var(--card-gap);
@@ -5761,16 +6364,31 @@ svg.ui-title__moon-glint {
 .ui-card__steps {
   display: grid;
   position: absolute;
-  top: calc(var(--card-head) - var(--strip-height) - var(--strip-inset));
+  top: calc(var(--card-head) - var(--strip-height) - var(--strip-inset) - var(--hit-room));
   inset-inline: calc(var(--card-pad-x) + var(--strip-inset) / 2);
+  grid-template-rows: var(--hit-room) var(--strip-height);
   grid-template-columns: repeat(16, minmax(0, 1fr));
-  gap: calc(3 * var(--card-unit));
+  gap: 0 calc(3 * var(--card-unit));
   padding: 0;
 }
 
 .ui-card[data-kind='weapon'] .ui-card__head {
   position: relative;
-  padding-bottom: calc(var(--strip-height) + var(--strip-inset));
+  padding-bottom: calc(var(--strip-height) + var(--strip-inset) + var(--hit-room));
+}
+
+/* Small, above the step it strikes on, in the card's colour; no unit, no label. */
+.ui-card__hit {
+  grid-row: 1;
+  align-self: end;
+  justify-self: center;
+  padding-bottom: calc(3 * var(--card-unit));
+  color: color-mix(in srgb, var(--family) 80%, var(--texte));
+  font-size: calc(11 * var(--card-unit));
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px var(--sol);
 }
 
 .ui-card[data-kind='weapon'] .ui-card__head::after {
@@ -5783,6 +6401,7 @@ svg.ui-title__moon-glint {
 }
 
 .ui-card__step {
+  grid-row: 2;
   height: var(--strip-height);
   border-radius: 3px;
   background: color-mix(in srgb, var(--texte) 14%, transparent);
@@ -6866,11 +7485,8 @@ svg.ui-title__moon-glint {
   text-align: center;
   cursor: pointer;
   transform-style: preserve-3d;
+  transform: rotateY(calc(var(--turns, 0) * 180deg));
   transition: transform 520ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ui-end-card[aria-pressed='true'] {
-  transform: rotateY(180deg);
 }
 
 .ui-end-card__face {
@@ -6895,17 +7511,50 @@ svg.ui-title__moon-glint {
     visibility 0s linear 260ms;
 }
 
-/* The side turned away is gone at half the turn, for the eyes as for the screen readers. */
-.ui-end-card[aria-pressed='false'] .ui-end-card__face--back,
-.ui-end-card[aria-pressed='true'] .ui-end-card__face:not(.ui-end-card__face--back) {
+/* The face turned away is gone at half the turn, for the eyes as for the screen readers; the
+   face shown sits on the side the turn brings to the viewer. */
+.ui-end-card__face[aria-hidden='true'] {
   visibility: hidden;
 }
 
-/* Both sides stack in one cell: the card takes the size of the taller. */
+.ui-end-card__face[data-side='1'] {
+  transform: rotateY(180deg);
+}
+
+/* Every face stacks in one cell: the card keeps the size of the tallest. */
 .ui-end-card__face--back {
   align-items: stretch;
   gap: 8px;
-  transform: rotateY(180deg);
+}
+
+.ui-end-card__face[data-face='stats'] {
+  text-align: start;
+}
+
+/* The dot of the face shown is long, across from the turn arrow. */
+.ui-end-card__dots {
+  position: absolute;
+  inset-block-start: 20px;
+  inset-inline-end: 17px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.ui-end-card__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--texte) 30%, transparent);
+}
+
+.ui-end-card__dot[data-on] {
+  width: 11px;
+  background: color-mix(in srgb, var(--who) 80%, var(--texte));
+}
+
+.ui-end-card__face--back :is(.ui-end-card__name, .ui-stats__who) {
+  padding-inline: 26px;
 }
 
 .ui-end-card[data-downed='true'] .ui-end-card__face {
@@ -7752,7 +8401,7 @@ svg.ui-title__moon-glint {
 /* Two players of one screen know they are levelling up: the level and the title are read, not shown,
    and the cards take their height. */
 .ui-offers__panels[data-count='2']
-  .ui-offer:has(> .ui-cards[data-offer='levelUp'])
+  .ui-offer:has(> .ui-offer__views > .ui-cards[data-offer='levelUp'])
   > :is(.ui-kicker, .ui-heading) {
   position: absolute;
   width: 1px;
@@ -7788,10 +8437,15 @@ svg.ui-title__moon-glint {
   }
 
   .ui-offers__panels[data-count='2']
+    .ui-offer__views:has(> .ui-cards:not([data-count='5'], [data-count='6'])) {
+    flex-grow: 1;
+  }
+
+  .ui-offers__panels[data-count='2']
     .ui-cards:not([data-count='4'], [data-count='5'], [data-count='6']) {
     --card-head: calc(170 * var(--card-unit));
 
-    flex-grow: 1;
+    align-self: stretch;
     gap: calc(10 * var(--card-unit));
     margin-top: calc(22 * var(--card-unit));
   }
@@ -7861,7 +8515,7 @@ svg.ui-title__moon-glint {
   .ui-offers__panels[data-count='2'] .ui-cards[data-count='4'] {
     --card-head: calc(76 * var(--card-unit));
 
-    flex-grow: 1;
+    align-self: stretch;
     grid-auto-rows: auto;
     margin-top: calc(22 * var(--card-unit));
     /* A new weapon's bracelet wraps round its card's sides: the columns leave it room. */
@@ -7898,7 +8552,7 @@ svg.ui-title__moon-glint {
 }
 
 .ui-offers__panels:is([data-count='3'], [data-count='4'])
-  :is(.ui-heading, .ui-cards, .ui-offer__foot) {
+  :is(.ui-heading, .ui-offer__views, .ui-offer__foot) {
   flex-basis: 100%;
 }
 
@@ -8025,7 +8679,17 @@ svg.ui-title__moon-glint {
   opacity: 0;
 }
 
-.ui-offer[data-state='chosen'] :is(.ui-hint, .ui-reroll) {
+.ui-offer[data-state='chosen'] :is(.ui-hint, .ui-reroll, .ui-offer__toggle) {
+  visibility: hidden;
+}
+
+/* The stats walk no card: the hints go, and with two panels, whose pill waits in a corner, the row
+   keeps their height. */
+.ui-offers__panels:not([data-count='2']) .ui-offer[data-view='stats'] .ui-hint {
+  display: none;
+}
+
+.ui-offers__panels[data-count='2'] .ui-offer[data-view='stats'] .ui-hint {
   visibility: hidden;
 }
 
@@ -8037,8 +8701,159 @@ svg.ui-title__moon-glint {
   gap: 8px 24px;
 }
 
-/* Nothing to show in it: the row takes no room, nor the gap before it. */
-[data-touch] .ui-offer__foot:has(> .ui-reroll[hidden]) {
+/* The pill that turns the panel between its cards and the player's stats, with its key cap; a little
+   taller than the hint's key caps, it does not grow their row. */
+.ui-offer__toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin-block: -3px;
+  padding: 4px 14px 4px 5px;
+  border: 1.5px solid color-mix(in srgb, var(--turquoise) 55%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--turquoise) 12%, transparent);
+  color: var(--texte);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ui-offer__toggle:not(:has(.ui-key)) {
+  padding-inline-start: 14px;
+}
+
+/* A screen with no room for the hints, or a touch screen, which shows none: the pill waits in the top
+   corner, out of the cards' room. */
+@media (max-height: 700px) and (min-height: 521px) {
+  .ui-offer[data-bar] .ui-offer__foot:has(> .ui-reroll[hidden]) {
+    display: contents;
+  }
+
+  .ui-offer[data-bar] .ui-offer__toggle {
+    position: absolute;
+    top: 15px;
+    inset-inline-end: 16px;
+  }
+}
+
+@media (min-height: 521px) {
+  [data-touch] .ui-offer[data-bar] .ui-offer__foot:has(> .ui-reroll[hidden]) {
+    display: contents;
+  }
+
+  [data-touch] .ui-offer[data-bar] .ui-offer__toggle {
+    position: absolute;
+    top: 15px;
+    inset-inline-end: 16px;
+  }
+}
+
+.ui-offer__toggle:hover {
+  border-color: var(--turquoise);
+  background: color-mix(in srgb, var(--turquoise) 22%, transparent);
+}
+
+/* The cards and the stats stack in one cell: the box keeps the taller's height in both views, so that
+   the kicker and the heading stay in place when the panel turns, the view shown in its middle. */
+.ui-offer__views {
+  display: grid;
+  grid-template: 1fr / minmax(0, 1fr);
+  place-items: center;
+  align-self: stretch;
+}
+
+.ui-offer__views > * {
+  grid-area: 1 / 1;
+}
+
+/* Hidden to the eyes, and with the inert it carries, to the pointer, the keys and the screen readers;
+   the opacity too, as the focused card's "Choose" would show through visibility alone. */
+.ui-offer:not([data-view='stats']) .ui-offer__stats,
+.ui-offer[data-view='stats'] .ui-cards {
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* The stats take the cards' room under the heading, the focused card named on the sheet's top edge
+   and its lines lit in its tint. */
+.ui-offer__stats {
+  --lit: var(--mage);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 680px);
+  margin-inline: auto;
+}
+
+.ui-offer__stats[data-tint='rare'] {
+  --lit: var(--turquoise);
+}
+
+.ui-offer__stats:is([data-tint='legendary'], [data-tint='relic']) {
+  --lit: var(--or);
+}
+
+.ui-offer__stats .ui-stats {
+  --lit: inherit;
+}
+
+.ui-offer__sheets {
+  display: grid;
+  width: 100%;
+}
+
+.ui-offer__sheets > .ui-stats {
+  grid-area: 1 / 1;
+  justify-content: center;
+}
+
+.ui-offer__sheets > .ui-stats:not([data-shown]) {
+  visibility: hidden;
+}
+
+.ui-offer__aim {
+  position: relative;
+  z-index: 1;
+  max-width: calc(100% - 32px);
+  margin-bottom: -15px;
+  padding: 4px 16px;
+  overflow: hidden;
+  border: 1.5px solid var(--lit);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lit) 14%, var(--sol));
+  box-shadow: 0 0 calc(18px * var(--ui-halo)) color-mix(in srgb, var(--lit) 30%, transparent);
+  color: var(--ui-muted);
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* No card named: the line keeps its room, the sheet does not move. */
+.ui-offer__aim[data-blank] {
+  visibility: hidden;
+}
+
+.ui-offer__aimnote {
+  font-style: italic;
+}
+
+.ui-offer__aimnote::before {
+  content: '·';
+  margin-inline: 8px;
+  font-style: normal;
+}
+
+.ui-offer__aim b {
+  color: color-mix(in srgb, var(--lit) 60%, var(--texte));
+  font-weight: 800;
+}
+
+.ui-offer[data-view='stats'] .ui-places {
   display: none;
 }
 
@@ -8068,6 +8883,15 @@ svg.ui-title__moon-glint {
 .ui-offers__panels[data-multi] .ui-offer__foot {
   flex-wrap: nowrap;
   gap: calc(20 * var(--panel-unit));
+}
+
+/* Two panels: the pill mirrors the places in the panel's other top corner, the reroll and the hints
+   keeping their row. */
+.ui-offers__panels[data-count='2'] .ui-offer__toggle {
+  position: absolute;
+  top: calc(12 * var(--panel-unit));
+  inset-inline-start: calc(16 * var(--panel-unit));
+  margin: 0;
 }
 
 .ui-offers__panels[data-multi] .ui-reroll {
@@ -8104,6 +8928,13 @@ svg.ui-title__moon-glint {
   padding: calc(3 * var(--panel-unit)) calc(4 * var(--panel-unit)) calc(3 * var(--panel-unit))
     calc(11 * var(--panel-unit));
   border-width: 1.5px;
+  font-size: calc(12 * var(--panel-unit));
+}
+
+.ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-offer__toggle {
+  min-height: 0;
+  padding: calc(3 * var(--panel-unit)) calc(11 * var(--panel-unit)) calc(3 * var(--panel-unit))
+    calc(4 * var(--panel-unit));
   font-size: calc(12 * var(--panel-unit));
 }
 
@@ -8522,16 +9353,26 @@ svg.ui-title__moon-glint {
   }
 }
 
+@keyframes ui-invite-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--turquoise) 55%, transparent);
+  }
+
+  to {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+
 @keyframes ui-invite-knock-a {
   from {
-    border-color: var(--turquoise);
+    border-color: var(--texte);
     transform: scale(1.06);
   }
 }
 
 @keyframes ui-invite-knock-b {
   from {
-    border-color: var(--turquoise);
+    border-color: var(--texte);
     transform: scale(1.06);
   }
 }
@@ -9407,11 +10248,13 @@ svg.ui-title__moon-glint {
 }
 
 @media (orientation: portrait) and (min-width: 721px) and (max-width: 1024px) {
+  /* The hits written above the strip take the room of the gaps around it. */
   .ui-offers__panels:not([data-multi])
     .ui-cards:not([data-count='5'], [data-count='6'])
     .ui-card__steps {
     position: static;
     order: 1;
+    margin-block: -6px -5px;
   }
 
   .ui-offers__panels:not([data-multi])
@@ -9421,7 +10264,7 @@ svg.ui-title__moon-glint {
   }
 
   .ui-upgrade {
-    padding-block: 20px;
+    padding-block: 16px;
   }
 
   .ui-offers__panels:not([data-multi]) .ui-cards:not([data-count='5'], [data-count='6']) {
@@ -9808,9 +10651,14 @@ svg.ui-title__moon-glint {
     justify-content: center;
   }
 
-  .ui-offers__panels:not([data-multi]) .ui-cards:not([data-count='5'], [data-count='6']) {
+  .ui-offers__panels:not([data-multi])
+    .ui-offer__views:has(> .ui-cards:not([data-count='5'], [data-count='6'])) {
     flex: 1 1 0;
+  }
+
+  .ui-offers__panels:not([data-multi]) .ui-cards:not([data-count='5'], [data-count='6']) {
     grid-template-rows: minmax(48px, 1fr) auto;
+    align-self: stretch;
     min-height: 0;
   }
 
@@ -9887,8 +10735,9 @@ svg.ui-title__moon-glint {
     font-size: 14px;
   }
 
+  /* The cards hold a stats face: the rows above and below them close up a little. */
   .ui-end__body {
-    gap: 6px;
+    gap: 4px;
   }
 
   .ui-end__emblem,
@@ -9974,11 +10823,17 @@ svg.ui-title__moon-glint {
     padding: 8px 10px;
   }
 
+  /* With the name gone, the dots keep a line of their own above the first row. */
   .ui-end-card__face--back {
     gap: 4px;
+    padding-block-start: 20px;
   }
 
-  .ui-end-card__face--back .ui-end-card__name {
+  .ui-end-card__face[data-face='stats'] {
+    padding-block: 16px 3px;
+  }
+
+  .ui-end-card__face--back :is(.ui-end-card__name, .ui-stats__head) {
     display: none;
   }
 
@@ -9987,6 +10842,11 @@ svg.ui-title__moon-glint {
     inset-inline-start: 10px;
     width: 12px;
     height: 12px;
+  }
+
+  .ui-end-card__dots {
+    inset-block-start: 12px;
+    inset-inline-end: 10px;
   }
 
   .ui-end-card__feats,
@@ -10140,10 +11000,6 @@ svg.ui-title__moon-glint {
     display: none;
   }
 
-  .ui-offer[data-bar] .ui-offer__foot:has(> .ui-reroll[hidden]) {
-    display: none;
-  }
-
   .ui-end__body {
     gap: 8px;
   }
@@ -10179,6 +11035,15 @@ svg.ui-title__moon-glint {
 
   .ui-end-card__face--back {
     gap: 4px;
+  }
+
+  /* The stats face gives its name line to the rows, the dots keeping a line of their own. */
+  .ui-end-card__face[data-face='stats'] {
+    padding-block-start: 20px;
+  }
+
+  .ui-end-card__face[data-face='stats'] .ui-stats__head {
+    display: none;
   }
 
   .ui-end-card__feats,
@@ -10419,21 +11284,25 @@ svg.ui-title__moon-glint {
     display: none;
   }
 
-  .ui-offer[data-bar] .ui-offer__foot:has(> .ui-reroll[hidden]) {
-    display: none;
-  }
-
-  /* The reroll waits in the middle of the bar's row, between the bracelet and the actions. */
+  /* The reroll and the pill wait in the bar's row, clear of the status panel: at its far end, over
+     the dimmed actions. */
   .ui-offer[data-bar] .ui-offer__foot {
     position: absolute;
     inset-inline: 0;
     bottom: 0;
+    justify-content: flex-end;
+    gap: 8px 12px;
     height: var(--bar-room);
+    padding-inline-end: 8px;
     pointer-events: none;
   }
 
-  .ui-offer[data-bar] .ui-reroll {
+  .ui-offer[data-bar] :is(.ui-reroll, .ui-offer__toggle) {
     pointer-events: auto;
+  }
+
+  .ui-offer[data-bar] .ui-offer__toggle {
+    background: color-mix(in srgb, var(--turquoise) 14%, var(--sol));
   }
 
   .ui-hud[data-multi] .ui-hud__status,

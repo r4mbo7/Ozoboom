@@ -12,6 +12,7 @@ import type {
 import type { PlayerId, PlayerState, SimEvent, UpgradeOffer } from '../sim/state';
 import { t } from '../shared/i18n';
 import { growsSkillAlone, leadStat, upgradeForm } from '../sim/stats';
+import { propHit } from './class-figures';
 import { formatNumber } from './format';
 
 export const SIXTEENTHS_PER_BAR = 16;
@@ -81,6 +82,8 @@ export interface WeaponCard extends CardBase {
   steps: readonly boolean[] | 'continuous';
   // Above one, the weapon fires on one bar out of that many.
   everyBars: number;
+  // The damage of one hit once taken; null for a weapon that never hits.
+  hit: number | null;
   // What the weapon becomes back to back with an upgrade, once both are at their maximum.
   fusions: readonly FusionPath[];
   roles: readonly RoleView[];
@@ -227,6 +230,7 @@ export function cardFor(
     adds: level === 0,
     steps: stepsOf(weapon),
     everyBars: weapon.rhythm === 'continuous' ? 1 : weapon.rhythm.everyBars,
+    hit: propHit(weapon, level + 1, player ?? { modifiers: {} }),
     roles: rolesOf(weapon, player, content),
     fusions: (content.fusions ?? []).flatMap((fusion) => {
       const result = content.weapons?.find((entry) => entry.id === fusion.resultId);

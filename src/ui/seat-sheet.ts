@@ -96,12 +96,15 @@ export interface Invite {
 export function createInvite(): Invite {
   const element = el('div', 'ui-invite');
   const keys = el('p', 'ui-invite__keys');
-  keys.append(keycap('A', 'button'), el('span', '', t('or')), keycap(t('Enter'), 'key'));
-  element.append(
-    el('span', 'ui-invite__plus', '+'),
-    el('p', 'ui-invite__text', t('Hold A or Enter to join')),
-    keys,
+  keys.append(
+    el('span', '', t('Hold')),
+    keycap('A', 'button'),
+    el('span', '', t('or')),
+    keycap(t('Enter'), 'key'),
   );
+  const body = el('div', 'ui-invite__body');
+  body.append(el('p', 'ui-invite__text', t('Add a player')), keys);
+  element.append(el('span', 'ui-invite__plus', '+'), body);
   let filled = 0;
   return {
     element,

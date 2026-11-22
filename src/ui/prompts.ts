@@ -17,6 +17,8 @@ export interface DevicePrompts {
   navigate: readonly string[];
   navigateRow: readonly string[];
   tabs: readonly string[];
+  // Turns a screen between its two views; none on a touch screen, which touches its pill.
+  switchView: string;
   confirm: string;
   back: string;
   skill: string;
@@ -42,6 +44,7 @@ const keyboard = (profile: KeyProfile, name: Name): DevicePrompts => ({
   navigate: ['↑', '↓'],
   navigateRow: ['←', '→'],
   tabs: [name('KeyQ'), name('KeyE')],
+  switchView: t('Tab'),
   confirm: t('Enter'),
   back: t('Esc'),
   skill: keyNames(profile, 'skill', name)[0] ?? '',
@@ -66,6 +69,7 @@ const gamepad = (profile: KeyProfile): DevicePrompts => ({
   navigate: [sticks(profile).move, t('D-pad')],
   navigateRow: [sticks(profile).move, t('D-pad')],
   tabs: ['LB', 'RB'],
+  switchView: 'RB',
   confirm: 'A',
   back: 'B',
   skill: buttonNames(profile, 'skill')[0] ?? '',
@@ -91,6 +95,7 @@ const touch = (): DevicePrompts => ({
   navigate: [],
   navigateRow: [],
   tabs: [],
+  switchView: '',
   confirm: t('Tap'),
   back: t('Back'),
   skill: '',

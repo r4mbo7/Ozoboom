@@ -40,6 +40,10 @@ export const straight: AttackModule<StraightAttack> = {
     });
   },
 
+  damage(attack) {
+    return attack.damage;
+  },
+
   reach(attack, player) {
     return statValue(player, 'projectileSpeedMul', attack.projectileSpeed) * attack.rangeTicks;
   },

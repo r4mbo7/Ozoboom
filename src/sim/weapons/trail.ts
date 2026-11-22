@@ -3,6 +3,7 @@ import { lookup } from '../content';
 import { healPlayer, soothe, touches } from '../effects';
 import { applyModifiers, refreshDerivedStats } from '../stats';
 import type { PlayerState, WeaponSlot } from '../state';
+import { trailRide } from './trail-ride';
 import type { WeaponModule } from './types';
 
 const point = { x: 0, y: 0 };
@@ -15,7 +16,7 @@ export const trail: WeaponModule = {
     }
     if (slot.trail === undefined) {
       slot.trail = new Array<number>(effect.lengthTicks * 2).fill(0);
-      applyModifiers(player, [{ stat: 'speedMul', mul: effect.speedMul }]);
+      applyModifiers(player, trailRide(effect));
       refreshDerivedStats(player, lookup(content.classes, player.classId, 'class'));
     }
     const ring = slot.trail;

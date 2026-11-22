@@ -94,6 +94,18 @@ function attract(pickup: PickupState, player: PlayerState, speed: number): boole
   return false;
 }
 
+// Pickups taken at once by the first player standing, off the ground.
+export function absorbPickups(state: SimState, taken: readonly PickupState[]): void {
+  const collector = state.players.find((player) => !player.downed && player.gone !== true);
+  if (collector === undefined || taken.length === 0) {
+    return;
+  }
+  for (const pickup of taken) {
+    collect(state, pickup, collector);
+  }
+  state.pickups = state.pickups.filter((pickup) => !taken.includes(pickup));
+}
+
 function collect(state: SimState, pickup: PickupState, player: PlayerState): void {
   const amount = pickup.amount * volumeMul(state);
   // Downed players too, so that the whole team levels up together.

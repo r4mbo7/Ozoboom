@@ -205,11 +205,12 @@ export function createProgramme(
   const board = el('div', 'ui-programme__panel ui-programme__board');
   board.setAttribute('role', 'tabpanel');
   const heading = el('h3', 'ui-programme__heading');
+  const subtitle = el('p', 'ui-programme__subtitle');
   const room = el('div', 'ui-programme__room');
   const grid = el('div', 'ui-programme__grid');
   grid.setAttribute('role', 'listbox');
   room.append(grid);
-  board.append(heading, el('span', 'ui-programme__rule'), room);
+  board.append(heading, subtitle, el('span', 'ui-programme__rule'), room);
 
   const sheet = createSheet();
   guide.append(strip, board, sheet.element);
@@ -377,6 +378,8 @@ export function createProgramme(
       node.setAttribute('aria-selected', position === index ? 'true' : 'false');
     });
     setText(heading, tab.title());
+    setText(subtitle, tab.subtitle?.() ?? '');
+    subtitle.hidden = tab.subtitle === undefined;
     grid.setAttribute('aria-label', tab.title());
     board.dataset.tab = tab.id;
     art.quiet();

@@ -1,8 +1,9 @@
 import { CLASSES } from '../../data/classes';
-import type { AttackDefinition, ClassDefinition } from '../../data/types';
+import type { ClassDefinition } from '../../data/types';
 import { t } from '../../shared/i18n';
 import { TICKS_PER_BEAT } from '../../shared/tempo';
 import { attackReach } from '../../sim/attacks';
+import { damageOf, rateOf } from '../class-figures';
 import { formatTenth } from '../format';
 import { CLASS_TEASERS } from '../teaser';
 import { figureRows } from './figure-rows';
@@ -13,13 +14,6 @@ import type { ProgrammeArt, ProgrammeEntry, ProgrammeTab } from './types';
 const BUST =
   '<circle cx="12" cy="7.6" r="4.6" fill="currentColor"/>' +
   '<path d="M3.2 22.4Q3.4 14 12 14T20.8 22.4z" fill="currentColor"/>';
-
-const damageOf = (attack: AttackDefinition): number | undefined =>
-  'damage' in attack ? attack.damage : undefined;
-
-// Shots per beat, for an attack whose data holds its cooldown; one that strikes on the beat holds none.
-const rateOf = (attack: AttackDefinition): number | undefined =>
-  'cooldownTicks' in attack ? TICKS_PER_BEAT / attack.cooldownTicks : undefined;
 
 function rateText(rate: number): string {
   return rate >= 1
@@ -36,7 +30,7 @@ export function characterEntries(
     { label: t('Health'), of: ({ maxHp }) => maxHp },
     { label: t('Speed'), of: ({ speed }) => speed },
     { label: t('Damage'), of: ({ attack }) => damageOf(attack) },
-    { label: t('Rate'), of: ({ attack }) => rateOf(attack), text: rateText },
+    { label: t('Rate'), of: ({ attack }) => rateOf(attack, TICKS_PER_BEAT), text: rateText },
     { label: t('Range'), of: ({ attack }) => attackReach(attack) },
   ]);
   return classes.map((definition) => ({

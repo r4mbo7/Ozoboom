@@ -2,53 +2,16 @@ import { FUSIONS } from '../../data/fusions';
 import { UPGRADES } from '../../data/upgrades';
 import { weaponGlyph } from '../../data/weapon-glyphs';
 import { WEAPONS } from '../../data/weapons';
-import type {
-  FusionDefinition,
-  UpgradeDefinition,
-  WeaponDefinition,
-  WeaponEffect,
-} from '../../data/types';
+import type { FusionDefinition, UpgradeDefinition, WeaponDefinition } from '../../data/types';
 import { t } from '../../shared/i18n';
 import { SIXTEENTHS_PER_BAR } from '../cards';
+import { figuresOf } from '../class-figures';
 import { formatHundredth } from '../format';
 import { figureRows } from './figure-rows';
 import type { ProgrammeArt, ProgrammeEntry, ProgrammeTab } from './types';
 
-interface PropFigures {
-  readonly damage?: number;
-  readonly range?: number;
-  // On each catch, or on every bar for a zone or a trail.
-  readonly heal?: number;
-  readonly healsPerBar?: true;
-}
-
-function figuresOf(effect: WeaponEffect): PropFigures {
-  switch (effect.kind) {
-    case 'sweep':
-      return { damage: effect.damage, range: effect.radius };
-    case 'spark':
-      return { damage: effect.damage, range: effect.speed * effect.rangeTicks };
-    case 'hoop':
-      return { damage: effect.damage, range: effect.wideRadius };
-    case 'lob':
-      return { damage: effect.damage, range: effect.range };
-    case 'boomerang':
-      return { damage: effect.damage, range: effect.range, heal: effect.heal };
-    case 'plate':
-      return { range: effect.radius, heal: effect.healPerBar, healsPerBar: true };
-    case 'totem':
-      return { damage: effect.damage, range: effect.radius };
-    case 'orbit':
-      return { damage: effect.damage, range: effect.orbitRadius + effect.radius };
-    case 'trail':
-      return { heal: effect.healPerBar, healsPerBar: true };
-    case 'ribbon':
-      return { range: effect.length };
-  }
-}
-
 // Its hits in a bar; a prop that plays non-stop fills every sixteenth, as its card's strip lights.
-function rateOf({ rhythm }: WeaponDefinition): number {
+function hitsPerBar({ rhythm }: WeaponDefinition): number {
   return rhythm === 'continuous' ? SIXTEENTHS_PER_BAR : rhythm.steps.length / rhythm.everyBars;
 }
 
@@ -82,7 +45,7 @@ export function propEntries(
     { label: t('Damage'), of: (weapon) => figuresOf(weapon.effect).damage },
     {
       label: t('Rate'),
-      of: rateOf,
+      of: hitsPerBar,
       text: (value, weapon) => (weapon.rhythm === 'continuous' ? t('Non-stop') : perBar(value)),
     },
     { label: t('Range'), of: (weapon) => figuresOf(weapon.effect).range },
@@ -115,5 +78,6 @@ export function propEntries(
 export const PROPS_TAB: ProgrammeTab = {
   id: 'props',
   title: () => t('Props'),
+  subtitle: () => t('(weapons)'),
   entries: (art) => propEntries(WEAPONS, FUSIONS, UPGRADES, art),
 };

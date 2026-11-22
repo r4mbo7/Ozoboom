@@ -11,7 +11,7 @@ import {
   touches,
 } from '../effects';
 import type { PlacedState, SimState } from '../state';
-import { statValue } from '../stats';
+import { weaponPower } from '../stats';
 import type { StepContext } from './types';
 
 const TOTEM_BODY_RADIUS = 14;
@@ -81,19 +81,27 @@ function definitionOf({ content }: StepContext, zone: PlacedState): WeaponDefini
   return lookup(content.weapons, zone.weaponId, 'weapon');
 }
 
-function levelPowerOf({ state, content }: StepContext, zone: PlacedState): number {
+// Its owner, and the slot and definition of the prop it was placed by, while the owner still holds it.
+function heldOf({ state, content }: StepContext, zone: PlacedState) {
   const owner = state.players.find((player) => player.id === zone.playerId);
   const slot = owner?.weapons?.find((candidate) => candidate.id === zone.weaponId);
   const definition = content.weapons.get(zone.weaponId);
+  return { owner, slot, definition };
+}
+
+function levelPowerOf(ctx: StepContext, zone: PlacedState): number {
+  const { slot, definition } = heldOf(ctx, zone);
   return slot === undefined || definition === undefined
     ? 1
     : compound(definition.levelMul, slot.level - 1);
 }
 
 function damagePowerOf(ctx: StepContext, zone: PlacedState): number {
-  const owner = ctx.state.players.find((player) => player.id === zone.playerId);
-  const weaponDamage = owner === undefined ? 1 : statValue(owner, 'weaponDamageMul', 1);
-  return levelPowerOf(ctx, zone) * weaponDamage;
+  const { owner, slot, definition } = heldOf(ctx, zone);
+  if (owner === undefined) {
+    return 1;
+  }
+  return weaponPower(owner, definition ?? { levelMul: 1 }, slot?.level ?? 1);
 }
 
 function removeExpired(state: SimState): void {

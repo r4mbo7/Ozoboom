@@ -5,6 +5,7 @@ import type { PlayerState, UpgradeOffer } from '../state';
 import { pick } from '../../shared/prng';
 import { applyModifiers, refreshDerivedStats, upgradeForm } from '../stats';
 import { giveTrap } from '../trap-moves';
+import { trailDismount } from '../weapons/trail-ride';
 import { presentNextOffer } from './progression';
 import type { StepContext } from './types';
 
@@ -173,7 +174,7 @@ function evolve(
   }
   const old = lookup(content.weapons, baseId, 'weapon');
   if (slot.trail !== undefined && old.effect.kind === 'trail') {
-    applyModifiers(player, [{ stat: 'speedMul', mul: 1 / old.effect.speedMul }]);
+    applyModifiers(player, trailDismount(old.effect));
     refreshDerivedStats(player, lookup(content.classes, player.classId, 'class'));
   }
   slot.id = result.id;

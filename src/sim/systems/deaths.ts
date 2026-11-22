@@ -12,6 +12,7 @@ import { dropBomb } from './bomb';
 import { dropDie } from './dice';
 import { dropBossTrap, dropCarriedTrap } from './carriers';
 import { unmaskFallen } from './dancers';
+import { absorbPickups } from './pickups';
 import { tallyOf } from '../tally';
 import { dropTwinVibes, vibesDoubled } from './twin-vibes';
 import { bossLeft, isLastTier } from './set-progress';
@@ -96,13 +97,24 @@ export function deaths(ctx: StepContext): void {
       dropBossRows(ctx, enemy, at);
     }
     if (vibesDrop > 0) {
+      const first = state.pickups.length;
       dropVibes(state, vibesDrop, at, set.pickups.lifetimeTicks);
+      if (enemy.isBoss) {
+        for (const pickup of state.pickups.slice(first)) {
+          pickup.fromBoss = true;
+        }
+      }
     }
   }
   state.enemies.length = kept;
-  // The relics wait for the last boss of the drop, called ones included.
-  if (bossFell && !bossLeft(state) && !isLastTier(state.set, set)) {
-    offerRelics(ctx);
+  // The relics wait for the last boss of the drop, called ones included. The vibes of all its bosses go
+  // to the team at once, so that the level up they bring is offered right after the relic, not once the
+  // stage is back.
+  if (bossFell && !bossLeft(state) && !isLastTier(state.set, set) && offerRelics(ctx)) {
+    absorbPickups(
+      state,
+      state.pickups.filter((pickup) => pickup.fromBoss === true),
+    );
   }
 }
 
@@ -128,7 +140,8 @@ function dropBossRows(ctx: StepContext, boss: EnemyState, at: Vec2): void {
   });
 }
 
-function offerRelics({ state, content }: StepContext): void {
+function offerRelics({ state, content }: StepContext): boolean {
+  let offered = false;
   for (const player of state.players) {
     if (player.gone === true) {
       continue;
@@ -138,8 +151,10 @@ function offerRelics({ state, content }: StepContext): void {
       const rarities = options.map(() => 'common' as const);
       state.pendingUpgrades.push({ playerId: player.id, options, rarities, kind: 'relic' });
       state.events.push({ type: 'relicOffered', playerId: player.id, options });
+      offered = true;
     }
   }
+  return offered;
 }
 
 // Doubled, they fall as a pair side by side, each the whole drop.

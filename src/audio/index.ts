@@ -138,13 +138,14 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     menus === 'ambience' ? null : menus;
 
   const menuVoice = (opened: Running): Ambience =>
-    mood === 'menu' ? (trackOf(opened) ?? opened.ambience) : opened.ambience;
+    mood === 'set' ? opened.ambience : (trackOf(opened) ?? opened.ambience);
 
   // A mood asked in the same frame as an update waits for it: the menu ambience must know the ending has begun.
   const applyMood = () => {
     if (running === null || heard === mood) {
       return;
     }
+    const before = heard;
     heard = mood;
     const { context, music, ambience } = running;
     if (mood === 'set') {
@@ -159,7 +160,14 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
           other.leave();
         }
       }
-      menuAt = music.menuAt(context.currentTime);
+      const track = trackOf(running);
+      if (before === 'pause' && mood === 'menu' && track !== null && voice === track) {
+        // Quitting a run from its pause: the set is already out, the recording starts over on its opening.
+        menuAt = null;
+        track.rewind();
+      } else {
+        menuAt = music.menuAt(context.currentTime);
+      }
     }
     stopPumping ??= repeat(pump);
     pump();
@@ -199,7 +207,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       voice.leave();
       opened.dropped = voice;
       opened.menus = 'ambience';
-      if (heard === 'menu' && menuAt === null) {
+      if (heard !== 'set' && menuAt === null) {
         opened.ambience.enter(opened.context.currentTime);
       }
     }

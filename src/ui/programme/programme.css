@@ -290,6 +290,21 @@
   text-shadow: 0 0 calc(12px * var(--ui-halo)) color-mix(in srgb, var(--pg-gold) 50%, transparent);
 }
 
+/* A precision under the heading, such as « (enemies) ». */
+.ui-programme__subtitle {
+  margin: clamp(2px, 0.5cqh, 6px) 0 0;
+  color: var(--pg-gold);
+  font-family: var(--font-title);
+  font-size: clamp(11px, 1.5cqw, 24px);
+  line-height: 1.1;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.ui-programme__subtitle[hidden] {
+  display: none;
+}
+
 /* A gold rule under the heading, a diamond at its middle. */
 .ui-programme__rule {
   position: relative;

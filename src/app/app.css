@@ -34,6 +34,90 @@ body {
   margin-top: 12px;
 }
 
+.pause__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+/* The sheet of the player who paused, beside the menu, the hint under both. */
+.pause[data-sheet] {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 480px);
+  justify-content: center;
+  align-items: center;
+  gap: 16px 56px;
+  width: min(100%, 896px);
+}
+
+.pause[data-sheet] > .pause__sheet {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  text-align: start;
+}
+
+.pause[data-sheet] > .ui-hint {
+  grid-column: 1 / -1;
+}
+
+/* Too narrow for two columns, or a phone held sideways: the sheet comes under the menu. */
+@media (max-width: 899px), (max-height: 520px) {
+  .pause[data-sheet] {
+    display: flex;
+    width: min(100%, 520px);
+  }
+
+  .pause[data-sheet] > .pause__sheet {
+    width: 100%;
+  }
+}
+
+/* A phone held sideways: the sheet at its compact size, every row kept. */
+@media (max-height: 520px) {
+  .pause .ui-stats {
+    gap: 8px;
+    max-width: 440px;
+    padding: 12px 16px 14px;
+  }
+
+  .pause .ui-stats__name {
+    font-size: 20px;
+  }
+
+  .pause .ui-stats__rows {
+    gap: 4px 10px;
+  }
+
+  .pause .ui-stats__label {
+    font-size: 13px;
+  }
+
+  .pause .ui-stats__value {
+    font-size: 14px;
+  }
+
+  .pause .ui-stats__special {
+    gap: 2px;
+    padding: 6px 12px 7px;
+  }
+
+  .pause .ui-stats__specialname {
+    font-size: 15px;
+  }
+
+  .pause .ui-stats__props {
+    gap: 6px;
+  }
+
+  .pause .ui-stats__prop {
+    padding: 2px 9px;
+    font-size: 12px;
+  }
+}
+
 .toast__line {
   position: absolute;
   top: 16px;

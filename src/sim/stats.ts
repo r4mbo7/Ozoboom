@@ -8,8 +8,9 @@ import type {
   StatKey,
   StatModifier,
   UpgradeDefinition,
+  WeaponDefinition,
 } from '../data/types';
-import { wholeTicks } from './effects';
+import { compound, wholeTicks } from './effects';
 import type { PlayerState } from './state';
 
 const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
@@ -82,6 +83,15 @@ export function skillCooldownTicks(
   skill: Pick<SkillDefinition, 'cooldownTicks'>,
 ): number {
   return wholeTicks(statValue(player, 'skillCooldownMul', skill.cooldownTicks));
+}
+
+// What every hit of a prop at this level is multiplied by, before the player's own level.
+export function weaponPower(
+  player: Carded,
+  weapon: Pick<WeaponDefinition, 'levelMul'>,
+  level: number,
+): number {
+  return compound(weapon.levelMul, level - 1) * statValue(player, 'weaponDamageMul', 1);
 }
 
 type Carded = Pick<PlayerState, 'modifiers' | 'suppressedTicks' | 'boosts'>;

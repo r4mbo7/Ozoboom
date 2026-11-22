@@ -10,6 +10,9 @@ export interface AttackModule<A extends AttackDefinition> {
   readonly reads: readonly StatKey[];
   // Every tick, for each standing player of a class with this attack.
   step(ctx: StepContext, player: PlayerState, attack: A, input: PlayerInput): void;
+  // The damage of one hit before cards and levels, read where the step reads it, which damageMul
+  // scales: the stats sheet and the Programme show it. None for an attack that holds none.
+  damage(attack: A): number | undefined;
   // The bot keeps to it; the aim and the class screen show it.
   reach(attack: A, player: Upgraded): number;
   // It charges while the player stands still: the bot holds its ground while it has a target in

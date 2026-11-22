@@ -4,7 +4,7 @@ import { normalize } from '../../shared/vec';
 import { blackedOut } from '../blackout';
 import { compound } from '../effects';
 import type { EnemyState, PlayerState, WeaponSlot } from '../state';
-import { statValue } from '../stats';
+import { statValue, weaponPower } from '../stats';
 import { boomerang } from '../weapons/boomerang';
 import { hoop } from '../weapons/hoop';
 import { lob } from '../weapons/lob';
@@ -134,7 +134,7 @@ export function weapons(ctx: StepContext): void {
       const aim = normalize(player.aim);
       const level = compound(definition.levelMul, slot.level - 1);
       const shot = {
-        power: level * statValue(player, 'weaponDamageMul', 1),
+        power: weaponPower(player, definition, slot.level),
         healPower: level,
         target,
         direction: target === null ? aim : directionTo(player, target, aim),

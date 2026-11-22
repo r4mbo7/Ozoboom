@@ -1,7 +1,8 @@
-import type { InputDevice } from '../input/intents';
+import type { DeviceId, InputDevice } from '../input/intents';
 import { t } from '../shared/i18n';
+import type { PlayerId } from '../sim/state';
 import { createControlsButton, createFeedbackButton } from '../ui';
-import type { InputView } from './match';
+import type { InputView, MatchSeat } from './match';
 import type { PauseItem, PauseScreen } from './pause';
 import type { Settings } from './settings';
 
@@ -9,6 +10,8 @@ export interface TeamPause {
   readonly paused: boolean;
   // Online, the pause menu stops nothing: the set goes on, and so does its music.
   readonly stopsTheSet: boolean;
+  // The device that pressed pause; null for a pause the game opened, as when the tab is hidden.
+  readonly pauser: DeviceId | null;
   pause(device: InputDevice): void;
   resume(): void;
   dismiss(): void;
@@ -34,12 +37,14 @@ export interface PauseActions {
 // The pause is the team's: any device pauses, navigates and resumes, through the merged view.
 export function createTeamPause(screen: PauseScreen, env: TeamPauseEnv): TeamPause {
   let paused = false;
+  let pauser: DeviceId | null = null;
 
-  function pause(device: InputDevice): void {
+  function pause(device: InputDevice, by: DeviceId | null = null): void {
     if (paused) {
       return;
     }
     paused = true;
+    pauser = by;
     env.changed();
     screen.show(device, env.online() ? onlinePauseText() : undefined);
   }
@@ -60,7 +65,12 @@ export function createTeamPause(screen: PauseScreen, env: TeamPauseEnv): TeamPau
     get stopsTheSet() {
       return paused && !env.online();
     },
-    pause,
+    get pauser() {
+      return pauser;
+    },
+    pause(device) {
+      pause(device);
+    },
     resume,
     dismiss() {
       paused = false;
@@ -71,8 +81,8 @@ export function createTeamPause(screen: PauseScreen, env: TeamPauseEnv): TeamPau
       const wasPaused = paused;
       if (!paused) {
         if (gameplay.pause) {
-          const pauser = [...devices.values()].find((snapshot) => snapshot.gameplay.pause);
-          pause(pauser?.device ?? merged.device);
+          const [id, snapshot] = [...devices].find(([, own]) => own.gameplay.pause) ?? [];
+          pause(snapshot?.device ?? merged.device, id);
         }
       } else if ((gameplay.pause || menu.back) && screen.confirming) {
         screen.cancelConfirmation();
@@ -84,6 +94,17 @@ export function createTeamPause(screen: PauseScreen, env: TeamPauseEnv): TeamPau
       return wasPaused || paused;
     },
   };
+}
+
+// The player of this screen whose sheet the pause shows: the one on the device that paused, else the
+// first; online, that is the local player. Null when this screen plays nobody.
+export function pausingPlayer(
+  seats: readonly MatchSeat[],
+  pauser: DeviceId | null,
+): PlayerId | null {
+  const local = seats.filter((seat) => seat.local);
+  const own = local.find((seat) => seat.device !== null && seat.device === pauser);
+  return (own ?? local[0])?.playerId ?? null;
 }
 
 export function pauseItems(settings: Settings, actions: PauseActions): PauseItem[] {

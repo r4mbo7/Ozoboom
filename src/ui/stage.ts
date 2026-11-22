@@ -2,7 +2,7 @@ import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
 import { type GoMark, el, fillHint, findAll, goMark, setText } from './dom';
 import { PLAY } from './icons';
-import { createNightTabs, nightLength, nightNote, nightOf, stageQuestion } from './night';
+import { createNightTabs, nightLength, nightNote, nightOf } from './night';
 import { formatTempo } from './format';
 import { createButtonRow } from './button-row';
 import { stepClass } from './lobby-model';
@@ -150,9 +150,6 @@ export function createStagePicker(
 
   const element = el('section', 'ui-screen ui-stagepicker');
   element.setAttribute('aria-label', t('Stage choice'));
-  const header = el('header', 'ui-lobby__header');
-  const title = el('h2', 'ui-lobby__title');
-  header.append(title);
   const nights = createNightTabs((night) => {
     actions.chooseNight(night);
   });
@@ -182,7 +179,7 @@ export function createStagePicker(
   footer.append(toClasses, back);
   const hint = el('p', 'ui-hint');
   const body = el('div', 'ui-lobby__body');
-  body.append(header, nights.element, cards.element, note, footer, hint);
+  body.append(nights.element, note, cards.element, footer, hint);
   element.append(body);
 
   let device: InputDevice | null = null;
@@ -219,11 +216,9 @@ export function createStagePicker(
     setModel(next) {
       model = next;
       const night = nightOf(next);
-      setText(title, stageQuestion(night));
       nights.set(night, nightLength(night, next.stages, next.stageId));
       cards.set(next.stages, next.stageId, night === 'festival');
       setText(note, nightNote(night));
-      note.hidden = nightNote(night) === '';
     },
     setDevice(next) {
       if (next !== device) {

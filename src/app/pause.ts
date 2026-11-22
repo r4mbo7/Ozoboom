@@ -47,25 +47,39 @@ export interface PauseScreen {
 
 interface View {
   section: HTMLElement;
+  body: HTMLElement;
   heading: HTMLElement;
   text: HTMLElement;
   nav: HTMLElement;
   hint: HTMLElement;
 }
 
-function view(role: 'dialog' | 'alertdialog', heading: string, text: string): View {
+// `aside` goes beside the menu, the hint under both.
+function view(
+  role: 'dialog' | 'alertdialog',
+  heading: string,
+  text: string,
+  aside?: HTMLElement,
+): View {
   const section = el('section', 'ui-screen ui-overlay');
   section.setAttribute('role', role);
   section.hidden = true;
   const body = el('div', 'pause');
   const parts: View = {
     section,
+    body,
     heading: el('h2', 'ui-heading', heading),
     text: el('p', 'pause__text', text),
     nav: el('nav', 'pause__menu'),
     hint: el('p', 'ui-hint'),
   };
-  body.append(el('p', 'ui-kicker', t('Pause')), parts.heading, parts.text, parts.nav, parts.hint);
+  const menu = el('div', 'pause__main');
+  menu.append(el('p', 'ui-kicker', t('Pause')), parts.heading, parts.text, parts.nav);
+  body.append(menu);
+  if (aside !== undefined) {
+    body.append(aside);
+  }
+  body.append(parts.hint);
   section.append(body);
   return parts;
 }
@@ -77,14 +91,18 @@ function button(className: string, label: string): HTMLButtonElement {
 }
 
 // The pause screen is the app's, but wears the interface's styles so that it reads as one of its screens.
+// `sheetFor`, asked each time the pause opens: what goes beside the menu, null for nothing.
 export function createPauseScreen(
   root: HTMLElement,
   prompts: Prompts,
   items: readonly PauseItem[],
+  sheetFor?: () => HTMLElement | null,
 ): PauseScreen {
   const layer = el('div', 'ui');
   const resting = pauseText();
-  const main = view('dialog', resting.heading, resting.text);
+  const sheet = el('aside', 'pause__sheet');
+  sheet.hidden = true;
+  const main = view('dialog', resting.heading, resting.text, sheet);
   main.section.setAttribute('aria-label', t('Pause'));
   main.nav.setAttribute('aria-label', t('Pause menu'));
   const confirmation = view('alertdialog', '', '');
@@ -177,6 +195,10 @@ export function createPauseScreen(
       menu.setItems(nodes.filter((node) => !node.hidden));
       setText(main.heading, text.heading);
       setText(main.text, text.text);
+      const shownSheet = sheetFor?.() ?? null;
+      sheet.replaceChildren(...(shownSheet === null ? [] : [shownSheet]));
+      sheet.hidden = shownSheet === null;
+      main.body.toggleAttribute('data-sheet', shownSheet !== null);
       const shown = prompts.for(device);
       const navigate = visible.length > 1 ? [{ keys: shown.navigate, label: t('navigate') }] : [];
       fillHint(

@@ -100,6 +100,24 @@ export type BoardLine =
   | { readonly kind: 'share'; readonly pseudo: string; readonly refused: boolean }
   | { readonly kind: 'rank'; readonly rank: number | null };
 
+// A line of the Classement screen, full game only: a verified run of the board, or one this device
+// shared that the replay has not verified yet, at the place its score claims.
+export interface LeaderboardRow {
+  readonly rank: number;
+  readonly pseudo: string;
+  readonly classId: string;
+  readonly score: number;
+  // This device shared it.
+  readonly mine: boolean;
+  readonly pending: boolean;
+}
+
+// Best first, at most `BOARD_SIZE` each; empty when the board could not be read.
+export interface Leaderboard {
+  readonly today: readonly LeaderboardRow[];
+  readonly allTime: readonly LeaderboardRow[];
+}
+
 // A team's game: its host, online or on one screen, restarts it or takes it back to the lobby.
 // Absent, the game is solo.
 export interface EndSession {
@@ -192,6 +210,9 @@ export interface UiCallbacks {
   // Menu intents go to the keys screen until it closes.
   onControls(): void;
   onChangelogOpened(): void;
+  // The Classement screen opened: the app reads the boards, then `setLeaderboard`. Absent, the
+  // title has no Classement entry: a build without `VITE_LEADERBOARD_URL` reads no board.
+  onLeaderboardOpened?(): void;
 }
 
 export interface Ui {
@@ -208,6 +229,7 @@ export interface Ui {
   showClassPicker(model: ClassPickerModel): void;
   showVisits(count: number): void;
   showChangelogNews(news: boolean): void;
+  setLeaderboard(board: Leaderboard): void;
   showStagePicker(model: StagePickerModel): void;
   showLobby(model: LobbyModel): void;
   updateLobby(model: LobbyModel): void;

@@ -399,6 +399,9 @@ export function createUi(
       sun.fix('nuit');
       show('game');
     },
+    setLeaderboard(board) {
+      title.setLeaderboard(board);
+    },
     setBoardLine(line) {
       end.setBoardLine(line);
     },

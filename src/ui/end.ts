@@ -312,7 +312,7 @@ export function createEnd(
       if (unmoved) {
         lesson.show(state, content);
       }
-      players = playerCards(state.players, content);
+      players = playerCards(state.players, content, state.setId);
       cards.replaceChildren(...players.map((player) => player.seat));
       cards.style.setProperty('--count', String(state.players.length));
       const guest = session?.role === 'guest';

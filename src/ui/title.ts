@@ -21,7 +21,8 @@ import { locale, t, tn, type Locale } from '../shared/i18n';
 import { createCredits } from './credits';
 import { createThanksClock, thanksOf } from './title-thanks';
 import { createThanksPainter } from './title-thanks-paint';
-import { FULL_CHANGELOG } from './full';
+import { FULL_CHANGELOG, FULL_LEADERBOARD } from './full';
+import type { Leaderboard } from './types';
 
 export interface TitleActions {
   start(): void;
@@ -38,6 +39,8 @@ export interface TitleActions {
   chooseLocale(locale: Locale): void;
   feedback?(): void;
   changelogOpened(): void;
+  // Absent, the title has no Classement entry: the build reads no board.
+  leaderboardOpened?(): void;
 }
 
 export interface TitleOptions {
@@ -50,13 +53,30 @@ export interface TitleOptions {
   readonly pseudo: string;
 }
 
-export type TitleView = 'main' | 'settings' | 'credits' | 'changelog';
+export type TitleView = 'main' | 'settings' | 'credits' | 'changelog' | 'leaderboard';
 
 // The notebook of what changed, which only the full game has: its rows are menu items, one open at a time.
 export interface ChangelogView {
   readonly element: HTMLElement;
   readonly rows: readonly HTMLElement[];
   open(row: HTMLElement): void;
+}
+
+// The Classement screen, which only the full game has: its rows are menu items, walked to read them.
+export interface LeaderboardView {
+  // Its heading, and the title's entry that opens it.
+  readonly title: string;
+  readonly entry: HTMLButtonElement;
+  readonly element: HTMLElement;
+  // The rows of the tab shown, best first.
+  readonly rows: readonly HTMLElement[];
+  // The player's best run in that tab, null without one.
+  readonly mine: HTMLElement | null;
+  // On today's tab; the title walks its rows.
+  open(): void;
+  set(board: Leaderboard): void;
+  // True when the presses turned the tab.
+  handle(edges: MenuIntents): boolean;
 }
 
 export interface TitleScreen {
@@ -69,6 +89,7 @@ export interface TitleScreen {
   setDevice(device: InputDevice): void;
   setVisits(count: number): void;
   setChangelogNews(news: boolean): void;
+  setLeaderboard(board: Leaderboard): void;
   // What the menus play as it is heard, null when nothing; calm or null stills the title.
   follow(heard: MenuHeard | null, calm: boolean): void;
 }
@@ -343,6 +364,22 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   const version = changelog === null ? el('p', 'ui-title__meta', release) : door(release, whatsNew);
   const changelogBack = backButton();
 
+  const leaderboard =
+    actions.leaderboardOpened === undefined
+      ? null
+      : (FULL_LEADERBOARD.create?.(walkLeaderboard) ?? null);
+  // Where the view put the selection when it opened, until its board arrives; -1 after.
+  let placed = -1;
+  // With a Classement, the Programme shares its row with it: the column keeps its height.
+  const leaderboardButton = leaderboard?.entry ?? null;
+  const leaderboardEntry = leaderboardButton === null ? [] : [leaderboardButton];
+  let programmeRow: HTMLElement = programme;
+  if (leaderboardButton !== null) {
+    programmeRow = el('div', 'ui-title__pair');
+    programmeRow.append(programme, leaderboardButton);
+  }
+  const leaderboardBack = backButton();
+
   const discord = el('button', 'ui-title__discord');
   discord.type = 'button';
   discord.setAttribute('aria-label', t('Backstage'));
@@ -356,6 +393,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
         play,
         online,
         programme,
+        ...leaderboardEntry,
         sound.element,
         settings,
         discord,
@@ -363,6 +401,11 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
         ...(changelog === null ? [] : [version]),
       ],
       nav: el('nav', 'ui-menu'),
+    },
+    leaderboard: {
+      title: leaderboard?.title ?? '',
+      items: [leaderboardBack],
+      nav: leaderboard?.element ?? el('nav', 'ui-menu'),
     },
     changelog: {
       title: whatsNew,
@@ -391,17 +434,24 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     },
   };
   views.main.nav.setAttribute('aria-label', t('Main menu'));
-  views.main.nav.append(play, online, programme, sound.element, settings);
-  for (const name of ['settings', 'credits', 'changelog'] as const) {
+  views.main.nav.append(play, online, programmeRow, sound.element, settings);
+  for (const name of ['settings', 'credits', 'changelog', 'leaderboard'] as const) {
     views[name].nav.setAttribute('aria-label', views[name].title);
   }
   views.settings.nav.append(...views.settings.items);
   views.credits.nav.append(creditsBack);
   views.changelog.nav.append(changelogBack);
+  views.leaderboard.nav.append(leaderboardBack);
 
   const hint = el('p', 'ui-hint');
   const deck = el('div', 'ui-title__deck');
-  deck.append(views.main.nav, views.settings.nav, views.credits.nav, views.changelog.nav);
+  deck.append(
+    views.main.nav,
+    views.settings.nav,
+    views.credits.nav,
+    views.changelog.nav,
+    views.leaderboard.nav,
+  );
 
   const visits = el('p', 'ui-title__visits');
   visits.hidden = true;
@@ -523,6 +573,14 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   activations.set(changelogBack, () => {
     open('main');
   });
+  if (leaderboardButton !== null) {
+    activations.set(leaderboardButton, () => {
+      open('leaderboard');
+    });
+  }
+  activations.set(leaderboardBack, () => {
+    open('main');
+  });
   if (changelog !== null) {
     for (const row of changelog.rows) {
       activations.set(row, () => {
@@ -536,6 +594,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     settings,
     credits: creditsButton,
     changelog: version,
+    ...(leaderboardButton === null ? {} : { leaderboard: leaderboardButton }),
   };
   let view: TitleView = 'main';
   const menu = createMenu(
@@ -561,12 +620,16 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     header.hidden = next !== 'main';
     heading.hidden = next === 'main' || next === 'credits';
     discord.hidden = next !== 'main';
-    corner.hidden = next === 'credits' || next === 'changelog';
+    corner.hidden = next === 'credits' || next === 'changelog' || next === 'leaderboard';
     creditsButton.hidden = next !== 'main';
     hint.hidden = next === 'credits';
     if (next === 'changelog' && from !== 'changelog') {
       version.removeAttribute('data-news');
       actions.changelogOpened();
+    }
+    if (next === 'leaderboard' && from !== 'leaderboard') {
+      leaderboard?.open();
+      actions.leaderboardOpened?.();
     }
     credits.element.hidden = next !== 'credits';
     setText(heading, views[next].title);
@@ -577,6 +640,9 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     const opener = openers[from] ?? null;
     if (next === 'main' && opener !== null) {
       menu.select(views.main.items.indexOf(opener));
+    }
+    if (next === 'leaderboard') {
+      walkLeaderboard(true);
     }
     if (next === 'credits') {
       body.style.setProperty('--credits-roll', `${credits.open().toFixed(1)}s`);
@@ -590,17 +656,42 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   const thanks = createThanksClock(thanksOf());
   const painter = createThanksPainter(lake, views.main.nav);
 
+  // A new tab goes to the player's run, or the best one, and so does the board the view opened on
+  // while the player has not moved; once they have, a board read again keeps their row, or Back.
+  function walkLeaderboard(turned: boolean): void {
+    if (view !== 'leaderboard' || leaderboard === null) {
+      return;
+    }
+    const before = views.leaderboard.items;
+    const items = [...leaderboard.rows, leaderboardBack];
+    views.leaderboard.items = items;
+    if (turned || menu.index === placed) {
+      const mine = leaderboard.mine;
+      menu.setItems(items, mine === null ? 0 : items.indexOf(mine));
+      mine?.scrollIntoView({ block: 'nearest' });
+      placed = turned ? menu.index : -1;
+      return;
+    }
+    const onBack = before[menu.index] === leaderboardBack;
+    menu.setItems(items, onBack ? items.length - 1 : Math.min(menu.index, items.length - 2));
+  }
+
   function showHint(): void {
     if (device === null) {
       return;
     }
     const shown = prompts.for(device);
+    // The Classement has nothing to confirm: its keys turn the tabs, none on a touch screen.
+    const action =
+      view === 'leaderboard'
+        ? { keys: shown.tabs, label: t('tabs') }
+        : { keys: [shown.confirm], label: view === 'changelog' ? t('open') : t('confirm') };
     fillHint(
       hint,
       [
         { keys: shown.navigate, label: t('navigate') },
         ...(view === 'main' ? [{ keys: shown.navigateRow, label: t('sound') }] : []),
-        { keys: [shown.confirm], label: view === 'changelog' ? t('open') : t('confirm') },
+        ...(action.keys.length === 0 ? [] : [action]),
         ...(view === 'main' ? [] : [{ keys: [shown.back], label: t('back') }]),
       ],
       shown.style,
@@ -620,6 +711,9 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       }
       if (edges.back && view !== 'main') {
         open('main');
+        return;
+      }
+      if (view === 'leaderboard' && leaderboard?.handle(edges) === true) {
         return;
       }
       if (view === 'credits' && calmNow && edges.up !== edges.down) {
@@ -657,6 +751,9 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       });
       setText(visits, text);
       visits.hidden = false;
+    },
+    setLeaderboard(board) {
+      leaderboard?.set(board);
     },
     setChangelogNews(news) {
       version.toggleAttribute('data-news', news && changelog !== null);

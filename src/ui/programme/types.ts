@@ -54,6 +54,8 @@ export interface ProgrammeEntry {
 export interface ProgrammeTab {
   readonly id: string;
   title(): string;
+  // A short precision printed under the title, such as « (enemies) ».
+  subtitle?(): string;
   entries(art: ProgrammeArt): readonly ProgrammeEntry[];
   // Its own board in place of the tiles: the Stages map.
   board?(entries: readonly ProgrammeEntry[]): ProgrammeBoard;

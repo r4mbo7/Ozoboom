@@ -421,6 +421,8 @@ export interface PickupState extends Positioned {
   flight?: { ticksLeft: number; ticks: number; fromX: number; fromY: number; arc?: number };
   // Swept to this player whatever the distance: the Bénévole's Grand ménage.
   drawnBy?: PlayerId;
+  // Vibes a boss dropped: the relic of the drop's last boss hands them to the team at once.
+  fromBoss?: true;
 }
 
 // Set a bar ahead; it rules from `startTick` to `endTick` excluded, or until `byId` is chased.

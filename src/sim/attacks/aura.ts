@@ -59,6 +59,10 @@ export const aura: AttackModule<AuraAttack> = {
     }
   },
 
+  damage(attack) {
+    return attack.damage;
+  },
+
   reach(attack, player) {
     return statValue(player, 'attackRadiusMul', attack.radius);
   },

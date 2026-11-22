@@ -11,7 +11,7 @@ interface RecordingPart {
 // An artist's recording, played as it was mastered: only its level changes (ADR 0020). Its own files
 // and bars are its loop: it loops on its last bar, its first beat on its first sample.
 export interface Recording extends RecordingPart {
-  // Played once, at the first entrance; at its last bar the loop takes over from its first sample.
+  // Played at every entrance from silence; at its last bar the loop takes over from its first sample.
   readonly opening?: RecordingPart;
   // The first bars of whichever part plays first, light enough to play at once while that part
   // decodes; they loop if it is late.
@@ -139,6 +139,8 @@ export function loadRecording(
 export interface RecordingVoice extends Ambience {
   // Entered, it waits in silence for its first part; each part takes over from the one before.
   take(buffer: AudioBuffer, part: RecordingPartName): void;
+  // Starts again on its first part, once what plays has faded out.
+  rewind(): void;
 }
 
 interface Playing {
@@ -162,8 +164,7 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
   const introSeconds = loopSeconds(recording, recording.intro.bars);
   const openingBars = recording.opening?.bars ?? 0;
   const openingSeconds = loopSeconds(recording, openingBars);
-  let first: 'opening' | 'loop' = recording.opening === undefined ? 'loop' : 'opening';
-  let openingPlayed = false;
+  const first: 'opening' | 'loop' = recording.opening === undefined ? 'loop' : 'opening';
   const buffers: Record<RecordingPartName, AudioBuffer | null> = {
     intro: null,
     opening: null,
@@ -176,6 +177,7 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
   };
   let wanted = false;
   let stopAt: number | null = null;
+  let rewinding = false;
 
   const silent = () => Object.values(playing).every((part) => part === null);
 
@@ -212,7 +214,7 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
     }
   }
 
-  // Every entrance from silence starts on the first part: the opening until it has played once.
+  // Every entrance from silence starts on the first part: the opening, when the recording has one.
   function begin(at: number) {
     const head = buffers[first];
     if (head !== null) {
@@ -230,15 +232,12 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
     playFirst(buffer, at, (bars * bar) % introSeconds);
   }
 
-  // Lets the decoded opening and intro be collected: every later entrance starts on the loop.
+  // The intro and the opening have played out: their sources go, their buffers stay for the next entrance.
   function letOpeningGo() {
     for (const part of ['intro', 'opening'] as const) {
       playing[part]?.source.disconnect();
       playing[part] = null;
-      buffers[part] = null;
     }
-    first = 'loop';
-    openingPlayed = true;
   }
 
   function silence() {
@@ -250,28 +249,37 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
     playing.opening = null;
     playing.loop = null;
     stopAt = null;
+    rewinding = false;
   }
 
   return {
     enter(at) {
       wanted = true;
-      stopAt = null;
-      fader.to(1);
+      if (!rewinding) {
+        stopAt = null;
+        fader.to(1);
+      }
       if (silent()) {
         begin(Math.max(at, context.currentTime));
       }
     },
     leave() {
       wanted = false;
+      rewinding = false;
       if (silent()) {
         return;
       }
       stopAt = fader.to(0);
     },
-    take(buffer, part) {
-      if (openingPlayed && part !== 'loop') {
+    rewind() {
+      wanted = true;
+      if (silent()) {
         return;
       }
+      rewinding = true;
+      stopAt = fader.to(0);
+    },
+    take(buffer, part) {
       buffers[part] = buffer;
       if (!wanted) {
         return;
@@ -289,16 +297,22 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
       if (silent()) {
         return false;
       }
-      // Without this each entrance replays the opening; a bar late, as the output latency lags.
+      // Once the loop plays the opening's sources are done; a bar late, as the output latency lags.
       if (
-        first === 'opening' &&
+        (playing.opening !== null || playing.intro !== null) &&
         playing.loop !== null &&
         context.currentTime >= playing.loop.from + bar
       ) {
         letOpeningGo();
       }
       if (stopAt !== null && context.currentTime >= stopAt) {
+        const again = rewinding;
         silence();
+        if (again) {
+          fader.to(1);
+          begin(context.currentTime);
+          return true;
+        }
         return false;
       }
       return true;

@@ -80,7 +80,7 @@ import { FULL_BOARD } from './full';
 import { browserStorage } from './storage';
 import { changelogNews, seeChangelog } from './changelog-seen';
 import { FULL_RELEASES } from '../data/full';
-import { createTeamPause, pauseItems } from './team-pause';
+import { createTeamPause, pauseItems, pausingPlayer } from './team-pause';
 import { createToast } from './toast';
 import { drawTrack, stageTracks, trackOf } from './track';
 import { countVisit } from './visits';
@@ -88,6 +88,8 @@ import { stageCards } from '../ui/lobby-model';
 import type { UiCallbacks, UpgradeCue } from '../ui/types';
 import { showsStageChoice } from '../ui/teaser';
 import { createPrompts } from '../ui/prompts';
+import { statsSheetOf } from '../ui/stats-model';
+import { createStatsSheet } from '../ui/stats-sheet';
 import { chooseLocale } from './locale';
 import { startOrExplain } from './renderer-start';
 import { createStillness } from './stillness';
@@ -246,6 +248,8 @@ export async function startGame(
   const dialogs = createDialogs(navigatorGamepads);
   const portraits = createPortraits(content.classes, () => prefs.calmMode);
   const latestRelease = FULL_RELEASES[0]?.version;
+  let boardReads = 0;
+  const readBoard = FULL_BOARD.read;
 
   const ui = createUi(
     root,
@@ -255,6 +259,25 @@ export async function startGame(
       onChangelogOpened() {
         seeChangelog(browserStorage, latestRelease);
       },
+      // A build without a board has no Classement on its title.
+      ...(readBoard === undefined
+        ? {}
+        : {
+            onLeaderboardOpened() {
+              // Only the answer to the last opening shows: an earlier, slower one is an older board.
+              boardReads += 1;
+              const read = boardReads;
+              const env = {
+                fetch: (input: RequestInfo | URL) => fetch(input),
+                storage: browserStorage,
+              };
+              void readBoard(env, nightOf(new Date())).then((board) => {
+                if (read === boardReads) {
+                  ui.setLeaderboard(board);
+                }
+              });
+            },
+          }),
       ...menuCallbacks(),
       ...choiceCallbacks({
         seats,
@@ -304,6 +327,7 @@ export async function startGame(
     },
   });
   const fade = createDefeatFade(root);
+  const pauseSheet = createStatsSheet('pause');
   const pause = createTeamPause(
     createPauseScreen(
       root,
@@ -319,6 +343,7 @@ export async function startGame(
         online: () => onlineMatch !== null,
         leadsTeam: () => teamSession()?.role === 'host',
       }),
+      sheetOfPauser,
     ),
     { online: () => onlineMatch !== null, changed: applySound },
   );
@@ -328,6 +353,22 @@ export async function startGame(
     watch(replay);
   }
   applySound();
+
+  // The build of the player who paused, beside the pause menu.
+  function sheetOfPauser(): HTMLElement | null {
+    const playerId = pausingPlayer(match.seats, pause.pauser);
+    const { state } = match.session;
+    const player = state.players.find((candidate) => candidate.id === playerId);
+    const sheet =
+      player === undefined
+        ? null
+        : statsSheetOf(player, content, setTempo(setOf(content, state.setId)).ticksPerBeat);
+    if (sheet === null) {
+      return null;
+    }
+    pauseSheet.update(sheet);
+    return pauseSheet.element;
+  }
 
   // The stage and class a card's scene shows for that player, null once they left.
   function stageOf(playerId: PlayerId): { setId: string; classId: string } | null {

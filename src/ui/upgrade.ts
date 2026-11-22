@@ -2,11 +2,11 @@ import type { GameContent } from '../data/types';
 import { weaponGlyph } from '../data/weapon-glyphs';
 import type { InputDevice, InputSnapshot } from '../input/intents';
 import { direction, t, tn } from '../shared/i18n';
-import { beatPeriodMs } from '../shared/tempo';
+import { beatPeriodMs, type Tempo } from '../shared/tempo';
 import { weaponSlotCount } from '../sim/draw';
 import { setOf, setTempo } from '../sim/lineup';
 import type { PlayerId, PlayerState, SimState, UpgradeOffer } from '../sim/state';
-import { el, fillHint, findAll, icon, setFlag, setText, setVar } from './dom';
+import { el, fillHint, findAll, icon, onPointerClick, setFlag, setText, setVar } from './dom';
 import { MENU_GRACE_MS } from './menu-grace';
 import {
   SIXTEENTHS_PER_BAR,
@@ -42,7 +42,9 @@ import {
   upgradeIcon,
 } from './icons';
 import { type Menu, createMenu } from './menu';
+import { MARKS, namesIn } from './names-in';
 import { type MenuInput, createMenuInput } from './navigation';
+import { type OfferView, createOfferStats } from './offer-stats';
 import type { Prompts } from './prompts';
 import type { UiFrame, UpgradeCue } from './types';
 import { placesKey, createPlaceRow } from './weapon-place';
@@ -102,7 +104,7 @@ function runDue(later: readonly Later[], now: number): Later[] {
   return later.filter((entry) => entry.at > now);
 }
 
-function stripLabel({ steps, everyBars }: WeaponCard): string {
+function rhythmLabel({ steps, everyBars }: WeaponCard): string {
   if (steps === 'continuous') {
     return t('Plays non-stop');
   }
@@ -117,11 +119,30 @@ function stripLabel({ steps, everyBars }: WeaponCard): string {
     : t('Fires on sixteenths {steps}', { steps: fired });
 }
 
+// The damage of one hit above each step that fires it; once over a strip that never stops.
+function hitsOf(steps: WeaponCard['steps'], amount: string): HTMLElement[] {
+  const columns =
+    steps === 'continuous'
+      ? ['1 / -1']
+      : steps.flatMap((on, step) => (on ? [String(step + 1)] : []));
+  return columns.map((column) => {
+    const node = el('span', 'ui-card__hit', amount);
+    node.style.gridColumn = column;
+    return node;
+  });
+}
+
 function strip(card: WeaponCard): HTMLElement {
   const { steps } = card;
+  const amount = card.hit === null ? null : formatNumber(card.hit);
   const row = el('span', 'ui-card__steps');
   row.setAttribute('role', 'img');
-  row.setAttribute('aria-label', stripLabel(card));
+  row.setAttribute(
+    'aria-label',
+    amount === null
+      ? rhythmLabel(card)
+      : t('{rhythm}, {damage} damage per hit', { rhythm: rhythmLabel(card), damage: amount }),
+  );
   row.dataset.mode = steps === 'continuous' ? 'continuous' : 'steps';
   const cells = steps === 'continuous' ? Array<boolean>(SIXTEENTHS_PER_BAR).fill(true) : steps;
   row.append(
@@ -131,6 +152,7 @@ function strip(card: WeaponCard): HTMLElement {
       cell.dataset.beat = String(step % 4 === 0);
       return cell;
     }),
+    ...(amount === null ? [] : hitsOf(steps, amount)),
   );
   return row;
 }
@@ -144,18 +166,6 @@ function pearlRow(pearls: Pearls): HTMLElement {
     row.append(pearl);
   }
   return row;
-}
-
-// The two names a translated sentence carries stand out in it: the sentence holds their marks.
-const MARKS = ['\uE000', '\uE001'] as const;
-
-function namesIn(className: string, text: string, names: readonly [string, string]): HTMLElement {
-  const node = el('span', className);
-  for (const part of text.split(/(\uE000|\uE001)/u)) {
-    const mark = MARKS.findIndex((candidate) => candidate === part);
-    node.append(mark < 0 ? part : el('b', '', names[mark]));
-  }
-  return node;
 }
 
 function fusionLine(fusions: WeaponCard['fusions']): HTMLElement | null {
@@ -414,7 +424,8 @@ interface Panel {
     // The only offer of this screen: its cards are large enough to play their weapons.
     alone: boolean,
     now: number,
-    beatMs: number,
+    // The stage's, which the panel's moves and the stats' rate count their beats in.
+    tempo: Tempo,
   ): void;
   reset(): void;
 }
@@ -438,17 +449,23 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     el('span', 'ui-reroll__label', t('Reroll')),
     rerollCount,
   );
-  // The reroll shares the row of the hints: a phone has no height to spare for it.
+  const stats = createOfferStats(element, cards);
+  // The reroll and the pill share the row of the hints: a phone has no height to spare for them.
   const foot = el('div', 'ui-offer__foot');
-  foot.append(hint, reroll);
-  element.append(who, kicker, heading, places.element, cards, foot);
+  foot.append(hint, reroll, stats.toggle);
+  // Both views share one box, as tall as the taller: the heading above stays put when the panel turns.
+  const room = el('div', 'ui-offer__views');
+  room.append(cards, stats.element);
+  element.append(who, kicker, heading, places.element, room, foot);
 
   const input = createMenuInput();
   let current: UpgradeOffer | null = null;
   let models: readonly Card[] = [];
   let chosen: string | null = null;
   let opensAt = 0;
-  let device: InputDevice | null = null;
+  // The item focused when the panel turned to the stats: they preview it, the cards get it back.
+  let held = 0;
+  let hinted = '';
   let buttons: readonly HTMLButtonElement[] = [];
   let later: Later[] = [];
   let beatMs = 0;
@@ -582,12 +599,13 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     }
   }
 
-  function fillHints(next: InputDevice): void {
-    if (next === device) {
+  function fillHints(device: InputDevice): void {
+    const key = `${device}|${stats.view}`;
+    if (key === hinted) {
       return;
     }
-    device = next;
-    const shown = host.prompts.for(next);
+    hinted = key;
+    const shown = host.prompts.for(device);
     fillHint(
       hint,
       [
@@ -597,7 +615,35 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       ],
       shown.style,
     );
+    stats.label(shown);
   }
+
+  function show(next: OfferView): void {
+    stats.show(next);
+    if (next === 'stats') {
+      // Their entrance is over: shown again, the cards would be dealt again.
+      for (const button of buttons) {
+        delete button.dataset.dealt;
+        delete button.dataset.shine;
+      }
+    }
+  }
+
+  // The stats walk no card: another card is chosen back on the cards.
+  function turn(): void {
+    if (current === null || chosen !== null || clock < opensAt) {
+      return;
+    }
+    if (stats.view === 'cards') {
+      held = menu.index;
+      show('stats');
+    } else {
+      menu.select(held);
+      show('cards');
+    }
+  }
+
+  onPointerClick(stats.toggle, turn);
 
   function stopScenes(): void {
     for (const stop of stops) {
@@ -775,6 +821,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     waiting = null;
     rerolling = false;
     later = [];
+    show('cards');
     element.hidden = true;
   }
 
@@ -797,9 +844,9 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         ? null
         : { button, weaponId: model.kind === 'upgrade' ? null : model.id };
     },
-    update(offer, player, content, slots, snapshot, inTeam, alone, now, beat) {
+    update(offer, player, content, slots, snapshot, inTeam, alone, now, tempo) {
       clock = now;
-      beatMs = beat;
+      beatMs = beatPeriodMs(tempo.bpm);
       team = inTeam;
       const edges = input.edges(snapshot.menu, snapshot.gameplay.move);
       later = runDue(later, now);
@@ -812,7 +859,6 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         }
         return;
       }
-      fillHints(snapshot.device);
       if (offer !== current) {
         current = offer;
         chosen = null;
@@ -828,10 +874,12 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         cards.dataset.offer = offer.kind ?? 'levelUp';
         setText(heading, offerHeading(offer));
         cards.replaceChildren(...buttons);
+        stats.deal(models);
         scenes = alone;
         if (scenes) {
           startScenes();
         }
+        show('cards');
         deal();
         mark();
       }
@@ -849,11 +897,24 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         element.style.setProperty('--who', whoColor(player.classId));
       }
       if (chosen === null && now >= opensAt) {
-        menu.handle(edges);
+        if (edges.next || edges.previous) {
+          turn();
+        }
+        if (stats.view === 'cards') {
+          menu.handle(edges);
+        }
       }
+      fillHints(snapshot.device);
       walkStrips();
       const focusing = snapshot.device !== 'touch' && chosen === null && now >= opensAt;
-      fillPlaces(player, content, slots, focusing ? models[menu.index] : undefined);
+      const focused = focusing ? menu.index : -1;
+      fillPlaces(player, content, slots, models[focused]);
+      // Filled behind the cards too, so that the box already has the stats' height.
+      if (player !== undefined) {
+        const previewed =
+          snapshot.device === 'touch' ? -1 : stats.view === 'stats' ? held : menu.index;
+        stats.fill(offer, player, content, tempo.ticksPerBeat, previewed);
+      }
     },
     reset,
   };
@@ -1019,7 +1080,8 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
     update(state, frame, content, now) {
       sounded.clear();
       const set = setOf(content, state.setId);
-      const beatMs = beatPeriodMs(setTempo(set).bpm);
+      const tempo = setTempo(set);
+      const beatMs = beatPeriodMs(tempo.bpm);
       const slots = weaponSlotCount(set);
       const beat = `${beatMs.toFixed(1)}ms`;
       setVar(element, '--beat', beat);
@@ -1056,7 +1118,7 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
             team,
             locals.length === 1,
             now,
-            beatMs,
+            tempo,
           );
         }
       }

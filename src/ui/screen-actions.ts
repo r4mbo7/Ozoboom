@@ -12,7 +12,12 @@ type Once = Pick<ShownScreen, 'once'>;
 export function titleActions(
   callbacks: Pick<
     UiCallbacks,
-    'onStart' | 'onPlayOnline' | 'onControls' | 'onChooseLocale' | 'onChangelogOpened'
+    | 'onStart'
+    | 'onPlayOnline'
+    | 'onControls'
+    | 'onChooseLocale'
+    | 'onChangelogOpened'
+    | 'onLeaderboardOpened'
   >,
   shown: Once,
   options: TitleOptionActions,
@@ -40,6 +45,13 @@ export function titleActions(
     changelogOpened() {
       callbacks.onChangelogOpened();
     },
+    ...(callbacks.onLeaderboardOpened === undefined
+      ? {}
+      : {
+          leaderboardOpened() {
+            callbacks.onLeaderboardOpened?.();
+          },
+        }),
   };
 }
 
