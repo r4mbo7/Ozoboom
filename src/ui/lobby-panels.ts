@@ -39,7 +39,7 @@ export interface LobbyHeader {
 export function createLobbyHeader(): LobbyHeader {
   const lead = el('p', 'ui-lobby__lead');
   const element = el('header', 'ui-lobby__header');
-  element.append(el('h2', 'ui-lobby__title', t('Salon en ligne')), lead);
+  element.append(el('h2', 'ui-lobby__title', t('Online room')), lead);
   return { element, lead };
 }
 
@@ -64,10 +64,10 @@ export function createEntryPanel(
   joinRoom: (code: string) => void,
   linkedCode: string,
 ): EntryPanel {
-  const create = button('ui-button ui-button--primary', t('Créer un salon'));
+  const create = button('ui-button ui-button--primary', t('Create a room'));
   const discord = createActionButton(
-    t('Trouve ton crew'),
-    t('Recrute tes roadies sur Discord'),
+    t('Find your crew'),
+    t('Round up your roadies on Discord'),
     DISCORD,
   );
   discord.tabIndex = -1;
@@ -76,16 +76,16 @@ export function createEntryPanel(
   codeInput.autocomplete = 'off';
   codeInput.spellcheck = false;
   codeInput.setAttribute('autocapitalize', 'characters');
-  codeInput.setAttribute('aria-label', t('Code du salon'));
-  codeInput.placeholder = t('Colle le code ici');
+  codeInput.setAttribute('aria-label', t('Room code'));
+  codeInput.placeholder = t('Paste the code here');
   const codeField = el('div', 'ui-lobby__field');
-  codeField.append(el('span', 'ui-field__label', t('Code du salon')), codeInput);
-  const join = button('ui-button', t('Rejoindre'));
+  codeField.append(el('span', 'ui-field__label', t('Room code')), codeInput);
+  const join = button('ui-button', t('Join'));
   const element = el('div', 'ui-panel ui-lobby__entry');
   element.append(
     create,
     discord,
-    el('p', 'ui-lobby__or', t('ou rejoins le salon d’un ami')),
+    el('p', 'ui-lobby__or', t('or join a friend’s room')),
     codeField,
     join,
   );
@@ -123,25 +123,25 @@ export interface SharePanel {
 export function createSharePanel(): SharePanel {
   const codeText = el('p', 'ui-lobby__code');
   const linkText = el('p', 'ui-lobby__link');
-  const copy = button('ui-button', t('Copier le lien'));
+  const copy = button('ui-button', t('Copy the link'));
   const status = el('p', 'ui-lobby__copy');
   status.setAttribute('role', 'status');
   const element = el('div', 'ui-panel ui-lobby__share');
   const text = el('div', 'ui-lobby__sharetext');
-  text.append(el('p', 'ui-panel__label', t('Code du salon')), codeText, linkText, status);
+  text.append(el('p', 'ui-panel__label', t('Room code')), codeText, linkText, status);
   element.append(text, copy);
   let link = '';
 
   async function copyNow(): Promise<void> {
     if (await copyText(navigator.clipboard, link)) {
-      setText(status, t('Lien copié, envoie-le à tes amis.'));
+      setText(status, t('Link copied, send it to your friends.'));
     } else {
       const range = document.createRange();
       range.selectNodeContents(linkText);
       const selection = window.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(range);
-      setText(status, t('Lien sélectionné : copie-le avec Ctrl+C.'));
+      setText(status, t('Link selected: copy it with Ctrl+C.'));
     }
   }
 
@@ -201,15 +201,15 @@ export function createSeatCard(
   input.placeholder = defaultName(playerId);
   input.setAttribute(
     'aria-label',
-    t('Nom du joueur {number}', { number: formatNumber(playerId + 1) }),
+    t('Player {number}’s name', { number: formatNumber(playerId + 1) }),
   );
   const field = el('div', 'ui-lobby__field');
-  field.append(el('span', 'ui-field__label', t('Nom')), input);
+  field.append(el('span', 'ui-field__label', t('Name')), input);
   const name = el('p', 'ui-seat__name');
 
   const stepper = createClassStepper(classes, handlers.stepClass);
   const sheet = createClassSheet(classes);
-  const wait = el('p', 'ui-seat__wait', t('En attente d’un joueur'));
+  const wait = el('p', 'ui-seat__wait', t('Waiting for a player'));
   const drawn = portrait();
   const frame = el('div', 'ui-seat__portrait');
   frame.append(drawn.element);
@@ -277,7 +277,7 @@ export interface StagePanel {
 
 export function createStagePanel(chooseStage: (setId: string) => void): StagePanel {
   const label = el('p', 'ui-panel__label');
-  const cards = createStageCards(t('Scène'), chooseStage);
+  const cards = createStageCards(t('Stage'), chooseStage);
   const element = el('div', 'ui-lobby__stage');
   element.append(label, cards.element);
   return { element, label, cards };
@@ -297,9 +297,9 @@ export function createLobbyFooter(): LobbyFooter {
   const launchText = el('span', 'ui-launch__label');
   const launchMore = el('span', 'ui-launch__detail');
   launch.append(launchText, launchMore);
-  const waiting = el('p', 'ui-lobby__waiting', t('En attente de l’hôte'));
+  const waiting = el('p', 'ui-lobby__waiting', t('Waiting for the host'));
   waiting.setAttribute('role', 'status');
-  const leave = button('ui-button', t('Retour au titre'));
+  const leave = button('ui-button', t('Back to the title'));
   const element = el('div', 'ui-lobby__actions');
   element.append(launch, waiting, leave);
   return { element, launch, launchText, launchMore, waiting, leave };

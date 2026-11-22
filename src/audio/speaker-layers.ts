@@ -10,6 +10,7 @@ export const SPEAKER_LAYER_IDS = ['dome-chill', 'foret', 'sub', 'cercle-acid'] a
 export type SpeakerLayerId = (typeof SPEAKER_LAYER_IDS)[number];
 
 const MUFFLED_HZ = 260;
+const STEM_OPEN_HZ = 20_000;
 // While a speaker charges, its layer comes to the front of the mix, up to four times its level
 // (+12 dB) and fully open, then joins the mix at its own level once plugged.
 const CHARGING_LEVEL = { from: 0.4, to: 4 };
@@ -91,6 +92,25 @@ export function presenceAt(
     level: inBreak ? level * BREAK_LEVEL : level,
     open: inBreak ? open * BREAK_OPEN : open,
   };
+}
+
+// A speaker's stem (ADR 0022) comes forward and opens as its synth layer does, and a break halves
+// it as it halves the layer; the artist's sound is never darkened by a break.
+export function stemPresenceAt(
+  tick: number,
+  entry: number | null,
+  charge: number,
+  inBreak: boolean,
+): Presence {
+  return {
+    level: presenceAt(tick, entry, charge, inBreak).level,
+    open: presenceAt(tick, entry, charge, false).open,
+  };
+}
+
+// The cutoff of a stem's own low-pass: muffled closed, out of the way open.
+export function stemCutoff(open: number): number {
+  return bright(open, STEM_OPEN_HZ);
 }
 
 function bright(open: number, hz: number, closed = MUFFLED_HZ): number {

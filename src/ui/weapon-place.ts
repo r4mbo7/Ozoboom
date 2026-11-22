@@ -23,7 +23,7 @@ export function placesKey(places: readonly WeaponPlace[]): string {
 
 function spoken(place: WeaponPlace): string {
   return place.state === 'held' && place.weapon !== null
-    ? t('{weapon}, niveau {level}', { weapon: place.label, level: formatNumber(place.level) })
+    ? t('{weapon}, level {level}', { weapon: place.label, level: formatNumber(place.level) })
     : place.label;
 }
 
@@ -51,7 +51,7 @@ function weaponPlace(place: WeaponPlace): HTMLElement {
     ring.append(icon('ui-place__icon', weaponGlyph(weapon.effect)));
   }
   if (place.state === 'held' && weapon !== null) {
-    node.title = t('{name} : {description}', {
+    node.title = t('{name}: {description}', {
       name: place.label,
       description: t(weapon.description),
     });
@@ -76,7 +76,7 @@ export function createPlaceRow(className: string): PlaceRow {
       shown = key;
       element.setAttribute(
         'aria-label',
-        t('Tes agrès : {places}', { places: places.map(spoken).join(', ') }),
+        t('Your props: {places}', { places: places.map(spoken).join(', ') }),
       );
       element.replaceChildren(...places.map(weaponPlace));
     },

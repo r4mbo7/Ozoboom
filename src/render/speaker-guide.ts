@@ -126,7 +126,7 @@ export function createSpeakerGuide(ctx: RenderContext): Family {
     pin.poly(shape).circle(zone.x, headY, PIN_HEAD).fill({ color });
     placeLabel(
       word,
-      textures.names.get(t('ici')),
+      textures.names.get(t('here')),
       { x: zone.x, y: headY },
       PIN_WORD,
       { fill: palette.sol, edge: color },

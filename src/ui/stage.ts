@@ -49,7 +49,7 @@ function card(
     el('span', 'ui-stage__chip', t(stage.style)),
     el('span', 'ui-stage__chip', formatTempo(stage.bpm)),
   );
-  const tag = el('span', 'ui-stage__tag', t('Départ'));
+  const tag = el('span', 'ui-stage__tag', t('Start'));
   tag.hidden = true;
   node.append(tag, stagePreview(stage.decor), el('span', 'ui-stage__name', t(stage.name)), meta);
   if (go !== null) {
@@ -149,14 +149,14 @@ export function createStagePicker(
   let model: StagePickerModel = { stages: [], stageId: '', endless: false };
 
   const element = el('section', 'ui-screen ui-stagepicker');
-  element.setAttribute('aria-label', t('Choix de la scène'));
+  element.setAttribute('aria-label', t('Stage choice'));
   const header = el('header', 'ui-lobby__header');
   const title = el('h2', 'ui-lobby__title');
   header.append(title);
   const nights = createNightTabs((night) => {
     actions.chooseNight(night);
   });
-  const cards = createStageCards(t('Scènes'), (setId) => {
+  const cards = createStageCards(t('Stages'), (setId) => {
     if (setId === model.stageId) {
       actions.confirm();
     } else {
@@ -164,10 +164,10 @@ export function createStagePicker(
     }
   });
   const note = el('p', 'ui-stagepicker__note');
-  const toClasses = el('button', 'ui-button ui-button--primary', t('Choisir les persos'));
+  const toClasses = el('button', 'ui-button ui-button--primary', t('Pick the characters'));
   toClasses.type = 'button';
   toClasses.tabIndex = -1;
-  const back = el('button', 'ui-button', t('Retour au titre'));
+  const back = el('button', 'ui-button', t('Back to the title'));
   back.type = 'button';
   back.tabIndex = -1;
   toClasses.addEventListener('click', () => {
@@ -176,7 +176,7 @@ export function createStagePicker(
   back.addEventListener('click', () => {
     actions.leave();
   });
-  cards.setGo(t('Choisir les persos'));
+  cards.setGo(t('Pick the characters'));
   const buttons = createButtonRow(cards.element, [toClasses, back]);
   const footer = el('div', 'ui-lobby__actions');
   footer.append(toClasses, back);
@@ -189,7 +189,7 @@ export function createStagePicker(
 
   // What a validation does on the button in focus: the cards lead to the characters.
   function confirmLabel(focused: HTMLButtonElement | null): string {
-    return focused === back ? t('valider') : t('persos');
+    return focused === back ? t('confirm') : t('characters');
   }
 
   function paintHint(): void {
@@ -202,9 +202,9 @@ export function createStagePicker(
       hint,
       [
         ...(shown.tabs.length === 0 ? [] : [{ keys: shown.tabs, label: t('mode') }]),
-        { keys: shown.navigateRow, label: t('scène') },
+        { keys: shown.navigateRow, label: t('stage') },
         { keys: [shown.confirm], label: confirmLabel(buttons.focused) },
-        { keys: [shown.back], label: t('retour') },
+        { keys: [shown.back], label: t('back') },
       ],
       shown.style,
     );

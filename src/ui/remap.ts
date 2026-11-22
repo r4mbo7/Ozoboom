@@ -91,14 +91,14 @@ export function openRemap(root: HTMLElement, options: RemapOptions): RemapScreen
     change({ ...profile, swapSticks: !profile.swapSticks });
     say(
       profile.swapSticks
-        ? t('Tu marches au stick droit et tu vises au gauche.')
-        : t('Tu marches au stick gauche et tu vises au droit.'),
+        ? t('You walk with the right stick and aim with the left.')
+        : t('You walk with the left stick and aim with the right.'),
     );
   }
 
   function resetTab(): void {
     change(defaultsFor(profile, tab));
-    say(tab === 'keyboard' ? t('Touches par défaut remises.') : t('Boutons par défaut remis.'));
+    say(tab === 'keyboard' ? t('Default keys restored.') : t('Default buttons restored.'));
   }
 
   function say(text: string): void {
@@ -139,8 +139,8 @@ export function openRemap(root: HTMLElement, options: RemapOptions): RemapScreen
         refused: (what) => {
           say(
             what === 'key'
-              ? t('Cette touche garde son rôle, choisis-en une autre.')
-              : t('Ce bouton garde son rôle, choisis-en un autre.'),
+              ? t('This key keeps its job, pick another one.')
+              : t('This button keeps its job, pick another one.'),
           );
         },
       }),

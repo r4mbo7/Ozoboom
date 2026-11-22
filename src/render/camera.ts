@@ -115,6 +115,23 @@ export function centerInArena(
   out.y = clampAxis(y, Math.max(screenHeight, 1) / scale, arena.height);
 }
 
+export function showArena(
+  camera: Camera,
+  arena: Arena,
+  x: number,
+  y: number,
+  center: { x: number; y: number },
+  view: Bounds,
+): void {
+  centerInArena(camera, arena, x, y, center);
+  const halfWidth = camera.screenWidth / camera.scale / 2;
+  const halfHeight = camera.screenHeight / camera.scale / 2;
+  view.minX = center.x - halfWidth;
+  view.maxX = center.x + halfWidth;
+  view.minY = center.y - halfHeight;
+  view.maxY = center.y + halfHeight;
+}
+
 function clampAxis(value: number, extent: number, size: number): number {
   return extent >= size ? size / 2 : clamp(value, extent / 2, size - extent / 2);
 }

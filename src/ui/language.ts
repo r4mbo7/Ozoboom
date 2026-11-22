@@ -15,8 +15,8 @@ export function createLanguageControl(current: Locale): HTMLButtonElement {
   button.setAttribute('aria-haspopup', 'dialog');
   const text = el('span', 'ui-toggle__text');
   text.append(
-    el('span', 'ui-toggle__label', t('Langue')),
-    el('span', 'ui-toggle__hint', t('Le jeu se recharge')),
+    el('span', 'ui-toggle__label', t('Language')),
+    el('span', 'ui-toggle__hint', t('The game reloads')),
   );
   const state = el('span', 'ui-toggle__state', nameOf(current));
   state.lang = current;
@@ -41,12 +41,12 @@ export function createLanguageList(
   const element = el('section', 'ui-screen ui-overlay ui-languages');
   element.setAttribute('role', 'dialog');
   element.setAttribute('aria-modal', 'true');
-  element.setAttribute('aria-label', t('Langue'));
+  element.setAttribute('aria-label', t('Language'));
   element.hidden = true;
   const body = el('div', 'ui-languages__body');
   const group = el('div', 'ui-languages__list');
   group.setAttribute('role', 'radiogroup');
-  group.setAttribute('aria-label', t('Langues du jeu'));
+  group.setAttribute('aria-label', t('Game languages'));
   const items = LOCALES.map((entry) => {
     const item = el('button', 'ui-button', entry.name);
     item.type = 'button';
@@ -60,7 +60,7 @@ export function createLanguageList(
   });
   group.append(...items);
   const hint = el('p', 'ui-hint');
-  body.append(el('h2', 'ui-heading', t('Langue')), group, hint);
+  body.append(el('h2', 'ui-heading', t('Language')), group, hint);
   element.append(body);
 
   function hide(): void {
@@ -98,9 +98,9 @@ export function createLanguageList(
       fillHint(
         hint,
         [
-          { keys: shown.navigate, label: t('naviguer') },
-          { keys: [shown.confirm], label: t('valider') },
-          { keys: [shown.back], label: t('retour') },
+          { keys: shown.navigate, label: t('navigate') },
+          { keys: [shown.confirm], label: t('confirm') },
+          { keys: [shown.back], label: t('back') },
         ],
         shown.style,
       );

@@ -1,5 +1,7 @@
 import { locale } from '../shared/i18n';
 import { EIGHTH_SECONDS } from '../audio/ambience';
+import { beatSeconds } from '../audio/clock';
+import { weaponTake } from '../audio/sfx';
 import {
   APP_VERSION,
   buildFeedbackReport,
@@ -15,7 +17,7 @@ import { navigatorGamepads } from '../input/gamepad';
 import type { DeviceId, InputSnapshot } from '../input/intents';
 import { createKeyNames, learnKeyboardLayout } from '../input/key-names';
 import { createPlayerKeys } from '../input/profile';
-import { createPortraits, createRenderer } from '../render';
+import { createPortraits, createRenderer, paintMask } from '../render';
 import { NO_ARENA_GUIDE, arenaGuide } from './arena-guide';
 import type { GameEvent, GameMode } from '../shared/stats';
 import type { MenuHeard } from '../shared/menu-score';
@@ -47,7 +49,7 @@ import { createBackgroundPlay } from './background-play';
 import { createDefeatFade } from './defeat-fade';
 import { createDialogs } from './dialogs';
 import { createFpsMeter } from './fps';
-import { createGameAudio } from './game-audio';
+import { createGameSound } from './game-audio';
 import { createFixedStepLoop } from './loop';
 import { choiceCallbacks } from './choices';
 import type { Assist } from './controls';
@@ -68,11 +70,16 @@ import { createPauseScreen } from './pause';
 import { loadPlayerPrefs } from './prefs';
 import { createSeats, openerOf, type LaunchedSeats } from './seats';
 import { type Settings, createSettings } from './settings';
-import { soundOf, type Screen } from './sound';
+import { listen, soundOf, type Screen } from './sound';
+import { createStageListen } from './stage-listen';
 import { createCrashReport } from './crash';
 import { createGameStats, outcomeOf, sendGameEvent } from './stats';
 import { keepRecord } from './records';
+import { nightOf, ranksRun } from './board';
+import { FULL_BOARD } from './full';
 import { browserStorage } from './storage';
+import { changelogNews, seeChangelog } from './changelog-seen';
+import { FULL_RELEASES } from '../data/full';
 import { createTeamPause, pauseItems } from './team-pause';
 import { createToast } from './toast';
 import { drawTrack, stageTracks, trackOf } from './track';
@@ -99,8 +106,9 @@ const CATCH_UP_TICKS_PER_FRAME = 2;
 export interface Replay {
   readonly recording: Recording;
   readonly source: CommandSource;
-  // A film renders the game's sound offline, in step with the page clock.
-  readonly audio?: () => BaseAudioContext;
+  // A film renders the game's sound offline, in step with the page clock, into the context this
+  // returns; `loaded` settles once the files the replay plays next have decoded.
+  readonly audio?: (loaded: () => Promise<void>) => BaseAudioContext;
   // A film's own camera; absent, the one of a watched game.
   readonly camera?: { readonly focus?: CameraFocus; readonly viewHeight?: number };
   // While a film runs to its next shot, the steps each tick plays at once, unheard and undrawn; 0
@@ -167,21 +175,43 @@ export async function startGame(
   const stillness = createStillness();
   let stageSize = { width: stage.clientWidth, height: stage.clientHeight };
   const hub = createInputHub(stage, keys, names);
-  const audio = createGameAudio(content, {
-    state: () => match.session.state,
-    lastTrackId: () => prefs.trackId,
-    setNamed,
-    ...(replay?.audio === undefined ? {} : { film: replay.audio }),
-  });
+  const { audio, landings } = createGameSound(
+    content,
+    {
+      state: () => match.session.state,
+      lastTrackId: () => prefs.trackId,
+      setNamed,
+      ...(replay?.audio === undefined ? {} : { film: replay.audio }),
+    },
+    dev,
+    () => match,
+  );
+
+  const stageListen = createStageListen(content, audio, applySound);
 
   let stageId = prefs.stageId;
   let frozenAlpha = 0;
   // What the arena shows of the guide of the last step.
   let arena = NO_ARENA_GUIDE;
   let endingLeft = 0;
+  // A replayed game is no run of this player's.
+  const board =
+    (replay === undefined ? FULL_BOARD.entry : undefined)?.({
+      fetch: (input, init) => fetch(input, init),
+      storage: browserStorage,
+      pseudo: () => prefs.pseudo,
+      keepPseudo: (pseudo) => {
+        settings.remember('pseudo', pseudo);
+      },
+      online: () => navigator.onLine,
+      show: (line) => {
+        ui.setBoardLine(line);
+      },
+    }) ?? null;
   let recorder: Recorder | null = null;
-  let match = soloMatch();
+  let rankedNight: string | null = null;
   let onlineMatch: OnlineMatch | null = null;
+  let match = soloMatch();
   let onlineLobby = false;
   let interruption: Interruption | null = null;
   let catchUp = 0;
@@ -214,12 +244,17 @@ export async function startGame(
   const weaponScenes = createWeaponScenes(content, renderer);
   const settings = createSettings(browserStorage, prefs, applySound);
   const dialogs = createDialogs(navigatorGamepads);
+  const portraits = createPortraits(content.classes, () => prefs.calmMode);
+  const latestRelease = FULL_RELEASES[0]?.version;
 
   const ui = createUi(
     root,
     {
       ...gameCallbacks(),
       ...settingsCallbacks(settings, renderer, { openForm, openControls }),
+      onChangelogOpened() {
+        seeChangelog(browserStorage, latestRelease);
+      },
       ...menuCallbacks(),
       ...choiceCallbacks({
         seats,
@@ -244,8 +279,9 @@ export async function startGame(
     },
     prompts,
     content.classes,
-    createPortraits(content.classes, () => prefs.calmMode),
+    portraits.create,
   );
+  ui.showChangelogNews(changelogNews(browserStorage, latestRelease));
   void countVisit(window.location.hostname, (url) => fetch(url)).then((count) => {
     if (count !== null) ui.showVisits(count);
   });
@@ -257,6 +293,7 @@ export async function startGame(
     festival: () => prefs.festival,
     classIds,
     classId: () => prefs.classId,
+    pseudo: () => prefs.pseudo,
     trackId: nextTrackId,
     version: () => probe?.forcedVersion ?? APP_VERSION,
     onMatch: startOnline,
@@ -338,6 +375,9 @@ export async function startGame(
   function menuCallbacks() {
     return {
       onStart: openStart,
+      onBoardName(pseudo: string) {
+        board?.name(pseudo);
+      },
       onChooseClass(classId: string) {
         if (classIds.includes(classId)) {
           settings.remember('classId', classId);
@@ -359,6 +399,32 @@ export async function startGame(
       onLeaveStagePicker: toTitle,
       onPlayOnline: openOnline,
       onLeaveLobby: toTitle,
+      onPaintMask: paintMask,
+      onListenStage(setId: string | null) {
+        if (setId === null) {
+          stageListen.stop();
+        } else {
+          stageListen.play(setId);
+        }
+      },
+      onPaintClass: portraits.paint,
+      onPlaySpecial(classId: string) {
+        listen(audio, () => {
+          audio.playSpecial(classId);
+        });
+      },
+      onWeaponSound(weaponId: string) {
+        const weapon = content.weapons?.find((candidate) => candidate.id === weaponId);
+        const take =
+          weapon === undefined ? [] : weaponTake(weapon.id, weapon.effect.kind, beatSeconds());
+        return take.length === 0
+          ? null
+          : () => {
+              listen(audio, () => {
+                audio.hear(take);
+              });
+            };
+      },
     };
   }
 
@@ -370,6 +436,7 @@ export async function startGame(
       hitSound: prefs.hitSound,
       autoFire: prefs.autoFire,
       autoAim: prefs.autoAim,
+      pseudo: prefs.pseudo,
       device: view.merged.device,
     });
   }
@@ -380,11 +447,15 @@ export async function startGame(
       paused: pause.stopsTheSet,
       muted: prefs.muted,
       hidden: document.hidden,
+      landing: landings.waiting(),
+      listening: stageListen.listening(),
     });
     audio.setMuted(sound.muted);
     audio.setVolume(prefs.volume / VOLUME_STEPS);
     audio.setHitSound(prefs.hitSound);
-    audio.setMood(sound.mood);
+    if (sound.mood !== null) {
+      audio.setMood(sound.mood);
+    }
   }
 
   // The tutorial is one set, never endless nor a festival.
@@ -413,27 +484,30 @@ export async function startGame(
   }
 
   function recorded(source: CommandSource, start: MatchStart): CommandSource {
-    if (!dev.record) {
+    const game = { version: APP_VERSION, query: window.location.search, ...start };
+    rankedNight =
+      board !== null && ranksRun(game, onlineMatch !== null) ? nightOf(new Date()) : null;
+    if (!dev.record && rankedNight === null) {
+      recorder = null;
       return source;
     }
-    recorder = createRecorder(source, {
-      version: APP_VERSION,
-      query: window.location.search,
-      ...start,
-    });
+    recorder = createRecorder(source, game);
     return recorder.source;
   }
 
   // Once a game, at its end screen or when it is left: a match never played has nothing to keep.
-  function saveRecording(state: SimState): void {
-    if (recorder === null || (screen !== 'game' && screen !== 'ending')) {
-      return;
-    }
-    downloadJson(
-      `ozoboom-${state.setId}-${String(state.seed)}.json`,
-      recorder.save(state, prefs.trackId),
-    );
+  // `ranked`: the leaderboard takes the recording of this end.
+  function saveRecording(state: SimState, ranked = false): string | null {
+    const kept = recorder;
     recorder = null;
+    if (kept === null || (screen !== 'game' && screen !== 'ending') || (!dev.record && !ranked)) {
+      return null;
+    }
+    const text = kept.save(state, prefs.trackId);
+    if (dev.record) {
+      downloadJson(`ozoboom-${state.setId}-${String(state.seed)}.json`, text);
+    }
+    return text;
   }
 
   function watch({ recording, source, camera }: Replay): void {
@@ -513,7 +587,10 @@ export async function startGame(
   }
 
   function nextTrackId(setId = stageId): string {
-    return drawTrack(stageTracks(TRACKS, setNamed(setId).trackIds), prefs.trackId, Math.random).id;
+    return (
+      dev.moment?.track ??
+      drawTrack(stageTracks(TRACKS, setNamed(setId).trackIds), prefs.trackId, Math.random).id
+    );
   }
 
   function classPicker(): ClassPickerModel {
@@ -536,6 +613,7 @@ export async function startGame(
   }
 
   function openStagePicker(): void {
+    landings.cancel();
     screen = 'stage';
     applySound();
     ui.showStagePicker(stagePicker());
@@ -543,9 +621,20 @@ export async function startGame(
 
   // An online guest counts nothing: the host counts the game for everyone.
   function beginGame(trackId: string, mode: GameMode | null): void {
+    board?.leave();
     void audio.start();
     audio.setTrack(trackOf(TRACKS, trackId));
     settings.remember('trackId', trackId);
+    landings.begin(
+      match,
+      () => audio.loaded(),
+      () => {
+        landGame(mode);
+      },
+    );
+  }
+
+  function landGame(mode: GameMode | null): void {
     played = true;
     devScene(match.session.state, dev);
     screen = 'game';
@@ -590,6 +679,7 @@ export async function startGame(
   }
 
   function openOnline(): void {
+    landings.cancel();
     void audio.start();
     onlineLobby = true;
     screen = 'lobby';
@@ -615,6 +705,7 @@ export async function startGame(
   }
 
   function interrupt(next: Interruption): void {
+    landings.cancel();
     stats.end(match.session.state, 'interrupted');
     saveRecording(match.session.state);
     interruption = next;
@@ -640,6 +731,7 @@ export async function startGame(
   }
 
   function toTitle(): void {
+    landings.cancel();
     onlineLobby = false;
     online.leave();
     onlineMatch = null;
@@ -740,6 +832,14 @@ export async function startGame(
   }
 
   function step(): false | undefined {
+    if (screen === 'title') {
+      stageListen.step();
+    } else {
+      stageListen.stop();
+    }
+    if (landings.waiting()) {
+      return;
+    }
     if (screen === 'ending') {
       endingLeft -= 1;
       if (endingLeft <= 0) {
@@ -835,10 +935,15 @@ export async function startGame(
 
   function openEnd(): void {
     const { state } = match.session;
-    saveRecording(state);
+    const recording = saveRecording(state, rankedNight !== null);
     screen = 'end';
     fade.lift();
-    ui.showEnd(state, teamSession(), keepRecord(browserStorage, state, scoreOf(state)));
+    const score = scoreOf(state);
+    ui.showEnd(state, teamSession(), keepRecord(browserStorage, state, score));
+    const classId = state.players[0]?.classId;
+    if (recording !== null && rankedNight !== null && classId !== undefined) {
+      board?.finish({ night: rankedNight, classId, score, recording });
+    }
   }
 
   function render(alpha: number): void {
@@ -965,6 +1070,7 @@ function settingsCallbacks(
   | 'onToggleHitSound'
   | 'onToggleAutoFire'
   | 'onToggleAutoAim'
+  | 'onSetPseudo'
   | 'onChooseLocale'
   | 'onFeedback'
   | 'onControls'
@@ -984,6 +1090,9 @@ function settingsCallbacks(
     onToggleHitSound: settings.setHitSound,
     onToggleAutoFire: settings.setAutoFire,
     onToggleAutoAim: settings.setAutoAim,
+    onSetPseudo(pseudo) {
+      settings.remember('pseudo', pseudo);
+    },
     onChooseLocale: chooseLocale,
     onFeedback: open.openForm,
     onControls: open.openControls,

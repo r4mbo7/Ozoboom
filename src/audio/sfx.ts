@@ -12,9 +12,11 @@ import {
   FULL_ATTACK_CALLS,
   FULL_BAR_CALLS,
   FULL_EVENT_CALLS,
+  FULL_EVENT_VARIANTS,
   FULL_SKILL_CALLS,
   FULL_SKILL_LIMITS,
   FULL_SKILL_VOICES,
+  FULL_SPECIAL_TAKES,
 } from './full';
 
 export type SfxName =
@@ -106,8 +108,26 @@ export interface SfxLimit {
 
 export interface SfxLimiter {
   beginFrame(): void;
-  tryAcquire(name: SfxName, now: number): boolean;
+  // `seconds`: how long this one plays, a file by its own length; its limit says otherwise.
+  tryAcquire(name: SfxName, now: number, seconds?: number): boolean;
 }
+
+// An artist's file in place of a synth voice (src/audio/samples.ts).
+export interface SampleVoice {
+  // How long it plays, which the limiter holds it for.
+  readonly seconds: number;
+  readonly play: (out: AudioNode, at: number) => void;
+}
+
+// A tonal file plays in the key asked (K7 of ADR 0022).
+export interface SfxSamples {
+  // Absent until the sound has a decoded file: its synth voice plays.
+  sound(name: SfxName, key: MusicKey): SampleVoice | undefined;
+  // The shot of an attack kind that plays the shared shot, absent until it has its own file.
+  shot(attackKind: string, key: MusicKey): SampleVoice | undefined;
+}
+
+const NO_SAMPLES: SfxSamples = { sound: () => undefined, shot: () => undefined };
 
 export type TrapEffectOf = (kind: string) => string;
 
@@ -310,6 +330,19 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
 
 const SFX_LIMITS = sfxLimitsFor(MAIN_TEMPO);
 
+// The attack kind of the player who fired.
+function firedAttackKind(
+  event: SimEvent,
+  lookups: SfxLookups,
+  players: readonly SfxPlayer[],
+): string | undefined {
+  const classId =
+    event.type === 'playerFired'
+      ? players.find((player) => player.id === event.playerId)?.classId
+      : undefined;
+  return classId === undefined ? undefined : lookups.attackKindOf?.(classId);
+}
+
 export function sfxOf(
   event: SimEvent,
   trapEffectOf: TrapEffectOf,
@@ -318,8 +351,7 @@ export function sfxOf(
 ): SfxName | null {
   switch (event.type) {
     case 'playerFired': {
-      const classId = players.find((player) => player.id === event.playerId)?.classId;
-      const kind = classId === undefined ? undefined : lookups.attackKindOf?.(classId);
+      const kind = firedAttackKind(event, lookups, players);
       return (kind === undefined ? undefined : ATTACK_SFX.get(kind)) ?? event.type;
     }
     case 'enemyHit':
@@ -410,6 +442,9 @@ export function sfxOf(
 }
 
 export type EventCall = SfxName | ((event: SimEvent) => SfxName | null);
+// The variant a sound plays an event at, read from the event and the sim's tick when known.
+export type EventVariant = (event: SimEvent, tick: number | undefined, tempo: Tempo) => number;
+const EVENT_VARIANTS: Readonly<Partial<Record<SfxName, EventVariant>>> = FULL_EVENT_VARIANTS;
 const BOSS_EVENT_CALLS: Readonly<Partial<Record<SimEvent['type'], EventCall>>> = {
   gust: 'bossGust',
   ...FULL_EVENT_CALLS,
@@ -429,7 +464,7 @@ export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): S
     beginFrame() {
       playedThisFrame.clear();
     },
-    tryAcquire(name, now) {
+    tryAcquire(name, now, seconds = limits[name].seconds) {
       const limit = limits[name];
       const played = playedThisFrame.get(name) ?? 0;
       if (played >= limit.perFrame) {
@@ -440,7 +475,7 @@ export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): S
       if (sounding.length >= limit.concurrent) {
         return false;
       }
-      sounding.push(now + limit.seconds);
+      sounding.push(now + seconds);
       playedThisFrame.set(name, played + 1);
       return true;
     },
@@ -449,6 +484,29 @@ export function createSfxLimiter(limits: Readonly<Record<SfxName, SfxLimit>>): S
 
 // One casting of a special: what it sounds through, `after` seconds from the first.
 export type SpecialTake = readonly { readonly after: number; readonly event: SimEvent }[];
+
+// A special that sounds through its `skillUsed` alone.
+export const SPECIAL_CAST: SpecialTake = [{ after: 0, event: { type: 'skillUsed', playerId: 0 } }];
+
+// Each casting of a special of this kind, as the game sounds it.
+export function specialTakes(kind: string): readonly SpecialTake[] {
+  return FULL_SPECIAL_TAKES[kind] ?? [SPECIAL_CAST];
+}
+
+// A weapon as the game hears it, one sound a beat after the other: its throw, its touch, its catch.
+// Empty for a weapon the game keeps silent, the trail.
+export function weaponTake(weaponId: string, kind: string, beat: number): SpecialTake {
+  const origin = { playerId: 0, x: 0, y: 0 } as const;
+  const events: readonly SimEvent[] = [
+    { type: 'weaponFired', weaponId, ...origin },
+    { type: 'weaponHit', weaponId, id: 0, ...origin },
+    { type: 'weaponCaught', weaponId, ...origin },
+  ];
+  const lookups = { weaponKindOf: () => kind };
+  return events
+    .filter((event) => sfxOf(event, (trap) => trap, lookups) !== null)
+    .map((event, index) => ({ after: index * beat, event }));
+}
 
 export type Voice = (
   out: AudioNode,
@@ -624,7 +682,7 @@ function fireSpark(out: AudioNode, at: number, index: number, gain: number): voi
 const DEALT_DEGREES = [0, 2, 4, 5];
 const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
 
-const VOICES: Readonly<Record<SfxName, Voice>> = {
+export const VOICES: Readonly<Record<SfxName, Voice>> = {
   ...FULL_SKILL_VOICES,
   playerFired: (out, at, _variant, key) => {
     playTone(out, at, {
@@ -2215,6 +2273,8 @@ export interface Sfx {
     players?: readonly SfxPlayer[],
     core?: SfxCore,
     enemies?: readonly SfxEnemy[],
+    // The sim's tick of these events: the sfx clock drifts from it.
+    tick?: number,
   ): void;
   cue(cue: Cue, now: number, variant?: number): void;
   beginFrame(): void;
@@ -2251,9 +2311,18 @@ export function createSfx(
   trapEffectOf: TrapEffectOf,
   lookups: SfxLookups = {},
   initialKey: SfxKey = SOIREE_OUVERTURE,
+  samples: SfxSamples = NO_SAMPLES,
 ): Sfx {
   let key = initialKey;
   let limiter = createSfxLimiter(SFX_LIMITS);
+  // The voice of a sound the limiter lets through: the artist's file once decoded, in the key of the
+  // track, its synth voice otherwise. A shot of an attack kind tries its kind's file first.
+  const acquire = (name: SfxName, now: number, attackKind?: string): Voice | null => {
+    const file =
+      (attackKind === undefined ? undefined : samples.shot(attackKind, key)) ??
+      samples.sound(name, key);
+    return limiter.tryAcquire(name, now, file?.seconds) ? (file?.play ?? VOICES[name]) : null;
+  };
   let tempo = MAIN_TEMPO;
   let clock: Anchor | null = null;
   let progress = 0;
@@ -2268,12 +2337,18 @@ export function createSfx(
       ? BEATS_PER_BAR
       : (tempo.ticksPerBar - ticksIntoBar(timeToTick(clock, now), tempo)) / tempo.ticksPerBeat;
   const variantAt = (
+    name: SfxName,
     event: SimEvent,
     events: readonly SimEvent[],
     now: number,
     core: SfxCore,
     enemies: readonly SfxEnemy[],
+    tick: number | undefined,
   ): number => {
+    const variant = EVENT_VARIANTS[name];
+    if (variant !== undefined) {
+      return variant(event, tick, tempo);
+    }
     if (event.type === 'dashBack') {
       return chordRootNow(now) + 4;
     }
@@ -2290,7 +2365,7 @@ export function createSfx(
     return variantOf(event, core, enemies);
   };
   return {
-    play(events, now, players = [], core = FULL_CORE, enemies = []) {
+    play(events, now, players = [], core = FULL_CORE, enemies = [], tick) {
       let vibes = 0;
       for (const event of events) {
         const name = sfxOf(event, trapEffectOf, lookups, players);
@@ -2300,28 +2375,31 @@ export function createSfx(
         if (event.type === 'pickupCollected') {
           vibes += 1;
           progress = levelProgress(players.find((player) => player.id === event.playerId));
-        } else if (name !== null && limiter.tryAcquire(name, now)) {
-          const variant = variantAt(event, events, now, core, enemies);
-          VOICES[name](out, now, variant, key, undefined, undefined, beatSeconds(tempo));
+          continue;
+        }
+        const attackKind =
+          name === 'playerFired' ? firedAttackKind(event, lookups, players) : undefined;
+        const voice = name === null ? null : acquire(name, now, attackKind);
+        if (name !== null && voice !== null) {
+          const variant = variantAt(name, event, events, now, core, enemies, tick);
+          voice(out, now, variant, key, undefined, undefined, beatSeconds(tempo));
         } else if (event.type === 'bar') {
           for (const enemy of enemies) {
             const call = enemy.kind === undefined ? undefined : BOSS_BAR_CALLS.get(enemy.kind);
-            if (call !== undefined && limiter.tryAcquire(call, now)) {
-              VOICES[call](out, now, 0, key);
-            }
+            const bossCall = call === undefined ? null : acquire(call, now);
+            bossCall?.(out, now, 0, key);
           }
         }
       }
       const note = arp.collect(vibes, now, tempo, clock);
-      if (note !== null && limiter.tryAcquire('vibesCollected', note.at)) {
+      const arpVoice = note === null ? null : acquire('vibesCollected', note.at);
+      if (note !== null && arpVoice !== null) {
         const degree = chordRootOfBar(key.chords, note.bar) + note.degree;
-        VOICES.vibesCollected(out, note.at, degree, key, note.vibes, progress);
+        arpVoice(out, note.at, degree, key, note.vibes, progress);
       }
     },
     cue(cue, now, variant = 0) {
-      if (limiter.tryAcquire(cue, now)) {
-        VOICES[cue](out, now, variant, key, undefined, undefined, beatSeconds(tempo));
-      }
+      acquire(cue, now)?.(out, now, variant, key, undefined, undefined, beatSeconds(tempo));
     },
     beginFrame() {
       limiter.beginFrame();

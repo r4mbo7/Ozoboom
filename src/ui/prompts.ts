@@ -37,34 +37,34 @@ export interface Prompts {
 type Name = (input: string) => string;
 
 const keyboard = (profile: KeyProfile, name: Name): DevicePrompts => ({
-  name: t('Clavier et souris'),
+  name: t('Keyboard and mouse'),
   style: 'key',
   navigate: ['↑', '↓'],
   navigateRow: ['←', '→'],
-  tabs: [t('Maj+Tab'), 'Tab'],
-  confirm: t('Entrée'),
-  back: t('Échap'),
+  tabs: [name('KeyQ'), name('KeyE')],
+  confirm: t('Enter'),
+  back: t('Esc'),
   skill: keyNames(profile, 'skill', name)[0] ?? '',
   move: moveKeys(profile, name),
   fire: keyNames(profile, 'fire', name),
   dash: keyNames(profile, 'dash', name)[0] ?? '',
   placeTrap: keyNames(profile, 'placeTrap', name)[0] ?? '',
   controls: [
-    { action: t('Se déplacer'), keys: moveKeys(profile, name) },
-    { action: t('Viser'), keys: [t('Souris')] },
-    { action: t('Tirer'), keys: keyNames(profile, 'fire', name) },
-    { action: t('Déplacer un piège'), keys: keyNames(profile, 'placeTrap', name) },
-    { action: t('Spéciale'), keys: keyNames(profile, 'skill', name) },
+    { action: t('Move'), keys: moveKeys(profile, name) },
+    { action: t('Aim'), keys: [t('Mouse')] },
+    { action: t('Shoot'), keys: keyNames(profile, 'fire', name) },
+    { action: t('Move a trap'), keys: keyNames(profile, 'placeTrap', name) },
+    { action: t('Special'), keys: keyNames(profile, 'skill', name) },
     { action: t('Dash'), keys: keyNames(profile, 'dash', name) },
-    { action: t('Pause'), keys: [t('Échap')] },
+    { action: t('Pause'), keys: [t('Esc')] },
   ],
 });
 
 const gamepad = (profile: KeyProfile): DevicePrompts => ({
-  name: t('Manette'),
+  name: t('Gamepad'),
   style: 'button',
-  navigate: [sticks(profile).move, t('Croix')],
-  navigateRow: [sticks(profile).move, t('Croix')],
+  navigate: [sticks(profile).move, t('D-pad')],
+  navigateRow: [sticks(profile).move, t('D-pad')],
   tabs: ['LB', 'RB'],
   confirm: 'A',
   back: 'B',
@@ -74,11 +74,11 @@ const gamepad = (profile: KeyProfile): DevicePrompts => ({
   dash: buttonNames(profile, 'dash')[0] ?? '',
   placeTrap: buttonNames(profile, 'placeTrap')[0] ?? '',
   controls: [
-    { action: t('Se déplacer'), keys: [sticks(profile).move] },
-    { action: t('Viser'), keys: [sticks(profile).aim] },
-    { action: t('Tirer'), keys: buttonNames(profile, 'fire') },
-    { action: t('Déplacer un piège'), keys: buttonNames(profile, 'placeTrap') },
-    { action: t('Spéciale'), keys: buttonNames(profile, 'skill') },
+    { action: t('Move'), keys: [sticks(profile).move] },
+    { action: t('Aim'), keys: [sticks(profile).aim] },
+    { action: t('Shoot'), keys: buttonNames(profile, 'fire') },
+    { action: t('Move a trap'), keys: buttonNames(profile, 'placeTrap') },
+    { action: t('Special'), keys: buttonNames(profile, 'skill') },
     { action: t('Dash'), keys: buttonNames(profile, 'dash') },
     { action: t('Pause'), keys: ['Start'] },
   ],
@@ -86,24 +86,24 @@ const gamepad = (profile: KeyProfile): DevicePrompts => ({
 
 // Menus are touched, not walked: a touch screen shows no key hints and no skill key.
 const touch = (): DevicePrompts => ({
-  name: t('Tactile'),
+  name: t('Touch'),
   style: 'key',
   navigate: [],
   navigateRow: [],
   tabs: [],
-  confirm: t('Toucher'),
-  back: t('Retour'),
+  confirm: t('Tap'),
+  back: t('Back'),
   skill: '',
   move: [],
   fire: [],
   dash: '',
   placeTrap: '',
   controls: [
-    { action: t('Se déplacer'), keys: [t('Glisser sur l’arène')] },
-    { action: t('Viser et tirer'), keys: [t('Automatique')] },
-    { action: t('Déplacer un piège'), keys: [t('Toucher son bouton')] },
-    { action: t('Spéciale'), keys: [t('Toucher son bouton')] },
-    { action: t('Dash'), keys: [t('Toucher son bouton')] },
+    { action: t('Move'), keys: [t('Drag on the arena')] },
+    { action: t('Aim and shoot'), keys: [t('Automatic')] },
+    { action: t('Move a trap'), keys: [t('Tap its button')] },
+    { action: t('Special'), keys: [t('Tap its button')] },
+    { action: t('Dash'), keys: [t('Tap its button')] },
     { action: t('Pause'), keys: ['❚❚'] },
   ],
 });
@@ -137,8 +137,8 @@ function moveKeys(profile: KeyProfile, name: Name): string[] {
 }
 
 function sticks(profile: KeyProfile): { move: string; aim: string } {
-  const left = t('Stick gauche');
-  const right = t('Stick droit');
+  const left = t('Left stick');
+  const right = t('Right stick');
   return profile.swapSticks ? { move: right, aim: left } : { move: left, aim: right };
 }
 

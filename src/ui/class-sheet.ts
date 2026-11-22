@@ -29,9 +29,9 @@ function stepsAmong(classes: readonly ClassInfo[], of: (info: ClassInfo) => numb
 
 export function classStats(classes: readonly ClassInfo[], info: ClassInfo): readonly ClassStat[] {
   const rows: readonly [string, (entry: ClassInfo) => number, (value: number) => string][] = [
-    [t('Vie'), (entry) => entry.maxHp, formatNumber],
-    [t('Vitesse'), (entry) => entry.speed, formatTenth],
-    [t('Portée'), reach, formatNumber],
+    [t('Health'), (entry) => entry.maxHp, formatNumber],
+    [t('Speed'), (entry) => entry.speed, formatTenth],
+    [t('Range'), reach, formatNumber],
   ];
   return rows.map(([label, of, format]) => ({
     label,
@@ -67,7 +67,7 @@ export function createClassSheet(classes: readonly ClassInfo[]): ClassSheet {
   const role = el('p', 'ui-sheet__role');
   const recharge = el('span', 'ui-sheet__recharge');
   const head = el('p', 'ui-sheet__skillhead');
-  head.append(el('span', 'ui-sheet__skilllabel', t('Spéciale')), recharge);
+  head.append(el('span', 'ui-sheet__skilllabel', t('Special')), recharge);
   const skillName = el('p', 'ui-sheet__skillname');
   const skillText = el('p', 'ui-sheet__skilltext');
   const skill = el('div', 'ui-sheet__skill');
@@ -81,7 +81,7 @@ export function createClassSheet(classes: readonly ClassInfo[]): ClassSheet {
       setText(skillName, t(info.skill.name));
       setText(
         recharge,
-        t('recharge {duration}', { duration: formatSeconds(info.skill.cooldownTicks) }),
+        t('cooldown {duration}', { duration: formatSeconds(info.skill.cooldownTicks) }),
       );
       setText(skillText, t(info.skill.description));
       stats.replaceChildren(...classStats(classes, info).map(statRow));

@@ -2,16 +2,25 @@ import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { MusicTrack, SetDefinition } from '../data/types';
 import type { SimState } from '../sim/state';
 import { createAmbience, type Ambience } from './ambience';
-import { FULL_MUSIC } from './full';
+import { FULL_MUSIC, FULL_SOUNDS, FULL_SYNTH_LUFS } from './full';
 import { createMasterChain, type MasterChain } from './master';
 import {
   MENU_RECORDING,
   createRecordingVoice,
   type RecordingLoad,
+  type RecordingPartName,
   type RecordingVoice,
 } from './menu-track';
 import { createMusic, type Music } from './music';
-import { createSfx, type Sfx, type SfxLookups, type TrapEffectOf } from './sfx';
+import { loadSamples, type SampleBank } from './samples';
+import {
+  createSfx,
+  specialTakes,
+  type Sfx,
+  type SfxLookups,
+  type SpecialTake,
+  type TrapEffectOf,
+} from './sfx';
 import type { MenuHeard } from '../shared/menu-score';
 import type { AudioEngine, Mood } from './types';
 
@@ -33,6 +42,9 @@ export interface AudioEngineOptions {
   // The menu track (MENU_RECORDING), loaded in the background: the menus wait for it in silence, and
   // play the ambience only when it is absent or does not decode.
   readonly menuTrack?: (context: BaseAudioContext) => RecordingLoad;
+  // The artists' files of the effects, decoded from the opening with the engine's own context.
+  // Absent means those placed with `pnpm sounds`.
+  readonly samples?: (context: BaseAudioContext) => SampleBank;
 }
 
 interface Running {
@@ -40,10 +52,11 @@ interface Running {
   master: MasterChain;
   music: Music;
   sfx: Sfx;
+  samples: SampleBank;
   ambience: Ambience;
   // What the menus play: their track, silent until its first part decodes, or the ambience.
   menus: RecordingVoice | 'ambience';
-  // The track given up when its whole does not decode, pumped until its fade has stopped it.
+  // The track given up when its opening or loop does not decode, pumped until its fade has stopped it.
   dropped: RecordingVoice | null;
 }
 
@@ -73,6 +86,10 @@ export function heardNow(context: BaseAudioContext): number | null {
     return Math.min(estimate, context.currentTime);
   }
   return context.currentTime > OUTPUT_CLOCK_GRACE_SECONDS ? context.currentTime : null;
+}
+
+function placedSamples(context: BaseAudioContext): SampleBank {
+  return loadSamples(context, FULL_SOUNDS.samples ?? {}, FULL_SYNTH_LUFS);
 }
 
 function isRealtimeStalled(context: BaseAudioContext): boolean {
@@ -169,15 +186,16 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     applyMood();
   };
 
-  // Menus already waiting for it hear each part at once; the ambience when the whole does not decode.
-  const takeMenus = (opened: Running, part: 'intro' | 'whole', buffer: AudioBuffer | null) => {
+  // Menus already waiting for it hear each part at once; the ambience when its opening or loop does
+  // not decode.
+  const takeMenus = (opened: Running, part: RecordingPartName, buffer: AudioBuffer | null) => {
     const voice = trackOf(opened);
     if (running !== opened || voice === null) {
       return;
     }
     if (buffer !== null) {
       voice.take(buffer, part);
-    } else if (part === 'whole') {
+    } else if (part !== 'intro') {
       voice.leave();
       opened.dropped = voice;
       opened.menus = 'ambience';
@@ -191,17 +209,25 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const open = (): Running => {
     const context = (options.createContext ?? (() => new AudioContext()))();
     const master = createMasterChain(context, muted, volume, options.stems === true);
-    const sfx = createSfx(master.sfx, trapEffectOf, options.sfxLookups, track);
+    const samples = (options.samples ?? placedSamples)(context);
+    const sfx = createSfx(master.sfx, trapEffectOf, options.sfxLookups, track, samples);
     sfx.setHitSound(hitSound);
     const opened: Running = {
       context,
       master,
       music: (FULL_MUSIC.festival ?? createMusic)(
         master.music,
-        { track, breakBars, setOf: options.setOf, onKickScheduled: options.onKickScheduled },
+        {
+          track,
+          breakBars,
+          setOf: options.setOf,
+          onKickScheduled: options.onKickScheduled,
+          loops: { files: FULL_SOUNDS.music ?? {} },
+        },
         options.trackFor,
       ),
       sfx,
+      samples,
       ambience: createAmbience(master.music),
       menus:
         options.menuTrack === undefined
@@ -210,13 +236,25 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       dropped: null,
     };
     const load = options.menuTrack?.(context);
-    void load?.intro.then((buffer) => {
-      takeMenus(opened, 'intro', buffer);
-    });
-    void load?.whole.then((buffer) => {
-      takeMenus(opened, 'whole', buffer);
-    });
+    for (const part of ['intro', 'opening', 'loop'] as const) {
+      void load?.[part]?.then((buffer) => {
+        takeMenus(opened, part, buffer);
+      });
+    }
     return opened;
+  };
+
+  // Plays sim events outside any game, each `after` seconds on: the Programme's « Listen ».
+  const playTake = (take: SpecialTake, players?: Parameters<Sfx['play']>[2]): void => {
+    if (running === null || isRealtimeStalled(running.context)) {
+      return;
+    }
+    const { context, sfx } = running;
+    const now = context.currentTime;
+    for (const { after, event } of take) {
+      sfx.beginFrame();
+      sfx.play([event], now + after, players);
+    }
   };
 
   return {
@@ -241,6 +279,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         state.players,
         state.core,
         state.enemies,
+        state.tick,
       );
       if (latest === null) {
         queueMicrotask(flush);
@@ -254,6 +293,16 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       // Cues come from the lobby, where no update runs to open the frame.
       running.sfx.beginFrame();
       running.sfx.cue(name, running.context.currentTime, variant);
+    },
+    playSpecial(classId) {
+      const kind = options.sfxLookups?.skillKindOf?.(classId);
+      if (kind !== undefined) {
+        const [take = []] = specialTakes(kind);
+        playTake(take, [{ id: 0, classId }]);
+      }
+    },
+    hear(take) {
+      playTake(take);
     },
     setMuted(value) {
       muted = value;
@@ -271,6 +320,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       track = value;
       running?.music.setTrack(value);
       running?.sfx.setKey(value);
+    },
+    loaded() {
+      return running === null
+        ? Promise.resolve()
+        : Promise.all([running.music.loaded(), running.samples.loaded]).then(() => undefined);
     },
     setMood(value) {
       mood = value;

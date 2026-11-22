@@ -16,28 +16,28 @@ import { formatNumber } from './format';
 
 export const SIXTEENTHS_PER_BAR = 16;
 
-const familyLabels = (): Record<UpgradeFamily, string> => ({
-  class: t('Classe'),
-  generic: t('Générique'),
-  defense: t('Défense'),
-  relic: t('Relique'),
+export const familyLabels = (): Record<UpgradeFamily, string> => ({
+  class: t('Class'),
+  generic: t('General'),
+  defense: t('Defense'),
+  relic: t('Relic'),
 });
 
 const rarityLabels = (): Record<Rarity, string | null> => ({
   common: null,
   rare: t('Rare'),
-  legendary: t('Légendaire'),
+  legendary: t('Legendary'),
 });
 
 const roleLabels = (): Record<WeaponRole, string> => ({
-  hitFront: t('Frappe devant'),
-  hitFar: t('Frappe loin'),
-  hitAround: t('Frappe autour'),
-  heal: t('Soigne'),
-  slow: t('Ralentit'),
-  pull: t('Attire'),
-  push: t('Repousse'),
-  mark: t('Marque'),
+  hitFront: t('Hits ahead'),
+  hitFar: t('Hits far'),
+  hitAround: t('Hits around'),
+  heal: t('Heals'),
+  slow: t('Slows'),
+  pull: t('Pulls'),
+  push: t('Pushes back'),
+  mark: t('Marks'),
 });
 
 export type CardTint = 'common' | 'rare' | 'legendary' | 'relic' | 'fusion';
@@ -110,16 +110,16 @@ export interface FusionCard extends CardBase {
 export type Card = UpgradeCard | WeaponCard | FusionCard;
 
 export function offerHeading(offer: UpgradeOffer): string {
-  return offer.kind === 'relic' ? t('Le boss lâche une relique') : t('Choisis ton amélioration');
+  return offer.kind === 'relic' ? t('The boss drops a relic') : t('Pick your upgrade');
 }
 
 export function offerKicker(offer: UpgradeOffer, player: PlayerState | undefined): string {
   if (offer.kind === 'relic') {
-    return t('Boss vaincu');
+    return t('Boss down');
   }
   return player === undefined
-    ? t('Niveau supérieur')
-    : t('Niveau {level}', { level: formatNumber(player.level) });
+    ? t('Level up')
+    : t('Level {level}', { level: formatNumber(player.level) });
 }
 
 function stepsOf(weapon: WeaponDefinition): readonly boolean[] | 'continuous' {
@@ -134,7 +134,7 @@ function rankOf(family: UpgradeFamily, stacks: number): string {
   if (family === 'relic') {
     return '';
   }
-  return stacks === 0 ? t('Nouveau') : t('Rang {rank}', { rank: formatNumber(stacks + 1) });
+  return stacks === 0 ? t('New') : t('Rank {rank}', { rank: formatNumber(stacks + 1) });
 }
 
 export function cardFor(
@@ -167,8 +167,8 @@ export function cardFor(
         className === undefined
           ? familyLabels()[upgrade.family]
           : growsSkillAlone(form)
-            ? t('Spéciale')
-            : t('Classe · {className}', { className: t(className) }),
+            ? t('Special')
+            : t('Class · {className}', { className: t(className) }),
       rank: rankOf(upgrade.family, stacks),
       pearls:
         upgrade.family === 'relic'
@@ -176,7 +176,7 @@ export function cardFor(
           : {
               rank,
               max: upgrade.maxStacks,
-              label: t('Rang {rank} sur {max}', {
+              label: t('Rank {rank} of {max}', {
                 rank: formatNumber(rank),
                 max: formatNumber(upgrade.maxStacks),
               }),
@@ -217,12 +217,12 @@ export function cardFor(
     name: t(weapon.name),
     description: t(weapon.description),
     weapon,
-    label: t('Agrès'),
-    rank: level === 0 ? t('Nouveau') : t('Niveau {level}', { level: next }),
+    label: t('Props'),
+    rank: level === 0 ? t('New') : t('Level {level}', { level: next }),
     pearls: {
       rank: level + 1,
       max: weapon.maxLevel,
-      label: t('Niveau {level} sur {max}', { level: next, max: formatNumber(weapon.maxLevel) }),
+      label: t('Level {level} of {max}', { level: next, max: formatNumber(weapon.maxLevel) }),
     },
     adds: level === 0,
     steps: stepsOf(weapon),
@@ -273,7 +273,7 @@ function trapCardFor(
   return {
     ...base,
     name,
-    description: t('Un {name} tout neuf, prêt à poser.', { name }),
+    description: t('A brand-new {name}, ready to drop.', { name }),
     gift: { form: 'shown', traps: [trap] },
   };
 }
@@ -321,13 +321,13 @@ export function weaponPlaces(
           state: 'ghost',
           weapon: focused.weapon,
           level: 0,
-          label: t('Place {place} sur {slots}', {
+          label: t('Slot {place} of {slots}', {
             place: formatNumber(held.length + 1),
             slots: formatNumber(slots),
           }),
           lit: false,
         }
-      : { state: 'free', weapon: null, level: 0, label: t('Libre'), lit: false },
+      : { state: 'free', weapon: null, level: 0, label: t('Free'), lit: false },
   );
   return [...held, ...free];
 }
@@ -401,7 +401,7 @@ function listOf(names: readonly string[]): string {
   const last = names.at(-1);
   return names.length < 2 || last === undefined
     ? names.join('')
-    : t('{names} et {last}', { names: names.slice(0, -1).join(', '), last });
+    : t('{names} and {last}', { names: names.slice(0, -1).join(', '), last });
 }
 
 export interface RemoteChoice {
@@ -427,15 +427,15 @@ export function waitingFor(remote: readonly RemoteChoice[], localsDone: boolean)
   return {
     chips: remote.map((player) =>
       player.picked === null
-        ? { text: t('{name} choisit…', { name: player.name }), classId: null }
+        ? { text: t('{name} is choosing…', { name: player.name }), classId: null }
         : {
-            text: t('{name} : {card}', { name: player.name, card: player.picked }),
+            text: t('{name}: {card}', { name: player.name, card: player.picked }),
             classId: player.classId,
           },
     ),
     waiting:
       choosing.length > 0 && localsDone
-        ? t('En attente de {players}', { players: listOf(choosing) })
+        ? t('Waiting for {players}', { players: listOf(choosing) })
         : null,
   };
 }

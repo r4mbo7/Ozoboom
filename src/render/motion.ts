@@ -24,6 +24,26 @@ export function beatEnvelope(ticksSinceBeat: number, tempo: Tempo = MAIN_TEMPO):
   return remaining * remaining;
 }
 
+const HEART_DECAY_BEATS = 0.2;
+const HEART_SECOND_BEATS = 0.25;
+const HEART_SECOND = 0.6;
+
+function heartSwell(beats: number): number {
+  if (beats < 0 || beats >= HEART_DECAY_BEATS) {
+    return 0;
+  }
+  const remaining = 1 - beats / HEART_DECAY_BEATS;
+  return remaining * remaining;
+}
+
+export function heartbeat(
+  ticksSinceBeat: number,
+  { ticksPerBeat }: Pick<Tempo, 'ticksPerBeat'>,
+): number {
+  const beats = ticksSinceBeat / ticksPerBeat;
+  return heartSwell(beats) + HEART_SECOND * heartSwell(beats - HEART_SECOND_BEATS);
+}
+
 export class FlashLimiter {
   private lastStart = Number.NEGATIVE_INFINITY;
 

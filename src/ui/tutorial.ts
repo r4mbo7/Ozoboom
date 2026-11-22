@@ -6,7 +6,7 @@ import { enteredSpeaker, volumeCrans } from './hud-model';
 import { PLUG, SENT } from './icons';
 import type { DevicePrompts } from './prompts';
 
-// The gestures of the tutorial, in the order it asks them (docs/game-design.md, « Didacticiel »).
+// The gestures of the tutorial, in the order it asks them (docs/game-design.md, "Tutorial").
 export const TUTORIAL_STEPS = [
   'move',
   'fire',
@@ -139,28 +139,24 @@ export interface Gesture {
 export function lineOf(step: TutorialStep, touch: boolean, { carrying, inside }: Gesture): string {
   switch (step) {
     case 'move':
-      return touch ? t('Glisse sur l’arène pour te déplacer') : t('Déplace-toi');
+      return touch ? t('Drag on the arena to move') : t('Move around');
     case 'fire':
-      return touch ? t('Approche une bad vibe : tu tires tout seul') : t('Tire');
+      return touch ? t('Get close to a bad vibe: you fire on your own') : t('Shoot!');
     case 'vibes':
-      return t('Ramasse les vibes');
+      return t('Pick up the vibes');
     case 'upgrade':
-      return t('Remplis ta jauge de vibes, puis choisis une amélioration');
+      return t('Fill your vibes gauge, then pick an upgrade');
     case 'trap':
       if (carrying) {
-        return touch
-          ? t('Va plus loin et touche encore le bouton')
-          : t('Va plus loin et repose-le');
+        return touch ? t('Go farther and tap the button again') : t('Go farther and drop it');
       }
-      return touch
-        ? t('Près d’un piège, touche le bouton du piège pour le prendre')
-        : t('Prends un piège pour le déplacer');
+      return touch ? t('Near a trap, tap the trap button to take it') : t('Take a trap to move it');
     case 'dash':
-      return touch ? t('Touche le bouton du dash') : t('Fais un dash');
+      return touch ? t('Tap the dash button') : t('Dash!');
     case 'skill':
-      return touch ? t('Touche le bouton de ta spéciale') : t('Lance ta spéciale');
+      return touch ? t('Tap your special’s button') : t('Use your special');
     case 'speaker':
-      return inside ? t('Restes-y : elle se branche') : t('Va dans le cercle d’une enceinte');
+      return inside ? t('Stay there: it’s plugging in') : t('Go into a speaker’s circle');
   }
 }
 
@@ -288,7 +284,7 @@ export function createTutorialBanner(): TutorialBanner {
     setText(
       line,
       step === undefined
-        ? t('Tu sais jouer. Tiens jusqu’au sunrise\u202f!')
+        ? t('You know how to play. Hold on until sunrise!')
         : lineOf(step, touch, { carrying, inside }),
     );
     // The gauge shows while the player charges a speaker, and while the charge drains once out.

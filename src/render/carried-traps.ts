@@ -13,7 +13,7 @@ import { ViewPool } from './views';
 const RING_GAP = 7;
 const WHITE = 0xffffff;
 // Above the head, the trap is drawn this share of its size on the ground.
-const CARRIED_SCALE = 0.7;
+export const CARRIED_SCALE = 0.7;
 // Between a head, or the name above it, and the trap carried.
 const CARRIED_GAP = 6;
 // Between two traps a player carries, one above the other.
@@ -117,20 +117,21 @@ export class PlayerCarriedTraps {
     this.renewedSince = since;
   }
 
-  // `top` is the top of the head, or of the name above it.
+  // `top` is the top of the head, or of the name above it. Gives back the bottom of the next place
+  // above the stack, where the next trap taken would go.
   place(
     player: Pick<PlayerState, 'carriedTrap' | 'carriedUnder'>,
     x: number,
     top: number,
     frame: Frame,
-  ): void {
+  ): number {
     const carried = player.carriedTrap;
     this.drawn.clear();
     let used = 0;
+    let rise = CARRIED_GAP;
     const renewed = this.renewed(frame);
     if (carried !== undefined) {
       const stack = [...(player.carriedUnder ?? []), carried];
-      let rise = CARRIED_GAP;
       for (const trap of stack) {
         const alpha = wornBodyAlpha(trapPower(trap, frame.set.trapWear));
         const flying = trap === carried ? this.flying(trap.id, frame) : null;
@@ -153,6 +154,7 @@ export class PlayerCarriedTraps {
       return true;
     });
     this.hideFrom(used);
+    return top - rise;
   }
 
   hide(): void {

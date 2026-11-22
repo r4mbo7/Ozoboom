@@ -32,6 +32,8 @@ export const FIXED_KEY_BINDINGS: Bindings<string> = {
   ArrowDown: ['menuDown'],
   ArrowRight: ['menuRight'],
   Tab: ['menuNext'],
+  KeyQ: ['menuPrevious'],
+  KeyE: ['menuNext'],
   Escape: ['pause', 'back'],
   Enter: ['confirm'],
   NumpadEnter: ['confirm'],

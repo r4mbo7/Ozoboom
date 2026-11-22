@@ -32,6 +32,11 @@ export interface Groove {
   entries: ReadonlyMap<SpeakerLayerId, number>;
   plugging: ReadonlyMap<SpeakerLayerId, number>;
   onKick: ((tick: number, time: number) => void) | undefined;
+  // A moment an artist's loop plays (ADR 0022): its musical layers are silent, the game's hits stay.
+  recorded: (segment: SetSegment) => boolean;
+  // A speaker whose stem plays on the step at `tick`, heard at `at`: its synth layer leaves it the
+  // room (K8 of ADR 0022).
+  stemmed: (speaker: SpeakerLayerId, tick: number, at: number) => boolean;
 }
 
 interface Beat {
@@ -88,6 +93,9 @@ function barEndTime(tempo: Tempo, clock: Anchor, bar: number): number {
 export function sustain(groove: Groove, target: Bus, state: Playing, from: number, clock: Anchor) {
   const { track, tempo, dropTick } = groove;
   const { set, tick } = state;
+  if (groove.recorded(set.segment)) {
+    return;
+  }
   const layers = layersFor(set.segment, set.tier, set.phrase);
   const bar = barOfTick(tick, tempo);
   const barEnd = barEndTime(tempo, clock, bar);
@@ -142,20 +150,27 @@ export function playStep(
   if (thump > 0) {
     pulse(beat.input, at, thump, track);
   }
+  if (!groove.recorded(current)) {
+    playLayers(groove, cue, beat, state.set, clock);
+  }
+  playSpeakers(groove, beat, timeStep);
+}
+
+function playLayers(groove: Groove, cue: BreakCue, beat: Beat, set: SetProgress, clock: Anchor) {
+  const { track, dropTick } = groove;
   if (track.drums === undefined) {
     playEngineKit(groove, beat);
   } else {
     playTrackKit(groove, track.drums, beat);
   }
-  const { layers, sixteenth, bar } = beat;
+  const { input, at, step, layers, sixteenth, bar } = beat;
   if (layers.kick && sixteenth === 0 && bar % CRASH_EVERY_BARS === 0 && step !== dropTick) {
-    crash(beat.input, at, 0.07);
+    crash(input, at, 0.07);
   }
   playRoll(groove, cue, beat);
   playParts(groove, beat);
-  playSpeakers(groove, beat);
   if (layers.pad && sixteenth === 0) {
-    playBarPad(groove, state.set, clock, beat);
+    playBarPad(groove, set, clock, beat);
   }
 }
 
@@ -288,9 +303,10 @@ function playParts({ track, tempo }: Groove, beat: Beat) {
   }
 }
 
-function playSpeakers({ tempo, entries, plugging }: Groove, beat: Beat) {
+// `timeStep` is the step on the sequencer's grid, where a stem joins.
+function playSpeakers({ tempo, entries, plugging, stemmed }: Groove, beat: Beat, timeStep: number) {
   const { input, at, step, layers, key, bar, sixteenth, chord, light } = beat;
-  for (const id of layers.speakers) {
+  for (const id of layers.speakers.filter((speaker) => !stemmed(speaker, timeStep, at))) {
     SPEAKER_VOICES[id]({
       out: input,
       at,

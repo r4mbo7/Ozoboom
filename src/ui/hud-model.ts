@@ -12,7 +12,7 @@ import { type PaletteToken, isClassToken } from '../shared/palette';
 import { TICK_RATE_HZ, VIBE_STREAK_BEATS } from '../shared/tempo';
 import { POTION_BOOST, potionShielded } from '../sim/potion-shield';
 import { setTempo, ticksToDrop } from '../sim/lineup';
-import type { PlayerState, SimState } from '../sim/state';
+import type { PlayerState, SimState, TrapState } from '../sim/state';
 import { gaugeValue } from '../sim/gauges';
 import { skillCooldownTicks } from '../sim/stats';
 import { trapTheKeyTakes } from '../sim/trap-moves';
@@ -47,9 +47,9 @@ export function gaugeReading(
   const notches = gaugeNotches(gauge);
   const full = fill >= 1;
   const text = full
-    ? t('À fond')
+    ? t('Full')
     : notches > 0
-      ? t('{value} sur {max}', {
+      ? t('{value} of {max}', {
           value: formatNumber(Math.floor(value)),
           max: formatNumber(notches),
         })
@@ -63,10 +63,16 @@ export function classToken(classId: string): PaletteToken {
 
 const DANGER_RATIO = 0.25;
 
-export function inDanger(
+export function deepestDanger(
   players: readonly Pick<PlayerState, 'hp' | 'maxHp' | 'downed'>[],
-): boolean {
-  return players.some((player) => !player.downed && ratio(player.hp, player.maxHp) <= DANGER_RATIO);
+): number | null {
+  let lowest = Number.POSITIVE_INFINITY;
+  for (const player of players) {
+    if (!player.downed) {
+      lowest = Math.min(lowest, ratio(player.hp, player.maxHp));
+    }
+  }
+  return lowest <= DANGER_RATIO ? 1 - lowest / DANGER_RATIO : null;
 }
 
 export function allDown(players: readonly Pick<PlayerState, 'downed'>[]): boolean {
@@ -272,7 +278,15 @@ export function carriedTile(player: Pick<PlayerState, 'carriedTrap' | 'offering'
   return player.offering === undefined ? { trapId: null } : { trapId: null, offering: true };
 }
 
-// The trap the place key would lift: with empty hands, or with room for one more above the head.
+export function trapCapacity(
+  content: Pick<GameContent, 'classes'>,
+  player: Pick<PlayerState, 'classId'>,
+): number {
+  return content.classes.find((definition) => definition.id === player.classId)?.carriedTraps ?? 1;
+}
+
+// The trap the place key would lift: with empty hands, or with room for one more above the head;
+// none while downed, as the key does nothing then.
 export function trapToTake(
   definitions: ReadonlyMap<string, Pick<TrapDefinition, 'radius'>>,
   state: Pick<SimState, 'traps'>,
@@ -286,16 +300,17 @@ export function trapToTake(
     | 'carriedUnder'
     | 'laidTrapIds'
     | 'offering'
+    | 'downed'
     | 'modifiers'
     | 'suppressedTicks'
     | 'boosts'
   >,
   capacity = 1,
-): string | null {
-  if (player.offering !== undefined) {
-    return null;
+): TrapState | undefined {
+  if (player.offering !== undefined || player.downed) {
+    return undefined;
   }
-  return trapTheKeyTakes(definitions, state.traps, player, capacity)?.kind ?? null;
+  return trapTheKeyTakes(definitions, state.traps, player, capacity);
 }
 
 export function trapTileTitle(
@@ -304,11 +319,11 @@ export function trapTileTitle(
   look: SummonLook | undefined,
 ): string {
   if (tile.offering === true) {
-    return look === 'giants' ? t('Des spores, à porter à un géant') : t('Un bâton, à jeter au feu');
+    return look === 'giants' ? t('Spores, to carry to a giant') : t('A log, to toss on the fire');
   }
   return trap === undefined
-    ? t('Main libre')
-    : t('{name} : {description}', { name: t(trap.name), description: t(trap.description) });
+    ? t('Free hand')
+    : t('{name}: {description}', { name: t(trap.name), description: t(trap.description) });
 }
 
 export function trapCaption(
@@ -325,17 +340,17 @@ export function trapCaption(
 }
 
 const plugHelps = (): readonly string[] => [
-  t('Reste zéro mesure pour brancher'),
-  t('Reste une mesure pour brancher'),
-  t('Reste deux mesures pour brancher'),
-  t('Reste trois mesures pour brancher'),
-  t('Reste quatre mesures pour brancher'),
+  t('No bars left to plug in'),
+  t('One bar left to plug in'),
+  t('Two bars left to plug in'),
+  t('Three bars left to plug in'),
+  t('Four bars left to plug in'),
 ];
 
 export function plugHelp(bars: number): string {
   return (
     plugHelps()[bars] ??
-    tn(bars, 'Reste {bars} mesure pour brancher', 'Reste {bars} mesures pour brancher', {
+    tn(bars, '{bars} bar left to plug in', '{bars} bars left to plug in', {
       bars: formatNumber(bars),
     })
   );
@@ -431,12 +446,12 @@ export function momentReading(set: SetDefinition, state: SimState): MomentReadin
       beatsToDrop: 0,
     };
   }
-  const tier = t('Palier {tier} / {count}', {
+  const tier = t('Tier {tier} / {count}', {
     tier: formatNumber(state.set.tier + 1),
     count: formatNumber(set.tiers.length),
   });
   const moment = state.set.segment;
-  const word = { buildup: t('Montée'), break: t('Break'), drop: t('Drop') }[moment];
+  const word = { buildup: t('Build-up'), break: t('Break'), drop: t('Drop') }[moment];
   const ticks = ticksToDrop(set, state);
   if (ticks === null) {
     return { moment, tier, word, countdown: '', strike: 'none', beatsToDrop: 0 };

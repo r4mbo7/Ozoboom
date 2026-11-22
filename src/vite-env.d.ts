@@ -10,4 +10,6 @@ interface ImportMetaEnv {
   readonly VITE_TURN_URL?: string;
   // Base URL of the stats Worker (ADR 0013); unset means no usage events are sent.
   readonly VITE_STATS_URL?: string;
+  // Base URL of the leaderboard Worker (ADR 0023), full game only; unset means no run is sent.
+  readonly VITE_LEADERBOARD_URL?: string;
 }

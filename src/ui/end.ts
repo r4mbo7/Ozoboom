@@ -4,7 +4,7 @@ import type { InputDevice, MenuIntents } from '../input/intents';
 import { t } from '../shared/i18n';
 import { scoreBreakdown } from '../sim/score';
 import type { FestivalState, SimState } from '../sim/state';
-import { el, fillHint, icon, setText } from './dom';
+import { el, fillHint, icon, setFlag, setText } from './dom';
 import { createActionButton, createFeedbackButton } from './feedback-button';
 import { openDiscord } from './discord';
 import { type PlayerCard, playerCards, turnCard } from './end-cards';
@@ -15,9 +15,9 @@ import type { Prompts } from './prompts';
 import { tallyOf } from './score-tally';
 import { createScoreTicket, setTally, tallyState } from './score-ticket';
 import type { Ending } from './end-parts';
-import { FULL_END } from './full';
+import { FULL_BOARD_LINE, FULL_END } from './full';
 import { createTrapLesson } from './trap-lesson';
-import type { EndSession } from './types';
+import type { BoardLine, EndSession } from './types';
 
 export interface EndScreen {
   readonly element: HTMLElement;
@@ -33,24 +33,25 @@ export interface EndScreen {
     unmoved: boolean,
   ): void;
   setDevice(device: InputDevice): void;
+  setBoardLine(line: BoardLine | null): void;
 }
 
 export type { Ending } from './end-parts';
 
 const sunrise = (): Ending => ({
-  title: t('Sunrise\u202f!'),
-  text: t('Le soleil se lève sur le dancefloor. Le sound system a tenu toute la nuit.'),
+  title: t('Sunrise!'),
+  text: t('The sun rises over the dancefloor. The sound system held all night long.'),
 });
 
 const silence = (): Ending => ({
-  title: t('La musique s’arrête'),
-  text: t('Les bad vibes ont eu raison du sound system. On rebranche et on y retourne\u202f?'),
+  title: t('The music stops'),
+  text: t('The bad vibes got the better of the sound system. Plug back in and go again?'),
 });
 
 const emptyFloor = (): Ending => ({
-  title: t('Plus personne debout'),
+  title: t('Nobody left standing'),
   text: t(
-    'Le sound system tient bon, mais les bad vibes ont vidé la piste. On se relève et on y retourne\u202f?',
+    'The sound system holds, but the bad vibes cleared the floor. Back on your feet and go again?',
   ),
 });
 
@@ -62,9 +63,9 @@ export function endingOf(state: SimState): Ending {
   const from = state.set.endlessFromTick;
   if (typeof from === 'number') {
     return {
-      title: t('Quelle nuit\u202f!'),
+      title: t('What a night!'),
       text: t(
-        'Le set est allé au bout, puis le sound system a tenu {duration} de sans-fin. On y retourne\u202f?',
+        'The set went all the way, then the sound system held {duration} of endless. Go again?',
         { duration: formatDuration(state.tick - from) },
       ),
     };
@@ -102,41 +103,50 @@ export function createEnd(
   onBackToLobby: () => void,
   onQuit: () => void,
   onLearn: () => void,
+  onBoardName: (pseudo: string) => void,
   onFeedback?: () => void,
 ): EndScreen {
   const element = el('section', 'ui-screen ui-overlay ui-end');
-  element.setAttribute('aria-label', t('Fin de partie'));
+  element.setAttribute('aria-label', t('End of the game'));
   const emblem = el('div', 'ui-end__emblem');
   const title = el('h2', 'ui-end__title');
   const text = el('p', 'ui-end__text');
   // The score is a button that opens its detail in the cards' place; the record ends the detail.
   const score = el('button', 'ui-end__score');
   score.type = 'button';
-  score.setAttribute('aria-label', t('Détail du score'));
+  score.setAttribute('aria-label', t('Score details'));
   const scoreValue = el('strong', 'ui-end__score-value');
-  const opens = el('span', 'ui-end__score-open', t('Détail'));
+  const opens = el('span', 'ui-end__score-open', t('Details'));
   const chevron = el('span', 'ui-end__score-chevron', '▾');
   chevron.setAttribute('aria-hidden', 'true');
   opens.append(chevron);
   score.append(el('span', 'ui-end__score-label', t('Score')), scoreValue, opens);
   const record = el('span', 'ui-end__record');
+  const board = FULL_BOARD_LINE.create?.(onBoardName) ?? null;
+  // The score's pill also holds what acts on the score: « Partager », its form, then the rank.
+  const pill = el('div', 'ui-end__pill');
+  pill.append(score, ...(board === null ? [] : [board.element]));
   const cards = el('ul', 'ui-end__cards');
-  cards.setAttribute('aria-label', t('L’équipe'));
+  cards.setAttribute('aria-label', t('The team'));
   const lesson = createTrapLesson();
   // The lesson deals beside the cards: a phone has width to spare, not height.
   const table = el('div', 'ui-end__table');
   table.append(cards, lesson.element);
   const restart = el('button', 'ui-button ui-button--primary');
   restart.type = 'button';
-  const learn = el('button', 'ui-button', t('Apprendre à jouer'));
+  const learn = el('button', 'ui-button', t('Learn to play'));
   learn.type = 'button';
-  const lobby = el('button', 'ui-button', t('Retour au salon'));
+  const lobby = el('button', 'ui-button', t('Back to the lobby'));
   lobby.type = 'button';
-  const quit = el('button', 'ui-button', t('Retour au titre'));
+  const quit = el('button', 'ui-button', t('Back to the title'));
   quit.type = 'button';
   const feedback = onFeedback === undefined ? null : createFeedbackButton();
-  const discord = createActionButton(t('L’after'), t('Débriefe ton set sur Discord'), DISCORD);
-  const wait = el('p', 'ui-end__wait', t('En attente de l’hôte'));
+  const discord = createActionButton(
+    t('The afterparty'),
+    t('Talk your set over on Discord'),
+    DISCORD,
+  );
+  const wait = el('p', 'ui-end__wait', t('Waiting for the host'));
   wait.setAttribute('role', 'status');
   wait.hidden = true;
   const actions = el('div', 'ui-end__actions');
@@ -157,7 +167,7 @@ export function createEnd(
   const stage = el('div', 'ui-end__stage');
   stage.append(table, ticket.ticket);
   // The details tell how the game went, right under the title that says how it ended.
-  body.append(emblem, title, details, text, score, stage, actions, hint);
+  body.append(emblem, title, details, text, pill, stage, actions, hint);
   element.append(body);
 
   let items: HTMLElement[] = [];
@@ -170,8 +180,16 @@ export function createEnd(
     if (counting) {
       setTally(element, 'folded');
     }
-    // A press on the score while it counts only skips the count.
-    if (item === score) {
+    if (item === undefined) {
+      return;
+    }
+    if (board?.items().includes(item) === true) {
+      board.activate(item);
+      // « Partager » gives its place to the form, whose field takes the selection.
+      const shown = board.items();
+      settle(shown.includes(item) ? item : (shown[0] ?? score));
+    } else if (item === score) {
+      // A press on the score while it counts only skips the count.
       if (!counting) {
         setTally(element, tallyState(element) === 'open' ? 'folded' : 'open');
       }
@@ -209,9 +227,18 @@ export function createEnd(
   element.addEventListener('tally', () => {
     settle(items[menu.index] ?? score);
   });
+  // « Partager » arrives as the reward of a count that lands on its own; skipped or calm, at once.
+  element.addEventListener('landed', () => {
+    setFlag(pill, 'arrive', true);
+  });
   function settle(selected: HTMLElement): void {
     const open = tallyState(element) === 'open';
-    items = [score, ...(open ? [] : players.map((player) => player.card)), ...buttons];
+    items = [
+      score,
+      ...(board?.items() ?? []),
+      ...(open ? [] : players.map((player) => player.card)),
+      ...buttons,
+    ];
     menu.setItems(items, Math.max(0, items.indexOf(selected)));
     fillHints();
   }
@@ -220,15 +247,15 @@ export function createEnd(
     const shown = prompts.for(device ?? 'none');
     lesson.setDevice(shown);
     const state = tallyState(element);
-    const confirm = { keys: [shown.confirm], label: t('valider') };
+    const confirm = { keys: [shown.confirm], label: t('confirm') };
     fillHint(
       hint,
       state === 'counting'
-        ? [{ keys: [shown.confirm], label: t('passer') }]
+        ? [{ keys: [shown.confirm], label: t('skip') }]
         : [
-            { keys: shown.navigateRow, label: t('naviguer') },
+            { keys: shown.navigateRow, label: t('navigate') },
             confirm,
-            ...(state === 'open' ? [{ keys: [shown.back], label: t('replier') }] : []),
+            ...(state === 'open' ? [{ keys: [shown.back], label: t('collapse') }] : []),
           ],
       shown.style,
     );
@@ -245,12 +272,8 @@ export function createEnd(
     // A record beaten says so alone: the old one no longer matters.
     record.replaceChildren(
       beaten
-        ? el('span', 'ui-end__record-new', t('Nouveau record\u202f!'))
-        : el(
-            'span',
-            'ui-end__record-old',
-            t('Record\u202f: {score}', { score: formatNumber(best) }),
-          ),
+        ? el('span', 'ui-end__record-new', t('New record!'))
+        : el('span', 'ui-end__record-old', t('Record: {score}', { score: formatNumber(best) })),
     );
   }
 
@@ -281,6 +304,8 @@ export function createEnd(
       text.hidden = ending.text === '';
       details.replaceChildren(...(part === undefined ? [] : [part.details]));
       details.hidden = part === undefined;
+      board?.set(null);
+      setFlag(pill, 'arrive', false);
       const breakdown = scoreBreakdown(state);
       fillScore(breakdown.total, best);
       lesson.element.hidden = !unmoved;
@@ -294,7 +319,7 @@ export function createEnd(
       const leads = session?.role === 'host';
       const learns = offersTutorial(state);
       // After the tutorial, the button plays a set of the night.
-      setText(restart, state.setId === TUTORIAL.id ? t('Jouer') : t('Rejouer'));
+      setText(restart, state.setId === TUTORIAL.id ? t('Play') : t('Play again'));
       restart.hidden = guest;
       learn.hidden = !learns;
       lobby.hidden = !leads;
@@ -317,6 +342,10 @@ export function createEnd(
       }
       device = next;
       fillHints();
+    },
+    setBoardLine(line) {
+      board?.set(line);
+      settle(items[menu.index] ?? score);
     },
   };
 }

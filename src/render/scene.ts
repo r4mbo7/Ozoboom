@@ -7,12 +7,12 @@ import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
   type Bounds,
   type Camera,
-  centerInArena,
   easeCamera,
   frameBounds,
   frameCamera,
   isSettled,
   screenToWorld,
+  showArena,
   worldToScreen,
 } from './camera';
 import { ShowClock, isBossLanding } from './boss-moments';
@@ -21,10 +21,10 @@ import { createFamilies } from './families';
 import { createDropTrails } from './drop-trails';
 import { createPotionAura } from './potion-aura';
 import { type InsetScene, type Insets, createInsets } from './insets';
-import { type Frame, advanceFrame, createFrame } from './frame';
+import { type Frame, advanceFrame, beatFrame, createFrame } from './frame';
 import { type Layers, applyLight, createLayers } from './layers';
 import { checkDrawings } from './drawings';
-import { FlashLimiter, beatEnvelope } from './motion';
+import { FlashLimiter } from './motion';
 import { createTextures, destroyTextures } from './textures';
 import type { CameraFocus, Inset, RenderOptions, Renderer } from './types';
 import { byId, lookup } from './util';
@@ -56,7 +56,7 @@ export class Scene implements Renderer, InsetScene {
   private beatTick = Number.NEGATIVE_INFINITY;
   private shakeTick = Number.NEGATIVE_INFINITY;
   private readonly focus = { x: 0, y: 0 };
-  private readonly view = { x: 0, y: 0 };
+  private readonly center = { x: 0, y: 0 };
   private readonly bounds: Bounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
   private focusKey = '';
   private settling = false;
@@ -144,8 +144,7 @@ export class Scene implements Renderer, InsetScene {
         this.onEvent(event, state);
       }
     }
-    frame.pulse =
-      beatEnvelope(frame.now - this.beatTick, frame.tempo) * (frame.calm ? CALM.pulse : 1);
+    beatFrame(frame, frame.now - this.beatTick, CALM.pulse);
 
     this.frameWorld(state, alpha);
     frame.camera = this.camera;
@@ -275,7 +274,7 @@ export class Scene implements Renderer, InsetScene {
   }
 
   private placeWorld(now: number, arena: Arena): void {
-    const { camera, view } = this;
+    const { camera, center } = this;
     const { scale, screenWidth, screenHeight } = camera;
     let shakeX = 0;
     let shakeY = 0;
@@ -285,15 +284,16 @@ export class Scene implements Renderer, InsetScene {
       shakeX = Math.sin(now * 12.9) * strength;
       shakeY = Math.cos(now * 9.7) * strength;
     }
-    centerInArena(
+    showArena(
       camera,
       arena,
       camera.centerX - shakeX / scale,
       camera.centerY - shakeY / scale,
-      view,
+      center,
+      this.frame.view,
     );
     const { world } = this.layers;
     world.scale.set(scale);
-    world.position.set(screenWidth / 2 - view.x * scale, screenHeight / 2 - view.y * scale);
+    world.position.set(screenWidth / 2 - center.x * scale, screenHeight / 2 - center.y * scale);
   }
 }

@@ -118,7 +118,8 @@ export function stepInDirection(boxes: readonly Box[], from: number, side: MenuD
     const vertical = side === 'up' || side === 'down';
     const along = { up: oy - cy, down: cy - oy, left: ox - cx, right: cx - ox }[side];
     const across = vertical ? Math.abs(cx - ox) : Math.abs(cy - oy);
-    if (index === from || along < 1) {
+    // A hidden item has an empty box: it is never stepped to.
+    if (index === from || along < 1 || box.width === 0 || box.height === 0) {
       return;
     }
     const score = along + across * 2;

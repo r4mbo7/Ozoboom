@@ -17,15 +17,11 @@ export function createActionButton(
 
 // A touch screen has no keys to choose: the button only shows elsewhere.
 export function createControlsButton(): HTMLButtonElement {
-  const button = createActionButton(
-    t('Contrôles'),
-    t('Choisis tes touches et tes boutons'),
-    KEYBOARD,
-  );
+  const button = createActionButton(t('Controls'), t('Choose your keys and buttons'), KEYBOARD);
   button.classList.add('ui-action--keys');
   return button;
 }
 
 export function createFeedbackButton(): HTMLButtonElement {
-  return createActionButton(t('Ton avis'), t('Une idée, un bug ? Dis-le-nous'), SPEECH);
+  return createActionButton(t('Your feedback'), t('An idea, a bug? Tell us'), SPEECH);
 }

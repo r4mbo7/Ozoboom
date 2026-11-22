@@ -7,36 +7,36 @@ import { playerLabel } from '../ui/hud-model';
 export function refusalText(reason: RefusalReason): string {
   switch (reason) {
     case 'version':
-      return t('Recharge la page');
+      return t('Reload the page');
     case 'full':
-      return t('Salon plein');
+      return t('Room full');
     case 'started':
-      return t('La partie a déjà commencé');
+      return t('The game has already started');
   }
 }
 
 export function connectionText(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes('networks cannot reach each other')) {
-    return t('Le salon existe, mais vos réseaux n’arrivent pas à se joindre');
+    return t('The room exists, but your networks can’t reach each other');
   }
   if (message.includes('no room with the code')) {
-    return t('Aucun salon ne porte ce code');
+    return t('No room has this code');
   }
   if (message.includes('already taken')) {
-    return t('Ce code est déjà pris, réessaie');
+    return t('This code is taken, try again');
   }
   if (message.includes('did not answer') || message.includes('no answer from')) {
-    return t('Pas de réponse : réessaie, ou vérifie le code');
+    return t('No answer: try again, or check the code');
   }
-  return t('Connexion impossible ({message})', { message });
+  return t('Can’t connect ({message})', { message });
 }
 
 export function hostSilentText(seconds: number): string {
   return tn(
     seconds,
-    'Plus aucun signe de l’hôte depuis {seconds} seconde.',
-    'Plus aucun signe de l’hôte depuis {seconds} secondes.',
+    'No sign of the host for {seconds} second.',
+    'No sign of the host for {seconds} seconds.',
     { seconds: formatNumber(seconds) },
   );
 }
@@ -46,7 +46,7 @@ export function guestLeftText(
   playerId: PlayerId,
 ): string {
   const player = players.find((candidate) => candidate.id === playerId);
-  return t('{name} a quitté le set', {
-    name: player === undefined ? t('Un joueur') : playerLabel(player),
+  return t('{name} left the set', {
+    name: player === undefined ? t('A player') : playerLabel(player),
   });
 }

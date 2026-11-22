@@ -15,7 +15,7 @@ export interface BraceletRow {
 
 export function createBraceletRow(prompts: Prompts): BraceletRow {
   const element = el('div', 'ui-hud__bracelets');
-  element.setAttribute('aria-label', t('Les joueurs'));
+  element.setAttribute('aria-label', t('The players'));
   const views: Bracelet[] = [];
   let worn: readonly PlayerState[] = [];
 

@@ -1,6 +1,7 @@
-import type { MusicPart, MusicTrack } from '../data/types';
-import { MAIN_TEMPO, barOfTick, phraseOfTick, type Tempo } from '../shared/tempo';
-import type { GameStatus, SetProgress, SetSegment } from '../sim/state';
+import type { MusicPart, MusicTrack, SetDefinition } from '../data/types';
+import { BARS_PER_PHRASE, MAIN_TEMPO, barOfTick, phraseOfTick, type Tempo } from '../shared/tempo';
+import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state';
+import { MIN_DROP_BARS, bossLeft, isLastTier } from '../sim/systems/set-progress';
 import { SPEAKER_LAYER_IDS, type SpeakerLayerId } from './speaker-layers';
 
 export type MusicMode = 'playing' | 'won' | 'lost';
@@ -36,6 +37,8 @@ const THEME_TIER = 1;
 const ROLL_BARS = 3;
 export const PULSE: Threshold = { below: 0.25, offAt: 0.27 };
 export const CHOKE: Threshold = { below: 0.1, offAt: 0.12 };
+// Seconds, the time constant of a cutoff following the life of the core.
+export const CHOKE_SMOOTHING = 0.12;
 const PAD_HZ = 900;
 export const NO_CUE: BreakCue = { roll: null, cut: false };
 export const OPEN_HZ = 20_000;
@@ -96,6 +99,47 @@ export function dropTickOf(
   return progress.segment === 'break'
     ? progress.segmentStartTick + breakBars * tempo.ticksPerBar
     : null;
+}
+
+// A segment of a tier, from the tick it starts on.
+export type SetMoment = Pick<SetProgress, 'tier' | 'segment' | 'segmentStartTick'>;
+
+// The moment the set enters next once its tick is known, as the set's progress decides it: a
+// buildup's break after its phrases, a break's drop, and once a drop's last boss has fallen the next
+// buildup on the next bar it may end on (the last tier's again in an endless run, none after it).
+export function momentAfter(
+  state: SimState,
+  stage: SetDefinition,
+  dropTick: number | null,
+  tempo: Tempo = MAIN_TEMPO,
+): SetMoment | null {
+  const { set, tick } = state;
+  const { tier, segment, segmentStartTick } = set;
+  switch (segment) {
+    case 'buildup': {
+      const phrases = stage.tiers[tier]?.buildupPhrases;
+      return phrases === undefined
+        ? null
+        : {
+            tier,
+            segment: 'break',
+            segmentStartTick: segmentStartTick + phrases * BARS_PER_PHRASE * tempo.ticksPerBar,
+          };
+    }
+    case 'break':
+      return dropTick === null ? null : { tier, segment: 'drop', segmentStartTick: dropTick };
+    case 'drop': {
+      if (bossLeft(state) || isLastTier(set, stage)) {
+        return null;
+      }
+      const nextBar = tempo.originTick + (barOfTick(tick, tempo) + 1) * tempo.ticksPerBar;
+      return {
+        tier: Math.min(tier + 1, stage.tiers.length - 1),
+        segment: 'buildup',
+        segmentStartTick: Math.max(nextBar, segmentStartTick + MIN_DROP_BARS * tempo.ticksPerBar),
+      };
+    }
+  }
 }
 
 export function segmentAt(segment: SetSegment, dropTick: number | null, tick: number): SetSegment {

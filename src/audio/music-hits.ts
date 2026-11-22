@@ -6,6 +6,7 @@ import { playNoise, playTone } from './synth';
 const SUNRISE_ATTACK = 4;
 const SUNRISE_HOLD = 12;
 export const EXTINCTION_SECONDS = 1.6;
+const EXTINCT_HZ = 60;
 const RISER_LOW_HZ = 300;
 const RISER_HIGH_HZ = 7000;
 const SOFT_RISER_HIGH_HZ = 1800;
@@ -200,6 +201,12 @@ export function impact(out: AudioNode, at: number) {
     filter: { type: 'bandpass', hz: 900, q: 0.8 },
   });
   crash(out, at, 0.2);
+}
+
+// A loss closes the music down to a hum, under the power down.
+export function extinguish(filter: BiquadFilterNode, at: number) {
+  filter.frequency.setValueAtTime(filter.frequency.value, at);
+  filter.frequency.exponentialRampToValueAtTime(EXTINCT_HZ, at + EXTINCTION_SECONDS);
 }
 
 export function sunrise(out: AudioNode, at: number, key: MusicKey): number {

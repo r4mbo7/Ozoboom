@@ -1,19 +1,34 @@
-import type { GameContent } from '../data/types';
+import { TRACKS } from '../data/tracks';
+import type { GameContent, SetDefinition } from '../data/types';
 import { layoutGround } from '../render/ground-layout';
 import { clamp } from '../shared/scalar';
+import { resolveContent } from '../sim/content';
+import { drawBoss } from '../sim/draw';
 import { hashState } from '../sim/replay';
 import { setTempo } from '../sim/lineup';
+import { lookup } from '../sim/lookup';
+import { Obstacles } from '../sim/obstacles';
 import { shoreAt } from '../sim/shore';
-import { spawnEnemy } from '../sim/systems/spawning';
+import { edgePosition, spawnBossAt, spawnEnemy } from '../sim/systems/spawning';
 import type { PlayerSlot } from '../sim/initial-state';
-import { PLAYER_IDS, type SimState } from '../sim/state';
+import { PLAYER_IDS, type SetSegment, type SimState } from '../sim/state';
 
-export type DevMode = 'fast' | 'bench' | 'boss' | 'sunrise' | 'feu';
+export type DevMode = 'fast' | 'bench' | 'boss' | 'moment' | 'sunrise' | 'feu';
 
 export interface DevBoss {
   readonly id: string;
   readonly tier: number;
 }
+
+export interface DevMoment {
+  // Counted from 0, as the sim counts; the URL counts from 1.
+  readonly tier: number;
+  readonly segment: SetSegment;
+  // Replaces the run's track draw; null keeps the draw.
+  readonly track: string | null;
+}
+
+const SEGMENTS: readonly SetSegment[] = ['buildup', 'break', 'drop'];
 
 export class DevUrlError extends Error {}
 
@@ -27,6 +42,7 @@ export interface DevOptions {
   // Drawn at random when null.
   readonly seed: number | null;
   readonly boss: DevBoss | null;
+  readonly moment: DevMoment | null;
   // `&record`: each game downloads its recording when it ends.
   readonly record: boolean;
 }
@@ -48,6 +64,9 @@ function modeOptions(search: string, content: GameContent): Omit<DevOptions, 're
   if (mode === 'boss') {
     return bossOptions(params, content);
   }
+  if (mode === 'moment') {
+    return momentOptions(params, content);
+  }
   if (mode === 'feu') {
     return fireOptions(params, content);
   }
@@ -60,6 +79,7 @@ function modeOptions(search: string, content: GameContent): Omit<DevOptions, 're
       light: false,
       seed: readSeed(params),
       boss: null,
+      moment: null,
     };
   }
   if (mode !== null && !params.has('stages')) {
@@ -74,6 +94,7 @@ function modeOptions(search: string, content: GameContent): Omit<DevOptions, 're
       light: !params.has('crisp'),
       seed: readSeed(params),
       boss: null,
+      moment: null,
     };
   }
   if (mode === 'bench') {
@@ -85,9 +106,19 @@ function modeOptions(search: string, content: GameContent): Omit<DevOptions, 're
       light: false,
       seed: readSeed(params),
       boss: null,
+      moment: null,
     };
   }
-  return { mode: null, speed: 1, players: 1, content, light: false, seed: null, boss: null };
+  return {
+    mode: null,
+    speed: 1,
+    players: 1,
+    content,
+    light: false,
+    seed: null,
+    boss: null,
+    moment: null,
+  };
 }
 
 function bossOptions(params: URLSearchParams, content: GameContent): Omit<DevOptions, 'record'> {
@@ -96,20 +127,7 @@ function bossOptions(params: URLSearchParams, content: GameContent): Omit<DevOpt
   if (!bossIds.includes(id)) {
     throw new DevUrlError(`Unknown boss "${id}" in ?dev=boss, pick one of: ${bossIds.join(', ')}`);
   }
-  const stageId = params.get('stage') ?? content.sets[0]?.id;
-  const set = content.sets.find((candidate) => candidate.id === stageId);
-  if (set === undefined) {
-    const stageIds = content.sets.map((candidate) => candidate.id).join(', ');
-    throw new DevUrlError(
-      `Unknown stage "${stageId ?? ''}" in ?dev=boss, pick one of: ${stageIds}`,
-    );
-  }
-  const tier = params.get('tier') ?? '1';
-  if (!/^\d+$/.test(tier) || Number(tier) < 1 || Number(tier) > set.tiers.length) {
-    throw new DevUrlError(
-      `Unknown tier "${tier}" in ?dev=boss, ${set.id} has tiers 1 to ${String(set.tiers.length)}`,
-    );
-  }
+  const { set, tier } = readStageTier(params, content, 'boss');
   return {
     mode: 'boss',
     speed: 1,
@@ -121,8 +139,71 @@ function bossOptions(params: URLSearchParams, content: GameContent): Omit<DevOpt
     },
     light: false,
     seed: readSeed(params),
-    boss: { id, tier: Number(tier) - 1 },
+    boss: { id, tier },
+    moment: null,
   };
+}
+
+function momentOptions(params: URLSearchParams, content: GameContent): Omit<DevOptions, 'record'> {
+  const { set, tier } = readStageTier(params, content, 'moment');
+  const asked = params.get('segment') ?? '';
+  const segment = SEGMENTS.find((candidate) => candidate === asked);
+  if (segment === undefined) {
+    throw new DevUrlError(
+      `Unknown segment "${asked}" in ?dev=moment, pick one of: ${SEGMENTS.join(', ')}`,
+    );
+  }
+  return {
+    mode: 'moment',
+    speed: 1,
+    players: readPlayers(params),
+    content: { ...content, sets: [set] },
+    light: false,
+    seed: readSeed(params),
+    boss: null,
+    moment: { tier, segment, track: readTrack(params, set) },
+  };
+}
+
+function readStageTier(
+  params: URLSearchParams,
+  content: GameContent,
+  mode: DevMode,
+): { set: SetDefinition; tier: number } {
+  const stageId = params.get('stage') ?? content.sets[0]?.id;
+  const set = content.sets.find((candidate) => candidate.id === stageId);
+  if (set === undefined) {
+    const stageIds = content.sets.map((candidate) => candidate.id).join(', ');
+    throw new DevUrlError(
+      `Unknown stage "${stageId ?? ''}" in ?dev=${mode}, pick one of: ${stageIds}`,
+    );
+  }
+  const tier = params.get('tier') ?? '1';
+  if (!/^\d+$/.test(tier) || Number(tier) < 1 || Number(tier) > set.tiers.length) {
+    throw new DevUrlError(
+      `Unknown tier "${tier}" in ?dev=${mode}, ${set.id} has tiers 1 to ${String(set.tiers.length)}`,
+    );
+  }
+  return { set, tier: Number(tier) - 1 };
+}
+
+// Absent, the run draws its track as usual.
+function readTrack(params: URLSearchParams, set: SetDefinition): string | null {
+  const track = params.get('track');
+  if (track === null) {
+    return null;
+  }
+  if (!TRACKS.some((candidate) => candidate.id === track)) {
+    throw new DevUrlError(
+      `Unknown track "${track}" in ?dev=moment, ${set.id} plays: ${set.trackIds.join(', ')}`,
+    );
+  }
+  if (!set.trackIds.includes(track)) {
+    throw new DevUrlError(
+      `Track "${track}" is not on stage ${set.id}, pick one of: ${set.trackIds.join(', ')}`,
+    );
+  }
+  return track;
 }
 
 function fireOptions(params: URLSearchParams, content: GameContent): Omit<DevOptions, 'record'> {
@@ -142,6 +223,7 @@ function fireOptions(params: URLSearchParams, content: GameContent): Omit<DevOpt
     light: false,
     seed: readSeed(params),
     boss: null,
+    moment: null,
   };
 }
 
@@ -161,12 +243,43 @@ export function fireScene(state: SimState, content: GameContent): void {
 
 // The game starts at the break of the tier, its boss already drawn so that its arrival shows.
 export function bossScene(state: SimState, boss: DevBoss): void {
-  state.set.tier = boss.tier;
-  state.set.segment = 'break';
-  state.set.segmentStartTick = state.tick;
   state.bosses = [boss.id];
+  landOn(state, boss.tier, 'break');
+}
+
+// Bosses drawn as a run would have by then: a break's arrives on its drop, a drop's is already down.
+export function momentScene(state: SimState, moment: DevMoment, content: GameContent): void {
+  const set = content.sets.find((candidate) => candidate.id === state.setId);
+  const tier = set?.tiers[moment.tier];
+  if (set === undefined || tier === undefined) {
+    throw new Error(`no tier ${String(moment.tier + 1)} on "${state.setId}" for ?dev=moment`);
+  }
+  const resolved = resolveContent(content);
+  const bosses: string[] = [];
+  const drawn = moment.tier + (moment.segment === 'buildup' ? 0 : 1);
+  while (bosses.length < drawn) {
+    bosses.push(drawBoss(state.seed, resolved, bosses));
+  }
+  state.bosses = bosses;
+  landOn(state, moment.tier, moment.segment);
+  const bossId = bosses.at(-1);
+  if (moment.segment === 'drop' && bossId !== undefined) {
+    const boss = { ...lookup(resolved.enemies, bossId, 'enemy'), ...tier.boss };
+    const { width, height } = set.arena;
+    spawnBossAt(
+      { state, set, obstacles: new Obstacles(set.obstacles ?? [], width, height) },
+      boss,
+      edgePosition(state.rng, state.arena, boss.radius),
+    );
+  }
+}
+
+function landOn(state: SimState, tier: number, segment: SetSegment): void {
+  state.set.tier = tier;
+  state.set.segment = segment;
+  state.set.segmentStartTick = state.tick;
   state.events = state.events.filter((event) => event.type !== 'segment');
-  state.events.push({ type: 'segment', segment: 'break', tier: boss.tier });
+  state.events.push({ type: 'segment', segment, tier });
 }
 
 const SUNRISE_TRAPS = [
@@ -203,15 +316,58 @@ export function sunriseScene(state: SimState, content: GameContent): void {
   }
 }
 
+// Where a game's start waits: `?dev=moment` and a film land their scene once the files of the
+// track are decoded, so that the recording is heard from its first bar (ADR 0022); any other start
+// lands at once.
+export interface Landings {
+  // Lands the start of `match` unless another match is current by the time its files are heard.
+  begin(match: object, loaded: () => Promise<void>, land: () => void): void;
+  // The current match waits for its files: the game does not step it.
+  waiting(): boolean;
+  // The player left the start before its files decoded: it never lands.
+  cancel(): void;
+}
+
+export function createLandings(waits: boolean, current: () => object): Landings {
+  let pending: object | null = null;
+  return {
+    begin(match, loaded, land) {
+      if (!waits) {
+        land();
+        return;
+      }
+      pending = match;
+      void loaded().then(() => {
+        if (pending !== match) {
+          return;
+        }
+        pending = null;
+        if (current() === match) {
+          land();
+        }
+      });
+    },
+    waiting() {
+      return pending !== null && pending === current();
+    },
+    cancel() {
+      pending = null;
+    },
+  };
+}
+
 export function devScene(
   state: SimState,
-  dev: Pick<DevOptions, 'mode' | 'boss' | 'content'>,
+  dev: Pick<DevOptions, 'mode' | 'boss' | 'moment' | 'content'>,
 ): void {
   if (dev.mode === 'bench') {
     benchScene(state, dev.content, state.seed, BENCH_ENEMIES);
   }
   if (dev.boss !== null) {
     bossScene(state, dev.boss);
+  }
+  if (dev.moment !== null) {
+    momentScene(state, dev.moment, dev.content);
   }
   if (dev.mode === 'feu') {
     fireScene(state, dev.content);

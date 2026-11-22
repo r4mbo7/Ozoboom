@@ -4,8 +4,8 @@ const MIN_NAME_SIZE = 9;
 
 // A name whose words still overflow its card steps its size down, half a pixel at a time. Every size
 // is reset before any is read: a card's width does not depend on its name, and the page lays out once.
-function fitNames(row: HTMLElement): void {
-  const names = [...row.querySelectorAll<HTMLElement>('.ui-classcard__name')].flatMap((name) =>
+export function fitNames(row: HTMLElement, selector: string): void {
+  const names = [...row.querySelectorAll<HTMLElement>(selector)].flatMap((name) =>
     name.parentElement === null ? [] : [{ name, card: name.parentElement }],
   );
   for (const { name } of names) {
@@ -69,7 +69,7 @@ function placeCards(row: HTMLElement, width: number, gap: number, fit: CardFit):
     '--cards-inset',
     `${String(Math.floor((width - fit.columns * fit.card - (fit.columns - 1) * gap) / 2))}px`,
   );
-  fitNames(row);
+  fitNames(row, '.ui-classcard__name');
 }
 
 // The cards, of their --card-ratio and at most --card-most wide, fit the room the screen leaves them,

@@ -16,7 +16,7 @@ export interface SkillTile {
 
 export function createSkillTile(prompts: Prompts): SkillTile {
   const element = el('section', 'ui-hud__skills');
-  element.setAttribute('aria-label', t('Spéciale'));
+  element.setAttribute('aria-label', t('Special'));
   const view = createSkillView();
   view.root.dataset.touchControl = 'skill';
   element.append(view.root);
@@ -26,16 +26,16 @@ export function createSkillTile(prompts: Prompts): SkillTile {
     build(skill, device) {
       const shown = prompts.for(device);
       view.glyph.replaceChildren(icon('ui-skill__icon', skillIcon(skill.effect)));
-      const name = t('Spéciale');
+      const name = t('Special');
       setText(view.name, name);
-      view.root.title = t('{name} : {description}', { name, description: t(skill.description) });
+      view.root.title = t('{name}: {description}', { name, description: t(skill.description) });
       view.key.replaceChildren(keycap(shown.skill, shown.style));
     },
     update(player, skill) {
       const ready = player.skillCooldown <= 0;
       setVar(view.root, '--charge', String(skillCharge(player, skill)));
       setFlag(view.root, 'ready', ready);
-      setText(view.status, ready ? t('Prête') : t('Recharge'));
+      setText(view.status, ready ? t('Charged') : t('Cooldown'));
     },
   };
 }

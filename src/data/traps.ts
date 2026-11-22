@@ -16,10 +16,10 @@ export const TRAP_WEAR: TrapWear = {
 export const TRAPS: readonly TrapDefinition[] = [
   {
     id: 'caisson-de-basse',
-    name: 'Caisson de basse',
-    takeLabel: 'Prendre le caisson',
-    putLabel: 'Poser le caisson',
-    description: 'Envoie une onde de basse sur chaque temps et repousse les bad vibes.',
+    name: 'Subwoofer',
+    takeLabel: 'Take the subwoofer',
+    putLabel: 'Drop the subwoofer',
+    description: 'Sends a bass wave on every beat and pushes the bad vibes back.',
     radius: 18,
     cadence: 'beat',
     effect: { kind: 'shockwave', damage: 5, radius: 75, knockback: 8 },
@@ -28,9 +28,9 @@ export const TRAPS: readonly TrapDefinition[] = [
   {
     id: 'laser',
     name: 'Laser',
-    takeLabel: 'Prendre le laser',
-    putLabel: 'Poser le laser',
-    description: "Balaie un arc d'une ligne de lumière qui dissout les bad vibes.",
+    takeLabel: 'Take the laser',
+    putLabel: 'Drop the laser',
+    description: 'Sweeps an arc with a line of light that dissolves the bad vibes.',
     radius: 14,
     cadence: 'continuous',
     effect: { kind: 'beam', damagePerTick: 2, length: 360, width: 12, sweepDegrees: 90 },
@@ -38,11 +38,11 @@ export const TRAPS: readonly TrapDefinition[] = [
   },
   {
     id: 'ventilateur-brumisant',
-    name: 'Ventilateur brumisant',
-    takeLabel: 'Prendre le ventilateur',
-    putLabel: 'Poser le ventilateur',
+    name: 'Misting Fan',
+    takeLabel: 'Take the fan',
+    putLabel: 'Drop the fan',
     description:
-      'Souffle un cône de brume qui balaie la piste, soigne sur chaque temps et ralentit les bad vibes.',
+      'Blows a cone of mist that sweeps the floor, heals on every beat and slows the bad vibes.',
     radius: 16,
     cadence: 'continuous',
     effect: {

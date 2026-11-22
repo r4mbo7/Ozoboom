@@ -10,6 +10,7 @@ import { CONE_DEGREES, CONE_LENGTH, DROPLET_RADIUS } from './textures-traps';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { trapReach } from './reach';
+import { answerLook } from './trap-answers';
 import { callingTraps, trapKick } from './trap-call';
 import { add, byId, hide, lookup, placeOutline, setTint } from './util';
 import { ViewPool } from './views';
@@ -37,6 +38,9 @@ const FADE_SHRINK = 0.3;
 // Plugged to a Rallonge, its halo swells this much wider and brighter across the plugged beat, then
 // falls back; in calm mode it holds a steady part of that.
 const RECHARGE_FLARE = 0.8;
+// Answering its player, the halo leans this many units toward them and glows this much brighter.
+const ANSWER_LEAN = 6;
+const ANSWER_GLOW = 0.3;
 const FLARE_FALL_BEATS = 0.5;
 const CALM_FLARE = 0.5;
 
@@ -195,6 +199,7 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
       }
     },
     reset(): void {
+      ctx.answers.reset();
       fading.clear();
       recharged.clear();
       beatTick = Number.NEGATIVE_INFINITY;
@@ -204,6 +209,7 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
       const tick = state.status === 'running' ? state.tick - 1 + alpha : state.tick;
       const calling = callingTraps(state.traps, ctx.options.trapCallers ?? []);
       const kick = trapKick(frame.now - beatTick, frame.tempo, frame.calm);
+      ctx.answers.playing(state);
       views.begin();
       for (const trap of state.traps) {
         const look = lookup(ctx.trapLooks, trap.kind, 'trap kind');
@@ -237,13 +243,16 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
         }
 
         halo.visible = true;
-        setTint(halo, color);
-        halo.position.set(x, y);
+        const answer = answerLook(ctx, state, { id: trap.id, x, y }, frame);
+        const answered = answer?.level ?? 0;
+        setTint(halo, answer === undefined ? color : mixColor(color, answer.color, answered));
+        const lean = frame.calm || answer === undefined ? 0 : ANSWER_LEAN * answered;
+        halo.position.set(x + (answer?.toward.x ?? 0) * lean, y + (answer?.toward.y ?? 0) * lean);
         const flared = flare(trap.id, frame);
         halo.scale.set((look.radius * 3 * (1 + RECHARGE_FLARE * flared)) / t.halo.radius);
         const kept = (drowned ? 0.2 : 1) * (1 - (frame.drained.traps.get(trap.id) ?? 0)) * power;
         halo.alpha = Math.max(
-          (0.6 + 0.4 * pulse) * light.haloAlpha * kept,
+          (0.6 + 0.4 * pulse) * light.haloAlpha * kept * (1 + ANSWER_GLOW * answered),
           light.haloAlpha * flared,
         );
 

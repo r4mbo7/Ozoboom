@@ -50,7 +50,7 @@ export function createBracelet(prompts: Prompts): Bracelet {
   head.append(fireflies, who, level, status);
   const life = el('div', 'ui-bar ui-bracelet__life');
   life.setAttribute('role', 'meter');
-  life.setAttribute('aria-label', t('Vie'));
+  life.setAttribute('aria-label', t('Health'));
   life.setAttribute('aria-valuemin', '0');
   life.append(el('span', 'ui-bar__fill'));
   const body = el('div', 'ui-bracelet__body');
@@ -73,12 +73,12 @@ export function createBracelet(prompts: Prompts): Bracelet {
       life.setAttribute('aria-valuenow', String(Math.round(player.hp)));
       life.setAttribute(
         'aria-valuetext',
-        t('{hp} sur {maxHp}', { hp: formatNumber(player.hp), maxHp: formatNumber(player.maxHp) }),
+        t('{hp} of {maxHp}', { hp: formatNumber(player.hp), maxHp: formatNumber(player.maxHp) }),
       );
       setFlag(element, 'critical', !player.downed && fraction <= CRITICAL_RATIO);
       setFlag(element, 'downed', player.downed);
-      setText(level, t('Niv. {level}', { level: player.level }));
-      setText(status, player.downed ? t('À terre') : '');
+      setText(level, t('Lv. {level}', { level: player.level }));
+      setText(status, player.downed ? t('Downed') : '');
       element.setAttribute('aria-label', playerLabel(player));
       if (device !== builtDevice || builtKeys !== prompts.version()) {
         builtDevice = device;
@@ -97,8 +97,8 @@ export function createBracelet(prompts: Prompts): Bracelet {
       if (definition === null) {
         skill.title = '';
       } else {
-        const params = { skill: t('Spéciale') };
-        skill.title = ready ? t('{skill} : prête', params) : t('{skill} : en recharge', params);
+        const params = { skill: t('Special') };
+        skill.title = ready ? t('{skill}: ready', params) : t('{skill}: cooling down', params);
       }
     },
   };

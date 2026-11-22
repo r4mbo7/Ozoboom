@@ -74,7 +74,7 @@ export function createTrapLesson(): TrapLesson {
   element.hidden = true;
   const text = el('div', 'ui-lesson__text');
   const how = el('p', 'ui-lesson__how');
-  text.append(el('p', 'ui-lesson__title', t('Les pièges freinent les bad vibes')), how);
+  text.append(el('p', 'ui-lesson__title', t('Traps slow the bad vibes down')), how);
   element.append(scene(), text);
 
   return {
@@ -91,11 +91,11 @@ export function createTrapLesson(): TrapLesson {
     },
     setDevice(shown) {
       if (shown.placeTrap === '') {
-        how.replaceChildren(t('Près d’un piège, touche le bouton du piège pour le déplacer'));
+        how.replaceChildren(t('Near a trap, tap the trap button to move it'));
       } else {
         fillHint(
           how,
-          [{ keys: [shown.placeTrap], label: t('déplace un piège vers les bad vibes') }],
+          [{ keys: [shown.placeTrap], label: t('move a trap toward the bad vibes') }],
           shown.style,
         );
       }

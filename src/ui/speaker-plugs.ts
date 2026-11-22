@@ -29,8 +29,8 @@ function paintPlugged(row: HTMLElement, value: HTMLElement, plugged: number, tot
     'aria-valuetext',
     tn(
       plugged,
-      '{plugged} enceinte branchée sur {total}',
-      '{plugged} enceintes branchées sur {total}',
+      '{plugged} of {total} speakers plugged in',
+      '{plugged} of {total} speakers plugged in',
       counts,
     ),
   );
@@ -39,7 +39,7 @@ function paintPlugged(row: HTMLElement, value: HTMLElement, plugged: number, tot
 export function createSpeakerPlugs(): SpeakerPlugs {
   const row = el('div', 'ui-plugs');
   row.setAttribute('role', 'meter');
-  row.setAttribute('aria-label', t('Enceintes branchées'));
+  row.setAttribute('aria-label', t('Speakers plugged in'));
   row.setAttribute('aria-valuemin', '0');
   const count = el('span', 'ui-plugs__count');
   count.setAttribute('aria-hidden', 'true');
@@ -47,7 +47,7 @@ export function createSpeakerPlugs(): SpeakerPlugs {
   const total = el('span', 'ui-plugs__total');
   const figure = el('span', 'ui-plugs__figure');
   figure.append(value, total);
-  count.append(el('span', 'ui-plugs__label', t('Enceintes')), figure);
+  count.append(el('span', 'ui-plugs__label', t('Speakers')), figure);
   const help = el('p', 'ui-hud__help');
   help.setAttribute('role', 'status');
   help.hidden = true;

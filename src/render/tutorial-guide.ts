@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { clamp, lerp } from '../shared/scalar';
 import type { SetDefinition } from '../data/types';
 import type { SimState, TrapState, Vec2 } from '../sim/state';
@@ -6,7 +6,7 @@ import { trapSpot } from '../sim/trap-moves';
 import { worldToScreen } from './camera';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
-import { NAME_TEXTURE_SCALE } from './textures-names';
+import { KeyCap } from './key-cap';
 import { lookup, setTint } from './util';
 
 // Arena units from where a trap was taken to where the outline asks to put it down, away from the stage.
@@ -21,9 +21,6 @@ const OUTLINE_GROW = 0.08;
 const OUTLINE_SIZE = 1.5;
 // Screen pixels: below the dash arc, the key's cap.
 const KEY_BELOW = 16;
-const KEY_PAD_X = 7;
-const KEY_HEIGHT = 22;
-const KEY_ROUND = 6;
 const DASH_ARC_REACH = 23 / 14;
 
 // Where the outline asks to put down a trap of `radius` taken at `from`: further from the stage,
@@ -52,31 +49,10 @@ export function createTutorialGuide(ctx: RenderContext): Family {
   const { textures, layers } = ctx;
   const root = layers.screen.addChild(new Container());
   const outline = new Graphics();
-  const cap = new Graphics();
-  const label = new Sprite();
-  label.anchor.set(0.5);
-  label.scale.set(1 / NAME_TEXTURE_SCALE);
-  root.addChild(outline, cap, label);
+  root.addChild(outline);
+  const cap = new KeyCap(root, textures);
   let drop: Vec2 | null = null;
-  let drawnKey = '';
   const point = { x: 0, y: 0 };
-
-  function drawKey(key: string, frame: Frame): void {
-    const drawn = `${key} ${String(frame.palette.texte)}`;
-    if (drawn === drawnKey) {
-      return;
-    }
-    drawnKey = drawn;
-    const name = textures.names.get(key);
-    label.texture = name.fill;
-    const width = name.fill.width / NAME_TEXTURE_SCALE + 2 * KEY_PAD_X;
-    cap.clear();
-    cap
-      .roundRect(-width / 2, -KEY_HEIGHT / 2, width, KEY_HEIGHT, KEY_ROUND)
-      .fill({ color: frame.palette.texte })
-      .stroke({ width: 1.5, color: frame.palette.sol });
-    setTint(label, frame.palette.sol);
-  }
 
   return {
     update(state: SimState, alpha: number, frame: Frame): void {
@@ -95,13 +71,11 @@ export function createTutorialGuide(ctx: RenderContext): Family {
       point.y = lerp(player.prevY, player.y, alpha);
       const at = worldToScreen(camera, point);
 
-      const keyed = call.gesture === 'dash' && call.key !== '';
-      cap.visible = label.visible = keyed;
-      if (keyed) {
-        drawKey(call.key, frame);
+      if (call.gesture === 'dash' && call.key !== '') {
         const y = at.y + player.radius * DASH_ARC_REACH * camera.scale + KEY_BELOW;
-        cap.position.set(at.x, y);
-        label.position.set(at.x, y);
+        cap.place(call.key, at.x, y, frame);
+      } else {
+        cap.hide();
       }
 
       const carried = player.carriedTrap;

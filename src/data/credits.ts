@@ -18,19 +18,19 @@ export interface Credits {
 export const CREDITS: Credits = {
   author: { name: 'Constantin De La Roche', alias: 'BrotherCos' },
   music: {
-    name: 'Timo Lissy',
-    alias: 'FuTurum SonaT',
+    // As Timo asks to be named; a line break never parts "aka" from the artist name.
+    name: 'Timo Lissy aka\u00a0Futurum Sonat',
     link: 'https://soundcloud.com/futurum-sonat-psytrance',
   },
   thanks: [
     { name: 'Hélène Burgholzer' },
-    { name: 'Zizou Goodgirl', role: 'Support indéfectible' },
-    { name: 'Max Race', role: 'Psychologue, écrivain, professeur' },
-    { name: 'Lubin Basty', role: 'Responsable études de prix travaux ferroviaires' },
-    { name: 'Quentin Morvan', role: 'Docteur émérite en lettres' },
-    { name: 'James Brown', role: 'Testeur de la première heure' },
-    { name: 'Amaury', role: 'Testeur ultrarapide' },
-    { name: 'Alexandre Chavenon', role: 'Partenaire psytrance' },
+    { name: 'Zizou Goodgirl', role: 'Unfailing support' },
+    { name: 'Max Race', role: 'Psychologist, writer, teacher' },
+    { name: 'Lubin Basty', role: 'Railway works cost estimating lead' },
+    { name: 'Quentin Morvan', role: 'Emeritus doctor of letters' },
+    { name: 'James Brown', role: 'Tester from day one' },
+    { name: 'Amaury', role: 'Lightning-fast tester' },
+    { name: 'Alexandre Chavenon', role: 'Psytrance partner' },
     { name: 'bno', alias: 'Boom ’25' },
     { name: 'Jeppe', alias: 'Boom ’25' },
   ],

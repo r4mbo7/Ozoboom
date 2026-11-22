@@ -31,6 +31,7 @@ import { createSpeakerCards } from './speaker-card';
 import { createSpeakerGuide } from './speaker-guide';
 import { createTutorialGuide } from './tutorial-guide';
 import { createSpeakers } from './speakers';
+import { createTrapKeys } from './trap-keys';
 import { createTraps } from './traps';
 import { createWeapons } from './weapons';
 import { createWounds } from './wounds';
@@ -92,6 +93,7 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Families {
     createMarkers(ctx),
     createSpeakerGuide(ctx),
     createTutorialGuide(ctx),
+    createTrapKeys(ctx),
     createStageMarker(ctx),
     createEffects(ctx, (id) => traps.reachOf(id)),
     createHits(ctx, enemies),

@@ -29,20 +29,22 @@ export interface GamepadLike {
 
 export interface GamepadState {
   readonly index: number | null;
-  readonly buttons: readonly boolean[];
   readonly move: Vec2;
   readonly aim: Vec2;
-  readonly menuDirection: MenuDirection | null;
+  // For each connected pad, which of its buttons, then its move and aim sticks, are in use, and
+  // where its move stick points the menus: a pad given the view back keeps what it held.
+  readonly controls: ReadonlyMap<number, readonly boolean[]>;
+  readonly menuDirections: ReadonlyMap<number, MenuDirection | null>;
 }
 
 const ZERO: Vec2 = { x: 0, y: 0 };
 
 export const INITIAL_GAMEPAD_STATE: GamepadState = {
   index: null,
-  buttons: [],
   move: ZERO,
   aim: ZERO,
-  menuDirection: null,
+  controls: new Map(),
+  menuDirections: new Map(),
 };
 
 export function applyRadialDeadzone(x: number, y: number, deadzone = STICK_DEADZONE): Vec2 {
@@ -52,12 +54,30 @@ export function applyRadialDeadzone(x: number, y: number, deadzone = STICK_DEADZ
   return { x: (x / length) * scaled, y: (y / length) * scaled };
 }
 
+function readStick(pad: GamepadLike, { x, y }: { x: number; y: number }): Vec2 {
+  return applyRadialDeadzone(pad.axes[x] ?? 0, pad.axes[y] ?? 0);
+}
+
+function controlsInUse(pad: GamepadLike, sticks: InputBindings['sticks']): boolean[] {
+  return [
+    ...pad.buttons.map((button) => button.pressed),
+    ...[sticks.move, sticks.aim].map((axes) => !sameVec(readStick(pad, axes), ZERO)),
+  ];
+}
+
+// An idle pad listed first, such as a headset dongle or a virtual pad, must not hide the one in use.
 function selectGamepad(
-  pads: readonly (GamepadLike | null)[],
-  currentIndex: number | null,
+  connected: readonly GamepadLike[],
+  controls: ReadonlyMap<number, readonly boolean[]>,
+  state: GamepadState,
 ): GamepadLike | null {
-  const connected = pads.filter((pad): pad is GamepadLike => pad?.connected === true);
-  return connected.find((pad) => pad.index === currentIndex) ?? connected[0] ?? null;
+  const selected = connected.find((pad) => pad.index === state.index);
+  const starting = connected.filter((pad) => {
+    const before = state.controls.get(pad.index) ?? [];
+    return (controls.get(pad.index) ?? []).some((on, control) => on && before[control] !== true);
+  });
+  if (selected !== undefined && starting.includes(selected)) return selected;
+  return starting[0] ?? selected ?? connected[0] ?? null;
 }
 
 export function reduceGamepad(
@@ -65,7 +85,11 @@ export function reduceGamepad(
   pads: readonly (GamepadLike | null)[],
   bindings: InputBindings = DEFAULT_INPUT_BINDINGS,
 ): { frame: GamepadFrame; state: GamepadState } {
-  const pad = selectGamepad(pads, state.index);
+  const connected = pads.filter((pad): pad is GamepadLike => pad?.connected === true);
+  const controls = new Map(
+    connected.map((pad) => [pad.index, controlsInUse(pad, bindings.sticks)] as const),
+  );
+  const pad = selectGamepad(connected, controls, state);
   if (pad === null) {
     return {
       frame: {
@@ -80,7 +104,7 @@ export function reduceGamepad(
     };
   }
 
-  const previousButtons = pad.index === state.index ? state.buttons : [];
+  const previousButtons = state.controls.get(pad.index)?.slice(0, pad.buttons.length) ?? [];
   const buttons = pad.buttons.map((button) => button.pressed);
   const held = new Set<Control>();
   const presses: Control[] = [];
@@ -90,13 +114,22 @@ export function reduceGamepad(
     for (const control of controls) held.add(control);
     if (previousButtons[index] !== true) presses.push(...controls);
   });
-  const previousDirection = pad.index === state.index ? state.menuDirection : null;
   const { sticks } = bindings;
-  const menuDirection = stickMenuDirection(
-    pad.axes[sticks.move.x] ?? 0,
-    pad.axes[sticks.move.y] ?? 0,
-    previousDirection,
+  const menuDirections = new Map(
+    connected.map(
+      ({ index, axes }) =>
+        [
+          index,
+          stickMenuDirection(
+            axes[sticks.move.x] ?? 0,
+            axes[sticks.move.y] ?? 0,
+            state.menuDirections.get(index) ?? null,
+          ),
+        ] as const,
+    ),
   );
+  const previousDirection = state.menuDirections.get(pad.index) ?? null;
+  const menuDirection = menuDirections.get(pad.index) ?? null;
   if (menuDirection !== null) {
     const control = MENU_DIRECTION_CONTROLS[menuDirection];
     held.add(control);
@@ -104,10 +137,8 @@ export function reduceGamepad(
   }
   const anyButtonPressed = buttons.some((down, index) => down && previousButtons[index] !== true);
 
-  const stick = ({ x, y }: { x: number; y: number }) =>
-    applyRadialDeadzone(pad.axes[x] ?? 0, pad.axes[y] ?? 0);
-  const move = stick(sticks.move);
-  const aimStick = stick(sticks.aim);
+  const move = readStick(pad, sticks.move);
+  const aimStick = readStick(pad, sticks.aim);
   const aimLength = Math.sqrt(aimStick.x * aimStick.x + aimStick.y * aimStick.y);
   const sticksMoved = !sameVec(move, state.move) || !sameVec(aimStick, state.aim);
 
@@ -118,9 +149,9 @@ export function reduceGamepad(
       move,
       aim: aimLength > 0 ? { x: aimStick.x / aimLength, y: aimStick.y / aimLength } : null,
       active: anyButtonPressed || sticksMoved,
-      disconnected: state.index !== null && pad.index !== state.index,
+      disconnected: state.index !== null && !connected.some(({ index }) => index === state.index),
     },
-    state: { index: pad.index, buttons, move, aim: aimStick, menuDirection },
+    state: { index: pad.index, move, aim: aimStick, controls, menuDirections },
   };
 }
 

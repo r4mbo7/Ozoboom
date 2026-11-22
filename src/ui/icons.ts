@@ -64,6 +64,11 @@ export const PAD =
   '<path d="M7.5 10v3.5M5.75 11.75h3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
   '<circle cx="16.5" cy="10.75" r="1.2" fill="currentColor"/><circle cx="18" cy="13" r="1.2" fill="currentColor"/>';
 
+// The festival's guide, folded in three.
+export const PROGRAMME =
+  '<path d="M3 6l6-2.5 6 2.5 6-2.5v14.5L15 20.5 9 18l-6 2.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
+  '<path d="M9 3.5V18M15 6v14.5" stroke="currentColor" stroke-width="1.6"/>';
+
 export const GLOBE =
   '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>' +
   '<path d="M3 12h18M12 3c3.2 3.4 3.2 14.6 0 18M12 3c-3.2 3.4-3.2 14.6 0 18" fill="none" stroke="currentColor" stroke-width="1.8"/>';
@@ -156,8 +161,12 @@ export function trapFanIcon(effects: readonly TrapEffect[]): string {
     .join('');
 }
 
-// Read by a plain string: in the demo, no skill is left for them.
-const FULL_ICONS: Readonly<Record<string, string>> = FULL_SKILL_ICONS;
+// Read by a plain string, as in the demo no skill is left for them, and at each call: `./full` imports
+// modules that import this one, so a copy taken while it loads first would stay undefined.
+function fullIcon(kind: string): string | undefined {
+  const icons: Readonly<Record<string, string>> = FULL_SKILL_ICONS;
+  return icons[kind];
+}
 
 export function skillIcon(effect: SkillEffect): string {
   const kind: string = effect.kind;
@@ -174,7 +183,7 @@ export function skillIcon(effect: SkillEffect): string {
     case 'ola':
       return OLA_ICON;
     default: {
-      const icon = FULL_ICONS[kind];
+      const icon = fullIcon(kind);
       if (icon === undefined) {
         throw new Error(`No icon for the skill "${kind}"`);
       }

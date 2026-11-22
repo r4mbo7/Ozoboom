@@ -4,7 +4,14 @@ import { t } from '../shared/i18n';
 import type { PlayerState, SimState } from '../sim/state';
 import { el, icon, keycap, setFlag, setText } from './dom';
 import { FULL_OFFERING_ICONS, FULL_PLACE_KEY } from './full';
-import { type CarriedTile, carriedTile, trapCaption, trapTileTitle, trapToTake } from './hud-model';
+import {
+  type CarriedTile,
+  carriedTile,
+  trapCapacity,
+  trapCaption,
+  trapTileTitle,
+  trapToTake,
+} from './hud-model';
 import { trapIcon } from './icons';
 import type { Prompts } from './prompts';
 
@@ -39,7 +46,7 @@ function drawTile(
 
 export function createCarriedTrap(prompts: Prompts): CarriedTrap {
   const element = el('section', 'ui-hud__traps');
-  element.setAttribute('aria-label', t('Pièges'));
+  element.setAttribute('aria-label', t('Traps'));
   const tile = el('div', 'ui-trap');
   tile.dataset.touchControl = 'trap';
   const trapName = el('div', 'ui-traps__name');
@@ -84,14 +91,8 @@ export function createCarriedTrap(prompts: Prompts): CarriedTrap {
         const trap = view.trapId === null ? undefined : definitions.get(view.trapId);
         drawTile(tile, view, trap, look);
       }
-      const capacity = content.classes.find(
-        (definition) => definition.id === player.classId,
-      )?.carriedTraps;
-      const caption = trapCaption(
-        definitions,
-        trapToTake(definitions, state, player, capacity),
-        view.trapId,
-      );
+      const taken = trapToTake(definitions, state, player, trapCapacity(content, player));
+      const caption = trapCaption(definitions, taken?.kind ?? null, view.trapId);
       setText(label, caption ?? '');
       trapName.hidden = caption === null;
       element.hidden = !touch && caption === null;

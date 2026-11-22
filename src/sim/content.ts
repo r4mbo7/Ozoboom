@@ -140,13 +140,11 @@ export function resolveContent(content: GameContent): ResolvedContent {
     requirePositive(set.reviveBars, `reviveBars of set "${set.id}"`);
     requirePositive(set.perPlayer?.spawnMul, `perPlayer.spawnMul of set "${set.id}"`);
     requirePositive(set.perPlayer?.enemyHpMul, `perPlayer.enemyHpMul of set "${set.id}"`);
+    requirePositive(set.perPlayer?.enemyDamageMul, `perPlayer.enemyDamageMul of set "${set.id}"`);
     requirePositive(set.endlessPerMinute?.hp, `endlessPerMinute.hp of set "${set.id}"`);
     requirePositive(set.endlessPerMinute?.damage, `endlessPerMinute.damage of set "${set.id}"`);
     requirePositive(set.levelCurve.growth, `levelCurve.growth of set "${set.id}"`);
     requirePositive(set.powerPerLevel, `powerPerLevel of set "${set.id}"`);
-    requirePositive(set.warmup?.phrases, `warmup.phrases of set "${set.id}"`);
-    requirePositive(set.warmup?.count, `warmup.count of set "${set.id}"`);
-    requirePositive(set.warmup?.hp, `warmup.hp of set "${set.id}"`);
     if (set.tiers.length === 0) {
       throw new Error(`set "${set.id}" has no tier`);
     }

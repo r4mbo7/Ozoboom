@@ -33,7 +33,7 @@ export function createNotice(
   const title = el('h2', 'ui-end__title');
   const text = el('p', 'ui-end__text');
   const detail = el('p', 'ui-notice__detail');
-  const back = el('button', 'ui-button ui-button--primary', t('Retour au titre'));
+  const back = el('button', 'ui-button ui-button--primary', t('Back to the title'));
   back.type = 'button';
   const feedback = onFeedback === undefined ? null : createFeedbackButton();
   const items = feedback === null ? [back] : [back, feedback];
@@ -79,8 +79,8 @@ export function createNotice(
       fillHint(
         hint,
         [
-          ...(items.length > 1 ? [{ keys: shown.navigate, label: t('naviguer') }] : []),
-          { keys: [shown.confirm], label: t('valider') },
+          ...(items.length > 1 ? [{ keys: shown.navigate, label: t('navigate') }] : []),
+          { keys: [shown.confirm], label: t('confirm') },
         ],
         shown.style,
       );

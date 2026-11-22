@@ -23,8 +23,8 @@ export interface OlaEffect {
 
 export const KIFFEUR: ClassDefinition = {
   id: 'kiffeur',
-  name: 'Le Kiffeur',
-  role: 'Ne vise pas, il danse : sa bonne humeur frappe tout autour de lui et fait tirer plus vite.',
+  name: 'The Reveler',
+  role: 'Doesn’t aim, just dances: their good mood hits all around them and makes everyone fire faster.',
   color: '#f5e663',
   maxHp: 150,
   speed: 7.2,
@@ -39,9 +39,9 @@ export const KIFFEUR: ClassDefinition = {
   },
   skill: {
     id: 'ola',
-    name: 'Ola',
+    name: 'Wave',
     description:
-      'Une vague part de toi, ralentit les bad vibes et fait courir et tirer plus vite toute l’équipe.',
+      'A wave leaves you, slows the bad vibes and makes the whole team run and fire faster.',
     cooldownTicks: 4 * TICKS_PER_BAR,
     effect: {
       kind: 'ola',
@@ -54,7 +54,7 @@ export const KIFFEUR: ClassDefinition = {
       boostBars: 1,
     },
   },
-  gauge: { kind: 'kiff', name: 'Kiff', max: 3 },
+  gauge: { kind: 'kiff', name: 'Bliss', max: 3 },
   affinityWeaponIds: ['assiettes-chinoises'],
   excludedWeaponIds: ['cerceaux'],
 };
@@ -62,18 +62,18 @@ export const KIFFEUR: ClassDefinition = {
 export const KIFFEUR_UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'eclats-de-rire',
-    name: 'Éclats de rire',
-    description: 'Ton Kiff fait frapper ta bonne humeur plus fort.',
+    name: 'Belly Laughs',
+    description: 'Your Bliss makes your good mood hit harder.',
     family: 'class',
     classId: 'kiffeur',
     modifiers: [{ stat: 'kiffDamageAdd', add: 0.15 }],
     rarities: {
       rare: {
-        description: 'Ton Kiff fait frapper ta bonne humeur nettement plus fort.',
+        description: 'Your Bliss makes your good mood hit a lot harder.',
         modifiers: [{ stat: 'kiffDamageAdd', add: 0.25 }],
       },
       legendary: {
-        description: 'Ton Kiff au max double la force de ta bonne humeur.',
+        description: 'Your Bliss at max doubles the power of your good mood.',
         modifiers: [{ stat: 'kiffDamageAdd', add: 0.35 }],
       },
     },
@@ -81,18 +81,18 @@ export const KIFFEUR_UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'bras-grands-ouverts',
-    name: 'Bras grands ouverts',
-    description: 'Ton aura s’élargit.',
+    name: 'Arms Wide Open',
+    description: 'Your aura widens.',
     family: 'class',
     classId: 'kiffeur',
     modifiers: [{ stat: 'attackRadiusMul', mul: 1.2 }],
     rarities: {
       rare: {
-        description: 'Ton aura s’élargit nettement.',
+        description: 'Your aura widens a lot.',
         modifiers: [{ stat: 'attackRadiusMul', mul: 1.4 }],
       },
       legendary: {
-        description: 'Ton aura s’étend de moitié.',
+        description: 'Your aura grows by half.',
         modifiers: [{ stat: 'attackRadiusMul', mul: 1.5 }],
       },
     },
@@ -100,18 +100,18 @@ export const KIFFEUR_UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'ola-dechainee',
-    name: 'Ola déchaînée',
-    description: 'Ta Ola frappe plus fort.',
+    name: 'Tidal Wave',
+    description: 'Your wave hits harder.',
     family: 'class',
     classId: 'kiffeur',
     modifiers: [{ stat: 'skillPowerMul', mul: 1.55 }],
     rarities: {
       rare: {
-        description: 'Ta Ola frappe deux fois plus fort.',
+        description: 'Your wave hits twice as hard.',
         modifiers: [{ stat: 'skillPowerMul', mul: 2.25 }],
       },
       legendary: {
-        description: 'Ta Ola frappe trois fois plus fort.',
+        description: 'Your wave hits three times as hard.',
         modifiers: [{ stat: 'skillPowerMul', mul: 3 }],
       },
     },
@@ -119,18 +119,18 @@ export const KIFFEUR_UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'ola-sans-fin',
-    name: 'Ola sans fin',
-    description: 'Ta spéciale revient plus vite.',
+    name: 'Endless Wave',
+    description: 'Your special comes back faster.',
     family: 'class',
     classId: 'kiffeur',
     modifiers: [{ stat: 'skillCooldownMul', mul: 0.64 }],
     rarities: {
       rare: {
-        description: 'Ta spéciale revient bien plus vite.',
+        description: 'Your special comes back much faster.',
         modifiers: [{ stat: 'skillCooldownMul', mul: 0.36 }],
       },
       legendary: {
-        description: 'Ta spéciale revient presque aussitôt.',
+        description: 'Your special comes back almost at once.',
         modifiers: [{ stat: 'skillCooldownMul', mul: 0.16 }],
       },
     },

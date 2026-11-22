@@ -1,16 +1,16 @@
 import { FULL_CATALOGS } from './full';
 import { LOCALES, type Locale, isLocale } from './languages';
 import ar from './locales/ar.json' with { type: 'json' };
-import en from './locales/en.json' with { type: 'json' };
 import es from './locales/es.json' with { type: 'json' };
+import fr from './locales/fr.json' with { type: 'json' };
 import ptBR from './locales/pt-BR.json' with { type: 'json' };
 
-// A French text is its own key, and stands in for a missing translation (ADR 0017).
+// An English text is its own key, and stands in for a missing translation (ADR 0024).
 export { LOCALES, type Locale };
 
 export type Direction = (typeof LOCALES)[number]['dir'];
 
-export const SOURCE_LOCALE: Locale = 'fr';
+export const SOURCE_LOCALE: Locale = 'en';
 
 export const FALLBACK_LOCALE: Locale = 'en';
 
@@ -42,7 +42,7 @@ export type Catalog = Readonly<Record<string, string | PluralForms>>;
 
 export type Params = Readonly<Record<string, string | number>>;
 
-const CATALOGS: Readonly<Record<Locale, Catalog>> = { fr: {}, en, es, 'pt-BR': ptBR, ar };
+const CATALOGS: Readonly<Record<Locale, Catalog>> = { fr, en: {}, es, 'pt-BR': ptBR, ar };
 
 export function catalogOf(locale: Locale): Catalog {
   return { ...CATALOGS[locale], ...FULL_CATALOGS[locale] };
@@ -87,12 +87,12 @@ function pluralOf(locale: Locale, count: number): Intl.LDMLPluralRule {
   return rules.select(count);
 }
 
-// `one` and `other` are the French forms, `other` the key; a language holds one per plural category.
+// `one` and `other` are the English forms, `other` the key; a language holds one per plural category.
 export function tn(count: number, one: string, other: string, params?: Params): string {
   const translation = translations[other];
   const form = typeof translation === 'object' ? translation[pluralOf(current, count)] : undefined;
-  const french = pluralOf(SOURCE_LOCALE, count) === 'one' ? one : other;
-  return fill(other, form === undefined || form === '' ? french : form, params);
+  const source = pluralOf(SOURCE_LOCALE, count) === 'one' ? one : other;
+  return fill(other, form === undefined || form === '' ? source : form, params);
 }
 
 function fill(source: string, text: string, params: Params | undefined): string {
@@ -109,5 +109,5 @@ function fill(source: string, text: string, params: Params | undefined): string 
 }
 
 export function defaultName(playerId: number): string {
-  return t('Joueur {number}', { number: playerId + 1 });
+  return t('Player {number}', { number: playerId + 1 });
 }

@@ -6,8 +6,8 @@ import type { ClassDefinition } from './types';
 export const CLASSES: readonly ClassDefinition[] = [
   {
     id: 'mage',
-    name: 'La Luxiole',
-    role: 'Balaie la foule de loin avec ses poi lumineux. Fragile.',
+    name: 'The Luxiole',
+    role: 'Sweeps the crowd from afar with glowing poi. Fragile.',
     color: '#ff2bd6',
     maxHp: 90,
     speed: 7.5,
@@ -27,15 +27,15 @@ export const CLASSES: readonly ClassDefinition[] = [
     skill: {
       id: 'nova',
       name: 'Nova',
-      description: 'Tu libères une onde de lumière qui repousse les bad vibes autour de toi.',
+      description: 'You release a wave of light that pushes back the bad vibes around you.',
       cooldownTicks: 2 * TICKS_PER_BAR,
       effect: { kind: 'nova', damage: 60, radius: 190, knockback: 60 },
     },
   },
   {
     id: 'tank',
-    name: 'Le Nounours',
-    role: 'Tient la ligne et attire les bad vibes. Lent.',
+    name: 'The Nounours',
+    role: 'Holds the line and draws the bad vibes in. Slow.',
     color: '#ff9a3d',
     maxHp: 210,
     speed: 6.8,
@@ -56,16 +56,15 @@ export const CLASSES: readonly ClassDefinition[] = [
     skill: {
       id: 'charge',
       name: 'Charge',
-      description:
-        'Tu fonces devant toi, intouchable, et les bad vibes alentour ne voient plus que toi.',
+      description: 'You charge ahead, untouchable, and the bad vibes around see only you.',
       cooldownTicks: TICKS_PER_BAR,
-      effect: { kind: 'dash', distance: 160, invulnerableTicks: 10, tauntRadius: 160 },
+      effect: { kind: 'dash', distance: 160, invulnerableTicks: 10, tauntRadius: 180 },
     },
   },
   {
     id: 'healer',
-    name: "L'Hygie",
-    role: 'Soigne, répare la scène et relève ses amis.',
+    name: 'The Hygie',
+    role: 'Heals, repairs the stage and gets friends back up.',
     color: '#7cf2b0',
     maxHp: 130,
     speed: 7,
@@ -86,8 +85,8 @@ export const CLASSES: readonly ClassDefinition[] = [
     },
     skill: {
       id: 'soin',
-      name: 'Soin',
-      description: 'Tu soignes ceux qui sont près de toi et tu répares un peu la scène.',
+      name: 'Heal',
+      description: 'You heal those near you and repair the stage a little.',
       cooldownTicks: 5 * TICKS_PER_BAR,
       effect: { kind: 'healPulse', amount: 8, radius: 120, coreRepair: 10 },
     },

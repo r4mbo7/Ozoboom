@@ -1,31 +1,39 @@
 import type { Ambience } from './ambience';
 import { createFader } from './fade';
 
-// An artist's recording, played as it was mastered: only its level changes (ADR 0020).
-export interface Recording {
-  // Under public/, in the order to try: the first one this browser decodes plays.
+// A part of a recording: its files under public/, in the order to try (the first one this browser
+// decodes plays), and how many bars it lasts.
+interface RecordingPart {
   readonly files: readonly string[];
-  // Its first bars, light enough to play at once while the whole decodes; they loop if it is late.
-  readonly intro: { readonly files: readonly string[]; readonly bars: number };
-  readonly bpm: number;
-  // It loops on its last bar, its first beat on its first sample.
   readonly bars: number;
-  // Integrated loudness of its master.
+}
+
+// An artist's recording, played as it was mastered: only its level changes (ADR 0020). Its own files
+// and bars are its loop: it loops on its last bar, its first beat on its first sample.
+export interface Recording extends RecordingPart {
+  // Played once, at the first entrance; at its last bar the loop takes over from its first sample.
+  readonly opening?: RecordingPart;
+  // The first bars of whichever part plays first, light enough to play at once while that part
+  // decodes; they loop if it is late.
+  readonly intro: RecordingPart;
+  readonly bpm: number;
+  // Integrated loudness of its master, one level for both parts.
   readonly lufs: number;
 }
 
-// « Ozoboom » by Timo Lissy, for the menus. scripts/menu-track.ts writes its files from the master.
+// « Ozoboom home screen 1.1 » by Timo Lissy: scripts/menu-track.ts writes its files from its parts.
 export const MENU_RECORDING: Recording = {
+  opening: { files: ['music/ozoboom-opening.webm', 'music/ozoboom-opening.m4a'], bars: 128 },
   files: ['music/ozoboom.webm', 'music/ozoboom.m4a'],
   intro: { files: ['music/ozoboom-intro.webm', 'music/ozoboom-intro.m4a'], bars: 8 },
   bpm: 145,
-  bars: 136,
-  lufs: -11.6,
+  bars: 128,
+  lufs: -11.8,
 };
 
 // The synthesized ambience where it joins the music bus, which a recording matches.
 const AMBIENCE_LUFS = -20.8;
-// The whole takes over from the intro on a bar at least this far ahead, to be scheduled in time.
+// A part takes over from the one before on a bar at least this far ahead, to be scheduled in time.
 const TAKE_OVER_LEAD_SECONDS = 0.2;
 
 export function recordingGain(recording: Recording): number {
@@ -46,13 +54,12 @@ const fetchPublic: FetchFile = async (file) => {
   return response.arrayBuffer();
 };
 
-// Starts loading the first file of the intro and of the whole at once, so that they are there when
-// the audio opens, at the first gesture; the others only if those do not decode. A failed load
-// reaches decodeFiles, which awaits it: it is marked handled only so that the browser does not
-// report it before.
+// Starts loading the first file of each part at once, so that they are there when the audio opens,
+// at the first gesture; the others only if those do not decode. A failed load reaches decodeFiles,
+// which awaits it: it is marked handled only so that the browser does not report it before.
 export function prefetchRecording(recording: Recording, fetchFile = fetchPublic): FetchFile {
   const early = new Map<string, Promise<ArrayBuffer>>();
-  for (const [first] of [recording.intro.files, recording.files]) {
+  for (const [first] of [recording.intro.files, recording.opening?.files ?? [], recording.files]) {
     if (first !== undefined) {
       const bytes = fetchFile(first);
       bytes.catch(() => undefined);
@@ -89,10 +96,30 @@ export async function decodeFiles(
   return null;
 }
 
+// null as well on an unexpected failure, which still reaches the crash report, a tick later: a slot
+// that fails this way plays its synth voice and never holds up the load of the others.
+export async function decodeSlot(
+  context: BaseAudioContext,
+  files: readonly string[],
+  fetchFile?: FetchFile,
+): Promise<AudioBuffer | null> {
+  try {
+    return await decodeFiles(context, files, fetchFile);
+  } catch (error) {
+    queueMicrotask(() => {
+      throw error;
+    });
+    return null;
+  }
+}
+
+export type RecordingPartName = 'intro' | 'opening' | 'loop';
+
 export interface RecordingLoad {
   readonly intro: Promise<AudioBuffer | null>;
-  // null: the ambience keeps the menus.
-  readonly whole: Promise<AudioBuffer | null>;
+  // Only for a recording with an opening. null here or for the loop: the ambience keeps the menus.
+  readonly opening?: Promise<AudioBuffer | null>;
+  readonly loop: Promise<AudioBuffer | null>;
 }
 
 export function loadRecording(
@@ -102,13 +129,16 @@ export function loadRecording(
 ): RecordingLoad {
   return {
     intro: decodeFiles(context, recording.intro.files, fetchFile),
-    whole: decodeFiles(context, recording.files, fetchFile),
+    ...(recording.opening === undefined
+      ? {}
+      : { opening: decodeFiles(context, recording.opening.files, fetchFile) }),
+    loop: decodeFiles(context, recording.files, fetchFile),
   };
 }
 
 export interface RecordingVoice extends Ambience {
-  // Entered, it waits in silence for its first part, and the whole takes over from the intro.
-  take(buffer: AudioBuffer, part: 'intro' | 'whole'): void;
+  // Entered, it waits in silence for its first part; each part takes over from the one before.
+  take(buffer: AudioBuffer, part: RecordingPartName): void;
 }
 
 interface Playing {
@@ -130,48 +160,95 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
   const beat = 60 / recording.bpm;
   const bar = 4 * beat;
   const introSeconds = loopSeconds(recording, recording.intro.bars);
-  const buffers: { intro: AudioBuffer | null; whole: AudioBuffer | null } = {
+  const openingBars = recording.opening?.bars ?? 0;
+  const openingSeconds = loopSeconds(recording, openingBars);
+  let first: 'opening' | 'loop' = recording.opening === undefined ? 'loop' : 'opening';
+  let openingPlayed = false;
+  const buffers: Record<RecordingPartName, AudioBuffer | null> = {
     intro: null,
-    whole: null,
+    opening: null,
+    loop: null,
   };
-  let intro: Playing | null = null;
-  let whole: Playing | null = null;
+  const playing: Record<RecordingPartName, Playing | null> = {
+    intro: null,
+    opening: null,
+    loop: null,
+  };
   let wanted = false;
   let stopAt: number | null = null;
 
-  function play(buffer: AudioBuffer, loopEnd: number, from: number, offset: number): Playing {
+  const silent = () => Object.values(playing).every((part) => part === null);
+
+  function play(buffer: AudioBuffer, from: number, offset: number, loopEnd?: number): Playing {
     const source = context.createBufferSource();
     source.buffer = buffer;
-    source.loop = true;
-    source.loopEnd = loopEnd;
+    if (loopEnd !== undefined) {
+      source.loop = true;
+      source.loopEnd = loopEnd;
+    }
     source.connect(level);
     source.start(from, offset);
     return { source, from, origin: from - offset };
   }
 
-  function begin(at: number) {
-    if (buffers.whole !== null) {
-      whole = play(buffers.whole, loopSeconds(recording), at, 0);
-    } else if (buffers.intro !== null) {
-      intro = play(buffers.intro, introSeconds, at, 0);
+  // The loop from its first sample, at the last bar of the opening, or on the first bar after it is
+  // ready when it decoded late: the opening never repeats.
+  function follow(opening: Playing, loop: AudioBuffer) {
+    const ready = context.currentTime + TAKE_OVER_LEAD_SECONDS - opening.origin;
+    const at = opening.origin + Math.max(openingBars, Math.ceil(ready / bar)) * bar;
+    playing.loop = play(loop, at, 0, loopSeconds(recording));
+  }
+
+  function playFirst(buffer: AudioBuffer, from: number, offset: number) {
+    if (first === 'loop') {
+      playing.loop = play(buffer, from, offset, loopSeconds(recording));
+      return;
+    }
+    const opening = play(buffer, from, offset);
+    opening.source.stop(opening.origin + openingSeconds);
+    playing.opening = opening;
+    if (buffers.loop !== null) {
+      follow(opening, buffers.loop);
     }
   }
 
-  // On the next bar, where the whole plays the very note the intro would.
-  function takeOver(from: Playing, buffer: AudioBuffer) {
-    const bars = Math.ceil((context.currentTime + TAKE_OVER_LEAD_SECONDS - from.origin) / bar);
-    const at = from.origin + bars * bar;
-    from.source.stop(at);
-    whole = play(buffer, loopSeconds(recording), at, (bars * bar) % introSeconds);
+  // Every entrance from silence starts on the first part: the opening until it has played once.
+  function begin(at: number) {
+    const head = buffers[first];
+    if (head !== null) {
+      playFirst(head, at, 0);
+    } else if (buffers.intro !== null) {
+      playing.intro = play(buffers.intro, at, 0, introSeconds);
+    }
+  }
+
+  // On the next bar, where the first part plays the very note the intro would.
+  function takeOver(intro: Playing, buffer: AudioBuffer) {
+    const bars = Math.ceil((context.currentTime + TAKE_OVER_LEAD_SECONDS - intro.origin) / bar);
+    const at = intro.origin + bars * bar;
+    intro.source.stop(at);
+    playFirst(buffer, at, (bars * bar) % introSeconds);
+  }
+
+  // Lets the decoded opening and intro be collected: every later entrance starts on the loop.
+  function letOpeningGo() {
+    for (const part of ['intro', 'opening'] as const) {
+      playing[part]?.source.disconnect();
+      playing[part] = null;
+      buffers[part] = null;
+    }
+    first = 'loop';
+    openingPlayed = true;
   }
 
   function silence() {
-    for (const playing of [intro, whole]) {
-      playing?.source.stop();
-      playing?.source.disconnect();
+    for (const part of Object.values(playing)) {
+      part?.source.stop();
+      part?.source.disconnect();
     }
-    intro = null;
-    whole = null;
+    playing.intro = null;
+    playing.opening = null;
+    playing.loop = null;
     stopAt = null;
   }
 
@@ -180,31 +257,45 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
       wanted = true;
       stopAt = null;
       fader.to(1);
-      if (intro === null && whole === null) {
+      if (silent()) {
         begin(Math.max(at, context.currentTime));
       }
     },
     leave() {
       wanted = false;
-      if (intro === null && whole === null) {
+      if (silent()) {
         return;
       }
       stopAt = fader.to(0);
     },
     take(buffer, part) {
+      if (openingPlayed && part !== 'loop') {
+        return;
+      }
       buffers[part] = buffer;
       if (!wanted) {
         return;
       }
-      if (intro === null && whole === null) {
+      const { intro, opening, loop } = playing;
+      if (silent()) {
         begin(context.currentTime);
-      } else if (part === 'whole' && intro !== null && whole === null) {
+      } else if (part === first && intro !== null && playing[first] === null) {
         takeOver(intro, buffer);
+      } else if (part === 'loop' && opening !== null && loop === null) {
+        follow(opening, buffer);
       }
     },
     pump() {
-      if (intro === null && whole === null) {
+      if (silent()) {
         return false;
+      }
+      // Without this each entrance replays the opening; a bar late, as the output latency lags.
+      if (
+        first === 'opening' &&
+        playing.loop !== null &&
+        context.currentTime >= playing.loop.from + bar
+      ) {
+        letOpeningGo();
       }
       if (stopAt !== null && context.currentTime >= stopAt) {
         silence();
@@ -212,9 +303,14 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
       }
       return true;
     },
+    // In beats since the first beat of the recording, its opening counted once.
     position(now) {
-      if (whole !== null && now >= whole.from) {
-        return (now - whole.origin) / beat;
+      const { intro, opening, loop } = playing;
+      if (loop !== null && now >= loop.from) {
+        return openingBars * 4 + (now - loop.origin) / beat;
+      }
+      if (opening !== null && now >= opening.from) {
+        return now < opening.origin + openingSeconds ? (now - opening.origin) / beat : null;
       }
       if (intro !== null && now >= intro.from) {
         return ((now - intro.origin) % introSeconds) / beat;

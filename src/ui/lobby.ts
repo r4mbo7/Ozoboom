@@ -99,10 +99,10 @@ function paintRoom(parts: LobbyParts, model: LobbyModel): void {
   setText(
     parts.header.lead,
     view === 'entry'
-      ? t('Crée un salon pour inviter tes amis, ou rejoins le leur avec son code.')
+      ? t('Create a room to invite your friends, or join theirs with its code.')
       : hosting
-        ? t('Envoie le code ou le lien à tes amis, puis lance le set.')
-        : t('Tu as rejoint le salon {code}.', { code: model.code ?? '' }),
+        ? t('Send the code or the link to your friends, then start the set.')
+        : t('You joined room {code}.', { code: model.code ?? '' }),
   );
   setText(parts.error, model.error ?? '');
   parts.error.hidden = model.error === null;
@@ -121,7 +121,7 @@ function paintStage(stage: StagePanel, model: LobbyModel): void {
   stage.element.hidden = lobbyView(model) === 'entry' || !showsStageChoice(stages.length);
   setText(
     stage.label,
-    guest ? t('L’hôte choisit la scène') : night === 'festival' ? t('Scène du départ') : t('Scène'),
+    guest ? t('The host picks the stage') : night === 'festival' ? t('Starting stage') : t('Stage'),
   );
 }
 
@@ -138,7 +138,7 @@ function paintLaunch(nights: NightTabs, footer: LobbyFooter, model: LobbyModel):
   footer.launch.hidden = guest || view === 'entry';
   footer.launch.setAttribute('aria-disabled', String(!model.canLaunch));
   footer.waiting.hidden = !guest;
-  setText(footer.leave, view === 'room' ? t('Quitter le salon') : t('Retour au titre'));
+  setText(footer.leave, view === 'room' ? t('Leave the room') : t('Back to the title'));
 }
 
 function paintHint(
@@ -244,7 +244,7 @@ export function createLobby(
   let device: InputDevice | null = null;
 
   const element = el('section', 'ui-screen ui-lobby');
-  element.setAttribute('aria-label', t('Salon'));
+  element.setAttribute('aria-label', t('Lobby'));
   element.toggleAttribute('data-many', classes.length > ROW_CARDS);
   const header = createLobbyHeader();
   const error = createLobbyError();

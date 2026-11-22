@@ -5,7 +5,7 @@ import { drawBoss } from '../draw';
 import type { SetProgress, SetSegment, SimState } from '../state';
 import type { StepContext } from './types';
 
-const MIN_DROP_BARS = 1;
+export const MIN_DROP_BARS = 1;
 const TICKS_PER_MINUTE = 60 * TICK_RATE_HZ;
 
 export function setProgress({ state, content, set, tempo }: StepContext): void {

@@ -89,9 +89,9 @@ export function createTeamPause(screen: PauseScreen, env: TeamPauseEnv): TeamPau
 export function pauseItems(settings: Settings, actions: PauseActions): PauseItem[] {
   const { prefs } = settings;
   return [
-    { label: t('Reprendre'), activate: actions.resume },
+    { label: t('Resume'), activate: actions.resume },
     {
-      label: t('Son'),
+      label: t('Sound'),
       element: settings.soundControl.element,
       activate() {
         settings.setSound({ volume: prefs.volume, muted: !prefs.muted });
@@ -99,36 +99,36 @@ export function pauseItems(settings: Settings, actions: PauseActions): PauseItem
       adjust: settings.stepVolume,
     },
     {
-      label: t('Son des coups'),
+      label: t('Hit sound'),
       element: settings.hitSoundToggle.button,
       activate() {
         settings.setHitSound(!prefs.hitSound);
       },
     },
     {
-      label: t('Tir automatique'),
+      label: t('Auto fire'),
       element: settings.autoFireToggle.button,
       activate() {
         settings.setAutoFire(!prefs.autoFire);
       },
     },
     {
-      label: t('Visée automatique'),
+      label: t('Auto aim'),
       element: settings.autoAimToggle.button,
       activate() {
         settings.setAutoAim(!prefs.autoAim);
       },
     },
-    { label: t('Contrôles'), element: createControlsButton(), activate: actions.openControls },
-    { label: t('Ton avis'), element: createFeedbackButton(), activate: actions.openForm },
+    { label: t('Controls'), element: createControlsButton(), activate: actions.openControls },
+    { label: t('Your feedback'), element: createFeedbackButton(), activate: actions.openForm },
     {
-      label: t('Retour au salon'),
+      label: t('Back to the lobby'),
       shown: actions.leadsTeam,
       confirm: lobbyConfirm(),
       activate: actions.backToLobby,
     },
     {
-      label: t('Quitter la partie'),
+      label: t('Quit the game'),
       get confirm() {
         return actions.online() ? quitOnlineConfirm() : quitConfirm();
       },
@@ -139,34 +139,34 @@ export function pauseItems(settings: Settings, actions: PauseActions): PauseItem
 
 const quitConfirm = () =>
   ({
-    question: t('Quitter le set ?'),
-    text: t('Tu rentres avant le sunrise : la partie s’arrête ici, sans score.'),
-    stay: t('Rester'),
-    leave: t('Quitter'),
+    question: t('Leave the set?'),
+    text: t('Heading home before sunrise: the game ends here, with no score.'),
+    stay: t('Stay'),
+    leave: t('Leave'),
   }) as const;
 
 const lobbyConfirm = () =>
   ({
-    question: t('Retour au salon ?'),
-    text: t('Le set s’arrête pour toute l’équipe, sans score : chacun peut changer de perso.'),
-    stay: t('Rester'),
-    leave: t('Retour au salon'),
+    question: t('Back to the lobby?'),
+    text: t('The set stops for the whole team, with no score: everyone can change character.'),
+    stay: t('Stay'),
+    leave: t('Back to the lobby'),
   }) as const;
 
 const quitOnlineConfirm = () =>
   ({
-    question: t('Quitter le set ?'),
+    question: t('Leave the set?'),
     text: t(
-      'Tu laisses les autres joueurs : ton personnage reste immobile et le set continue sans toi.',
+      'You leave the others behind: your character stands still and the set goes on without you.',
     ),
-    stay: t('Rester'),
-    leave: t('Quitter'),
+    stay: t('Stay'),
+    leave: t('Leave'),
   }) as const;
 
 const onlinePauseText = () =>
   ({
-    heading: t('Le set continue'),
+    heading: t('The set goes on'),
     text: t(
-      'En ligne, la pause n’arrête pas le set : ton personnage reste immobile pendant que les autres jouent.',
+      'Online, pausing doesn’t stop the set: your character stands still while the others play.',
     ),
   }) as const;

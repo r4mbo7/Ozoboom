@@ -39,13 +39,13 @@ function arrow(label: string, flipped: boolean, onClick: () => void): HTMLButton
 export function createSoundControl(onStep: (side: -1 | 1) => void): SoundControl {
   const element = el('div', 'ui-button ui-toggle ui-volume');
   element.setAttribute('role', 'slider');
-  element.setAttribute('aria-label', t('Son'));
+  element.setAttribute('aria-label', t('Sound'));
   element.setAttribute('aria-valuemin', '0');
   element.setAttribute('aria-valuemax', String(VOLUME_STEPS));
   const text = el('span', 'ui-toggle__text');
   text.append(
-    el('span', 'ui-toggle__label', t('Son')),
-    el('span', 'ui-toggle__hint', t('Musique et effets')),
+    el('span', 'ui-toggle__label', t('Sound')),
+    el('span', 'ui-toggle__hint', t('Music and effects')),
   );
   const meter = el('span', 'ui-volume__meter');
   meter.setAttribute('aria-hidden', 'true');
@@ -58,11 +58,11 @@ export function createSoundControl(onStep: (side: -1 | 1) => void): SoundControl
   const state = el('span', 'ui-toggle__state');
   const control = el('span', 'ui-toggle__control ui-volume__control');
   control.append(
-    arrow(t('Baisser le son'), false, () => {
+    arrow(t('Turn the sound down'), false, () => {
       onStep(-1);
     }),
     meter,
-    arrow(t('Monter le son'), true, () => {
+    arrow(t('Turn the sound up'), true, () => {
       onStep(1);
     }),
     state,
@@ -72,7 +72,7 @@ export function createSoundControl(onStep: (side: -1 | 1) => void): SoundControl
     element,
     set({ volume, muted }) {
       const level = muted ? 0 : volume;
-      const label = muted ? t('Coupé') : t('{percent} %', { percent: volume * 10 });
+      const label = muted ? t('Muted') : t('{percent}%', { percent: volume * 10 });
       element.setAttribute('aria-valuenow', String(level));
       element.setAttribute('aria-valuetext', label);
       element.toggleAttribute('data-on', !muted);

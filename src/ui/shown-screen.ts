@@ -1,4 +1,5 @@
-export type Screen = 'title' | 'class' | 'stage' | 'lobby' | 'game' | 'end' | 'notice';
+export type Screen =
+  'title' | 'programme' | 'class' | 'stage' | 'lobby' | 'game' | 'end' | 'notice';
 
 export interface ShownScreen {
   current(): Screen;

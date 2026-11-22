@@ -8,7 +8,7 @@ import type { PlayerId, PlayerState, SimState } from '../sim/state';
 import { createBossBanner } from './boss-banner';
 import { createBraceletRow } from './bracelet-row';
 import { createDashTile } from './dash-tile';
-import { el, icon, setFlag, setText, setVar } from './dom';
+import { el, icon, replay, setFlag, setText, setVar } from './dom';
 import { FULL_HUD } from './full';
 import { createGaugeTile } from './gauge-tile';
 import { createGearPlaces } from './gear-places';
@@ -19,7 +19,7 @@ import {
   type TwinVibesReading,
   allDown,
   classToken,
-  inDanger,
+  deepestDanger,
   rosterOf,
   potionReading,
   twinVibesReading,
@@ -35,6 +35,9 @@ import { createVibeCounter } from './vibe-counter';
 import { createCarriedTrap } from './carried-trap';
 import type { UiFrame } from './types';
 import { type TutorialBanner, createTutorialBanner } from './tutorial';
+
+// The frame's depth moves in twentieths: finer steps repaint the whole screen for nothing seen.
+const DEPTH_STEPS = 20;
 
 export interface Hud {
   readonly element: HTMLElement;
@@ -113,6 +116,7 @@ export function createHud(prompts: Prompts): Hud {
   let built: { content: GameContent; set: SetDefinition } | null = null;
   let dressed: { definition: ClassDefinition; device: InputDevice; keys: number } | null = null;
   let shownId: PlayerId | null = null;
+  let heartBeat = Number.NaN;
 
   function build(content: GameContent, setId: string): SetDefinition {
     const set = setOf(content, setId);
@@ -145,10 +149,25 @@ export function createHud(prompts: Prompts): Hud {
     setFlag(element, 'team', people.team);
     setFlag(element, 'multi', people.team && people.locals.length > 1);
     bracelets.update(frame, content, people);
-    setFlag(element, 'danger', inDanger(people.locals));
     const down = allDown(people.locals);
     setFlag(element, 'watched', down);
-    setText(watched, down ? t('Les lucioles veillent sur toi') : '');
+    setText(watched, down ? t('The fireflies are watching over you') : '');
+  }
+
+  function showDanger(people: Roster, beat: number): void {
+    const depth = deepestDanger(people.locals);
+    setFlag(element, 'danger', depth !== null);
+    const beaten = beat !== heartBeat;
+    heartBeat = beat;
+    if (depth === null) {
+      // Coming back, the frame waits for a beat: a mark left from before would beat at once.
+      delete danger.dataset.beat;
+      return;
+    }
+    setVar(danger, '--danger-depth', (Math.round(depth * DEPTH_STEPS) / DEPTH_STEPS).toFixed(2));
+    if (beaten) {
+      replay(danger, 'beat');
+    }
   }
 
   function showTwinVibes(twins: TwinVibesReading | null): void {
@@ -204,7 +223,9 @@ export function createHud(prompts: Prompts): Hud {
     for (const part of parts) {
       part.update(state, content, frame);
     }
-    showTeam(frame, content, rosterOf(state, frame));
+    const people = rosterOf(state, frame);
+    showTeam(frame, content, people);
+    showDanger(people, state.set.beat);
     const twins = twinVibesReading(state, set, tempo.ticksPerBar);
     showTwinVibes(twins);
     const player = shownPlayer(state, frame);

@@ -2,7 +2,7 @@ import type { DecorId, GameContent } from '../data/types';
 import type { Locale } from '../shared/i18n';
 import type { MenuHeard } from '../shared/menu-score';
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
-import type { PlayerId, SimState, Vec2 } from '../sim/state';
+import type { EntityId, PlayerId, SimState, Vec2 } from '../sim/state';
 import type { TutorialStep } from './tutorial';
 
 export interface LocalPlayer {
@@ -94,6 +94,12 @@ export interface LobbyModel {
 
 export type Notice = 'desync' | 'hostLeft' | 'connectionLost';
 
+// The end screen's leaderboard line: the run offered to share under the saved pseudo (asked
+// again once refused), or its rank among today's verified runs, null past the board.
+export type BoardLine =
+  | { readonly kind: 'share'; readonly pseudo: string; readonly refused: boolean }
+  | { readonly kind: 'rank'; readonly rank: number | null };
+
 // A team's game: its host, online or on one screen, restarts it or takes it back to the lobby.
 // Absent, the game is solo.
 export interface EndSession {
@@ -135,6 +141,16 @@ export interface UiCallbacks {
     trapIds: readonly string[],
     playerId: PlayerId,
   ): (() => void) | null;
+  // Paints a bad vibe's or a boss's mask, still, filling the canvas: the Programme's portraits.
+  onPaintMask?(canvas: HTMLCanvasElement, enemyId: string): void;
+  // Plays a stage's music as a game plays it, from the Programme; null gives the title music back.
+  onListenStage?(setId: string | null): void;
+  // Paints a class standing still, filling the canvas: the Programme's portraits of characters.
+  onPaintClass?(canvas: HTMLCanvasElement, classId: string): void;
+  // Plays a class's special as the game sounds it when cast.
+  onPlaySpecial?(classId: string): void;
+  // Plays a prop's sound as the game plays it, for the Programme; null for a silent prop.
+  onWeaponSound?(weaponId: string): (() => void) | null;
   onToggleCalmMode(enabled: boolean): void;
   onToggleMute(muted: boolean): void;
   // From 1 to `VOLUME_STEPS`.
@@ -142,6 +158,8 @@ export interface UiCallbacks {
   onToggleHitSound(enabled: boolean): void;
   onToggleAutoFire(enabled: boolean): void;
   onToggleAutoAim(enabled: boolean): void;
+  onSetPseudo(pseudo: string): void;
+  onBoardName(pseudo: string): void;
   // The game reloads in it (ADR 0017).
   onChooseLocale(locale: Locale): void;
   onPlayOnline(): void;
@@ -173,6 +191,7 @@ export interface UiCallbacks {
   onFeedback?(details?: string): void;
   // Menu intents go to the keys screen until it closes.
   onControls(): void;
+  onChangelogOpened(): void;
 }
 
 export interface Ui {
@@ -183,10 +202,12 @@ export interface Ui {
     hitSound: boolean;
     autoFire: boolean;
     autoAim: boolean;
+    pseudo: string;
     device: InputDevice;
   }): void;
   showClassPicker(model: ClassPickerModel): void;
   showVisits(count: number): void;
+  showChangelogNews(news: boolean): void;
   showStagePicker(model: StagePickerModel): void;
   showLobby(model: LobbyModel): void;
   updateLobby(model: LobbyModel): void;
@@ -197,6 +218,7 @@ export interface Ui {
   observeStep(state: SimState): StepGuide;
   // `best`: this device's record for the night before the game, null for the first game.
   showEnd(state: SimState, session: EndSession | undefined, best: number | null): void;
+  setBoardLine(line: BoardLine | null): void;
   update(state: SimState, frame: UiFrame, content: GameContent): void;
   destroy(): void;
 }
@@ -208,6 +230,14 @@ export interface StepGuide {
   readonly tutorial: TutorialStep | null;
   readonly tutorialKey: string;
   readonly trapCallers: readonly PlayerId[];
+  // The trap each player's place key would take, since that tick, with the key's name on their device: '' on touch,
+  // and for a player on another screen. The same array while nothing changes.
+  readonly keyTraps: readonly {
+    readonly playerId: PlayerId;
+    readonly trapId: EntityId;
+    readonly since: number;
+    readonly key: string;
+  }[];
 }
 
 export type CreateUi = (root: HTMLElement, callbacks: UiCallbacks) => Ui;

@@ -1,0 +1,158 @@
+/* The Map tab: the festival site printed in muted inks, the stages as gold-rimmed medallions, a
+   turquoise pin on the selected one (.lavish/programme, map A). Sizes follow the map's own width. */
+
+.ui-programme__map {
+  /* A medallion's width: 36 of the 264 units the printed sheet spans. */
+  --disc: 13.64cqw;
+
+  container-type: inline-size;
+  position: relative;
+}
+
+/* The fold between the guide's two middle panels runs across the map. */
+.ui-programme__map::after {
+  content: '';
+  position: absolute;
+  inset-block: -2%;
+  left: 50%;
+  width: 2px;
+  background: linear-gradient(90deg, rgb(2 4 14 / 0.4) 50%, rgb(190 205 255 / 0.07) 50%);
+  pointer-events: none;
+}
+
+.ui-programme__terrain,
+.ui-programme__terrain svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ui-programme__stop {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 32cqw;
+  padding: 0;
+  border: 0;
+  background: none;
+  translate: -50% calc(-0.5 * var(--disc));
+  cursor: pointer;
+}
+
+.ui-programme__medallion {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--disc);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--or) 75%, transparent);
+  border-radius: 50%;
+  background: var(--sol);
+  box-shadow: 0 0 0 0.8cqw color-mix(in srgb, var(--sol) 85%, black);
+  transition:
+    border-color 120ms ease-out,
+    outline-color 120ms ease-out;
+}
+
+/* Printed on the map, the pictures take the paper's muted inks. */
+.ui-programme__medallion .ui-programme__picture {
+  filter: saturate(0.7) brightness(0.85);
+}
+
+.ui-programme__stop:hover .ui-programme__medallion {
+  border-color: var(--turquoise);
+}
+
+.ui-programme__stop[aria-current] .ui-programme__medallion {
+  outline: 0.8cqw solid var(--turquoise);
+  outline-offset: 1.6cqw;
+  box-shadow:
+    0 0 0 0.8cqw color-mix(in srgb, var(--sol) 85%, black),
+    0 0 calc(5cqw * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 45%, transparent);
+  animation: ui-programme-ring 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes ui-programme-ring {
+  to {
+    outline-offset: 2.1cqw;
+  }
+}
+
+.ui-programme__stop-name {
+  /* Clear of the selected medallion's ring. */
+  margin-top: 2.6cqw;
+  color: var(--or);
+  font-family: var(--font-title);
+  font-size: 3.6cqw;
+  font-weight: 900;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
+  text-shadow:
+    0 0 0.4cqw #0a1228,
+    0 0 0.8cqw #0a1228,
+    0 0.3cqw 0.6cqw #0a1228;
+}
+
+.ui-programme__stop[aria-current] .ui-programme__stop-name {
+  color: color-mix(in srgb, var(--or) 40%, #fff3d0);
+  text-shadow:
+    0 0 0.4cqw #0a1228,
+    0 0 0.8cqw #0a1228,
+    0 0 calc(3cqw * var(--ui-halo)) color-mix(in srgb, var(--or) 60%, transparent);
+}
+
+.ui-programme__stop[data-locked='true'] .ui-programme__medallion {
+  border-color: color-mix(in srgb, #aab8ec 22%, transparent);
+  background: radial-gradient(closest-side, var(--pg-hollow), var(--sol));
+}
+
+.ui .ui-programme__medallion .ui-programme__badge {
+  top: 14%;
+  inset-inline-end: 14%;
+  width: 22%;
+  height: 22%;
+}
+
+.ui-programme__stop[data-locked='true'] .ui-programme__stop-name {
+  color: var(--ui-muted);
+}
+
+/* The pin: its tip on the selected medallion's top, walking the paths to the next. */
+.ui .ui-programme__pin {
+  position: absolute;
+  z-index: 2;
+  width: 6cqw;
+  aspect-ratio: 14 / 19;
+  translate: -50% -100%;
+  filter: drop-shadow(
+    0 0 calc(2cqw * var(--ui-halo)) color-mix(in srgb, var(--turquoise) 55%, transparent)
+  );
+  pointer-events: none;
+}
+
+.ui-programme__pin svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ui-programme__pin[data-walking='false'] svg {
+  animation: ui-programme-pin 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes ui-programme-pin {
+  to {
+    translate: 0 -12%;
+  }
+}
+
+.calm > .ui .ui-programme__stop[aria-current] .ui-programme__medallion,
+.calm > .ui .ui-programme__pin svg {
+  animation: none;
+}

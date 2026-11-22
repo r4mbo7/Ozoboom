@@ -8,6 +8,7 @@ import { createWebGLRenderer } from './webgl';
 export type { RenderContent } from './context';
 export type { Inset, RenderOptions, Renderer } from './types';
 export { type Portrait, type PortraitClass, createPortraits } from './portraits';
+export { paintMask } from './mask-portrait';
 export { RendererUnavailable } from './webgl';
 
 // `light` draws a quarter of the pixels without antialiasing, for tests that render in software.

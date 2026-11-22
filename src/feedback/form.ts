@@ -92,11 +92,11 @@ export function openFeedback(
         view.truncatedNote.hidden = !outcome.truncated;
         show(sent);
       } else {
-        setText(view.send, t('Réessayer'));
+        setText(view.send, t('Try again'));
         say(
           form,
           t(
-            'Ton navigateur a bloqué le nouvel onglet. Réessaie, ou copie ton avis pour ne pas le perdre.',
+            'Your browser blocked the new tab. Try again, or copy your feedback so you don’t lose it.',
           ),
           'warn',
         );
@@ -109,12 +109,12 @@ export function openFeedback(
 
   async function copyDraft(target: Page): Promise<void> {
     if (await copyText(navigator.clipboard, clipboardText(draft()))) {
-      say(target, t('Copié dans le presse-papiers.'), 'ok');
+      say(target, t('Copied to the clipboard.'), 'ok');
     } else if (target === form) {
       textarea.select();
-      say(form, t('Copie impossible ici. Ton texte est sélectionné : copie-le à la main.'), 'warn');
+      say(form, t('Can’t copy here. Your text is selected: copy it by hand.'), 'warn');
     } else {
-      say(sent, t('Copie impossible ici. Ton avis reste dans l’onglet GitHub.'), 'warn');
+      say(sent, t('Can’t copy here. Your feedback stays in the GitHub tab.'), 'warn');
     }
   }
 
@@ -210,8 +210,8 @@ export function openFeedback(
 
 function missingText(missing: 'type' | 'message'): string {
   return missing === 'type'
-    ? t('Choisis d’abord le type de ton avis.')
-    : t('Écris ton avis avant de l’envoyer.');
+    ? t('First pick what your feedback is about.')
+    : t('Write your feedback before sending it.');
 }
 
 function wireMessage(

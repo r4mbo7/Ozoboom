@@ -30,8 +30,8 @@ const LEAP_EIGHTHS = 4;
 
 export function thanksOf(credits: Credits = CREDITS): Thanks[] {
   return [
-    { label: t('Musique'), name: credits.music.name },
-    ...credits.thanks.map(({ name }) => ({ label: t('Merci à'), name })),
+    { label: t('Music'), name: credits.music.name },
+    ...credits.thanks.map(({ name }) => ({ label: t('Thanks to'), name })),
   ];
 }
 

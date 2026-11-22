@@ -16,13 +16,13 @@ export type Tab = 'keyboard' | 'gamepad';
 export type Action = KeyboardAction | GamepadAction;
 
 export const ACTION_NAMES: Readonly<Record<Action, () => string>> = {
-  moveUp: () => t('Haut'),
-  moveDown: () => t('Bas'),
-  moveLeft: () => t('Gauche'),
-  moveRight: () => t('Droite'),
-  fire: () => t('Tirer'),
-  placeTrap: () => t('Déplacer un piège'),
-  skill: () => t('Spéciale'),
+  moveUp: () => t('Up'),
+  moveDown: () => t('Down'),
+  moveLeft: () => t('Left'),
+  moveRight: () => t('Right'),
+  fire: () => t('Shoot'),
+  placeTrap: () => t('Move a trap'),
+  skill: () => t('Special'),
   dash: () => t('Dash'),
 };
 
@@ -57,16 +57,16 @@ export function defaultsFor(profile: KeyProfile, tab: Tab): KeyProfile {
 
 export function fixedKeysText(tab: Tab): string {
   return tab === 'keyboard'
-    ? t('Toujours là : Échap pour la pause, les flèches et Entrée dans les menus.')
-    : t('Toujours là : Start pour la pause, la croix pour les gestes, A et B dans les menus.');
+    ? t('Always there: Esc to pause, the arrows and Enter in the menus.')
+    : t('Always there: Start to pause, the D-pad for emotes, A and B in the menus.');
 }
 
 export function listenText(on: Tab, action: Action): string {
   return on === 'keyboard'
-    ? t('{action} : appuie sur une touche, un bouton de la souris ou la molette.', {
+    ? t('{action}: press a key, a mouse button or the wheel.', {
         action: ACTION_NAMES[action](),
       })
-    : t('{action} : appuie sur un bouton de la manette.', { action: ACTION_NAMES[action]() });
+    : t('{action}: press a gamepad button.', { action: ACTION_NAMES[action]() });
 }
 
 export interface Settled {
@@ -83,19 +83,19 @@ export function settledText(
 ): string {
   const name = ACTION_NAMES[action]();
   if (input === null) {
-    return t('{action} : case vidée.', { action: name });
+    return t('{action}: slot cleared.', { action: name });
   }
   if (moved === null) {
-    return t('{key} va à {action}.', { key: nameOf(on, input, names), action: name });
+    return t('{key} goes to {action}.', { key: nameOf(on, input, names), action: name });
   }
   if (replaced === null) {
-    return t('{key} va à {action} et quitte {other}.', {
+    return t('{key} goes to {action} and leaves {other}.', {
       key: nameOf(on, input, names),
       action: name,
       other: ACTION_NAMES[moved.action](),
     });
   }
-  return t('{key} va à {action}, {other} prend {old}.', {
+  return t('{key} goes to {action}, {other} takes {old}.', {
     key: nameOf(on, input, names),
     action: name,
     other: ACTION_NAMES[moved.action](),

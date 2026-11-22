@@ -44,7 +44,7 @@ export function createSeatSheet(
       big.setClass(chosen.id);
       element.style.setProperty('--class-color', classColor(chosen));
       element.toggleAttribute('data-ready', ready);
-      setText(stateText, ready ? t('Prêt') : t('Choisit…'));
+      setText(stateText, ready ? t('Ready') : t('Choosing…'));
       setText(name, t(chosen.name));
       sheet.set(chosen);
     },
@@ -96,10 +96,10 @@ export interface Invite {
 export function createInvite(): Invite {
   const element = el('div', 'ui-invite');
   const keys = el('p', 'ui-invite__keys');
-  keys.append(keycap('A', 'button'), el('span', '', t('ou')), keycap(t('Entrée'), 'key'));
+  keys.append(keycap('A', 'button'), el('span', '', t('or')), keycap(t('Enter'), 'key'));
   element.append(
     el('span', 'ui-invite__plus', '+'),
-    el('p', 'ui-invite__text', t('Maintiens A ou Entrée pour rejoindre')),
+    el('p', 'ui-invite__text', t('Hold A or Enter to join')),
     keys,
   );
   let filled = 0;

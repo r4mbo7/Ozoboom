@@ -29,9 +29,9 @@ export function stepNight(nights: readonly Night[], night: Night, direction: num
 function nameOf(night: Night): string {
   switch (night) {
     case 'stage':
-      return t('Une scène');
+      return t('One stage');
     case 'endless':
-      return t('Sans fin');
+      return t('Endless');
     case 'festival':
       return t('Full festival');
   }
@@ -50,7 +50,7 @@ export function nightLength(night: Night, stages: readonly StageCard[], stageId:
     case 'stage':
       return minutes(stages.find((stage) => stage.setId === stageId)?.minutes ?? 0);
     case 'endless':
-      return t('tant que vous tenez');
+      return t('as long as you hold');
     case 'festival':
       return minutes(
         Math.round(
@@ -62,7 +62,7 @@ export function nightLength(night: Night, stages: readonly StageCard[], stageId:
 }
 
 export function stageQuestion(night: Night): string {
-  return night === 'festival' ? t('Par où commence la nuit ?') : t('Choisis la scène');
+  return night === 'festival' ? t('Where does the night start?') : t('Pick the stage');
 }
 
 export function nightNote(night: Night): string {
@@ -71,21 +71,21 @@ export function nightNote(night: Night): string {
       return '';
     case 'endless':
       return t(
-        'Le set va jusqu’au dernier boss, puis la nuit repart : elle s’arrête quand vous tombez.',
+        'The set runs to the last boss, then the night takes off again: it ends when you fall.',
       );
     case 'festival':
-      return t('Les autres scènes suivent : à chaque sunrise, l’équipe choisit sa sortie.');
+      return t('The other stages follow: at each sunrise, the team picks its exit.');
   }
 }
 
 export function launchLabel(night: Night): string {
   switch (night) {
     case 'stage':
-      return t('Lancer le set');
+      return t('Start the set');
     case 'endless':
-      return t('Lancer la nuit');
+      return t('Start the night');
     case 'festival':
-      return t('Lancer le festival');
+      return t('Start the festival');
   }
 }
 
@@ -96,9 +96,9 @@ export function launchDetail(night: Night, stages: readonly StageCard[], stageId
     case 'stage':
       return `${name} · ${nightLength(night, stages, stageId)}`;
     case 'endless':
-      return `${name} · ${t('sans fin')}`;
+      return `${name} · ${t('endless')}`;
     case 'festival':
-      return t('départ {stage} · {count} scènes · {length}', {
+      return t('from {stage} · {count} stages · {length}', {
         stage: name,
         count: formatNumber(stages.length),
         length: nightLength(night, stages, stageId),
@@ -128,7 +128,7 @@ export function createNightTabs(onChoose: (night: Night) => void): NightTabs {
   const after = el('span', 'ui-nights__key');
   const list = el('div', 'ui-nights__tabs');
   list.setAttribute('role', 'tablist');
-  list.setAttribute('aria-label', t('Mode de jeu'));
+  list.setAttribute('aria-label', t('Game mode'));
   const tabs = nights.map((one) => {
     const tab = el('button', 'ui-nights__tab');
     tab.type = 'button';

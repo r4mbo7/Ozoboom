@@ -12,6 +12,8 @@ import { type LobbyScreen, createLobby } from './lobby';
 import { type MenuGrace, createMenuGrace } from './menu-grace';
 import { createMenuInput } from './navigation';
 import { type NoticeScreen, createNotice } from './notice';
+import { type ProgrammeScreen, createProgramme } from './programme/programme';
+import { PROGRAMME_TABS } from './programme/tabs';
 import type { Prompts } from './prompts';
 import { classActions, lobbyActions, stageActions, titleActions } from './screen-actions';
 import { type Screen, createShownScreen } from './shown-screen';
@@ -20,19 +22,22 @@ import { createSunFollower } from './sun';
 import { type TitleOptions, type TitleScreen, createTitle } from './title';
 import { createTitleOptions } from './title-options';
 import { t } from '../shared/i18n';
-import type { GameContent } from '../data/types';
+import type { GameContent, TrapDefinition } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
 import type {
   CreatePortrait,
   LobbyModel,
+  LocalPlayer,
   Notice,
   StagePickerModel,
+  StepGuide,
   Ui,
   UiCallbacks,
   UiFrame,
 } from './types';
 import { type UpgradeOverlay, createUpgradeOverlay } from './upgrade';
 import { veilStyle } from './veil';
+import { keyTraps } from './key-traps';
 import { lostWithoutMove, stillToMove } from './trap-lesson';
 
 export type {
@@ -60,20 +65,20 @@ const NO_CALLERS: readonly PlayerId[] = [];
 
 const notices = (): Readonly<Record<Notice, { title: string; text: string; glyph: string }>> => ({
   desync: {
-    title: t('Les deux versions de la partie ont divergé'),
+    title: t('The two copies of the game drifted apart'),
     text: t(
-      'Le set s’arrête pour tout le monde plutôt que de continuer de travers. Le rapport est prêt pour « Ton avis ».',
+      'The set stops for everyone rather than go on out of step. The report is ready in “Your feedback”.',
     ),
     glyph: TWO_VERSIONS,
   },
   hostLeft: {
-    title: t('L’hôte a quitté le set'),
-    text: t('Sans lui, le sound system s’éteint.'),
+    title: t('The host left the set'),
+    text: t('Without them, the sound system goes dark.'),
     glyph: DOOR,
   },
   connectionLost: {
-    title: t('Connexion perdue'),
-    text: t('Le lien avec les autres joueurs est coupé.'),
+    title: t('Connection lost'),
+    text: t('The link with the other players is cut.'),
     glyph: BROKEN_LINK,
   },
 });
@@ -84,6 +89,7 @@ export function prefersCalmMode(): boolean {
 
 interface Screens {
   readonly title: TitleScreen;
+  readonly programme: ProgrammeScreen;
   readonly classPicker: ClassPickerScreen;
   readonly stagePicker: StagePickerScreen;
   readonly lobby: LobbyScreen;
@@ -97,6 +103,7 @@ type ScreenMenu = (edges: MenuIntents, frame: UiFrame) => void;
 
 function reveal(screens: Screens, next: Screen): void {
   screens.title.element.hidden = next !== 'title';
+  screens.programme.element.hidden = next !== 'programme';
   screens.classPicker.element.hidden = next !== 'class';
   screens.stagePicker.element.hidden = next !== 'stage';
   screens.lobby.element.hidden = next !== 'lobby';
@@ -108,6 +115,7 @@ function reveal(screens: Screens, next: Screen): void {
 
 function showDevice(screens: Screens, device: InputDevice): void {
   screens.title.setDevice(device);
+  screens.programme.setDevice(device);
   screens.end.setDevice(device);
   screens.classPicker.setDevice(device);
   screens.stagePicker.setDevice(device);
@@ -124,6 +132,9 @@ function screenMenus(
     title(edges, frame) {
       screens.title.handle(edges);
       screens.title.follow(frame.menuPosition ?? null, calm());
+    },
+    programme(edges) {
+      screens.programme.handle(edges);
     },
     class(edges, frame) {
       screens.classPicker.update(edges, frame);
@@ -167,6 +178,10 @@ export function createUi(
   let device: InputDevice = 'none';
   let keysShown = prompts.version();
   let lastContent: GameContent | null = null;
+  let trapDefinitions: ReadonlyMap<string, TrapDefinition> = new Map();
+  // The players on this screen, from the last frame, for the key each one presses.
+  let localPlayers: readonly LocalPlayer[] = [];
+  let shownKeyTraps: StepGuide['keyTraps'] = [];
   // The players of this game who never lifted a trap, null before its first step.
   let unmoved: readonly PlayerId[] | null = null;
   let tutorialGame = false;
@@ -179,7 +194,7 @@ export function createUi(
           callbacks.onFeedback?.(details);
         };
   const screens = createScreens();
-  const { title, classPicker, stagePicker, lobby, notice, hud, end, upgrade } = screens;
+  const { title, programme, classPicker, stagePicker, lobby, notice, hud, end, upgrade } = screens;
   const menus = screenMenus(screens, grace, isCalm);
   container.append(
     hud.element,
@@ -187,6 +202,7 @@ export function createUi(
     upgrade.effects,
     end.element,
     title.element,
+    programme.element,
     classPicker.element,
     stagePicker.element,
     lobby.element,
@@ -194,10 +210,43 @@ export function createUi(
   );
 
   function createScreens(): Screens {
+    // The app paints the masks and the characters and plays the specials; a harness without it
+    // leaves their frames empty and Listen silent.
+    const programme = createProgramme(
+      prompts,
+      PROGRAMME_TABS,
+      {
+        paintMask(canvas, enemyId) {
+          callbacks.onPaintMask?.(canvas, enemyId);
+        },
+        playStage(setId) {
+          callbacks.onListenStage?.(setId);
+        },
+        quiet() {
+          callbacks.onListenStage?.(null);
+        },
+        paintClass(canvas, classId) {
+          callbacks.onPaintClass?.(canvas, classId);
+        },
+        playSpecial(classId) {
+          callbacks.onPlaySpecial?.(classId);
+        },
+        weaponSound(weaponId) {
+          return callbacks.onWeaponSound?.(weaponId) ?? null;
+        },
+      },
+      () => {
+        showMenu('title');
+      },
+    );
     const title = createTitle(
       prompts,
-      titleActions(callbacks, shown, options.actions, menuInput, feedback),
+      titleActions(callbacks, shown, options.actions, menuInput, feedback, () => {
+        showMenu('programme');
+        programme.open();
+      }),
     );
+
     const classPicker = createClassPicker(
       prompts,
       classes,
@@ -240,6 +289,9 @@ export function createUi(
       shown.once(() => {
         callbacks.onLearn();
       }),
+      (pseudo) => {
+        callbacks.onBoardName(pseudo);
+      },
       feedback,
     );
     const lobby = createLobby(prompts, lobbyActions(callbacks, shown), classes, portrait);
@@ -252,7 +304,7 @@ export function createUi(
       }),
       feedback,
     );
-    return { title, classPicker, stagePicker, lobby, notice, hud, end, upgrade };
+    return { title, programme, classPicker, stagePicker, lobby, notice, hud, end, upgrade };
   }
 
   function applyOptions(current: TitleOptions): void {
@@ -273,6 +325,12 @@ export function createUi(
       sun.fix('nuit');
     }
     reveal(screens, next);
+  }
+
+  // Between the title and the Programme: what was held when the screen changed waits for its release.
+  function showMenu(next: 'title' | 'programme'): void {
+    show(next);
+    menuInput.open();
   }
 
   function openMenu(next: 'class' | 'stage', menu: ClassPickerScreen | StagePickerScreen): void {
@@ -302,6 +360,9 @@ export function createUi(
     showVisits(count) {
       title.setVisits(count);
     },
+    showChangelogNews(news) {
+      title.setChangelogNews(news);
+    },
     // The screen first: a seat leaving beside friends all ready launches from setModel, and the game
     // it shows must stay on screen.
     showClassPicker(model) {
@@ -322,7 +383,7 @@ export function createUi(
     updateLobby,
     showNotice(kind, details) {
       const content = notices()[kind];
-      notice.show(t('Partie interrompue'), content.title, content.text, {
+      notice.show(t('Game interrupted'), content.title, content.text, {
         glyph: content.glyph,
         detail: details,
       });
@@ -338,6 +399,9 @@ export function createUi(
       sun.fix('nuit');
       show('game');
     },
+    setBoardLine(line) {
+      end.setBoardLine(line);
+    },
     showEnd(state, session, best) {
       end.show(state, lastContent, session, best, lostWithoutMove(state, unmoved));
       sun.fix(state.status === 'won' ? 'jour' : 'nuit');
@@ -350,14 +414,29 @@ export function createUi(
       unmoved = stillToMove(unmoved, state.players);
       // The tutorial asks one gesture at a time: the trap calls only when it is asked.
       const calling = !tutorialGame || tutorial === 'trap';
+      if (lastContent !== null) {
+        shownKeyTraps = keyTraps(
+          state,
+          lastContent,
+          trapDefinitions,
+          localPlayers,
+          prompts,
+          shownKeyTraps,
+        );
+      }
       return {
         tutorial,
         tutorialKey: hud.tutorial.askedKey(),
         trapCallers: calling ? unmoved : NO_CALLERS,
+        keyTraps: shownKeyTraps,
       };
     },
     update(state, frame, content) {
+      if (content !== lastContent) {
+        trapDefinitions = new Map(content.traps.map((trap) => [trap.id, trap]));
+      }
       lastContent = content;
+      localPlayers = frame.players;
       const snapshot = frame.snapshot;
       if (snapshot.device !== device || keysShown !== prompts.version()) {
         applyDevice(snapshot.device);

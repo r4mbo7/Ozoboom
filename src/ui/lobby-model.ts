@@ -23,8 +23,15 @@ export function roomCodeFromHash(hash: string): string {
 
 export { defaultName } from '../shared/i18n';
 
+// No invisible character, which the leaderboard refuses, and no emoji cut in half at the end.
 export function seatName(raw: string): string {
-  return raw.replace(/\s+/g, ' ').trim().slice(0, NAME_LENGTH).trim();
+  return raw
+    .replace(/\s+/g, ' ')
+    .replace(/[\p{C}\p{Zl}\p{Zp}]/gu, '')
+    .trim()
+    .slice(0, NAME_LENGTH)
+    .replace(/[\uD800-\uDBFF]$/, '')
+    .trim();
 }
 
 export function stepClass(
@@ -61,9 +68,9 @@ export function seatAt(model: LobbyModel, playerId: PlayerId): LobbySeat | null 
 
 export function seatTag(seat: LobbySeat): string {
   if (seat.remote) {
-    return seat.host ? t('Hôte') : t('Invité');
+    return seat.host ? t('Host') : t('Guest');
   }
-  return seat.host ? t('Toi · hôte') : t('Toi');
+  return seat.host ? t('You · host') : t('You');
 }
 
 export interface LobbyHint {
@@ -79,15 +86,15 @@ export function lobbyHint(model: LobbyModel, prompts: DevicePrompts): LobbyHint 
       : [];
   const choice = {
     keys: prompts.navigateRow,
-    label: hasStageChoice(model) ? t('classe, scène') : t('classe'),
+    label: hasStageChoice(model) ? t('class, stage') : t('class'),
   };
   return {
     parts: [
-      { keys: prompts.navigate, label: t('naviguer') },
+      { keys: prompts.navigate, label: t('navigate') },
       ...tabs,
       ...(view === 'entry' ? [] : [choice]),
-      { keys: [prompts.confirm], label: t('valider') },
-      { keys: [prompts.back], label: t('quitter') },
+      { keys: [prompts.confirm], label: t('confirm') },
+      { keys: [prompts.back], label: t('leave') },
     ],
     style: prompts.style,
   };

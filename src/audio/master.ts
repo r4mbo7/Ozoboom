@@ -3,6 +3,12 @@ import { clamp01 } from '../shared/scalar';
 const CLIP_KNEE = 0.7;
 export const CLIP_CEILING = 0.98;
 const MUTE_SECONDS = 0.003;
+// What the effects and music buses pass on to the master chain.
+export const SFX_BUS_GAIN = 0.45;
+export const MUSIC_BUS_GAIN = 0.5;
+// What a bus may feed the limiter, whose threshold (-6 dB) a single file never reaches, from the
+// loudest sample of that file.
+export const LOUDEST_PEAK = 0.475;
 
 export interface MasterChain {
   music: GainNode;
@@ -40,9 +46,9 @@ export function createMasterChain(
   stems = false,
 ): MasterChain {
   const music = context.createGain();
-  music.gain.value = 0.5;
+  music.gain.value = MUSIC_BUS_GAIN;
   const sfx = context.createGain();
-  sfx.gain.value = 0.45;
+  sfx.gain.value = SFX_BUS_GAIN;
   const outputs: GainNode[] = [];
   const master = (...inputs: AudioNode[]): GainNode => {
     const output = masterOf(context, inputs, muted ? 0 : loudness(volume));

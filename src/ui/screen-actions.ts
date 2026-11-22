@@ -10,15 +10,20 @@ import type { UiCallbacks } from './types';
 type Once = Pick<ShownScreen, 'once'>;
 
 export function titleActions(
-  callbacks: Pick<UiCallbacks, 'onStart' | 'onPlayOnline' | 'onControls' | 'onChooseLocale'>,
+  callbacks: Pick<
+    UiCallbacks,
+    'onStart' | 'onPlayOnline' | 'onControls' | 'onChooseLocale' | 'onChangelogOpened'
+  >,
   shown: Once,
   options: TitleOptionActions,
   menuInput: Pick<MenuInput, 'open'>,
   feedback: (() => void) | undefined,
+  programme: () => void,
 ): TitleActions {
   return {
     ...(feedback === undefined ? {} : { feedback }),
     ...options,
+    programme,
     start: shown.once(() => {
       callbacks.onStart();
     }),
@@ -31,6 +36,9 @@ export function titleActions(
     },
     chooseLocale(next) {
       callbacks.onChooseLocale(next);
+    },
+    changelogOpened() {
+      callbacks.onChangelogOpened();
     },
   };
 }

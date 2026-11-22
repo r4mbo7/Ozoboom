@@ -6,7 +6,9 @@ import { trapPower } from '../sim/trap-wear';
 import type { Family, RenderContext } from './context';
 import type { Frame } from './frame';
 import { easeOutQuad } from './motion';
+import { mixColor } from './palette';
 import { trapReach } from './reach';
+import { answerLook } from './trap-answers';
 import { TRAP_TOKENS, type Shape } from './textures';
 import { byId, lookup } from './util';
 
@@ -116,6 +118,9 @@ export class Particles {
   }
 }
 
+// Answering its player, a Caisson's kick wave drifts toward them by this share of its reach.
+const WAVE_DRIFT = 0.15;
+
 interface Wave {
   reach: number;
   power: number;
@@ -157,14 +162,20 @@ export function createEffects(
         const { effect } = lookup(ctx.trapLooks, event.kind, 'trap kind');
         if (effect.kind === 'shockwave') {
           const { reach, power } = fired(state, event.id, effect, frame.set.trapWear);
+          const own = frame.palette[TRAP_TOKENS.shockwave];
+          const answer = answerLook(ctx, state, event, frame);
+          const answered = answer?.level ?? 0;
+          const drift = frame.calm || answer === undefined ? 0 : reach * WAVE_DRIFT * answered;
           rings.spawn({
             now: tick,
             duration: TICKS_PER_BEAT / 2,
             x: event.x,
             y: event.y,
+            dx: (answer?.toward.x ?? 0) * drift,
+            dy: (answer?.toward.y ?? 0) * drift,
             fromRadius: reach * 0.2,
             toRadius: reach,
-            tint: frame.palette[TRAP_TOKENS.shockwave],
+            tint: answer === undefined ? own : mixColor(own, answer.color, answered),
             peak: (ctx.options.calmMode ? 0.5 : 0.9) * power,
           });
         }

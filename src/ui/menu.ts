@@ -1,8 +1,26 @@
 import type { MenuIntents } from '../input/intents';
+import { direction } from '../shared/i18n';
 import { clamp } from '../shared/scalar';
 import { onPointerClick } from './dom';
 import { navigateMenu } from './navigation';
 import { onMouseMove } from './pointer';
+import { type Box, screenSide, stepInDirection } from './remap-cursor';
+
+// In a menu laid out in columns, left and right go to the item beside on screen. In a list, or
+// with nothing beside, they step through its order (`null`), wrapping around a row's ends.
+// Hidden items have no box and are never stepped to.
+export function stepAcross(
+  boxes: readonly Box[],
+  from: number,
+  side: 'left' | 'right',
+): number | null {
+  const shown = boxes.filter((box) => box.width > 0 && box.height > 0);
+  if (new Set(shown.map((box) => Math.round(box.x))).size < 2) {
+    return null;
+  }
+  const beside = stepInDirection(boxes, from, side);
+  return beside === from ? null : beside;
+}
 
 export interface Menu {
   readonly index: number;
@@ -69,8 +87,21 @@ export function createMenu(
         return;
       }
       const step = navigateMenu(index, items.length, edges);
-      if (step.index !== index) {
-        select(step.index);
+      const side =
+        edges.left === edges.right
+          ? null
+          : screenSide({ ...edges, up: false, down: false }, direction());
+      const across =
+        side === 'left' || side === 'right'
+          ? stepAcross(
+              items.map((item) => item.getBoundingClientRect()),
+              index,
+              side,
+            )
+          : null;
+      const next = across ?? step.index;
+      if (next !== index) {
+        select(next);
         // A long menu scrolls: the keyboard and the gamepad follow their selection.
         items[index]?.scrollIntoView({ block: 'nearest' });
       }

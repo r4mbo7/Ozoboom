@@ -15,10 +15,7 @@ export function startLocale(): void {
   }
   document
     .querySelector('meta[name="description"]')
-    ?.setAttribute(
-      'content',
-      t('Jeu web léger de survie coopérative dans un festival de psytrance.'),
-    );
+    ?.setAttribute('content', t('A light co-op survival web game set at a psytrance festival.'));
 }
 
 // Every screen is built in the language of the start: the game reloads in the new one.

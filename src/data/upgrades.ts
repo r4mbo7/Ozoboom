@@ -13,18 +13,18 @@ export const RARITY_WEIGHTS: readonly RarityWeights[] = [
 export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'double-faisceau',
-    name: 'Double faisceau',
-    description: 'Tu tires deux projectiles de plus.',
+    name: 'Double Beam',
+    description: 'You fire two more projectiles.',
     family: 'class',
     classId: 'mage',
     modifiers: [{ stat: 'projectileCountAdd', add: 2 }],
     rarities: {
       rare: {
-        description: 'Tu tires quatre projectiles de plus.',
+        description: 'You fire four more projectiles.',
         modifiers: [{ stat: 'projectileCountAdd', add: 4 }],
       },
       legendary: {
-        description: 'Tu tires six projectiles de plus.',
+        description: 'You fire six more projectiles.',
         modifiers: [{ stat: 'projectileCountAdd', add: 6 }],
       },
     },
@@ -32,18 +32,18 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'lumiere-traversante',
-    name: 'Lumière traversante',
-    description: 'Tes tirs traversent deux bad vibes de plus.',
+    name: 'Piercing Light',
+    description: 'Your shots go through two more bad vibes.',
     family: 'class',
     classId: 'mage',
     modifiers: [{ stat: 'pierceAdd', add: 2 }],
     rarities: {
       rare: {
-        description: 'Tes tirs traversent quatre bad vibes de plus.',
+        description: 'Your shots go through four more bad vibes.',
         modifiers: [{ stat: 'pierceAdd', add: 4 }],
       },
       legendary: {
-        description: 'Tes tirs traversent six bad vibes de plus.',
+        description: 'Your shots go through six more bad vibes.',
         modifiers: [{ stat: 'pierceAdd', add: 6 }],
       },
     },
@@ -51,18 +51,18 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'nova-xxl',
-    name: 'Spéciale XXL',
-    description: 'Ta spéciale frappe plus fort.',
+    name: 'Special XXL',
+    description: 'Your special hits harder.',
     family: 'class',
     classId: 'mage',
     modifiers: [{ stat: 'skillPowerMul', mul: 1.55 }],
     rarities: {
       rare: {
-        description: 'Ta spéciale frappe deux fois plus fort.',
+        description: 'Your special hits twice as hard.',
         modifiers: [{ stat: 'skillPowerMul', mul: 2.25 }],
       },
       legendary: {
-        description: 'Ta spéciale frappe trois fois plus fort.',
+        description: 'Your special hits three times as hard.',
         modifiers: [{ stat: 'skillPowerMul', mul: 3 }],
       },
     },
@@ -70,18 +70,18 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'boucle-vj',
-    name: 'Boucle VJ',
-    description: 'Ta spéciale revient plus vite.',
+    name: 'VJ Loop',
+    description: 'Your special comes back faster.',
     family: 'class',
     classId: 'mage',
     modifiers: [{ stat: 'skillCooldownMul', mul: 0.64 }],
     rarities: {
       rare: {
-        description: 'Ta spéciale revient bien plus vite.',
+        description: 'Your special comes back much faster.',
         modifiers: [{ stat: 'skillCooldownMul', mul: 0.36 }],
       },
       legendary: {
-        description: 'Ta spéciale revient presque en continu.',
+        description: 'Your special comes back almost non-stop.',
         modifiers: [{ stat: 'skillCooldownMul', mul: 0.16 }],
       },
     },
@@ -89,17 +89,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'jambes-de-danseur',
-    name: 'Jambes de danseur',
-    description: 'Tu te déplaces plus vite.',
+    name: 'Dancer’s Legs',
+    description: 'You move faster.',
     family: 'generic',
     modifiers: [{ stat: 'speedMul', mul: 1.2 }],
     rarities: {
       rare: {
-        description: 'Tu te déplaces nettement plus vite.',
+        description: 'You move a lot faster.',
         modifiers: [{ stat: 'speedMul', mul: 1.45 }],
       },
       legendary: {
-        description: 'Tu te déplaces bien plus vite.',
+        description: 'You move much faster.',
         modifiers: [{ stat: 'speedMul', mul: 1.7 }],
       },
     },
@@ -107,17 +107,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'deuxieme-souffle',
-    name: 'Deuxième souffle',
-    description: 'Tu gagnes 40 points de vie maximum.',
+    name: 'Second Wind',
+    description: 'You gain 40 max health.',
     family: 'generic',
     modifiers: [{ stat: 'maxHpAdd', add: 40 }],
     rarities: {
       rare: {
-        description: 'Tu gagnes 80 points de vie maximum.',
+        description: 'You gain 80 max health.',
         modifiers: [{ stat: 'maxHpAdd', add: 80 }],
       },
       legendary: {
-        description: 'Tu gagnes 120 points de vie maximum.',
+        description: 'You gain 120 max health.',
         modifiers: [{ stat: 'maxHpAdd', add: 120 }],
       },
     },
@@ -125,17 +125,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'bonnes-ondes',
-    name: 'Bonnes ondes',
-    description: 'Tu attires les vibes de plus loin.',
+    name: 'Good Vibrations',
+    description: 'You draw in vibes from farther away.',
     family: 'generic',
     modifiers: [{ stat: 'pickupRadiusMul', mul: 1.7 }],
     rarities: {
       rare: {
-        description: 'Tu attires les vibes de bien plus loin.',
+        description: 'You draw in vibes from much farther away.',
         modifiers: [{ stat: 'pickupRadiusMul', mul: 2.5 }],
       },
       legendary: {
-        description: 'Tu attires les vibes de très loin.',
+        description: 'You draw in vibes from very far away.',
         modifiers: [{ stat: 'pickupRadiusMul', mul: 3.6 }],
       },
     },
@@ -143,17 +143,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'baskets-legeres',
-    name: 'Baskets légères',
-    description: 'Ton dash revient plus vite.',
+    name: 'Light Sneakers',
+    description: 'Your dash comes back faster.',
     family: 'generic',
     modifiers: [{ stat: 'dashRechargeMul', mul: 0.75 }],
     rarities: {
       rare: {
-        description: 'Ton dash revient nettement plus vite.',
+        description: 'Your dash comes back a lot faster.',
         modifiers: [{ stat: 'dashRechargeMul', mul: 0.5 }],
       },
       legendary: {
-        description: 'Ton dash revient bien plus vite.',
+        description: 'Your dash comes back much faster.',
         modifiers: [{ stat: 'dashRechargeMul', mul: 0.375 }],
       },
     },
@@ -161,17 +161,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'pas-chasse',
-    name: 'Pas chassé',
-    description: 'Tu peux enchaîner un dash de plus.',
+    name: 'Chassé Step',
+    description: 'You can chain one more dash.',
     family: 'generic',
     modifiers: [{ stat: 'dashChargesAdd', add: 1 }],
     rarities: {
       rare: {
-        description: 'Tu peux enchaîner deux dashs de plus.',
+        description: 'You can chain two more dashes.',
         modifiers: [{ stat: 'dashChargesAdd', add: 2 }],
       },
       legendary: {
-        description: 'Tu peux enchaîner trois dashs de plus.',
+        description: 'You can chain three more dashes.',
         modifiers: [{ stat: 'dashChargesAdd', add: 3 }],
       },
     },
@@ -179,17 +179,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'volume-a-fond',
-    name: 'Volume à fond',
-    description: 'Tes tirs font plus de dégâts.',
+    name: 'Volume Maxed',
+    description: 'Your shots deal more damage.',
     family: 'generic',
     modifiers: [{ stat: 'damageMul', mul: 1.3 }],
     rarities: {
       rare: {
-        description: 'Tes tirs font nettement plus de dégâts.',
+        description: 'Your shots deal a lot more damage.',
         modifiers: [{ stat: 'damageMul', mul: 1.7 }],
       },
       legendary: {
-        description: 'Tes tirs font deux fois plus de dégâts.',
+        description: 'Your shots deal twice the damage.',
         modifiers: [{ stat: 'damageMul', mul: 2.1 }],
       },
     },
@@ -197,17 +197,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'double-tempo',
-    name: 'Double tempo',
-    description: 'Tu tires plus souvent.',
+    name: 'Double Time',
+    description: 'You fire more often.',
     family: 'generic',
     modifiers: [{ stat: 'attackCooldownMul', mul: 0.77 }],
     rarities: {
       rare: {
-        description: 'Tu tires nettement plus souvent.',
+        description: 'You fire a lot more often.',
         modifiers: [{ stat: 'attackCooldownMul', mul: 0.58 }],
       },
       legendary: {
-        description: 'Tu tires bien plus souvent.',
+        description: 'You fire much more often.',
         modifiers: [{ stat: 'attackCooldownMul', mul: 0.41 }],
       },
     },
@@ -215,17 +215,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'sub-renforce',
-    name: 'Sub renforcé',
-    description: 'Tes pièges font plus de dégâts.',
+    name: 'Boosted Sub',
+    description: 'Your traps deal more damage.',
     family: 'defense',
     modifiers: [{ stat: 'trapDamageMul', mul: 1.45 }],
     rarities: {
       rare: {
-        description: 'Tes pièges font deux fois plus de dégâts.',
+        description: 'Your traps deal twice the damage.',
         modifiers: [{ stat: 'trapDamageMul', mul: 2 }],
       },
       legendary: {
-        description: 'Tes pièges font deux fois et demie plus de dégâts.',
+        description: 'Your traps deal two and a half times the damage.',
         modifiers: [{ stat: 'trapDamageMul', mul: 2.5 }],
       },
     },
@@ -233,17 +233,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'talkie-walkie',
-    name: 'Talkie-walkie',
-    description: 'Les pièges arrivent plus souvent.',
+    name: 'Walkie-Talkie',
+    description: 'Traps show up more often.',
     family: 'defense',
     modifiers: [{ stat: 'carrierIntervalMul', mul: 0.72 }],
     rarities: {
       rare: {
-        description: 'Les pièges arrivent deux fois plus souvent.',
+        description: 'Traps show up twice as often.',
         modifiers: [{ stat: 'carrierIntervalMul', mul: 0.5 }],
       },
       legendary: {
-        description: 'Les pièges arrivent trois fois plus souvent.',
+        description: 'Traps show up three times as often.',
         modifiers: [{ stat: 'carrierIntervalMul', mul: 0.3 }],
       },
     },
@@ -251,17 +251,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'banane',
-    name: 'Banane',
-    description: 'Tu récupères les pièges de plus loin.',
+    name: 'Bum Bag',
+    description: 'You take traps from farther away.',
     family: 'defense',
     modifiers: [{ stat: 'liftReachMul', mul: 2.5 }],
     rarities: {
       rare: {
-        description: 'Tu récupères les pièges de bien plus loin.',
+        description: 'You take traps from much farther away.',
         modifiers: [{ stat: 'liftReachMul', mul: 4 }],
       },
       legendary: {
-        description: 'Tu récupères les pièges de très loin.',
+        description: 'You take traps from very far away.',
         modifiers: [{ stat: 'liftReachMul', mul: 6 }],
       },
     },
@@ -269,17 +269,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'rallonge',
-    name: 'Rallonge',
-    description: 'Tu recharges les pièges en passant à côté.',
+    name: 'Extension Cord',
+    description: 'You recharge traps as you pass by.',
     family: 'defense',
     modifiers: [{ stat: 'trapRechargeBarsAdd', add: 2 }],
     rarities: {
       rare: {
-        description: 'Tu recharges bien les pièges en passant à côté.',
+        description: 'You recharge traps well as you pass by.',
         modifiers: [{ stat: 'trapRechargeBarsAdd', add: 3 }],
       },
       legendary: {
-        description: 'Tu recharges beaucoup les pièges en passant à côté.',
+        description: 'You recharge traps a lot as you pass by.',
         modifiers: [{ stat: 'trapRechargeBarsAdd', add: 4 }],
       },
     },
@@ -287,17 +287,17 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'colliers-de-serrage',
-    name: 'Colliers de serrage',
-    description: "Tes pièges s'usent moins vite.",
+    name: 'Zip Ties',
+    description: 'Your traps wear out more slowly.',
     family: 'defense',
     modifiers: [{ stat: 'trapWearMul', mul: 0.9 }],
     rarities: {
       rare: {
-        description: "Tes pièges s'usent nettement moins vite.",
+        description: 'Your traps wear out a lot more slowly.',
         modifiers: [{ stat: 'trapWearMul', mul: 0.8 }],
       },
       legendary: {
-        description: "Tes pièges s'usent bien moins vite.",
+        description: 'Your traps wear out much more slowly.',
         modifiers: [{ stat: 'trapWearMul', mul: 0.7 }],
       },
     },
@@ -306,8 +306,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   // A trap to lay, for a player with room above the head: never recorded, so never used up.
   {
     id: 'piege-neuf',
-    name: 'Piège neuf',
-    description: 'Un piège tout neuf, prêt à poser.',
+    name: 'New Trap',
+    description: 'A brand-new trap, ready to drop.',
     family: 'defense',
     modifiers: [],
     maxStacks: 1,
@@ -315,8 +315,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'piege-surprise',
-    name: 'Piège surprise',
-    description: 'Un piège au hasard, prêt à poser.',
+    name: 'Surprise Trap',
+    description: 'A random trap, ready to drop.',
     family: 'defense',
     modifiers: [],
     maxStacks: 1,
@@ -324,8 +324,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'boule-a-facettes',
-    name: 'Boule à facettes',
-    description: 'Tu attires les vibes, tires plus et frappes plus fort.',
+    name: 'Disco Ball',
+    description: 'You draw in vibes, fire more and hit harder.',
     family: 'relic',
     modifiers: [
       { stat: 'pickupRadiusMul', mul: 1.5 },
@@ -336,8 +336,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'machine-a-fumee',
-    name: 'Machine à fumée',
-    description: 'Tu deviens plus solide et tu glisses plus vite.',
+    name: 'Smoke Machine',
+    description: 'You get sturdier and glide faster.',
     family: 'relic',
     modifiers: [
       { stat: 'maxHpAdd', add: 40 },
@@ -347,8 +347,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'cable-d-or',
-    name: "Câble d'or",
-    description: 'Tes pièges frappent fort et loin, leurs porteurs abondent.',
+    name: 'Golden Cable',
+    description: 'Your traps hit hard and far, and their carriers pour in.',
     family: 'relic',
     modifiers: [
       { stat: 'trapDamageMul', mul: 1.3 },
@@ -359,8 +359,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'console-de-mixage',
-    name: 'Console de mixage',
-    description: 'Tu tires plus souvent et ta spéciale revient plus vite.',
+    name: 'Mixing Desk',
+    description: 'You fire more often and your special comes back faster.',
     family: 'relic',
     modifiers: [
       { stat: 'attackCooldownMul', mul: 0.8 },
@@ -371,8 +371,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'projecteur-de-poursuite',
-    name: 'Projecteur de poursuite',
-    description: 'Tes tirs vont plus vite, traversent plus et frappent fort.',
+    name: 'Follow Spot',
+    description: 'Your shots fly faster, go through more and hit hard.',
     family: 'relic',
     modifiers: [
       { stat: 'pierceAdd', add: 2 },
@@ -383,8 +383,8 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   },
   {
     id: 'mur-de-son',
-    name: 'Mur de son',
-    description: 'Tes pièges frappent plus fort et couvrent plus de piste.',
+    name: 'Wall of Sound',
+    description: 'Your traps hit harder and cover more of the floor.',
     family: 'relic',
     modifiers: [
       { stat: 'trapDamageMul', mul: 1.4 },
@@ -395,7 +395,7 @@ export const UPGRADES: readonly UpgradeDefinition[] = [
   {
     id: 'tamatebako',
     name: 'Tamatebako',
-    description: 'Chaque future offre propose un choix supplémentaire.',
+    description: 'Every future offer shows one more choice.',
     family: 'relic',
     modifiers: [{ stat: 'offerCardsAdd', add: 1 }],
     maxStacks: 1,

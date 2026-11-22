@@ -10,25 +10,25 @@ export function showRendererUnavailable(
   const screen = el('section', 'ui-screen ui-overlay ui-end ui-notice ui-unavailable');
   screen.dataset.outcome = 'lost';
   screen.setAttribute('role', 'alert');
-  const reloadButton = el('button', 'ui-button ui-button--primary', t('Recharger'));
+  const reloadButton = el('button', 'ui-button ui-button--primary', t('Reload'));
   reloadButton.type = 'button';
   reloadButton.addEventListener('click', reload);
   const actions = el('div', 'ui-end__actions');
   actions.append(reloadButton);
   const body = el('div', 'ui-end__body');
   body.append(
-    el('p', 'ui-kicker', t('Oups')),
-    el('h2', 'ui-end__title', t('Le jeu n’a pas pu démarrer')),
+    el('p', 'ui-kicker', t('Oops')),
+    el('h2', 'ui-end__title', t('The game couldn’t start')),
     el(
       'p',
       'ui-end__text',
-      t('Ton navigateur n’a pas pu lancer le jeu. Recharge la page dans un instant.'),
+      t('Your browser couldn’t launch the game. Reload the page in a moment.'),
     ),
     el(
       'p',
       'ui-notice__detail',
       t(
-        'Si ça recommence : ferme d’autres onglets, active l’accélération matérielle dans les réglages du navigateur, ou essaie un autre navigateur. (WebGL indisponible)',
+        'If it happens again: close other tabs, turn on hardware acceleration in your browser settings, or try another browser. (WebGL unavailable)',
       ),
     ),
     actions,

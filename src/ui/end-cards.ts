@@ -64,7 +64,7 @@ function frontOf(
   const head = el('span', 'ui-end-card__head');
   head.append(
     icon('ui-end-card__mark', classMark(player.classId)),
-    el('span', 'ui-end-card__state', player.downed ? t('À terre') : t('Debout')),
+    el('span', 'ui-end-card__state', player.downed ? t('Downed') : t('Standing')),
   );
   face.append(
     icon('ui-end-card__turn', TURN),
@@ -97,8 +97,8 @@ function backOf(player: PlayerState, build: Build | null, team: boolean): HTMLEl
   const feats = el('span', 'ui-end-card__feats');
   feats.append(
     feat(t('Bad vibes'), tally.badVibes),
-    feat(t('Boss'), tally.bosses),
-    ...(team ? [feat(t('Alliés soignés'), tally.revives)] : []),
+    feat(t('Bosses'), tally.bosses),
+    ...(team ? [feat(t('Allies healed'), tally.revives)] : []),
     feat(t('Vibes'), Math.round(tally.vibes)),
   );
   face.append(el('span', 'ui-end-card__name', playerLabel(player)), feats);
@@ -111,7 +111,7 @@ function backOf(player: PlayerState, build: Build | null, team: boolean): HTMLEl
       line(
         weaponGlyph(weapon.effect),
         weapon.name,
-        t('niv. {level}', { level: formatNumber(weapon.level) }),
+        t('lv. {level}', { level: formatNumber(weapon.level) }),
       ),
     ),
   );
@@ -119,7 +119,7 @@ function backOf(player: PlayerState, build: Build | null, team: boolean): HTMLEl
     kit.append(
       line(
         CARDS,
-        tn(build.cards, '{count} carte', '{count} cartes', { count: formatNumber(build.cards) }),
+        tn(build.cards, '{count} card', '{count} cards', { count: formatNumber(build.cards) }),
       ),
     );
   }

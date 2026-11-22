@@ -50,6 +50,7 @@ const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
   dishPowerMul: false,
   offerCardsAdd: true,
   oneLoveHealMul: false,
+  bisBeatsAdd: true,
 };
 
 export function statValue(

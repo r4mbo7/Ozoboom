@@ -4,8 +4,8 @@ import type { BystanderDefinition } from './types';
 export const BYSTANDERS: readonly BystanderDefinition[] = [
   {
     id: 'festivalier-en-detresse',
-    name: 'Le Festivalier en détresse',
-    description: "Il ne va pas bien : reste à son contact une mesure pour l'aider.",
+    name: 'The Raver in Distress',
+    description: 'They’re not doing well: stay by their side for a bar to help them.',
     radius: 11,
     speed: 1,
     helpTicks: TICKS_PER_BAR,

@@ -5,42 +5,42 @@ import { NEON } from './neon';
 import { POGO } from './pogo';
 import type { EnemyDefinition } from './types';
 
-const GROWING = { hp: 1.1, speed: 1.02 };
-const FIXED = { hp: 1, speed: 1 };
+const GROWING = { hp: 1.13, speed: 1.02, damage: 1.04 };
+const FIXED = { hp: 1, speed: 1, damage: 1 };
 
 export const ENEMIES: readonly EnemyDefinition[] = [
   {
     id: 'random',
-    name: 'Le Random',
-    description: 'Il surgit de partout à la fois, faible seul mais jamais seul.',
+    name: 'The Random',
+    description: 'Pops up from everywhere at once, weak alone but never alone.',
     behaviour: 'horde',
     maxHp: 30,
     speed: 1.4,
     radius: 12,
     damage: 3,
     attackCooldownTicks: 2 * TICKS_PER_BEAT,
-    aggroRadius: 80,
+    aggroRadius: 160,
     vibesDrop: 1,
     scalingPerPhrase: GROWING,
   },
   {
     id: 'desagreable',
-    name: 'Le Désagréable',
-    description: 'Il fonce droit sur la scène, plus vite que tout le monde.',
+    name: 'The Grump',
+    description: 'Charges straight at the stage, faster than anyone.',
     behaviour: 'rusher',
     maxHp: 18,
     speed: 2.3,
     radius: 10,
     damage: 4,
     attackCooldownTicks: TICKS_PER_BEAT,
-    aggroRadius: 140,
+    aggroRadius: 170,
     vibesDrop: 1,
     scalingPerPhrase: GROWING,
   },
   {
     id: 'meprisant',
-    name: 'Le Méprisant',
-    description: 'Il reste loin et balance des bouteilles qui ralentissent qui les reçoit.',
+    name: 'The Snob',
+    description: 'Keeps their distance and chucks bottles that slow down whoever they hit.',
     behaviour: 'shooter',
     maxHp: 15,
     speed: 1.8,
@@ -55,9 +55,9 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'male-alpha',
-    name: 'Le Mâle alpha',
+    name: 'The Alpha Male',
     description:
-      'Lourd et sûr de lui, il pousse ton matériel et encaisse moitié moins de face : prends-le à revers.',
+      'Heavy and full of themselves, they push your gear and take half the damage from the front: hit them from behind.',
     behaviour: 'heavy',
     maxHp: 140,
     speed: 1.1,
@@ -71,8 +71,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'collant',
-    name: 'Le Collant',
-    description: "Il s'accroche à toi et te ralentit jusqu'à ce qu'on le décroche.",
+    name: 'The Clinger',
+    description: 'Hangs on to you and slows you down until someone shakes them off.',
     behaviour: 'rusher',
     maxHp: 24,
     speed: 2.1,
@@ -86,8 +86,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'intolerant',
-    name: "L'Intolérant",
-    description: 'Il éteint les bonus de qui reste trop près : vise-le en priorité.',
+    name: 'The Bigot',
+    description: 'Switches off the boosts of anyone who stays too close: take them out first.',
     behaviour: 'horde',
     maxHp: 50,
     speed: 1,
@@ -101,8 +101,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'arnaqueur',
-    name: "L'Arnaqueur",
-    description: 'Il fonce sur tes vibes au sol, les vole, puis détale si tu le poursuis.',
+    name: 'The Hustler',
+    description: 'Dashes for your vibes on the ground, steals them, then bolts if you give chase.',
     behaviour: 'rusher',
     maxHp: 20,
     speed: 2.6,
@@ -116,8 +116,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'fatigue',
-    name: 'Le Fatigué',
-    description: "Son bâillement se propage autour de lui, puis il s'endort sur place.",
+    name: 'The Sleepyhead',
+    description: 'Their yawn spreads all around them, then they fall asleep on the spot.',
     behaviour: 'horde',
     maxHp: 45,
     speed: 0.9,
@@ -131,8 +131,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'filmeur',
-    name: 'Le Filmeur',
-    description: 'Il filme la scène et éblouit doucement la zone de son écran.',
+    name: 'The Filmer',
+    description: 'Films the stage and gently dazzles the area their screen points at.',
     behaviour: 'shooter',
     maxHp: 22,
     speed: 1.6,
@@ -147,8 +147,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'bavard',
-    name: 'Le Bavard',
-    description: "Ses bulles de blabla s'affichent et masquent un bout de ton écran.",
+    name: 'The Chatterbox',
+    description: 'Their chatter bubbles pop up and hide part of your screen.',
     behaviour: 'shooter',
     maxHp: 22,
     speed: 1.6,
@@ -163,8 +163,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'zombie',
-    name: 'Le Zombie',
-    description: 'Le lève-tôt du petit matin : abats-le, il se relève une fois.',
+    name: 'The Zombie',
+    description: 'The early-morning straggler: knock them down, they get up once.',
     behaviour: 'heavy',
     maxHp: 160,
     speed: 1,
@@ -179,8 +179,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   NEON,
   {
     id: 'couvre-feu',
-    name: 'Le Couvre-feu',
-    description: "Il veut couper le son avant l'heure.",
+    name: 'The Curfew',
+    description: 'Wants to cut the sound before it’s time.',
     behaviour: 'boss',
     maxHp: 1200,
     speed: 1,
@@ -193,8 +193,8 @@ export const ENEMIES: readonly EnemyDefinition[] = [
   },
   {
     id: 'batterie-a-plat',
-    name: 'La Batterie à plat',
-    description: "Elle vide l'énergie de tout ce qui brille.",
+    name: 'The Dead Battery',
+    description: 'Drains the energy out of everything that shines.',
     behaviour: 'boss',
     maxHp: 2400,
     speed: 0.9,

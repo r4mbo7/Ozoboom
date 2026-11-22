@@ -14,7 +14,7 @@ function withoutStageBonuses(set: SetDefinition): SetDefinition {
 export const TUTORIAL: SetDefinition = {
   ...withoutStageBonuses(MAIN_STAGE),
   id: 'didacticiel',
-  name: 'Didacticiel',
+  name: 'Tutorial',
   core: { radius: 56, maxHp: 2000 },
   levelCurve: { baseVibes: 6, vibesPerLevel: 16 },
   tiers: [

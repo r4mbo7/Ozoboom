@@ -17,7 +17,8 @@ export function tallyState(screen: HTMLElement): TallyState {
   return state === 'counting' || state === 'open' ? state : 'folded';
 }
 
-// Fires `tally` on the screen when the state changes.
+// Fires `tally` on the screen when the state changes; a count that ends on its own first fires
+// `landed`.
 export function setTally(screen: HTMLElement, next: TallyState): void {
   if (screen.dataset.tally === next) {
     return;
@@ -35,7 +36,7 @@ export function createScoreTicket(
   record: HTMLElement,
 ): ScoreTicket {
   const lines = el('ol', 'ui-end__ticket-lines');
-  lines.setAttribute('aria-label', t('Détail du score'));
+  lines.setAttribute('aria-label', t('Score details'));
   const ticket = el('div', 'ui-end__ticket');
   ticket.append(lines);
   score.setAttribute('aria-expanded', 'false');
@@ -58,6 +59,7 @@ export function createScoreTicket(
       const elapsed = now - start;
       setText(scoreValue, formatNumber(shownScore(tally, elapsed)));
       if (elapsed >= tallyMs(tally)) {
+        screen.dispatchEvent(new Event('landed'));
         setTally(screen, 'folded');
         return;
       }

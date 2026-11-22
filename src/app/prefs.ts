@@ -1,6 +1,8 @@
 import type { GameContent } from '../data/types';
 import { DEFAULT_KEY_PROFILE, type KeyProfile, parseKeyProfile } from '../input/profile';
+import { seatName } from '../ui/lobby-model';
 import { VOLUME_STEPS } from '../ui/volume';
+import { readItem, writeItem } from './storage';
 
 export interface Prefs {
   calmMode: boolean;
@@ -17,6 +19,8 @@ export interface Prefs {
   endless: boolean;
   festival: boolean;
   keys: KeyProfile;
+  // The player's name online and on the leaderboard, '' until typed.
+  pseudo: string;
 }
 
 const DEFAULT_CLASS_ID = 'mage';
@@ -34,6 +38,7 @@ const KEYS: Readonly<Record<keyof Prefs, string>> = {
   endless: 'ozoboom.endless',
   festival: 'ozoboom.festival',
   keys: 'ozoboom.keys',
+  pseudo: 'ozoboom.pseudo',
 };
 
 // Storage can be missing or refused (private browsing, blocked site data, a full quota): the game then plays with the defaults.
@@ -45,12 +50,13 @@ export function loadPrefs(storage: () => Storage | null, defaults: Prefs): Prefs
     hitSound: readFlag(storage, KEYS.hitSound) ?? defaults.hitSound,
     autoFire: readFlag(storage, KEYS.autoFire) ?? defaults.autoFire,
     autoAim: readFlag(storage, KEYS.autoAim) ?? defaults.autoAim,
-    classId: readText(storage, KEYS.classId) ?? defaults.classId,
-    stageId: readText(storage, KEYS.stageId) ?? defaults.stageId,
-    trackId: readText(storage, KEYS.trackId) ?? defaults.trackId,
+    classId: readItem(storage, KEYS.classId) ?? defaults.classId,
+    stageId: readItem(storage, KEYS.stageId) ?? defaults.stageId,
+    trackId: readItem(storage, KEYS.trackId) ?? defaults.trackId,
     endless: readFlag(storage, KEYS.endless) ?? defaults.endless,
     festival: readFlag(storage, KEYS.festival) ?? defaults.festival,
-    keys: parseKeyProfile(readText(storage, KEYS.keys)) ?? defaults.keys,
+    keys: parseKeyProfile(readItem(storage, KEYS.keys)) ?? defaults.keys,
+    pseudo: seatName(readItem(storage, KEYS.pseudo) ?? defaults.pseudo),
   };
 }
 
@@ -74,6 +80,7 @@ export function loadPlayerPrefs(
     endless: false,
     festival: false,
     keys: DEFAULT_KEY_PROFILE,
+    pseudo: '',
   });
   if (!classIds.includes(prefs.classId)) {
     prefs.classId = classIds.includes(DEFAULT_CLASS_ID) ? DEFAULT_CLASS_ID : (classIds[0] ?? '');
@@ -89,13 +96,7 @@ export function savePref<K extends keyof Prefs>(
   key: K,
   value: Prefs[K],
 ): void {
-  try {
-    storage()?.setItem(KEYS[key], stored(value));
-  } catch (error) {
-    if (!(error instanceof DOMException)) {
-      throw error;
-    }
-  }
+  writeItem(storage, KEYS[key], stored(value));
 }
 
 function stored(value: Prefs[keyof Prefs]): string {
@@ -106,22 +107,11 @@ function stored(value: Prefs[keyof Prefs]): string {
 }
 
 function readFlag(storage: () => Storage | null, key: string): boolean | null {
-  const value = readText(storage, key);
+  const value = readItem(storage, key);
   return value === '1' ? true : value === '0' ? false : null;
 }
 
 function readVolume(storage: () => Storage | null, key: string): number | null {
-  const value = Number(readText(storage, key));
+  const value = Number(readItem(storage, key));
   return Number.isInteger(value) && value >= 1 && value <= VOLUME_STEPS ? value : null;
-}
-
-function readText(storage: () => Storage | null, key: string): string | null {
-  try {
-    return storage()?.getItem(key) ?? null;
-  } catch (error) {
-    if (error instanceof DOMException) {
-      return null;
-    }
-    throw error;
-  }
 }

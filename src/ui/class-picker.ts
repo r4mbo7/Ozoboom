@@ -65,8 +65,8 @@ export function createClassStepper(
   onStep: (side: -1 | 1) => void,
 ): ClassStepper {
   const element = el('div', 'ui-stepper');
-  const previous = stepperArrow(t('Classe précédente'), false);
-  const next = stepperArrow(t('Classe suivante'), true);
+  const previous = stepperArrow(t('Previous class'), false);
+  const next = stepperArrow(t('Next class'), true);
   const current = el('div', 'ui-stepper__current');
   const dot = el('span', 'ui-swatch');
   dot.setAttribute('aria-hidden', 'true');
@@ -100,8 +100,8 @@ export function landscapeNotice(): HTMLElement {
   const notice = el('p', 'ui-landscape');
   const text = el('span', 'ui-landscape__text');
   text.append(
-    el('strong', 'ui-landscape__title', t('Tourne ton téléphone')),
-    el('span', 'ui-landscape__detail', t('Le set se joue en paysage.')),
+    el('strong', 'ui-landscape__title', t('Turn your phone')),
+    el('span', 'ui-landscape__detail', t('The set plays in landscape.')),
   );
   notice.append(icon('ui-landscape__icon', PHONE), text);
   return notice;

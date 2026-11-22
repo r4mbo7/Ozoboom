@@ -53,7 +53,7 @@ export function createDashTile(): DashTile {
       const ready = gauge.ready > 0;
       setVar(view.root, '--charge', String(ready ? 1 : gauge.fill));
       setFlag(view.root, 'ready', ready);
-      setText(view.status, ready ? t('Prêt') : t('Recharge'));
+      setText(view.status, ready ? t('Ready') : t('Cooldown'));
     },
   };
 }

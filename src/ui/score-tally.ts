@@ -51,8 +51,8 @@ export function tallyOf(breakdown: ScoreBreakdown): Tally {
     score += challenges.bonus;
     lines.push({
       count,
-      label: tn(challenges.count, '{count} défi relevé', '{count} défis relevés', { count }),
-      price: t('+{percent} par défi', { percent: formatPercent(challenges.rate) }),
+      label: tn(challenges.count, '{count} challenge taken', '{count} challenges taken', { count }),
+      price: t('+{percent} per challenge', { percent: formatPercent(challenges.rate) }),
       points: `+${formatNumber(challenges.bonus)}`,
       score,
     });
@@ -84,21 +84,21 @@ function termWords(term: ScoreTerm): Omit<TicketLine, 'points' | 'score'> {
     case 'phrases':
       return {
         count,
-        label: tn(term.count, '{count} phrase tenue', '{count} phrases tenues', { count }),
+        label: tn(term.count, '{count} phrase held', '{count} phrases held', { count }),
         price,
       };
     case 'seconds': {
       const duration = formatDuration(term.count * TICK_RATE_HZ);
       return {
         count: duration,
-        label: t('{duration} de son', { duration }),
+        label: t('{duration} of sound', { duration }),
         price: t('× {points}/s', { points: formatNumber(term.price) }),
       };
     }
     case 'kills':
       return {
         count,
-        label: tn(term.count, '{count} bad vibe dissipée', '{count} bad vibes dissipées', {
+        label: tn(term.count, '{count} bad vibe cleared', '{count} bad vibes cleared', {
           count,
         }),
         price,
@@ -106,22 +106,27 @@ function termWords(term: ScoreTerm): Omit<TicketLine, 'points' | 'score'> {
     case 'stages':
       return {
         count,
-        label: tn(term.count, '{count} scène tenue', '{count} scènes tenues', { count }),
+        label: tn(term.count, '{count} stage held', '{count} stages held', { count }),
         price,
       };
     case 'calledBosses':
       return {
         count,
-        label: tn(term.count, '{count} boss appelé abattu', '{count} boss appelés abattus', {
-          count,
-        }),
+        label: tn(
+          term.count,
+          '{count} called-in boss taken down',
+          '{count} called-in bosses taken down',
+          {
+            count,
+          },
+        ),
         price,
       };
     case 'core': {
       const percent = formatPercent(term.count / 100);
       return {
         count: percent,
-        label: t('Vie de la scène {percent}', { percent }),
+        label: t('Stage health {percent}', { percent }),
         price,
       };
     }

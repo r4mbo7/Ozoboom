@@ -26,6 +26,10 @@ export function formatTenth(value: number): string {
   return format(1, value);
 }
 
+export function formatHundredth(value: number): string {
+  return format(2, value);
+}
+
 // A multiplier, to the hundredth: « × 1,25 ».
 export function formatFactor(value: number): string {
   return t('× {factor}', { factor: format(2, value) });
@@ -54,5 +58,5 @@ export function ratio(value: number, max: number): number {
 }
 
 export function formatPercent(fraction: number): string {
-  return t('{percent}\u202f%', { percent: formatNumber(Math.round(fraction * 100)) });
+  return t('{percent}%', { percent: formatNumber(Math.round(fraction * 100)) });
 }

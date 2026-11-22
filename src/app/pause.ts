@@ -19,8 +19,8 @@ export interface PauseText {
 }
 
 const pauseText = (): PauseText => ({
-  heading: t('La piste t’attend'),
-  text: t('Le set reprend là où tu l’as laissé.'),
+  heading: t('The floor is waiting'),
+  text: t('The set picks up where you left it.'),
 });
 
 export interface PauseItem {
@@ -86,7 +86,7 @@ export function createPauseScreen(
   const resting = pauseText();
   const main = view('dialog', resting.heading, resting.text);
   main.section.setAttribute('aria-label', t('Pause'));
-  main.nav.setAttribute('aria-label', t('Menu de pause'));
+  main.nav.setAttribute('aria-label', t('Pause menu'));
   const confirmation = view('alertdialog', '', '');
   layer.append(main.section, confirmation.section);
 
@@ -142,8 +142,8 @@ export function createPauseScreen(
     fillHint(
       confirmation.hint,
       [
-        { keys: shown.navigate, label: t('naviguer') },
-        { keys: [shown.confirm], label: t('valider') },
+        { keys: shown.navigate, label: t('navigate') },
+        { keys: [shown.confirm], label: t('confirm') },
         { keys: [shown.back], label: asked.stay.toLowerCase() },
       ],
       shown.style,
@@ -178,13 +178,13 @@ export function createPauseScreen(
       setText(main.heading, text.heading);
       setText(main.text, text.text);
       const shown = prompts.for(device);
-      const navigate = visible.length > 1 ? [{ keys: shown.navigate, label: t('naviguer') }] : [];
+      const navigate = visible.length > 1 ? [{ keys: shown.navigate, label: t('navigate') }] : [];
       fillHint(
         main.hint,
         [
           ...navigate,
-          { keys: [shown.confirm], label: t('valider') },
-          { keys: [device === 'gamepad' ? 'Start' : t('Échap')], label: t('reprendre') },
+          { keys: [shown.confirm], label: t('confirm') },
+          { keys: [device === 'gamepad' ? 'Start' : t('Esc')], label: t('resume') },
         ],
         shown.style,
       );

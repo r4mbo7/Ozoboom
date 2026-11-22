@@ -27,11 +27,13 @@ export function spawning(ctx: StepContext): void {
   }
 
   const tier = set.tiers[state.set.tier];
-  if (tier === undefined || !isBarTick(state.tick, tempo)) {
+  // The first step already runs tick 1: the bar opening the game at tick 0 sends its wave there.
+  const opening = state.tick === 1;
+  if (tier === undefined || !(opening || isBarTick(state.tick, tempo))) {
     return;
   }
   const rules = { buildup: tier.spawns, break: [], drop: tier.dropSpawns ?? [] }[state.set.segment];
-  const bar = (state.tick - state.set.segmentStartTick) / tempo.ticksPerBar;
+  const bar = opening ? 0 : (state.tick - state.set.segmentStartTick) / tempo.ticksPerBar;
   const phrase = Math.floor(bar / BARS_PER_PHRASE);
   for (const rule of rules) {
     const active =
@@ -43,14 +45,8 @@ export function spawning(ctx: StepContext): void {
     const count =
       definition.oneAtATime === true
         ? Number(!isOut(state, definition.id))
-        : warmedCount(
-            state,
-            set,
-            Math.ceil(
-              scaledCount(state, set, rule.count) *
-                volumeMul(state) *
-                (state.enemyScale?.count ?? 1),
-            ),
+        : Math.ceil(
+            scaledCount(state, set, rule.count) * volumeMul(state) * (state.enemyScale?.count ?? 1),
           );
     for (let i = 0; i < count; i++) {
       spawnAtEdge(ctx, definition, false);
@@ -86,7 +82,7 @@ export function spawnEnemy(
     hp: maxHp,
     maxHp,
     speed: definition.speed * compound(definition.scalingPerPhrase.speed, phrase) * speedMul,
-    damage: definition.damage * damageMul,
+    damage: definition.damage * compound(definition.scalingPerPhrase.damage, phrase) * damageMul,
     target: 'core',
     attackCooldown: 0,
     slowFactor: 1,
@@ -124,47 +120,22 @@ function spawnScaled(
   const { x, y } = clearOfObstacles(at, definition.radius, obstacles);
   const minutes = endlessMinutes(state);
   const scale = state.enemyScale ?? NO_SCALE;
-  const warmed = isBoss ? 1 : warmth(state, set);
   return spawnEnemy(
     state,
     definition,
     x,
     y,
     isBoss,
-    warm(set.warmup?.hp ?? 1, warmed) *
-      teamMul((set.perPlayer?.enemyHpMul ?? 0) * warmed, state.players.length) *
+    teamMul(set.perPlayer?.enemyHpMul, state.players.length) *
       compound(set.endlessPerMinute?.hp ?? 1, minutes) *
       scale.hp *
       (isBoss ? (scale.bossHp ?? 1) : 1),
-    compound(set.endlessPerMinute?.damage ?? 1, minutes) *
+    teamMul(set.perPlayer?.enemyDamageMul, state.players.length) *
+      compound(set.endlessPerMinute?.damage ?? 1, minutes) *
       scale.damage *
       (isBoss ? (scale.bossDamage ?? 1) : 1),
     isBoss ? 1 : (scale.speed ?? 1),
   );
-}
-
-// 0 through a game's first phrase, 1 once its warmup is over; a later festival stage starts at 1.
-function warmth(state: SimState, set: SetDefinition): number {
-  const { warmup } = set;
-  if (warmup === undefined || (state.festival?.scenes.length ?? 1) > 1) {
-    return 1;
-  }
-  const warming = state.set.bar - BARS_PER_PHRASE;
-  return Math.min(1, Math.max(0, warming / (warmup.phrases * BARS_PER_PHRASE)));
-}
-
-// The share of `count` the warmup lets through, its fraction drawn from the seed: a rule of one bad vibe
-// sends one now and then, more and more often.
-function warmedCount(state: SimState, set: SetDefinition, count: number): number {
-  const warmed = count * warm(set.warmup?.count ?? 1, warmth(state, set));
-  const whole = Math.floor(warmed);
-  const rest = warmed - whole;
-  return rest > 0 && nextFloat(state.rng) < rest ? whole + 1 : whole;
-}
-
-// From `cold` at warmth 0 to 1 at warmth 1.
-function warm(cold: number, warmth: number): number {
-  return cold + (1 - cold) * warmth;
 }
 
 function scaledCount(state: SimState, set: SetDefinition, count: number): number {

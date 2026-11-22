@@ -7,6 +7,7 @@ import { LOCK } from './icons';
 
 export const CLASS_TEASERS = FULL_TEASERS.filter((teaser) => teaser.kind === 'class');
 export const STAGE_TEASERS = FULL_TEASERS.filter((teaser) => teaser.kind === 'stage');
+export const BOSS_TEASERS = FULL_TEASERS.filter((teaser) => teaser.kind === 'boss');
 
 // Locked stages count: the choice shows when there is more than one to see.
 export function showsStageChoice(stages: number): boolean {
@@ -19,7 +20,7 @@ function teaser(className: string, entry: TeaserDefinition): HTMLButtonElement {
   node.type = 'button';
   node.tabIndex = -1;
   node.style.setProperty('--class-color', entry.color);
-  node.setAttribute('aria-label', t('{name}, dans le jeu complet', { name: t(entry.name) }));
+  node.setAttribute('aria-label', t('{name}, in the full game', { name: t(entry.name) }));
   node.addEventListener('click', (event) => {
     event.stopPropagation();
     openDiscord();
@@ -30,7 +31,7 @@ function teaser(className: string, entry: TeaserDefinition): HTMLButtonElement {
 export function classTeaser(entry: TeaserDefinition): HTMLButtonElement {
   const node = teaser('ui-classcard', entry);
   const name = el('span', 'ui-classcard__name ui-teaser__text');
-  name.append(el('span', '', t(entry.name)), el('span', 'ui-teaser__note', t('Jeu complet')));
+  name.append(el('span', '', t(entry.name)), el('span', 'ui-teaser__note', t('Full game')));
   node.append(icon('ui-classcard__portrait ui-teaser__lock', LOCK), name);
   return node;
 }
@@ -43,7 +44,7 @@ export function stageTeaser(entry: TeaserDefinition): HTMLButtonElement {
   if (entry.style !== undefined) {
     meta.append(el('span', 'ui-stage__chip', t(entry.style)));
   }
-  meta.append(el('span', 'ui-stage__chip ui-teaser__note', t('Jeu complet')));
+  meta.append(el('span', 'ui-stage__chip ui-teaser__note', t('Full game')));
   node.append(preview, el('span', 'ui-stage__name', t(entry.name)), meta);
   return node;
 }

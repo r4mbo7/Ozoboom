@@ -5,7 +5,8 @@ import type { Tempo } from '../shared/tempo';
 import { playedTempo, setFraction, setTempo } from '../sim/lineup';
 import type { EntityId, PlayerId, SimState } from '../sim/state';
 import { dropFilterIntensity } from './drop-filter';
-import { type Camera, frameCamera } from './camera';
+import { type Bounds, type Camera, frameCamera } from './camera';
+import { beatEnvelope, heartbeat } from './motion';
 import { type PixiPalette, createPixiPalette, writePixiPalette } from './palette';
 
 export interface Frame {
@@ -20,12 +21,16 @@ export interface Frame {
   light: Light;
   calm: boolean;
   pulse: number;
+  // A heartbeat on the set's beat, for a character in danger; zero in calm mode.
+  heart: number;
   flashTick: number;
   // A family that lands a blow sets the tick it lands on, and the scene shakes from it.
   shakeTick: number;
   dropFilter: number;
   groundFilter: number;
   camera: Camera;
+  // The world rectangle on screen this frame, shake included; unbounded until a scene places its world.
+  view: Bounds;
   // Canvas pixels per CSS pixel.
   resolution: number;
   // Rewritten every frame by the boss that drains halos; whoever draws a halo reads it.
@@ -45,15 +50,28 @@ export function createFrame(set: SetDefinition = MAIN_STAGE): Frame {
     light: lightAt(0),
     calm: false,
     pulse: 0,
+    heart: 0,
     flashTick: Number.NEGATIVE_INFINITY,
     shakeTick: Number.NEGATIVE_INFINITY,
     dropFilter: 0,
     groundFilter: 0,
     camera: frameCamera({ x: 0, y: 0 }, { width: 0, height: 0 }, 0, 0),
+    view: {
+      minX: Number.NEGATIVE_INFINITY,
+      minY: Number.NEGATIVE_INFINITY,
+      maxX: Number.POSITIVE_INFINITY,
+      maxY: Number.POSITIVE_INFINITY,
+    },
     resolution: 1,
     drained: { players: new Map(), traps: new Map() },
     portrait: false,
   };
+}
+
+// What beats with the set: the pulse, softened to `calmPulse` in calm mode, and the heart, stilled.
+export function beatFrame(frame: Frame, ticksSinceBeat: number, calmPulse: number): void {
+  frame.pulse = beatEnvelope(ticksSinceBeat, frame.tempo) * (frame.calm ? calmPulse : 1);
+  frame.heart = frame.calm ? 0 : heartbeat(ticksSinceBeat, frame.tempo);
 }
 
 export function advanceFrame(

@@ -1,10 +1,20 @@
-import type { PlayerId, SimState, Vec2 } from '../sim/state';
+import type { EntityId, PlayerId, SimState, Vec2 } from '../sim/state';
 
 // The dash: its arc at the player's feet kicks on every beat, its key under them ('' on touch, where
 // the button calls instead). A trap to move: once it is carried, a dashed outline further on says
 // where to put it down.
 export interface TutorialCall {
   readonly gesture: 'dash' | 'trap';
+  readonly key: string;
+}
+
+// The trap a player's place key would take, since that tick, and the key's name on their device (''
+// on touch, or for a player on another screen): the trap answers them, and after two bars the key
+// shows beside it.
+export interface KeyTrap {
+  readonly playerId: PlayerId;
+  readonly trapId: EntityId;
+  readonly since: number;
   readonly key: string;
 }
 
@@ -19,6 +29,8 @@ export interface RenderOptions {
   trapCallers?: readonly PlayerId[];
   // The tutorial asks to dash or to move a trap: the arena calls where the eyes are.
   tutorialCall?: TutorialCall | null;
+  // The trap each player's place key would take, as the HUD names it.
+  keyTraps?: readonly KeyTrap[];
   // World units from top to bottom of the screen; absent, the camera's own for the screen's height.
   viewHeight?: number;
 }

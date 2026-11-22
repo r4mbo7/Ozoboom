@@ -8,10 +8,10 @@ export interface EndlessToggle {
 
 export function createEndlessToggle(onToggle: (on: boolean) => void): EndlessToggle {
   const toggle = createToggle(
-    t('Sans fin'),
-    t('Après le dernier boss, la nuit continue'),
-    t('Oui'),
-    t('Non'),
+    t('Endless'),
+    t('After the last boss, the night goes on'),
+    t('On'),
+    t('Off'),
   );
   toggle.button.classList.add('ui-toggle--endless');
   toggle.button.tabIndex = -1;

@@ -1,5 +1,5 @@
 import { MAIN_STAGE } from '../data/main-stage';
-import type { MusicTrack, SetDefinition, SpeakerDefinition } from '../data/types';
+import type { MusicTrack, SetDefinition } from '../data/types';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
 import { playedTempo } from '../sim/lineup';
 import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state';
@@ -21,9 +21,18 @@ import {
 } from './clock';
 import { createFader } from './fade';
 import { createBus, createRoom, retireBus, type Bus } from './music-bus';
-import { EXTINCTION_SECONDS, downlifter, impact, powerDown, sunrise } from './music-hits';
+import { createLoopDeck, type LoopFiles } from './loop-deck';
+import {
+  EXTINCTION_SECONDS,
+  downlifter,
+  extinguish,
+  impact,
+  powerDown,
+  sunrise,
+} from './music-hits';
 import {
   CHOKE,
+  CHOKE_SMOOTHING,
   OPEN_HZ,
   PULSE,
   diveCutoff,
@@ -31,6 +40,7 @@ import {
   entersSegment,
   latched,
   modeOf,
+  momentAfter,
   musicCutoff,
   type MusicMode,
 } from './music-score';
@@ -44,6 +54,8 @@ export interface MusicOptions {
   // Absent means the main stage.
   setOf?: ((setId: string) => SetDefinition | undefined) | undefined;
   onKickScheduled: ((tick: number, time: number) => void) | undefined;
+  // The artists' loops of the stage tracks; absent, the sequencer plays every moment.
+  loops?: LoopFiles | undefined;
 }
 
 export interface Music {
@@ -54,6 +66,7 @@ export interface Music {
   fadeOut(currentTime: number): number;
   // Over one bar, on the grid of the next update.
   fadeIn(): void;
+  // Set again, the same track tries again the files that failed to load.
   setTrack(track: MusicTrack): void;
   // The one set, or the one a festival's next stage drew.
   track(): MusicTrack;
@@ -61,6 +74,8 @@ export interface Music {
   tempo(): Tempo;
   // null when none plays.
   clock(): Anchor | null;
+  // Settles once the loops of the playing track have decoded or failed.
+  loaded(): Promise<void>;
 }
 
 interface Dive {
@@ -69,7 +84,6 @@ interface Dive {
 }
 
 const WON_FADE_SECONDS = 1.5;
-const CHOKE_SMOOTHING = 0.12;
 // In decibels, for a low-pass: the peak that makes the closing heard as a sweep.
 const DIVE_Q = 6;
 const DIVE_OPEN_SECONDS = 0.01;
@@ -100,15 +114,17 @@ function lifeOf({ core }: SimState): number {
   return core.maxHp > 0 ? core.hp / core.maxHp : 1;
 }
 
-function extinguish(bus: Bus | null, at: number) {
+function extinguishBus(bus: Bus | null, at: number) {
   if (bus !== null) {
-    bus.input.frequency.setValueAtTime(bus.input.frequency.value, at);
-    bus.input.frequency.exponentialRampToValueAtTime(60, at + EXTINCTION_SECONDS);
+    extinguish(bus.input, at);
   }
   retireBus(bus, EXTINCTION_SECONDS);
 }
 
 export function createMusic(out: AudioNode, options: MusicOptions): Music {
+  const context = out.context;
+  const level = context.createGain();
+  const deck = createLoopDeck(level, options.loops ?? { files: {} });
   const groove: Groove = {
     track: options.track,
     tempo: MAIN_TEMPO,
@@ -119,12 +135,14 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     entries: new Map(),
     plugging: new Map(),
     onKick: options.onKickScheduled,
+    recorded: (segment) => deck.holds(heardTier(groove.tier), segment),
+    stemmed: (speaker, tick, at) => deck.stemAt(speaker, tick, at),
   };
   let acoustics: Acoustics | undefined;
   let setId: string | null = null;
-  let speakerDefinitions: readonly SpeakerDefinition[] = [];
-  const context = out.context;
-  const level = context.createGain();
+  let stage: SetDefinition = MAIN_STAGE;
+  // The last boss down takes the tier past the stage's last one: the files play its drop on.
+  const heardTier = (tier: number) => Math.min(tier, stage.tiers.length - 1);
   const fader = createFader(level.gain, context, 1, () => barSeconds(groove.tempo));
   const dive = createDive(context);
   const blank = context.createGain();
@@ -141,6 +159,13 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let mode: MusicMode | null = null;
   let segment: SetSegment | null = null;
   let followedTick = -1;
+  // A track's files decode from its first update, unless a game set it before.
+  let requested = false;
+
+  function load(track: MusicTrack) {
+    requested = true;
+    deck.load(track);
+  }
 
   function openBus(cutoff = OPEN_HZ): Bus {
     const opened = createBus(level, cutoff, groove.track.echo, 3 * sixteenthSeconds(groove.tempo));
@@ -164,7 +189,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     }
     groove.tempo = next;
     acoustics = set?.acoustics;
-    speakerDefinitions = (set ?? MAIN_STAGE).speakers ?? [];
+    stage = set ?? MAIN_STAGE;
   }
 
   function followMode(state: SimState, currentTime: number) {
@@ -177,9 +202,11 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     segment = null;
     if (next === 'won') {
       retireBus(bus, WON_FADE_SECONDS);
+      deck.retire(currentTime, WON_FADE_SECONDS);
       endsAt = sunrise(openBus().input, currentTime, groove.track);
     } else if (next === 'lost') {
-      extinguish(bus, currentTime);
+      extinguishBus(bus, currentTime);
+      deck.extinguish(currentTime);
       endsAt = powerDown(openBus().input, currentTime, groove.track);
     }
   }
@@ -244,7 +271,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
 
   function followSpeakers(state: SimState) {
     const speakers = state.speakers ?? [];
-    groove.plugging = pluggingSpeakers(speakers, speakerDefinitions, groove.tempo.ticksPerBar);
+    groove.plugging = pluggingSpeakers(speakers, stage.speakers ?? [], groove.tempo.ticksPerBar);
     groove.entries = speakerEntries(groove.entries, speakers, state.tick, cursor, groove.tempo);
   }
 
@@ -269,9 +296,40 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     cursor = range.until;
   }
 
+  // The steps left to the bar the fade lasts; the beat the music falls silent on.
+  function scheduleFade(currentTime: number): number {
+    if (mode !== 'playing' || bus === null || anchor === null || last === null) {
+      return currentTime;
+    }
+    const clock = anchor;
+    const { tempo } = groove;
+    const stepTicks = sixteenthTicks(tempo);
+    const range = stepsToSchedule(
+      clock,
+      cursor,
+      currentTime - LATE_TOLERANCE_SECONDS,
+      currentTime + barSeconds(tempo),
+      stepTicks,
+      tempo.originTick,
+    );
+    const until = Math.min(range.until, groove.dropTick ?? Infinity);
+    for (let step = range.from; step < until; step += stepTicks) {
+      playStep(groove, bus, step, last, clock, currentTime);
+    }
+    cursor = Math.max(cursor, until);
+    anchor = null;
+    const beat = firstStepAtOrAfter(
+      timeToTick(clock, currentTime),
+      tempo.ticksPerBeat,
+      tempo.originTick,
+    );
+    return Math.max(currentTime, tickToTime(clock, beat));
+  }
+
   return {
     setTrack(next) {
       groove.track = next;
+      load(next);
     },
     tempo() {
       return groove.tempo;
@@ -282,8 +340,14 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     clock() {
       return anchor;
     },
+    loaded() {
+      return deck.loaded();
+    },
     update(state, now, currentTime) {
       last = state;
+      if (!requested) {
+        load(groove.track);
+      }
       followSet(state);
       dive.to(state.status, currentTime, groove.tempo);
       followMode(state, currentTime);
@@ -302,6 +366,22 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       }
       followFilter(target, cutoff, currentTime);
       followSpeakers(state);
+      deck.follow({
+        set: { ...state.set, tier: heardTier(state.set.tier) },
+        // Frozen ticks, as during an upgrade choice, would let the time of a moment ahead pass.
+        ahead:
+          state.status === 'running'
+            ? momentAfter(state, stage, groove.dropTick, groove.tempo)
+            : null,
+        tick: state.tick,
+        followed,
+        cutoff,
+        tempo: groove.tempo,
+        currentTime,
+        entries: groove.entries,
+        plugging: groove.plugging,
+        cursor,
+      });
       blackout.follow(state, followed, currentTime);
       scheduleAhead(target, state, clock, currentTime);
     },
@@ -309,33 +389,11 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       return mode === 'won' || mode === 'lost' ? Math.max(currentTime, endsAt) : currentTime;
     },
     fadeOut(currentTime) {
-      fader.to(0);
-      if (mode !== 'playing' || bus === null || anchor === null || last === null) {
-        return currentTime;
-      }
-      const clock = anchor;
-      const { tempo } = groove;
-      const stepTicks = sixteenthTicks(tempo);
-      const range = stepsToSchedule(
-        clock,
-        cursor,
-        currentTime - LATE_TOLERANCE_SECONDS,
-        currentTime + barSeconds(tempo),
-        stepTicks,
-        tempo.originTick,
-      );
-      const until = Math.min(range.until, groove.dropTick ?? Infinity);
-      for (let step = range.from; step < until; step += stepTicks) {
-        playStep(groove, bus, step, last, clock, currentTime);
-      }
-      cursor = Math.max(cursor, until);
-      anchor = null;
-      const beat = firstStepAtOrAfter(
-        timeToTick(clock, currentTime),
-        tempo.ticksPerBeat,
-        tempo.originTick,
-      );
-      return Math.max(currentTime, tickToTime(clock, beat));
+      const silent = fader.to(0);
+      // The steps of the fade still hear the stems that play under it.
+      const until = scheduleFade(currentTime);
+      deck.stop(silent);
+      return until;
     },
     fadeIn() {
       fader.to(1);

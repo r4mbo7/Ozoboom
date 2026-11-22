@@ -16,8 +16,8 @@ export interface UnmaskEffect {
 
 export const NEON: EnemyDefinition = {
   id: 'neon',
-  name: 'Le Néon',
-  description: 'Chasse-le : sous son masque, un danseur qui lance des vibes, à protéger.',
+  name: 'The Neon',
+  description: 'Chase them down: under their mask is a dancer who throws vibes, to protect.',
   behaviour: 'horde',
   maxHp: 60,
   speed: 1.2,
@@ -26,7 +26,7 @@ export const NEON: EnemyDefinition = {
   attackCooldownTicks: 2 * TICKS_PER_BEAT,
   aggroRadius: 90,
   vibesDrop: 3,
-  scalingPerPhrase: { hp: 1.1, speed: 1.02 },
+  scalingPerPhrase: { hp: 1.13, speed: 1.02, damage: 1.04 },
   oneAtATime: true,
   special: {
     kind: 'unmask',

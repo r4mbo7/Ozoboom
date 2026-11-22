@@ -28,20 +28,20 @@ export function createToggle(label: string, hint: string, onText: string, offTex
 }
 
 export function createHitSoundToggle(): Toggle {
-  return createToggle(t('Son des coups'), t('Une note par coup porté'), t('Oui'), t('Non'));
+  return createToggle(t('Hit sound'), t('A note for every hit'), t('On'), t('Off'));
 }
 
 // The touch screen always fires and aims by itself: these switches only show elsewhere.
 export function createAutoFireToggle(): Toggle {
-  return assistToggle(t('Tir automatique'), t('Sans tenir le tir'));
+  return assistToggle(t('Auto fire'), t('Without holding fire'));
 }
 
 export function createAutoAimToggle(): Toggle {
-  return assistToggle(t('Visée automatique'), t('Vers la bad vibe à portée'));
+  return assistToggle(t('Auto aim'), t('At the bad vibe in range'));
 }
 
 function assistToggle(label: string, hint: string): Toggle {
-  const toggle = createToggle(label, hint, t('Oui'), t('Non'));
+  const toggle = createToggle(label, hint, t('On'), t('Off'));
   toggle.button.classList.add('ui-toggle--assist');
   return toggle;
 }

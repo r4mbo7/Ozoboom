@@ -88,12 +88,12 @@ export function createClassPicker(
   let cursorPress = false;
 
   const element = el('section', 'ui-screen ui-classpicker');
-  element.setAttribute('aria-label', t('Choix du perso'));
+  element.setAttribute('aria-label', t('Character choice'));
   const grid = classes.length > ROW_CARDS;
   element.toggleAttribute('data-many', classes.length + CLASS_TEASERS.length > ROW_CARDS);
-  const lead = el('p', 'ui-lobby__lead', t('Qui monte sur la piste ce soir ?'));
+  const lead = el('p', 'ui-lobby__lead', t('Who hits the floor tonight?'));
   const header = el('header', 'ui-lobby__header');
-  header.append(el('h2', 'ui-lobby__title', t('Choisis ton perso')), lead);
+  header.append(el('h2', 'ui-lobby__title', t('Pick your character')), lead);
 
   const hero = createClassHero(classes, portrait);
   const sheets = PLAYER_IDS.map((playerId) => createSeatSheet(playerId, classes, portrait));
@@ -152,7 +152,7 @@ export function createClassPicker(
   const confirmText = el('span', 'ui-launch__label');
   const confirmMore = el('span', 'ui-launch__detail');
   confirm.append(confirmText, confirmMore);
-  const learn = el('button', 'ui-button', t('Apprendre à jouer'));
+  const learn = el('button', 'ui-button', t('Learn to play'));
   learn.type = 'button';
   learn.tabIndex = -1;
   const back = el('button', 'ui-button');
@@ -273,13 +273,13 @@ export function createClassPicker(
       [
         {
           keys: grid ? [...new Set([...shown.navigateRow, ...shown.navigate])] : shown.navigateRow,
-          label: t('choisir'),
+          label: t('choose'),
         },
         {
           keys: [shown.confirm],
           label: confirmLabel(),
         },
-        { keys: [shown.back], label: t('retour') },
+        { keys: [shown.back], label: t('back') },
       ],
       shown.style,
     );
@@ -288,15 +288,15 @@ export function createClassPicker(
   function confirmLabel(): string {
     const focused = buttons.focused;
     if (focused === endless.toggle.button) {
-      return t('changer');
+      return t('change');
     }
     if (focused === learn) {
-      return t('apprendre');
+      return t('learn');
     }
     if (focused === back) {
-      return t('valider');
+      return t('confirm');
     }
-    return together() && (focused === null || focused === confirm) ? t('prêt') : t('lancer');
+    return together() && (focused === null || focused === confirm) ? t('ready') : t('start');
   }
 
   function paintHero(classId: string): void {
@@ -402,7 +402,7 @@ export function createClassPicker(
       confirmText,
       waiting === null
         ? launchLabel(night)
-        : t('En attente de {name}', { name: defaultName(waiting.playerId) }),
+        : t('Waiting for {name}', { name: defaultName(waiting.playerId) }),
     );
     setText(
       confirmMore,
@@ -422,7 +422,7 @@ export function createClassPicker(
     // The tutorial takes the place of the endless switch, which the scene screen asks for.
     endless.set(model.endless, oneScene);
     learn.hidden = oneScene || together();
-    setText(back, oneScene ? t('Retour au titre') : t('Retour à la scène'));
+    setText(back, oneScene ? t('Back to the title') : t('Back to the stage'));
   }
 
   function paint(): void {

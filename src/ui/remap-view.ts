@@ -14,12 +14,12 @@ interface Group<A extends Action> {
 }
 
 const KEYBOARD_GROUPS: readonly Group<KeyboardAction>[] = [
-  { name: () => t('Se déplacer'), actions: ['moveUp', 'moveDown', 'moveLeft', 'moveRight'] },
-  { name: () => t('Agir'), actions: ['fire', 'placeTrap', 'skill', 'dash'] },
+  { name: () => t('Move'), actions: ['moveUp', 'moveDown', 'moveLeft', 'moveRight'] },
+  { name: () => t('Actions'), actions: ['fire', 'placeTrap', 'skill', 'dash'] },
 ];
 
 const GAMEPAD_GROUPS: readonly Group<GamepadAction>[] = [
-  { name: () => t('Agir'), actions: ['fire', 'placeTrap', 'skill', 'dash'] },
+  { name: () => t('Actions'), actions: ['fire', 'placeTrap', 'skill', 'dash'] },
 ];
 
 export interface SlotButton {
@@ -57,10 +57,10 @@ export function createRemapView(
   element.setAttribute('aria-labelledby', titleId);
   layer.append(element);
 
-  const title = el('h2', 'ui-heading', t('Contrôles'));
+  const title = el('h2', 'ui-heading', t('Controls'));
   title.id = titleId;
   const header = el('header', 'ui-remap__header');
-  header.append(el('p', 'ui-kicker', t('Réglages')), title);
+  header.append(el('p', 'ui-kicker', t('Settings')), title);
 
   const tabRow = el('div', 'ui-remap__tabrow');
   const before = el('span', 'ui-remap__tabkey');
@@ -68,8 +68,8 @@ export function createRemapView(
   const tabList = el('div', 'ui-remap__tabs');
   tabList.setAttribute('role', 'tablist');
   const tabs: Readonly<Record<Tab, HTMLButtonElement>> = {
-    keyboard: button('ui-remap__tab', t('Clavier et souris')),
-    gamepad: button('ui-remap__tab', t('Manette')),
+    keyboard: button('ui-remap__tab', t('Keyboard and mouse')),
+    gamepad: button('ui-remap__tab', t('Gamepad')),
   };
   for (const name of keysOf(tabs)) {
     tabs[name].setAttribute('role', 'tab');
@@ -83,10 +83,10 @@ export function createRemapView(
     gamepad: panel('gamepad', GAMEPAD_GROUPS, slots),
   };
   const swap = createToggle(
-    t('Inverser les sticks'),
-    t('Marcher au stick droit, viser au gauche'),
-    t('Oui'),
-    t('Non'),
+    t('Swap the sticks'),
+    t('Walk with the right stick, aim with the left'),
+    t('On'),
+    t('Off'),
   );
   swap.button.tabIndex = -1;
   // Under the trap buttons: the two columns end level.
@@ -95,8 +95,8 @@ export function createRemapView(
   const status = el('p', 'ui-remap__status');
   status.setAttribute('role', 'status');
 
-  const reset = button('ui-button ui-remap__secondary', t('Remettre par défaut'));
-  const done = button('ui-button ui-button--primary', t('Fermer'));
+  const reset = button('ui-button ui-remap__secondary', t('Reset to default'));
+  const done = button('ui-button ui-button--primary', t('Close'));
   const actions = el('div', 'ui-remap__actions');
   actions.append(done, reset);
 
@@ -132,10 +132,10 @@ export function createRemapView(
           hint,
           listening.tab === 'keyboard'
             ? [
-                { keys: [t('Échap')], label: t('annuler') },
-                { keys: [t('Retour arrière')], label: t('vider') },
+                { keys: [t('Esc')], label: t('cancel') },
+                { keys: [t('Backspace')], label: t('clear') },
               ]
-            : [{ keys: ['Start'], label: t('annuler') }],
+            : [{ keys: ['Start'], label: t('cancel') }],
           listening.tab === 'keyboard' ? 'key' : 'button',
         );
         return;
@@ -150,9 +150,9 @@ export function createRemapView(
       fillHint(
         hint,
         [
-          { keys: shown.navigate, label: t('naviguer') },
-          { keys: [shown.confirm], label: t('changer') },
-          { keys: [shown.back], label: t('fermer') },
+          { keys: shown.navigate, label: t('navigate') },
+          { keys: [shown.confirm], label: t('change') },
+          { keys: [shown.back], label: t('close') },
         ],
         shown.style,
       );
@@ -203,14 +203,14 @@ function paintSlot(
   node.toggleAttribute('data-empty', input === null && !isListening);
   node.setAttribute(
     'aria-label',
-    t('{action}, touche {number} : {key}', {
+    t('{action}, slot {number}: {key}', {
       action: ACTION_NAMES[action](),
       number: slot + 1,
-      key: input === null ? t('aucune') : nameOf(tab, input, names),
+      key: input === null ? t('none') : nameOf(tab, input, names),
     }),
   );
   if (isListening) {
-    node.replaceChildren(el('span', 'ui-remap__waiting', t('Appuie…')));
+    node.replaceChildren(el('span', 'ui-remap__waiting', t('Press…')));
   } else if (input === null) {
     node.replaceChildren();
   } else {

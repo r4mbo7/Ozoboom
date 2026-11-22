@@ -10,6 +10,7 @@ export type TitleOptionActions = Pick<
   | 'toggleHitSound'
   | 'toggleAutoFire'
   | 'toggleAutoAim'
+  | 'setPseudo'
 >;
 
 type TitleOptionCallbacks = Pick<
@@ -20,6 +21,7 @@ type TitleOptionCallbacks = Pick<
   | 'onToggleHitSound'
   | 'onToggleAutoFire'
   | 'onToggleAutoAim'
+  | 'onSetPseudo'
 >;
 
 export interface TitleSettings {
@@ -39,6 +41,7 @@ export function createTitleOptions(
     hitSound: false,
     autoFire: false,
     autoAim: false,
+    pseudo: '',
   };
 
   function change(patch: Partial<TitleOptions>): void {
@@ -80,6 +83,10 @@ export function createTitleOptions(
       toggleAutoAim() {
         change({ autoAim: !options.autoAim });
         callbacks.onToggleAutoAim(options.autoAim);
+      },
+      setPseudo(pseudo) {
+        change({ pseudo });
+        callbacks.onSetPseudo(pseudo);
       },
     },
     calmMode: () => options.calmMode,

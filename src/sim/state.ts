@@ -652,7 +652,15 @@ export type SimEvent =
       y: number;
       byPlayer: PlayerId | null;
     }
-  | { type: 'playerFired'; playerId: PlayerId; x: number; y: number; angle: number }
+  // `bothHands`: Futurum Sonat's lead played from both hands at once, through the drop.
+  | {
+      type: 'playerFired';
+      playerId: PlayerId;
+      x: number;
+      y: number;
+      angle: number;
+      bothHands?: true;
+    }
   // The Bénévole's grabber closes on bad vibe `id`; a thrown one lands.
   | { type: 'pinched'; playerId: PlayerId; id: EntityId; x: number; y: number }
   | { type: 'tossLanded'; playerId: PlayerId; id: EntityId; x: number; y: number }
@@ -672,6 +680,15 @@ export type SimEvent =
   | { type: 'oneLove'; playerId: PlayerId; x: number; y: number; radius: number }
   // A blast of the Reggae's air horn rang out to `radius` round (x, y); `left` blasts follow it.
   | { type: 'hornBlasted'; playerId: PlayerId; x: number; y: number; radius: number; left: number }
+  // A star of Futurum Sonat's Glimmer landed on (x, y): `rank` in the arpeggio, `last` the final one.
+  | {
+      type: 'glimmerStruck';
+      playerId: PlayerId;
+      x: number;
+      y: number;
+      rank: number;
+      last: boolean;
+    }
   // Déchaîné is cast: `element` is the one of its bar, in the order of the Avatar's cycle.
   | { type: 'unleashed'; playerId: PlayerId; element: number }
   | { type: 'stiltLanded'; playerId: PlayerId }

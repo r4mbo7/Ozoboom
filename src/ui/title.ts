@@ -3,7 +3,7 @@ import { el, fillHint, icon, setText } from './dom';
 import { formatNumber } from './format';
 import { createActionButton, createControlsButton, createFeedbackButton } from './feedback-button';
 import { openDiscord } from './discord';
-import { DISCORD, GEAR, GLOBE } from './icons';
+import { DISCORD, GEAR, GLOBE, PROGRAMME } from './icons';
 import { type Menu, createMenu } from './menu';
 import type { Prompts } from './prompts';
 import type { MenuHeard } from '../shared/menu-score';
@@ -15,24 +15,29 @@ import {
   createToggle,
 } from './toggle';
 import { createSoundControl } from './volume';
+import { createPseudoSetting, editPseudo } from './pseudo-field';
 import { createLanguageControl, createLanguageList } from './language';
 import { locale, t, tn, type Locale } from '../shared/i18n';
 import { createCredits } from './credits';
 import { createThanksClock, thanksOf } from './title-thanks';
 import { createThanksPainter } from './title-thanks-paint';
+import { FULL_CHANGELOG } from './full';
 
 export interface TitleActions {
   start(): void;
   playOnline(): void;
+  programme(): void;
   toggleCalmMode(): void;
   toggleMute(): void;
   stepVolume(side: -1 | 1): void;
   toggleHitSound(): void;
   toggleAutoFire(): void;
   toggleAutoAim(): void;
+  setPseudo(pseudo: string): void;
   controls(): void;
   chooseLocale(locale: Locale): void;
   feedback?(): void;
+  changelogOpened(): void;
 }
 
 export interface TitleOptions {
@@ -42,9 +47,17 @@ export interface TitleOptions {
   readonly hitSound: boolean;
   readonly autoFire: boolean;
   readonly autoAim: boolean;
+  readonly pseudo: string;
 }
 
-export type TitleView = 'main' | 'settings' | 'credits';
+export type TitleView = 'main' | 'settings' | 'credits' | 'changelog';
+
+// The notebook of what changed, which only the full game has: its rows are menu items, one open at a time.
+export interface ChangelogView {
+  readonly element: HTMLElement;
+  readonly rows: readonly HTMLElement[];
+  open(row: HTMLElement): void;
+}
 
 export interface TitleScreen {
   readonly element: HTMLElement;
@@ -55,6 +68,7 @@ export interface TitleScreen {
   setOptions(options: TitleOptions): void;
   setDevice(device: InputDevice): void;
   setVisits(count: number): void;
+  setChangelogNews(news: boolean): void;
   // What the menus play as it is heard, null when nothing; calm or null stills the title.
   follow(heard: MenuHeard | null, calm: boolean): void;
 }
@@ -231,9 +245,17 @@ const WATER =
   }).join('') +
   '</g></svg>';
 
+// In the full game, the release number opens the notebook of what changed.
+function door(release: string, label: string): HTMLButtonElement {
+  const button = el('button', 'ui-title__meta ui-title__version', release);
+  button.type = 'button';
+  button.setAttribute('aria-label', `${release}, ${label}`);
+  return button;
+}
+
 export function createTitle(prompts: Prompts, actions: TitleActions): TitleScreen {
   const element = el('section', 'ui-screen ui-title');
-  element.setAttribute('aria-label', t('Écran titre'));
+  element.setAttribute('aria-label', t('Title screen'));
 
   const sky = el('div', 'ui-title__sky');
   sky.innerHTML = NIGHT + MOON + GLOW + SUN;
@@ -248,10 +270,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   const logo = el('h1', 'ui-title__logo', 'Ozoboom');
   logo.dataset.text = 'Ozoboom';
   mark.append(logo);
-  header.append(
-    mark,
-    el('p', 'ui-title__tagline', t('Défends le sound system jusqu’au lever du soleil.')),
-  );
+  header.append(mark, el('p', 'ui-title__tagline', t('Defend the sound system until sunrise.')));
   const heading = el('h2', 'ui-title__view');
 
   const shown = new Map<string, string>();
@@ -272,16 +291,23 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   show(TITLE_AT_REST);
   let origin: number | null = null;
 
-  const play = el('button', 'ui-button ui-button--primary', t('Jouer'));
+  const play = el('button', 'ui-button ui-button--primary', t('Play'));
   play.type = 'button';
-  const online = createActionButton(t('En ligne'), t('Avec des amis, sur internet'), GLOBE);
-  const settings = createActionButton(t('Réglages'), t('Mode calme, commandes, langue'), GEAR);
+  const online = createActionButton(t('Online'), t('With friends, over the internet'), GLOBE);
+  const programme = createActionButton(
+    t('The Programme'),
+    t('Bad vibes, bosses and the whole line-up'),
+    PROGRAMME,
+  );
+  programme.classList.add('ui-title__programme');
+  const settings = createActionButton(t('Settings'), t('Calm mode, controls, language'), GEAR);
+  settings.classList.add('ui-title__settings');
 
   const calm = createToggle(
-    t('Mode calme'),
-    t('Sans strobos, secousses ni halos forts'),
-    t('Oui'),
-    t('Non'),
+    t('Calm mode'),
+    t('No strobes, shakes or strong glows'),
+    t('On'),
+    t('Off'),
   );
   const sound = createSoundControl((side) => {
     actions.stepVolume(side);
@@ -289,45 +315,74 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   const hitSound = createHitSoundToggle();
   const autoFire = createAutoFireToggle();
   const autoAim = createAutoAimToggle();
+  const pseudo = createPseudoSetting((typed) => {
+    actions.setPseudo(typed);
+  });
   const keys = createControlsButton();
   const language = createLanguageControl(locale());
   const feedback = actions.feedback === undefined ? null : createFeedbackButton();
 
-  const settingsBack = el('button', 'ui-button ui-title__back', t('Retour'));
+  const settingsBack = el('button', 'ui-button ui-title__back', t('Back'));
   settingsBack.type = 'button';
 
   const credits = createCredits();
-  const creditsButton = el('button', 'ui-title__credits', t('Crédits'));
+  const creditsButton = el('button', 'ui-title__credits', t('Credits'));
   creditsButton.type = 'button';
-  const creditsBack = el('button', 'ui-button ui-title__credits-back');
-  creditsBack.type = 'button';
-  creditsBack.append(icon('ui-title__credits-chevron', '<path d="M15 5l-7 7 7 7"/>'), t('Retour'));
+  // The pill bottom left that leaves a page of its own.
+  const backButton = () => {
+    const back = el('button', 'ui-button ui-title__credits-back');
+    back.type = 'button';
+    back.append(icon('ui-title__credits-chevron', '<path d="M15 5l-7 7 7 7"/>'), t('Back'));
+    return back;
+  };
+  const creditsBack = backButton();
+
+  const changelog = FULL_CHANGELOG.create?.() ?? null;
+  const release = `v${__APP_RELEASE__}`;
+  const whatsNew = t("What's new");
+  const version = changelog === null ? el('p', 'ui-title__meta', release) : door(release, whatsNew);
+  const changelogBack = backButton();
 
   const discord = el('button', 'ui-title__discord');
   discord.type = 'button';
   discord.setAttribute('aria-label', t('Backstage'));
-  discord.title = t('Passe dans les coulisses sur Discord');
+  discord.title = t('Come backstage on Discord');
   discord.append(icon('ui-title__discord-icon', DISCORD));
 
   const views: Record<TitleView, { title: string; items: HTMLElement[]; nav: HTMLElement }> = {
     main: {
       title: '',
-      items: [play, online, sound.element, settings, discord, creditsButton],
+      items: [
+        play,
+        online,
+        programme,
+        sound.element,
+        settings,
+        discord,
+        creditsButton,
+        ...(changelog === null ? [] : [version]),
+      ],
       nav: el('nav', 'ui-menu'),
     },
+    changelog: {
+      title: whatsNew,
+      items: [...(changelog?.rows ?? []), changelogBack],
+      nav: changelog?.element ?? el('nav', 'ui-menu'),
+    },
     credits: {
-      title: t('Crédits'),
+      title: t('Credits'),
       items: [creditsBack, credits.link],
       nav: el('nav', 'ui-menu'),
     },
     settings: {
-      title: t('Réglages'),
+      title: t('Settings'),
       items: [
         calm.button,
         hitSound.button,
         autoFire.button,
         autoAim.button,
         keys,
+        pseudo.row,
         language,
         ...(feedback === null ? [] : [feedback]),
         settingsBack,
@@ -335,21 +390,23 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       nav: el('nav', 'ui-menu ui-menu--settings'),
     },
   };
-  views.main.nav.setAttribute('aria-label', t('Menu principal'));
-  views.main.nav.append(play, online, sound.element, settings);
-  for (const name of ['settings', 'credits'] as const) {
+  views.main.nav.setAttribute('aria-label', t('Main menu'));
+  views.main.nav.append(play, online, programme, sound.element, settings);
+  for (const name of ['settings', 'credits', 'changelog'] as const) {
     views[name].nav.setAttribute('aria-label', views[name].title);
   }
   views.settings.nav.append(...views.settings.items);
   views.credits.nav.append(creditsBack);
+  views.changelog.nav.append(changelogBack);
 
   const hint = el('p', 'ui-hint');
   const deck = el('div', 'ui-title__deck');
-  deck.append(views.main.nav, views.settings.nav, views.credits.nav);
+  deck.append(views.main.nav, views.settings.nav, views.credits.nav, views.changelog.nav);
 
-  const meta = el('p', 'ui-title__meta', `v${__APP_RELEASE__}`);
+  const visits = el('p', 'ui-title__visits');
+  visits.hidden = true;
   const corner = el('div', 'ui-title__corner');
-  corner.append(meta, creditsButton);
+  corner.append(creditsButton, version, visits);
 
   const body = el('div', 'ui-title__body');
   body.append(sky, water, credits.element, header, heading, deck, hint, corner, discord);
@@ -392,6 +449,12 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       },
     ],
     [
+      programme,
+      () => {
+        actions.programme();
+      },
+    ],
+    [
       calm.button,
       () => {
         actions.toggleCalmMode();
@@ -428,6 +491,12 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       },
     ],
     [
+      pseudo.row,
+      () => {
+        editPseudo(pseudo.input);
+      },
+    ],
+    [
       language,
       () => {
         languages.open();
@@ -448,11 +517,25 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   activations.set(settingsBack, () => {
     open('main');
   });
+  activations.set(version, () => {
+    open('changelog');
+  });
+  activations.set(changelogBack, () => {
+    open('main');
+  });
+  if (changelog !== null) {
+    for (const row of changelog.rows) {
+      activations.set(row, () => {
+        changelog.open(row);
+      });
+    }
+  }
 
   // Back on the title, the selection is the entry the player left it by.
   const openers: Partial<Record<TitleView, HTMLElement>> = {
     settings,
     credits: creditsButton,
+    changelog: version,
   };
   let view: TitleView = 'main';
   const menu = createMenu(
@@ -478,9 +561,13 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     header.hidden = next !== 'main';
     heading.hidden = next === 'main' || next === 'credits';
     discord.hidden = next !== 'main';
-    corner.hidden = next === 'credits';
+    corner.hidden = next === 'credits' || next === 'changelog';
     creditsButton.hidden = next !== 'main';
     hint.hidden = next === 'credits';
+    if (next === 'changelog' && from !== 'changelog') {
+      version.removeAttribute('data-news');
+      actions.changelogOpened();
+    }
     credits.element.hidden = next !== 'credits';
     setText(heading, views[next].title);
     for (const [name, { nav }] of Object.entries(views)) {
@@ -511,10 +598,10 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     fillHint(
       hint,
       [
-        { keys: shown.navigate, label: t('naviguer') },
-        ...(view === 'main' ? [{ keys: shown.navigateRow, label: t('son') }] : []),
-        { keys: [shown.confirm], label: t('valider') },
-        ...(view === 'main' ? [] : [{ keys: [shown.back], label: t('retour') }]),
+        { keys: shown.navigate, label: t('navigate') },
+        ...(view === 'main' ? [{ keys: shown.navigateRow, label: t('sound') }] : []),
+        { keys: [shown.confirm], label: view === 'changelog' ? t('open') : t('confirm') },
+        ...(view === 'main' ? [] : [{ keys: [shown.back], label: t('back') }]),
       ],
       shown.style,
     );
@@ -562,12 +649,17 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       hitSound.set(options.hitSound);
       autoFire.set(options.autoFire);
       autoAim.set(options.autoAim);
+      pseudo.set(options.pseudo);
     },
     setVisits(count) {
-      const visits = tn(count, '{count} visite', '{count} visites', {
+      const text = tn(count, '{count} visit', '{count} visits', {
         count: formatNumber(count),
       });
-      setText(meta, `v${__APP_RELEASE__} · ${visits}`);
+      setText(visits, text);
+      visits.hidden = false;
+    },
+    setChangelogNews(news) {
+      version.toggleAttribute('data-news', news && changelog !== null);
     },
     setDevice(next) {
       if (next === device && keysShown === prompts.version()) {

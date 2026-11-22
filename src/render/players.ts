@@ -3,6 +3,7 @@ import { clamp, lerp } from '../shared/scalar';
 import type { SimEvent, SimState } from '../sim/state';
 import { MAIN_TEMPO, type Tempo, ticksIntoBeat } from '../shared/tempo';
 import { PlayerCarriedTraps } from './carried-traps';
+import { TrapGhost } from './trap-ghost';
 import { createBurster } from './class-bursts';
 import type { Family, RenderContext } from './context';
 import { DashArc } from './dash-arc';
@@ -55,6 +56,7 @@ interface PlayerView {
   readonly lifeArc: LifeArc;
   readonly emote: PlayerEmote;
   readonly carried: PlayerCarriedTraps;
+  readonly ghost: TrapGhost;
 }
 
 export function createPlayers(ctx: RenderContext): Family & { readonly potion: PotionBodies } {
@@ -97,6 +99,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
       lifeArc: new LifeArc(ctx, arcs, lifeLabels),
       emote: new PlayerEmote(ctx, gestures, ground),
       carried: new PlayerCarriedTraps(ctx),
+      ghost: new TrapGhost(ctx),
     }),
     (view) => {
       view.lastNow = NEVER;
@@ -108,6 +111,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
       view.emote.reset();
       hide(view.halo, view.shadow, view.aim, view.contour);
       view.carried.hide();
+      view.ghost.hide();
       view.lying.hide();
       for (const look of view.looks.values()) {
         look.hide();
@@ -212,7 +216,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
           frame,
           state.players.length > 1,
         );
-        view.carried.place(player, x, top, frame);
+        view.ghost.place(state, player, color, x, view.carried.place(player, x, top, frame), frame);
         const bounce = view.glow.place(player, x, y, lookTextures.extent * scale, frame);
         const dt = view.lastNow === NEVER ? 0 : clamp(now - view.lastNow, 0, MAX_STEP_TICKS);
         view.lastNow = now;

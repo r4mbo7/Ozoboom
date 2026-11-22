@@ -108,19 +108,19 @@ export function createCredits(credits: Credits = CREDITS): CreditsPage {
 
   poster.append(
     el('p', 'ui-credits__logo', 'Ozoboom'),
-    label(t('Un jeu de')),
+    label(t('A game by')),
     person(credits.author, 'ui-credits__headliner'),
     rule(),
-    label(t('Musique')),
+    label(t('Music')),
     person(credits.music, 'ui-credits__headliner ui-credits__headliner--second'),
     link,
     rule(),
-    label(t('Merci à')),
+    label(t('Thanks to')),
     ...cast,
     rule(),
-    label(t('Bibliothèques libres')),
+    label(t('Open-source libraries')),
     libraries,
-    label(t('Polices')),
+    label(t('Fonts')),
     el('p', 'ui-credits__fine', `${fonts} · ${credits.fonts.licence}`),
   );
   element.append(poster);

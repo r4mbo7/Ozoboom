@@ -10,8 +10,8 @@ export interface GustEffect {
 
 export const COUP_DE_VENT: EnemyDefinition = {
   id: 'coup-de-vent',
-  name: 'Le Coup de vent',
-  description: 'Il souffle, et tout ce qui est léger dérive.',
+  name: 'The Gust',
+  description: 'Blows hard, and everything light drifts.',
   behaviour: 'boss',
   maxHp: 2000,
   speed: 0.8,
@@ -20,7 +20,7 @@ export const COUP_DE_VENT: EnemyDefinition = {
   attackCooldownTicks: 2 * TICKS_PER_BEAT,
   aggroRadius: 320,
   vibesDrop: 50,
-  scalingPerPhrase: { hp: 1, speed: 1 },
+  scalingPerPhrase: { hp: 1, speed: 1, damage: 1 },
   special: {
     kind: 'gust',
     everyBars: 4,

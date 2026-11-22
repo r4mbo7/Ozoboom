@@ -151,7 +151,7 @@ export function createSpeakerCards(ctx: RenderContext): Family {
         weapon: sprite(Texture.EMPTY),
         name: big(Texture.EMPTY),
         phrase: text(Texture.EMPTY),
-        heal: createHealLine(card, text(texts.get(t('Rebooste la scène'), HEAL_WEIGHT))),
+        heal: createHealLine(card, text(texts.get(t('Reboosts the stage'), HEAL_WEIGHT))),
         id: '',
         width: 0,
         height: 0,

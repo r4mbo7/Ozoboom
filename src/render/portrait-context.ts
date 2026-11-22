@@ -2,6 +2,7 @@ import type { SkillEffect } from '../data/types';
 import type { PaletteToken } from '../shared/palette';
 import type { RenderContext } from './context';
 import { DancedBodies } from './danced-bodies';
+import { TrapAnswers } from './trap-answers';
 import type { Layers } from './layers';
 import type { Textures } from './textures';
 
@@ -29,5 +30,6 @@ export function portraitContext(
     shadeRadii: new Map(),
     attacks: new Map(),
     bodies: new DancedBodies(),
+    answers: new TrapAnswers(),
   };
 }

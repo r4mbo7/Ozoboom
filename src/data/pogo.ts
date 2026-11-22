@@ -9,8 +9,8 @@ export interface MoshRingEffect {
 
 export const POGO: EnemyDefinition = {
   id: 'pogo',
-  name: 'Le Pogo',
-  description: 'Il enrôle les bad vibes en ronde autour de lui : elles prennent les coups.',
+  name: 'The Mosher',
+  description: 'They rope the bad vibes into a circle pit around them, which takes the hits.',
   behaviour: 'boss',
   maxHp: 2000,
   speed: 0.75,
@@ -19,6 +19,6 @@ export const POGO: EnemyDefinition = {
   attackCooldownTicks: 2 * TICKS_PER_BEAT,
   aggroRadius: 320,
   vibesDrop: 50,
-  scalingPerPhrase: { hp: 1, speed: 1 },
+  scalingPerPhrase: { hp: 1, speed: 1, damage: 1 },
   special: { kind: 'moshRing', reach: 260, orbit: 66 },
 };

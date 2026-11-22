@@ -33,6 +33,7 @@ export interface OnlineEnv extends LobbyDefaults {
   readonly ui: Pick<Ui, 'showLobby' | 'updateLobby'>;
   readonly classIds: readonly string[];
   classId(): string;
+  pseudo(): string;
   trackId(): string;
   version(): string;
   onMatch(match: OnlineMatch): void;
@@ -114,7 +115,7 @@ export function createOnline(env: OnlineEnv): Online {
       interrupt({ notice: 'hostLeft', details: '' });
     },
     onFellBehind() {
-      interrupt({ notice: 'connectionLost', details: t('Ton onglet a pris trop de retard.') });
+      interrupt({ notice: 'connectionLost', details: t('Your tab fell too far behind.') });
     },
   };
 
@@ -236,7 +237,7 @@ export function createOnline(env: OnlineEnv): Online {
   function peerLeft(peer: PeerId, as: Role, roomCode: string): void {
     if (as === 'guest' && peer === hostPeerId(roomCode)) {
       if (phase === 'lobby') {
-        failLobby(t('L’hôte a fermé le salon'));
+        failLobby(t('The host closed the room'));
       } else {
         interrupt({ notice: 'hostLeft', details: '' });
       }
@@ -250,7 +251,7 @@ export function createOnline(env: OnlineEnv): Online {
     phase = 'lobby';
     const joined = createRoom(opened, as, {
       version: env.version(),
-      name: '',
+      name: env.pseudo(),
       classId: env.classId(),
       classIds: env.classIds,
       setId: env.stageId(),
@@ -381,7 +382,7 @@ export function createOnline(env: OnlineEnv): Online {
       }
       const roomCode = normalizeCode(typed);
       if (roomCode === null) {
-        failLobby(t('Ce code n’est pas valide'));
+        failLobby(t('This code isn’t valid'));
         return;
       }
       void connect('guest', roomCode);

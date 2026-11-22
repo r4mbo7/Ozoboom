@@ -18,24 +18,24 @@ interface Feat {
 const FEATS: readonly Feat[] = [
   {
     count: (tally) => tally.bosses,
-    title: (count) => tn(count, 'A chassé le boss', 'A chassé les boss'),
-    proof: (count) => tn(count, '{count} boss', '{count} boss', { count: formatNumber(count) }),
+    title: (count) => tn(count, 'Chased off the boss', 'Chased off the bosses'),
+    proof: (count) => tn(count, '{count} boss', '{count} bosses', { count: formatNumber(count) }),
   },
   {
     count: (tally) => tally.revives,
-    title: () => t('A relevé l’équipe'),
+    title: () => t('Got the team back up'),
     proof: (count) =>
-      tn(count, '{count} allié soigné', '{count} alliés soignés', { count: formatNumber(count) }),
+      tn(count, '{count} ally healed', '{count} allies healed', { count: formatNumber(count) }),
   },
   {
     count: (tally) => tally.badVibes,
-    title: () => t('A chassé le plus de bad vibes'),
+    title: () => t('Chased off the most bad vibes'),
     proof: (count) =>
       tn(count, '{count} bad vibe', '{count} bad vibes', { count: formatNumber(count) }),
   },
   {
     count: (tally) => Math.round(tally.vibes),
-    title: () => t('A ramassé le plus de vibes'),
+    title: () => t('Picked up the most vibes'),
     proof: (count) => tn(count, '{count} vibe', '{count} vibes', { count: formatNumber(count) }),
   },
 ];

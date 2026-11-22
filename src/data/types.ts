@@ -41,7 +41,8 @@ export type StatKey =
   | 'recruitPowerMul'
   | 'dishPowerMul'
   | 'offerCardsAdd'
-  | 'oneLoveHealMul';
+  | 'oneLoveHealMul'
+  | 'bisBeatsAdd';
 
 export interface StatModifier {
   stat: StatKey;
@@ -184,7 +185,7 @@ export interface EnemyDefinition {
   aggroRadius: number;
   vibesDrop: number;
   // Compounded per phrase since the start of the set: value = base * factor ** phrase.
-  scalingPerPhrase: { hp: number; speed: number };
+  scalingPerPhrase: { hp: number; speed: number; damage: number };
   ranged?: {
     projectileSpeed: number;
     projectileRadius: number;
@@ -510,6 +511,8 @@ export interface SetDefinition {
   name: string;
   // Shown on the stage's card.
   style?: string;
+  // Its line on the Programme's sheet.
+  description?: string;
   // The tick rate stays the same (ADR 0012). Absent means 12.
   ticksPerBeat?: number;
   decor: DecorId;
@@ -554,11 +557,7 @@ export interface SetDefinition {
   // Share of the core's max life a speaker gives back the moment it plugs, outside the per-bar cap.
   // Absent means none.
   speakerCoreRepair?: number;
-  perPlayer?: { spawnMul: number; enemyHpMul: number };
-  // A game's first phrase sends its bad vibes `count` times as many, with `hp` of their life and none of the
-  // life added per player; they come back whole bar by bar over the next `phrases`. A later festival
-  // stage starts whole.
-  warmup?: { phrases: number; count: number; hp: number };
+  perPlayer?: { spawnMul: number; enemyHpMul: number; enemyDamageMul: number };
   // Per minute past the last boss, on top of each bad vibe's own; absent, endless replays the last tier.
   endlessPerMinute?: { hp: number; damage: number };
   // A window comes from one or two sides by `chance`; `randomShare` of its spawns still from anywhere.
@@ -567,15 +566,23 @@ export interface SetDefinition {
 
 export type EdgeSide = 'top' | 'right' | 'bottom' | 'left';
 
+export interface Release {
+  readonly version: string;
+  // YYYY-MM-DD
+  readonly date: string;
+  readonly name: string;
+  readonly changes: readonly string[];
+}
+
 // Shown locked in the demo (ADR 0014): a name and a colour, never the data.
 export interface TeaserDefinition {
-  kind: 'class' | 'stage';
+  kind: 'class' | 'stage' | 'boss';
   name: string;
   style?: string;
   color: string;
 }
 
-// The same for every character (docs/game-design.md, « Le dash »).
+// The same for every character (docs/game-design.md, "The dash").
 export interface DashDefinition {
   distance: number;
   ticks: number;

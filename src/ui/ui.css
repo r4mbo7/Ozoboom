@@ -225,6 +225,18 @@
   height: 18px;
 }
 
+/* The pseudo's row holds its field where the others hold their state. */
+.ui-pseudo {
+  cursor: text;
+}
+
+.ui-pseudo .ui-pseudo__input {
+  width: 8.5em;
+  flex: none;
+  padding: 6px 14px;
+  font-size: 16px;
+}
+
 .ui-language .ui-toggle__state {
   color: var(--texte);
   font-weight: 700;
@@ -534,6 +546,8 @@
 /* The scene is drawn in the title's em, so the sun keeps its size against the logo. */
 .ui-title {
   --title-em: clamp(40px, min(11vw, 15vh), 104px);
+  --star: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 8 8"><path d="M0 -4L1 -1L4 0L1 1L0 4L-1 1L-4 0L-1 -1Z"/></svg>')
+    center / contain no-repeat;
   background: var(--sol);
 }
 
@@ -546,7 +560,7 @@
   --title-rise: calc(0.6 * var(--title-em));
 }
 
-.ui-title__body[data-view='settings'] {
+.ui-title__body:is([data-view='settings'], [data-view='changelog']) {
   --title-rise: calc(0.35 * var(--title-em));
 }
 
@@ -1053,10 +1067,10 @@ svg.ui-title__moon-glint {
   font-variant-numeric: tabular-nums;
 }
 
-/* The word stays the version's discreet cream until hovered or selected; its target reaches past it. */
-.ui-title__credits {
+/* The words stay the version's discreet cream until hovered or selected; their target reaches past them. */
+:is(.ui-title__credits, .ui-title__version) {
   margin-block: -12px;
-  padding: 12px 6px 12px 0;
+  padding: 12px 0;
   border: 0;
   background: none;
   color: inherit;
@@ -1070,18 +1084,43 @@ svg.ui-title__moon-glint {
     text-decoration-color 120ms ease-out;
 }
 
-.ui-title__credits::before {
+/* The dot is drawn apart from the word, so a hovered word never underlines it; with the credits
+   hidden, the release number leads the corner. */
+:is(.ui-title__credits:not([hidden]) + .ui-title__meta, .ui-title__visits)::before {
   content: '·';
+  display: inline-block;
   padding-inline: 0.45em;
   color: var(--ui-muted);
 }
 
-.ui-title__credits:hover,
-.ui-title__credits[aria-current],
-.ui-title__credits:focus-visible {
+:is(.ui-title__credits, .ui-title__version):is(:hover, [aria-current], :focus-visible) {
   outline: none;
   color: var(--texte);
   text-decoration-color: var(--turquoise);
+}
+
+.ui-title__version {
+  position: relative;
+}
+
+.ui-title__body:not([data-view='main']) .ui-title__version {
+  pointer-events: none;
+}
+
+.ui-title__version[data-news]::after {
+  content: '';
+  position: absolute;
+  top: 13px;
+  inset-inline-end: -5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--or);
+  box-shadow: 0 0 calc(8px * var(--ui-halo)) var(--or);
+}
+
+.ui-title__visits {
+  font-variant-numeric: tabular-nums;
 }
 
 .ui-title__discord {
@@ -1225,9 +1264,6 @@ svg.ui-title__moon-glint {
 }
 
 .ui-credits {
-  --credits-star: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 8 8"><path d="M0 -4L1 -1L4 0L1 1L0 4L-1 1L-4 0L-1 -1Z"/></svg>')
-    center / contain no-repeat;
-
   position: absolute;
   inset: 0;
   overflow: clip;
@@ -1367,7 +1403,7 @@ svg.ui-title__moon-glint {
   width: 10px;
   height: 10px;
   background: var(--noyau);
-  mask: var(--credits-star);
+  mask: var(--star);
 }
 
 .ui-credits__names {
@@ -1426,7 +1462,7 @@ svg.ui-title__moon-glint {
   height: 0.7em;
   margin-inline: 0.8em;
   background: var(--or);
-  mask: var(--credits-star);
+  mask: var(--star);
 }
 
 .ui-credits__names--fine,
@@ -1519,6 +1555,22 @@ svg.ui-title__moon-glint {
   .ui-title .ui-button {
     min-height: 48px;
     padding-block: 6px;
+  }
+}
+
+/* A laptop screen: the five entries draw closer, so that the title holds whole. */
+@media (max-height: 799px) and (min-height: 521px) {
+  .ui-title__body[data-view='main'] .ui-menu {
+    gap: 8px;
+  }
+
+  .ui-title__body[data-view='main'] .ui-button {
+    min-height: 54px;
+    padding-block: 7px;
+  }
+
+  .ui-title__body[data-view='main'] .ui-title__deck {
+    padding-top: calc(0.45 * var(--title-em));
   }
 }
 
@@ -3727,23 +3779,78 @@ svg.ui-title__moon-glint {
   display: none;
 }
 
-/* The edges breathe on two beats, never a flash. */
+/* The middle stays clear, never a flash. */
 .ui-hud__danger {
+  --danger-depth: 0;
+  --frame: calc(5vmax + 5vmax * var(--danger-depth));
+  --frame-deep: color-mix(in srgb, var(--rouge) 50%, #000);
+  --frame-dark: color-mix(in srgb, var(--rouge) 12%, #000);
+  --frame-corner: calc(var(--frame) * 1.8);
+  --frame-dim: calc(0.4 + 0.3 * var(--danger-depth));
+
   position: fixed;
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  box-shadow: inset 0 0 8vw 0.5vw rgb(from var(--rouge) r g b / 0.18);
+  background:
+    radial-gradient(
+      circle at 0 0,
+      rgb(from var(--frame-dark) r g b / var(--frame-dim)),
+      transparent var(--frame-corner)
+    ),
+    radial-gradient(
+      circle at 100% 0,
+      rgb(from var(--frame-dark) r g b / var(--frame-dim)),
+      transparent var(--frame-corner)
+    ),
+    radial-gradient(
+      circle at 0 100%,
+      rgb(from var(--frame-dark) r g b / var(--frame-dim)),
+      transparent var(--frame-corner)
+    ),
+    radial-gradient(
+      circle at 100% 100%,
+      rgb(from var(--frame-dark) r g b / var(--frame-dim)),
+      transparent var(--frame-corner)
+    );
+  box-shadow:
+    inset 0 0 var(--frame) calc(var(--frame) * 0.22)
+      rgb(from var(--rouge) r g b / calc(0.5 + 0.3 * var(--danger-depth))),
+    inset 0 0 calc(var(--frame) * 0.4) calc(var(--frame) * 0.06)
+      rgb(from var(--frame-deep) r g b / calc(0.45 + 0.2 * var(--danger-depth)));
   transition: opacity 0.6s ease;
+}
+
+.ui-hud__danger::after {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  box-shadow: inset 0 0 calc(var(--frame) * 1.3) calc(var(--frame) * 0.36)
+    rgb(from var(--rouge) r g b / 0.45);
+  content: '';
 }
 
 .ui-hud[data-danger] .ui-hud__danger {
   opacity: 1;
-  animation: ui-danger-breathe calc(var(--beat) * 2) ease-in-out infinite;
+}
+
+.ui-hud[data-danger] .ui-hud__danger::after {
+  will-change: opacity;
+}
+
+.ui-hud[data-danger] .ui-hud__danger[data-beat='a']::after {
+  animation: ui-heartbeat-a var(--beat) linear;
+}
+
+.ui-hud[data-danger] .ui-hud__danger[data-beat='b']::after {
+  animation: ui-heartbeat-b var(--beat) linear;
 }
 
 .calm > .ui .ui-hud[data-danger] .ui-hud__danger {
   opacity: 0.5;
+}
+
+.calm > .ui .ui-hud[data-danger] .ui-hud__danger[data-beat]::after {
   animation: none;
 }
 
@@ -3871,14 +3978,60 @@ svg.ui-title__moon-glint {
   display: none;
 }
 
-@keyframes ui-danger-breathe {
-  0%,
-  100% {
-    opacity: 0.5;
+/* Two names for one heartbeat, so that each beat starts it again. */
+@keyframes ui-heartbeat-a {
+  0% {
+    opacity: 1;
   }
 
-  50% {
+  8% {
+    opacity: 0.4;
+  }
+
+  20%,
+  24.9% {
+    opacity: 0;
+  }
+
+  25% {
+    opacity: 0.6;
+  }
+
+  33% {
+    opacity: 0.24;
+  }
+
+  45%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-heartbeat-b {
+  0% {
     opacity: 1;
+  }
+
+  8% {
+    opacity: 0.4;
+  }
+
+  20%,
+  24.9% {
+    opacity: 0;
+  }
+
+  25% {
+    opacity: 0.6;
+  }
+
+  33% {
+    opacity: 0.24;
+  }
+
+  45%,
+  100% {
+    opacity: 0;
   }
 }
 
@@ -6212,12 +6365,11 @@ svg.ui-title__moon-glint {
 }
 
 /* The score reads as a button, like the ones at the bottom, and says what it opens. */
-.ui-end__score {
-  display: inline-flex;
+.ui-end__pill {
+  display: inline-grid;
+  grid-template-columns: auto auto;
   align-items: center;
-  gap: 14px;
-  margin: 0;
-  padding: 4px 6px 4px 22px;
+  padding-inline-end: 6px;
   border: 1.5px solid var(--ui-line);
   border-radius: 999px;
   background: linear-gradient(
@@ -6226,15 +6378,36 @@ svg.ui-title__moon-glint {
     var(--ui-panel)
   );
   box-shadow: var(--ui-lift);
+}
+
+/* Open on the pseudo's form, the pill grows a second row. */
+.ui-end__pill:has(.ui-end__board-ask:not([hidden])) {
+  border-radius: var(--ui-radius);
+}
+
+.ui-end__pill:not(:has(.ui-end__board-share:not([hidden]), .ui-end__board-rank:not([hidden]))) {
+  padding-inline-end: 0;
+}
+
+.ui-end__score {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding: 4px 6px 4px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
   color: var(--texte);
   font: inherit;
   cursor: pointer;
 }
 
-.ui-end__score[aria-current],
-.ui-end__score:hover,
 .ui-end__score:focus-visible {
   outline: none;
+}
+
+.ui-end__pill:has(> .ui-end__score:is([aria-current], :hover, :focus-visible)) {
   border-color: var(--turquoise);
   box-shadow:
     var(--ui-focus),
@@ -6262,10 +6435,13 @@ svg.ui-title__moon-glint {
 }
 
 /* While it counts, the score is no button yet: a press only skips the count. */
-.ui-end[data-tally='counting'] .ui-end__score {
+.ui-end[data-tally='counting'] .ui-end__pill {
   border-color: transparent;
   background: none;
   box-shadow: none;
+}
+
+.ui-end[data-tally='counting'] .ui-end__score {
   cursor: default;
 }
 
@@ -6312,6 +6488,138 @@ svg.ui-title__moon-glint {
 
 .ui-end[data-tally='counting'] .ui-end__record-new {
   animation: ui-end-record 420ms cubic-bezier(0.2, 1.6, 0.4, 1) calc(var(--drop) + 300ms) backwards;
+}
+
+/* In the score's pill, after « Détail »: the « Partager » chip, which grows the pill into the
+   pseudo's form on a second row, then the rank of the day in the chip's place. */
+.ui-end__board:not([hidden]) {
+  display: contents;
+}
+
+.ui-end__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--turquoise) 16%, transparent);
+  color: var(--turquoise);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ui-end__chip-icon {
+  width: 1.05em;
+  height: 1.05em;
+}
+
+.ui-end__chip-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ui-end__board-share {
+  cursor: pointer;
+}
+
+.ui-end__board-share[aria-current],
+.ui-end__board-share:hover,
+.ui-end__board-share:focus-visible {
+  outline: none;
+  box-shadow: var(--ui-focus);
+}
+
+/* The chip waits for the count, then rises in with one glow, as its reward. */
+.ui-end[data-tally='counting'] .ui-end__board-share {
+  display: none;
+}
+
+.ui-end__pill[data-arrive] .ui-end__board-share {
+  animation: ui-end-share 900ms ease-out both;
+}
+
+@keyframes ui-end-share {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+
+  40% {
+    opacity: 1;
+    translate: 0 0;
+    box-shadow: 0 0 calc(22px * var(--ui-halo))
+      color-mix(in srgb, var(--turquoise) 70%, transparent);
+  }
+}
+
+.ui-end__board-rank {
+  gap: 0;
+  border: 1px solid color-mix(in srgb, var(--or) 55%, transparent);
+  background: color-mix(in srgb, var(--or) 16%, transparent);
+  color: var(--ui-or);
+}
+
+.ui-end__board-pending {
+  color: var(--ui-muted);
+  font-weight: 600;
+}
+
+.ui-end__board-pending::before {
+  content: '·';
+  margin-inline: 8px;
+}
+
+.ui-end__board-ask {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 2px 0 6px;
+  padding: 8px 8px 0 16px;
+  border-top: 1px solid var(--ui-line);
+}
+
+.ui-end__board-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: text;
+}
+
+.ui-end__board-field .ui-field__label {
+  letter-spacing: 0.08em;
+}
+
+.ui-end__board-field .ui-pseudo__input {
+  width: 9.5em;
+  padding: 6px 14px;
+  font-size: 17px;
+}
+
+.ui-end__board-field[aria-current] .ui-pseudo__input {
+  border-color: var(--turquoise);
+  box-shadow: var(--ui-focus);
+}
+
+.ui-end__board-send {
+  width: auto;
+  min-height: 0;
+  padding: 7px 20px;
+  font-size: 16px;
+}
+
+.ui-end__board-field[data-refused] .ui-pseudo__input {
+  border-color: color-mix(in srgb, var(--rouge) 65%, var(--texte));
+}
+
+.ui-end__board-field[data-refused] .ui-field__label {
+  color: color-mix(in srgb, var(--rouge) 65%, var(--texte));
 }
 
 /* The entrances wait for the count to end, and play once: opening the ticket never deals again. */
@@ -9626,6 +9934,37 @@ svg.ui-title__moon-glint {
     padding: 3px 10px;
   }
 
+  .ui-end__chip {
+    padding: 3px 10px;
+    font-size: 13px;
+  }
+
+  .ui-end__board-ask {
+    gap: 8px;
+    margin: 0 0 3px;
+    padding: 3px 2px 0 12px;
+  }
+
+  .ui-end__board-field {
+    gap: 10px;
+  }
+
+  .ui-end__board-field .ui-field__label {
+    font-size: 11px;
+  }
+
+  .ui-end__board-field .ui-pseudo__input {
+    padding: 1px 10px;
+    border-width: 1px;
+    font-size: 14px;
+  }
+
+  .ui-end .ui-button.ui-end__board-send {
+    min-height: 0;
+    padding: 3px 14px;
+    font-size: 13px;
+  }
+
   .ui-end__cards {
     grid-auto-columns: minmax(0, 150px);
     gap: 8px;
@@ -9773,7 +10112,7 @@ svg.ui-title__moon-glint {
 
 /* Online, the row of chips under the cards is paid for with their margins: a card name on two
    lines, over a text on two lines, still fits a 720 px window. */
-@media (max-height: 760px) and (min-height: 521px) {
+@media (max-height: 799px) and (min-height: 521px) {
   .ui-offers:has(> .ui-offers__remote:not([hidden])) {
     gap: 6px;
   }

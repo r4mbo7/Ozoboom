@@ -19,7 +19,7 @@ function endlessMark(from: number | null | undefined): string | undefined {
 function tierMask(index: number): HTMLElement {
   // The drop keeps its slot class: the full game hangs the campfire's extra bosses on it.
   const drop = el('span', 'ui-slot ui-slot--drop');
-  drop.title = t('Palier {tier}, drop', { tier: formatNumber(index + 1) });
+  drop.title = t('Tier {tier}, drop', { tier: formatNumber(index + 1) });
   drop.append(icon('ui-slot__mask', BOSS_MASK));
   return drop;
 }
@@ -41,7 +41,7 @@ function paintEndless(sunrise: HTMLElement, from: number | null | undefined): vo
   } else {
     sunrise.dataset.endless = endlessMark(from);
   }
-  sunrise.title = from === undefined ? t('Sunrise') : t('Sans fin');
+  sunrise.title = from === undefined ? t('Sunrise') : t('Endless');
 }
 
 export function createLineupRibbon(): LineupRibbon {

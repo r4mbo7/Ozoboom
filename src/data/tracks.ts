@@ -6,7 +6,7 @@ const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
 
 export const SOIREE_OUVERTURE: MusicTrack = {
   id: 'soiree-ouverture',
-  name: "La soirée d'ouverture",
+  name: 'Opening Night',
   rootMidi: 30,
   scale: PHRYGIAN,
   themeScale: HIJAZ,
@@ -168,7 +168,7 @@ function brumeDroplets(oddBars: boolean): MusicNotes {
 
 export const BRUME_DU_LAC: MusicTrack = {
   id: 'brume-du-lac',
-  name: 'Brume du lac',
+  name: 'Lake Mist',
   rootMidi: 26,
   scale: AEOLIAN,
   chords: [0, 0, -2, -1],
@@ -288,7 +288,7 @@ const GOA_LEAD: MusicNotes = [
 
 const GOA_DES_ETOILES: MusicTrack = {
   id: 'goa-des-etoiles',
-  name: 'Goa des étoiles',
+  name: 'Starlight Goa',
   rootMidi: 28,
   scale: HARMONIC_MINOR,
   chords: [0, -2, -3, 0],
@@ -374,7 +374,7 @@ const ACID_LINE = {
 
 const GRENOUILLE_ACIDE: MusicTrack = {
   id: 'grenouille-acide',
-  name: 'La Grenouille acide',
+  name: 'The Acid Frog',
   rootMidi: 33,
   scale: DORIAN,
   chords: [0, 0, 0, -2],

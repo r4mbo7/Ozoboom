@@ -147,8 +147,8 @@ export function createVibeCounter(): VibeCounter {
     written = whole;
     const label = tn(
       whole,
-      '{vibes} vibe ramassée par l’équipe',
-      '{vibes} vibes ramassées par l’équipe',
+      '{vibes} vibe picked up by the team',
+      '{vibes} vibes picked up by the team',
       { vibes: next },
     );
     element.setAttribute('aria-label', label);

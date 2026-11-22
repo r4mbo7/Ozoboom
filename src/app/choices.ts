@@ -105,6 +105,7 @@ export function choiceCallbacks(env: ChoicesEnv): ChoiceCallbacks {
       env.showClassPicker();
     },
     onSeatName(name) {
+      settings.remember('pseudo', name);
       env.room().setSeatName(name);
     },
     onCreateRoom() {

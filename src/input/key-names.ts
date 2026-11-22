@@ -34,34 +34,34 @@ const PUNCTUATION: Readonly<Record<string, string>> = {
 };
 
 const NAMES: Readonly<Record<string, () => string>> = {
-  Space: () => t('Espace'),
-  ShiftLeft: () => t('Maj'),
-  ShiftRight: () => t('Maj droite'),
+  Space: () => t('Space'),
+  ShiftLeft: () => t('Shift'),
+  ShiftRight: () => t('Right Shift'),
   ControlLeft: () => t('Ctrl'),
-  ControlRight: () => t('Ctrl droite'),
+  ControlRight: () => t('Right Ctrl'),
   AltLeft: () => t('Alt'),
-  AltRight: () => t('Alt Gr'),
+  AltRight: () => t('Right Alt'),
   Tab: () => 'Tab',
-  Enter: () => t('Entrée'),
-  NumpadEnter: () => t('Entrée'),
-  CapsLock: () => t('Verr. maj'),
-  Insert: () => t('Inser'),
-  Home: () => t('Début'),
-  End: () => t('Fin'),
+  Enter: () => t('Enter'),
+  NumpadEnter: () => t('Enter'),
+  CapsLock: () => t('Caps Lock'),
+  Insert: () => t('Insert'),
+  Home: () => t('Home'),
+  End: () => t('End'),
   PageUp: () => t('Page ↑'),
   PageDown: () => t('Page ↓'),
   ArrowUp: () => '↑',
   ArrowDown: () => '↓',
   ArrowLeft: () => '←',
   ArrowRight: () => '→',
-  WheelUp: () => t('Molette ↑'),
-  WheelDown: () => t('Molette ↓'),
+  WheelUp: () => t('Wheel ↑'),
+  WheelDown: () => t('Wheel ↓'),
 };
 
 const MOUSE_NAMES: readonly (() => string)[] = [
-  () => t('Clic gauche'),
-  () => t('Clic molette'),
-  () => t('Clic droit'),
+  () => t('Left click'),
+  () => t('Middle click'),
+  () => t('Right click'),
 ];
 
 interface LayoutKeyboard {
@@ -128,7 +128,7 @@ export function createKeyNames(): KeyNames {
 function inputName(input: string, printed: string | undefined): string {
   const button = mouseButtonOf(input);
   if (button !== null) {
-    return MOUSE_NAMES[button]?.() ?? t('Bouton {number}', { number: button + 1 });
+    return MOUSE_NAMES[button]?.() ?? t('Button {number}', { number: button + 1 });
   }
   const named = NAMES[input];
   if (named !== undefined) {
@@ -143,7 +143,7 @@ function inputName(input: string, printed: string | undefined): string {
   }
   const pad = /^Numpad(\d)$/.exec(input);
   if (pad?.[1] !== undefined) {
-    return t('Pavé {number}', { number: pad[1] });
+    return t('Numpad {number}', { number: pad[1] });
   }
   return PUNCTUATION[input] ?? input;
 }
@@ -164,5 +164,5 @@ const BUTTON_NAMES: readonly string[] = [
 ];
 
 export function buttonName(button: number): string {
-  return BUTTON_NAMES[button] ?? t('Bouton {number}', { number: button + 1 });
+  return BUTTON_NAMES[button] ?? t('Button {number}', { number: button + 1 });
 }

@@ -12,7 +12,7 @@ export interface GaugeTile {
 
 export function createGaugeTile(): GaugeTile {
   const element = el('section', 'ui-hud__gauge');
-  element.setAttribute('aria-label', t('Jauge'));
+  element.setAttribute('aria-label', t('Gauge'));
   element.hidden = true;
   const ring = el('div', 'ui-gauge__ring');
   ring.setAttribute('role', 'meter');

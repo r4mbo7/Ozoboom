@@ -15,7 +15,7 @@ export interface MenuIntents {
   down: boolean;
   left: boolean;
   right: boolean;
-  // The tab before or after, on a screen with tabs: LB and RB, Shift+Tab and Tab.
+  // The tab before or after, on a screen with tabs: LB and RB, Q and E, Shift+Tab and Tab.
   previous: boolean;
   next: boolean;
   confirm: boolean;

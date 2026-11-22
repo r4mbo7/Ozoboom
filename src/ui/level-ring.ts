@@ -13,8 +13,8 @@ export interface LevelRing {
 function levelTitle(player: PlayerState): string {
   return tn(
     player.vibesToNextLevel,
-    'Niveau {level} : {vibes} vibes sur {next}',
-    'Niveau {level} : {vibes} vibes sur {next}',
+    'Level {level}: {vibes} of {next} vibe',
+    'Level {level}: {vibes} of {next} vibes',
     {
       level: formatNumber(player.level),
       vibes: formatNumber(player.vibes),
@@ -25,7 +25,7 @@ function levelTitle(player: PlayerState): string {
 
 export function createLevelRing(): LevelRing {
   const element = el('section', 'ui-hud__level');
-  element.setAttribute('aria-label', t('Niveau'));
+  element.setAttribute('aria-label', t('Level'));
   const ring = el('div', 'ui-level');
   const number = el('span', 'ui-level__number');
   ring.append(el('span', 'ui-level__twins'), number);

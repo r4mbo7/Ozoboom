@@ -104,17 +104,17 @@ function runDue(later: readonly Later[], now: number): Later[] {
 
 function stripLabel({ steps, everyBars }: WeaponCard): string {
   if (steps === 'continuous') {
-    return t('Joue en continu');
+    return t('Plays non-stop');
   }
   const fired = steps.flatMap((on, step) => (on ? [formatNumber(step + 1)] : [])).join(', ');
   return everyBars > 1
     ? tn(
         everyBars,
-        'Tire sur les doubles croches {steps}, une mesure sur {bars}',
-        'Tire sur les doubles croches {steps}, une mesure sur {bars}',
+        'Fires on sixteenths {steps}, one bar in {bars}',
+        'Fires on sixteenths {steps}, one bar in {bars}',
         { steps: fired, bars: formatNumber(everyBars) },
       )
-    : t('Tire sur les doubles croches {steps}', { steps: fired });
+    : t('Fires on sixteenths {steps}', { steps: fired });
 }
 
 function strip(card: WeaponCard): HTMLElement {
@@ -166,12 +166,12 @@ function fusionLine(fusions: WeaponCard['fusions']): HTMLElement | null {
   return second === undefined
     ? namesIn(
         'ui-card__fuse',
-        t('avec {upgrade}, devient {fusion}', { upgrade: MARKS[0], fusion: MARKS[1] }),
+        t('with {upgrade}, becomes {fusion}', { upgrade: MARKS[0], fusion: MARKS[1] }),
         [first.upgrade, first.name],
       )
     : namesIn(
         'ui-card__fuse',
-        t('avec {first} ou {second}, il fusionne', { first: MARKS[0], second: MARKS[1] }),
+        t('with {first} or {second}, it fuses', { first: MARKS[0], second: MARKS[1] }),
         [first.upgrade, second.upgrade],
       );
 }
@@ -183,7 +183,7 @@ function roles(model: WeaponCard): HTMLElement {
     chip.setAttribute('role', 'img');
     chip.setAttribute(
       'aria-label',
-      view.fresh ? t('{role}, que tes agrès ne font pas encore', { role: view.label }) : view.label,
+      view.fresh ? t('{role}, which your props don’t do yet', { role: view.label }) : view.label,
     );
     setFlag(chip, 'fresh', view.fresh);
     chip.append(
@@ -232,7 +232,7 @@ function rankOf(model: UpgradeCard | FusionCard): HTMLElement {
     el(
       'span',
       'ui-card__rank-text',
-      model.kind === 'fusion' ? t('Remplace {weapon}', { weapon: model.replaces }) : model.rank,
+      model.kind === 'fusion' ? t('Replaces {weapon}', { weapon: model.replaces }) : model.rank,
     ),
   );
   return rank;
@@ -267,7 +267,7 @@ function card(model: Card): HTMLButtonElement {
   const foot = el('span', 'ui-card__foot');
   foot.append(
     model.kind === 'weapon' ? levelsAndFusions(model) : rankOf(model),
-    el('span', 'ui-card__cta', t('Choisir')),
+    el('span', 'ui-card__cta', t('Choose')),
   );
   const head = el('span', 'ui-card__head');
   if (model.kind !== 'upgrade' || model.gift !== undefined) {
@@ -287,7 +287,7 @@ function card(model: Card): HTMLButtonElement {
     body.append(roles(model));
   }
   if (model.kind === 'fusion') {
-    body.append(el('span', 'ui-card__recipe', t('B2B : {recipe}', { recipe: model.recipe })));
+    body.append(el('span', 'ui-card__recipe', t('B2B: {recipe}', { recipe: model.recipe })));
   }
   body.append(el('span', 'ui-card__desc', model.description));
   if (model.kind === 'weapon') {
@@ -424,7 +424,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   element.hidden = true;
   const who = createWho();
   const kicker = el('p', 'ui-kicker');
-  const heading = el('h2', 'ui-heading', t('Choisis ton amélioration'));
+  const heading = el('h2', 'ui-heading', t('Pick your upgrade'));
   const places = createPlaceRow('ui-places');
   places.element.hidden = true;
   const cards = el('div', 'ui-cards');
@@ -435,7 +435,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
   const rerollCount = el('span', 'ui-reroll__count');
   reroll.append(
     icon('ui-reroll__die', DIE),
-    el('span', 'ui-reroll__label', t('Relancer')),
+    el('span', 'ui-reroll__label', t('Reroll')),
     rerollCount,
   );
   // The reroll shares the row of the hints: a phone has no height to spare for it.
@@ -499,8 +499,8 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       'aria-label',
       tn(
         rerolls,
-        'Relancer les cartes, {count} relance en réserve',
-        'Relancer les cartes, {count} relances en réserve',
+        'Reroll the cards, {count} reroll left',
+        'Reroll the cards, {count} rerolls left',
         {
           count: formatNumber(rerolls),
         },
@@ -577,7 +577,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       setFlag(button, 'chosen', picked);
       const cta = button.querySelector('.ui-card__cta');
       if (cta instanceof HTMLElement) {
-        setText(cta, picked ? t('Choisi') : t('Choisir'));
+        setText(cta, picked ? t('Chosen') : t('Choose'));
       }
     }
   }
@@ -591,9 +591,9 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     fillHint(
       hint,
       [
-        { keys: shown.navigateRow, label: t('choisir'), screen: 'wide' },
-        { keys: shown.navigate, label: t('choisir'), screen: 'narrow' },
-        { keys: [shown.confirm], label: t('valider') },
+        { keys: shown.navigateRow, label: t('choose'), screen: 'wide' },
+        { keys: shown.navigate, label: t('choose'), screen: 'narrow' },
+        { keys: [shown.confirm], label: t('confirm') },
       ],
       shown.style,
     );
@@ -875,7 +875,7 @@ const RELIC_HOLD_BEATS = 5;
 
 export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
   const element = el('section', 'ui-screen ui-overlay ui-upgrade');
-  element.setAttribute('aria-label', t('Choix d’amélioration'));
+  element.setAttribute('aria-label', t('Upgrade choice'));
   element.hidden = true;
   const effects = el('div', 'ui-screen ui-sparks');
   effects.setAttribute('aria-hidden', 'true');

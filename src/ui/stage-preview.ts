@@ -15,16 +15,21 @@ const LAKE = `
 
 const PREVIEWS: Readonly<Record<DecorId, string>> = { lake: LAKE, ...FULL_PREVIEWS };
 
+// The stage seen from above, as svg drawn in a 160 by 90 box.
+export function stagePicture(decor: DecorId): string {
+  const preview = PREVIEWS[decor];
+  if (preview === undefined) {
+    throw new Error(`No preview for the decor ${decor}`);
+  }
+  return preview;
+}
+
 export function stagePreview(decor: DecorId): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 160 90');
   svg.setAttribute('class', 'ui-stage__preview');
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
-  const preview = PREVIEWS[decor];
-  if (preview === undefined) {
-    throw new Error(`No preview for the decor ${decor}`);
-  }
-  svg.innerHTML = preview;
+  svg.innerHTML = stagePicture(decor);
   return svg;
 }

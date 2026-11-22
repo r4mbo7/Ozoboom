@@ -69,7 +69,7 @@ export function createFeedbackView(
   const message = messageField(messageId);
   const discord = discordLink();
   const { attach, context } = contextPanel(report);
-  const send = button('ui-button ui-button--primary', t('Envoyer sur GitHub'));
+  const send = button('ui-button ui-button--primary', t('Send on GitHub'));
   const form = formPage(titleId, {
     type: type.field,
     message: message.field,
@@ -83,7 +83,7 @@ export function createFeedbackView(
     'p',
     'ui-feedback__text ui-feedback__text--warn',
     t(
-      'Ton message était trop long pour le lien, sa fin a été coupée. Copie-le en entier pour le coller sur GitHub.',
+      'Your message was too long for the link, so its end was cut. Copy it whole to paste it on GitHub.',
     ),
   );
   const sent = sentPage(truncatedNote);
@@ -128,9 +128,9 @@ export function paintHint(page: Page, prompts: DevicePrompts): void {
   fillHint(
     page.hint,
     [
-      { keys: prompts.navigate, label: t('naviguer') },
-      { keys: [prompts.confirm], label: t('valider') },
-      { keys: [prompts.back], label: t('fermer') },
+      { keys: prompts.navigate, label: t('navigate') },
+      { keys: [prompts.confirm], label: t('confirm') },
+      { keys: [prompts.back], label: t('close') },
     ],
     prompts.style,
   );
@@ -138,7 +138,7 @@ export function paintHint(page: Page, prompts: DevicePrompts): void {
 
 function typeField(titleId: string): TypeField {
   const field = el('div', 'ui-field ui-field--type');
-  const label = el('span', 'ui-field__label', t('C’est plutôt'));
+  const label = el('span', 'ui-field__label', t('It’s about'));
   label.id = `${titleId}-type`;
   const group = el('div', 'ui-chips');
   group.setAttribute('role', 'radiogroup');
@@ -156,7 +156,7 @@ function typeField(titleId: string): TypeField {
 function messageField(messageId: string): MessageField {
   const field = el('div', 'ui-field ui-field--message');
   const head = el('div', 'ui-field__head');
-  const label = el('label', 'ui-field__label', t('Ton avis'));
+  const label = el('label', 'ui-field__label', t('Your feedback'));
   label.htmlFor = messageId;
   const counter = el('span', 'ui-field__count');
   head.append(label, counter);
@@ -164,7 +164,7 @@ function messageField(messageId: string): MessageField {
   textarea.id = messageId;
   textarea.maxLength = MAX_MESSAGE_LENGTH;
   textarea.rows = 6;
-  textarea.placeholder = t('Ce que tu as vécu, ce que tu attendais, ce que tu changerais.');
+  textarea.placeholder = t('What you lived, what you expected, what you would change.');
   field.append(head, textarea);
   return { field, textarea, counter };
 }
@@ -173,7 +173,7 @@ function publicNotice(): HTMLElement {
   const notice = el('p', 'ui-feedback__public');
   notice.append(
     icon('ui-feedback__public-icon', EYE),
-    el('span', '', t('Ton avis sera public sur GitHub. N’y mets rien de personnel.')),
+    el('span', '', t('Your feedback will be public on GitHub. Don’t put anything personal in it.')),
   );
   return notice;
 }
@@ -181,22 +181,22 @@ function publicNotice(): HTMLElement {
 function discordLink(): HTMLButtonElement {
   const discord = button('ui-feedback__discord', '');
   discord.append(
-    el('span', '', t('Pas sur GitHub ?')),
-    el('span', 'ui-feedback__discord-link', t('Pose ton mot sur Discord')),
+    el('span', '', t('Not on GitHub?')),
+    el('span', 'ui-feedback__discord-link', t('Drop us a line on Discord')),
   );
   return discord;
 }
 
 function contextPanel(report: string): ContextPanel {
   const attach = createToggle(
-    t('Joindre le contexte'),
-    t('Pour rejouer ta partie à l’identique'),
-    t('Oui'),
-    t('Non'),
+    t('Attach the context'),
+    t('To replay your game exactly'),
+    t('On'),
+    t('Off'),
   );
   attach.button.tabIndex = -1;
   const context = el('pre', 'ui-feedback__context', report);
-  context.setAttribute('aria-label', t('Contexte de la partie'));
+  context.setAttribute('aria-label', t('Game context'));
   // The report is read by developers, in English, whatever the language of the game.
   context.dir = 'ltr';
   return { attach, context };
@@ -221,15 +221,15 @@ function formPage(
   const grid = el('div', 'ui-feedback__grid');
   grid.append(main, side);
 
-  const copy = button('ui-button ui-feedback__secondary', t('Copier'));
-  const cancel = button('ui-button ui-feedback__secondary', t('Fermer'));
+  const copy = button('ui-button ui-feedback__secondary', t('Copy'));
+  const cancel = button('ui-button ui-feedback__secondary', t('Close'));
   const actions = el('div', 'ui-feedback__actions');
   actions.append(parts.send, copy, cancel);
 
-  const title = el('h2', 'ui-heading', t('Raconte-nous ta soirée'));
+  const title = el('h2', 'ui-heading', t('Tell us about your night'));
   title.id = titleId;
   const header = el('header', 'ui-feedback__header');
-  header.append(el('p', 'ui-kicker', t('Ton avis')), title);
+  header.append(el('p', 'ui-kicker', t('Your feedback')), title);
 
   const page: Page = {
     element: el('div', 'ui-feedback__view'),
@@ -251,8 +251,8 @@ function formPage(
 }
 
 function sentPage(truncatedNote: HTMLElement): Page {
-  const close = button('ui-button ui-button--primary', t('Fermer'));
-  const copy = button('ui-button ui-feedback__secondary', t('Copier'));
+  const close = button('ui-button ui-button--primary', t('Close'));
+  const copy = button('ui-button ui-feedback__secondary', t('Copy'));
   const actions = el('div', 'ui-feedback__actions');
   actions.append(close, copy);
   const page: Page = {
@@ -267,17 +267,17 @@ function sentPage(truncatedNote: HTMLElement): Page {
   };
   page.element.append(
     icon('ui-feedback__emblem', SENT),
-    el('h2', 'ui-heading', t('Le formulaire GitHub est ouvert')),
+    el('h2', 'ui-heading', t('The GitHub form is open')),
     el(
       'p',
       'ui-feedback__text',
-      t('Relis ton avis dans le nouvel onglet, puis publie-le. Il te faut un compte GitHub.'),
+      t('Read your feedback over in the new tab, then post it. You need a GitHub account.'),
     ),
     truncatedNote,
     el(
       'p',
       'ui-feedback__text',
-      t('Pas de compte GitHub ? Copie ton avis pour l’envoyer autrement.'),
+      t('No GitHub account? Copy your feedback to send it another way.'),
     ),
     page.status,
     actions,
