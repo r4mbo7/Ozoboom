@@ -66,6 +66,7 @@ export type SfxName =
   | 'giantWoken'
   | 'vibesStolen'
   | 'bystanderHelped'
+  | 'bystanderRewarded'
   | 'bystanderLost'
   | 'trapDropped'
   | 'trapTaken'
@@ -230,6 +231,19 @@ const POTION = {
   sparkle: { after: 0.14, every: 0.05, degrees: [0, 4, 7, 0, 4, 7], octaves: [5, 5, 5, 6, 6, 6] },
   bounceDegrees: [0, 3, 1, 4, 2],
 } as const;
+// A chord stab as the helped Raver's vibes leave, a coin climbing the key as each lands, the last
+// with the stab under it: timed on the flights of `src/render/raver-cues.ts` (sfx.test.ts).
+const JACKPOT = {
+  stab: [
+    [0, 3, 'sawtooth'],
+    [2, 3, 'square'],
+    [4, 3, 'sawtooth'],
+    [0, 4, 'square'],
+  ],
+  coins: [0, 1, 2, 3, 4, 5, 6, 7],
+  gap: 0.25,
+  flight: 1,
+} as const;
 // The charge-up's rise, then the chord it lands on.
 const CHARGE = { rise: 0.24, chord: [0, 4, 7] } as const;
 
@@ -282,6 +296,11 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     giantWoken: { perFrame: 1, concurrent: 2, seconds: 1 },
     vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
     bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
+    bystanderRewarded: {
+      perFrame: 1,
+      concurrent: 2,
+      seconds: beat * (JACKPOT.flight + (JACKPOT.coins.length - 1) * JACKPOT.gap) + 0.45,
+    },
     bystanderLost: { perFrame: 1, concurrent: 1, seconds: 0.5 },
     trapDropped: { perFrame: 1, concurrent: 2, seconds: 0.4 },
     trapTaken: { perFrame: 1, concurrent: 2, seconds: 0.15 },
@@ -362,8 +381,6 @@ export function sfxOf(
     case 'weaponGained':
     case 'weaponEvolved':
     case 'vibesStolen':
-    case 'bystanderHelped':
-    case 'bystanderLost':
     case 'taunted':
     case 'playerHealed':
     case 'playerDowned':
@@ -423,6 +440,11 @@ export function sfxOf(
       return 'enemyBabble';
     case 'enemyRevived':
       return 'enemyGrowl';
+    case 'bystanderHelped':
+      return 'bystanderRewarded';
+    // Its time up, the Raver leaves in silence: only a bad vibe chasing it away is heard.
+    case 'bystanderLost':
+      return event.reason === 'badVibe' ? 'bystanderLost' : null;
     case 'dancerUnmasked':
       return 'bystanderHelped';
     case 'dancerMasked':
@@ -587,6 +609,27 @@ function rechargeNotes(
       filter: { type: 'lowpass', hz: 1200 },
     });
   }
+}
+
+function jackpotStab(out: AudioNode, at: number, key: MusicKey): void {
+  for (const [degree, octave, wave] of JACKPOT.stab) {
+    playTone(out, at, {
+      wave,
+      hz: keyHz(key, degree, octave),
+      gain: 0.12,
+      attack: 0.004,
+      hold: 0.08,
+      release: 0.34,
+      filter: { type: 'lowpass', hz: 4200, toHz: 1400, glide: 0.3, q: 1.2 },
+    });
+  }
+  playNoise(out, at, {
+    gain: 0.18,
+    attack: 0.001,
+    hold: 0.01,
+    release: 0.12,
+    filter: { type: 'bandpass', hz: 3000, q: 0.9 },
+  });
 }
 
 // A bass thump with a body, `level` 1 at its loudest; kept low, the mids carry the loudness.
@@ -2013,6 +2056,35 @@ export const VOICES: Readonly<Record<SfxName, Voice>> = {
         release: 0.15,
       });
     });
+  },
+  bystanderRewarded: (
+    out,
+    at,
+    _variant,
+    key,
+    _vibes,
+    _progress,
+    beat = beatSeconds(MAIN_TEMPO),
+  ) => {
+    jackpotStab(out, at, key);
+    JACKPOT.coins.forEach((degree, index) => {
+      const land = at + beat * (JACKPOT.flight + index * JACKPOT.gap);
+      for (const [octave, delay, gain] of [
+        [4, 0, 0.2],
+        [5, 0.045, 0.14],
+      ] as const) {
+        playTone(out, land + delay, {
+          wave: 'square',
+          hz: keyHz(key, degree, octave),
+          gain,
+          attack: 0.002,
+          hold: 0.02,
+          release: 0.11,
+          filter: { type: 'lowpass', hz: 3600, q: 0.8 },
+        });
+      }
+    });
+    jackpotStab(out, at + beat * (JACKPOT.flight + (JACKPOT.coins.length - 1) * JACKPOT.gap), key);
   },
   bystanderLost: (out, at, _variant, key) => {
     playTone(out, at, {

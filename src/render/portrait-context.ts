@@ -23,7 +23,7 @@ export function portraitContext(
     behaviours: new Map(),
     trapLooks: new Map(),
     specials: new Map(),
-    helpTicks: new Map(),
+    bystanderLooks: new Map(),
     speakerLooks: new Map(),
     weaponLooks: new Map(),
     skillEffects,

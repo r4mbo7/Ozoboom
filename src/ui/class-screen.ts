@@ -86,11 +86,14 @@ export function createClassPicker(
   let device: InputDevice | null = null;
   // The press on a button came from the first seat's cursor, not from the mouse.
   let cursorPress = false;
+  // Opened while hidden: the first model it shows after lays it out.
+  let layOutDue = false;
 
   const element = el('section', 'ui-screen ui-classpicker');
   element.setAttribute('aria-label', t('Character choice'));
   const grid = classes.length > ROW_CARDS;
-  element.toggleAttribute('data-many', classes.length + CLASS_TEASERS.length > ROW_CARDS);
+  const many = classes.length + CLASS_TEASERS.length > ROW_CARDS;
+  element.toggleAttribute('data-many', many);
   const lead = el('p', 'ui-lobby__lead', t('Who hits the floor tonight?'));
   const header = el('header', 'ui-lobby__header');
   header.append(el('h2', 'ui-lobby__title', t('Pick your character')), lead);
@@ -138,7 +141,7 @@ export function createClassPicker(
   });
   row.append(...cards, ...CLASS_TEASERS.map(classTeaser));
   // Its border box, which the padding leaves alone, measured on the next frame, once laid out.
-  if (element.hasAttribute('data-many') && typeof ResizeObserver !== 'undefined') {
+  if (many && typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => {
       requestAnimationFrame(() => {
         spreadCards(row);
@@ -253,6 +256,15 @@ export function createClassPicker(
       },
     },
   );
+
+  // Its first frame shows the cards and sheets at their size: measured in the task that shows the
+  // screen, not by the resize observers a frame later.
+  function layOut(): void {
+    keepSheetRooms();
+    if (many) {
+      spreadCards(row);
+    }
+  }
 
   function together(): boolean {
     return model.seats.length > 1;
@@ -452,12 +464,17 @@ export function createClassPicker(
       inputs.clear();
       cursors.open();
       paint();
+      layOutDue = true;
     },
     setModel(next) {
       model = next;
       inputs.keep(next.seats);
       cursors.follow(next.seats);
       paint();
+      if (layOutDue && element.offsetWidth > 0) {
+        layOutDue = false;
+        layOut();
+      }
     },
     setDevice(next) {
       if (next !== device) {

@@ -61,10 +61,12 @@ export interface LookTextures {
 
 export interface DownedTextures {
   readonly fill: Shape;
-  readonly line: Shape;
-  readonly inner: Shape;
+  readonly dot: Shape;
   readonly firefly: Shape;
   readonly veil: Shape;
+  readonly pool: Shape;
+  readonly column: Shape;
+  readonly wave: Shape;
 }
 
 export interface EmoteTextures {
@@ -218,10 +220,12 @@ export function playerTextures(density = 1): PlayerTextures {
     contour: t.contour,
     downed: {
       fill: t.downedFill,
-      line: t.downedLine,
-      inner: t.downedInner,
+      dot: t.swarmDot,
       firefly: t.firefly,
       veil: t.downedVeil,
+      pool: t.beaconPool,
+      column: t.beaconColumn,
+      wave: t.beaconWave,
     },
     emote: {
       sun: e.emoteSun,

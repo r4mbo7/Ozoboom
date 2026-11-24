@@ -475,13 +475,15 @@ export interface BatteryRules {
   radius: number;
 }
 
-// Dropped `chance` a stage: its taker is shielded `bars`, hits `damageMul` harder, fires `rateMul` faster, bounces `bounce`.
+// Dropped `chance` a stage: its taker is shielded `bars`, hits `damageMul` harder, fires `rateMul` faster,
+// runs `speedMul` faster, bounces `bounce`.
 export interface PotionRules {
   chance: number;
   radius: number;
   bars: number;
   damageMul: number;
   rateMul: number;
+  speedMul: number;
   bounce: number;
 }
 

@@ -80,8 +80,9 @@ export function potion(ctx: StepContext): void {
   state.events.push({ type: 'potionTaken', id: cell.id, playerId: taker.id, x: cell.x, y: cell.y });
 }
 
-function potionModifiers({ damageMul, rateMul }: PotionRules): BoostModifier[] {
+function potionModifiers({ damageMul, rateMul, speedMul }: PotionRules): BoostModifier[] {
   return [
+    { stat: 'speedMul', mul: speedMul },
     { stat: 'damageMul', mul: damageMul },
     { stat: 'attackCooldownMul', mul: 1 / rateMul },
     { stat: 'weaponRateMul', mul: rateMul },

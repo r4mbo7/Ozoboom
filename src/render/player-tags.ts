@@ -11,7 +11,7 @@ import { add, setTint } from './util';
 const REVIVE_GRACE = 3;
 const REVIVED_TICKS = 2 * TICKS_PER_BEAT;
 const NAME_GAP = 3;
-const NAME_ALPHA = { standing: 1, downed: 0.9 };
+const DOWNED_NAME = { size: 1.15, face: 0.92 };
 
 interface Revive {
   progress: number;
@@ -67,6 +67,8 @@ export class ReviveLog {
 }
 
 export class PlayerTag {
+  private readonly face: Sprite;
+  private readonly rim: Sprite;
   private readonly nameEdge: Sprite;
   private readonly name: Sprite;
   private readonly burst: Sprite;
@@ -77,12 +79,15 @@ export class PlayerTag {
     const { textures, layers } = ctx;
     this.ctx = ctx;
     this.burst = add(layers.glow, textures.halo);
+    this.face = add(tags, textures.halo);
+    this.rim = add(tags, textures.halo);
     this.nameEdge = add(tags, textures.halo);
     this.name = add(tags, textures.halo);
   }
 
   hide(): void {
     this.burst.visible = this.name.visible = this.nameEdge.visible = false;
+    this.face.visible = this.rim.visible = false;
   }
 
   place(
@@ -130,7 +135,7 @@ export class PlayerTag {
     frame: Frame,
     team: boolean,
   ): number {
-    const { name, nameEdge } = this;
+    const { name, nameEdge, face, rim } = this;
     const label =
       player.name !== undefined && player.name !== ''
         ? player.name
@@ -138,26 +143,38 @@ export class PlayerTag {
           ? defaultName(player.id)
           : null;
     name.visible = nameEdge.visible = label !== null;
+    face.visible = rim.visible = label !== null && player.downed;
     if (label === null) {
       return y - reach;
     }
     const { light, palette, camera } = frame;
+    const dark = light.additive ? palette.sol : palette.texte;
     const texts = this.ctx.textures.names.get(label);
     if (name.texture !== texts.fill) {
       name.texture = texts.fill;
       nameEdge.texture = texts.edge;
     }
-    const size = 1 / (NAME_TEXTURE_SCALE * camera.scale);
-    const above = reach + (texts.fill.height / NAME_TEXTURE_SCALE / 2 + NAME_GAP) / camera.scale;
-    const fade = player.downed ? NAME_ALPHA.downed : NAME_ALPHA.standing;
-    name.position.set(x, y - above);
-    nameEdge.position.set(x, y - above);
-    name.scale.set(size);
-    nameEdge.scale.set(size);
-    setTint(name, color);
-    setTint(nameEdge, light.additive ? palette.sol : palette.texte);
-    name.alpha = fade;
-    nameEdge.alpha = (light.additive ? 0.7 : 0.9) * fade;
-    return y - above - texts.fill.height / NAME_TEXTURE_SCALE / 2 / camera.scale;
+    const grow = player.downed ? DOWNED_NAME.size : 1;
+    const size = grow / (NAME_TEXTURE_SCALE * camera.scale);
+    let height = texts.fill.height;
+    if (player.downed) {
+      const plate = this.ctx.textures.names.plate(label);
+      face.texture = plate.face;
+      rim.texture = plate.rim;
+      height = plate.face.height;
+      setTint(face, dark);
+      setTint(rim, color);
+      face.alpha = DOWNED_NAME.face;
+    }
+    const half = (height / NAME_TEXTURE_SCALE / 2) * grow;
+    const above = reach + (half + NAME_GAP) / camera.scale;
+    for (const sprite of [name, nameEdge, face, rim]) {
+      sprite.position.set(x, y - above);
+      sprite.scale.set(size);
+    }
+    setTint(name, player.downed ? (light.additive ? palette.texte : palette.sol) : color);
+    setTint(nameEdge, dark);
+    nameEdge.alpha = light.additive ? 0.7 : 0.9;
+    return y - above - half / camera.scale;
   }
 }

@@ -1,4 +1,5 @@
 import { type Container, Graphics, type Sprite } from 'pixi.js';
+import { DANGER_RATIO, dangerDepth } from '../shared/low-life';
 import { clamp01 } from '../shared/scalar';
 import type { Tempo } from '../shared/tempo';
 import type { PlayerState } from '../sim/state';
@@ -24,7 +25,6 @@ const NUMBER_SIZE = 11 / LABEL_FONT_PX;
 const NUMBER_GAP = 2;
 const NUMBER_HEIGHT = (LABEL_FONT_PX * 1.4 + 2 * LABEL_PAD) * NUMBER_SIZE;
 
-const DANGER_RATIO = 0.25;
 const ALARM_REACH = 0.3;
 const ALARM_STROKE = 0.75;
 const ALARM_NUMBER = 0.4;
@@ -117,10 +117,6 @@ export function alarmScale(growth: number): AlarmScale {
     stroke: 1 + ALARM_STROKE * growth,
     number: 1 + ALARM_NUMBER * growth,
   };
-}
-
-export function dangerDepth(fraction: number): number {
-  return clamp01(1 - fraction / DANGER_RATIO);
 }
 
 export class LifeArc {

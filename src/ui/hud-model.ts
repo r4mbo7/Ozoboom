@@ -8,6 +8,7 @@ import type {
   WeaponDefinition,
 } from '../data/types';
 import { t, tn } from '../shared/i18n';
+import { DANGER_RATIO, dangerDepth } from '../shared/low-life';
 import { type PaletteToken, isClassToken } from '../shared/palette';
 import { TICK_RATE_HZ, VIBE_STREAK_BEATS } from '../shared/tempo';
 import { POTION_BOOST, potionShielded } from '../sim/potion-shield';
@@ -61,8 +62,6 @@ export function classToken(classId: string): PaletteToken {
   return isClassToken(classId) ? classId : 'or';
 }
 
-const DANGER_RATIO = 0.25;
-
 export function deepestDanger(
   players: readonly Pick<PlayerState, 'hp' | 'maxHp' | 'downed'>[],
 ): number | null {
@@ -72,7 +71,7 @@ export function deepestDanger(
       lowest = Math.min(lowest, ratio(player.hp, player.maxHp));
     }
   }
-  return lowest <= DANGER_RATIO ? 1 - lowest / DANGER_RATIO : null;
+  return lowest <= DANGER_RATIO ? dangerDepth(lowest) : null;
 }
 
 export function allDown(players: readonly Pick<PlayerState, 'downed'>[]): boolean {

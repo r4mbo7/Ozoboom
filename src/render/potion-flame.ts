@@ -1,5 +1,6 @@
 import { BufferImageSource, Mesh, MeshGeometry, type Shader, Texture } from 'pixi.js';
 import { clamp01, frac, lerp, smoothstep } from '../shared/scalar';
+import { seeded } from './seeded';
 import { TAU } from './paint';
 import { WHITE, mixColor } from './palette';
 import { DRAWN_RADIUS, OUTLINE, type PoweredBody, hueAt } from './potion-aura-model';
@@ -21,10 +22,6 @@ interface Tongue {
   readonly phase: number;
   readonly flickerPhase: number;
   readonly flicker: number;
-}
-
-function seeded(index: number): number {
-  return frac(Math.sin(index * 12.9898 + 4.1414) * 43758.5453);
 }
 
 const TONGUES: readonly Tongue[] = [

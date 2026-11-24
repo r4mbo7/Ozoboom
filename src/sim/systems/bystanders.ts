@@ -6,9 +6,9 @@ import { lookup, type ResolvedContent } from '../content';
 import { touches } from '../effects';
 import { clearOfObstacles, type Obstacles } from '../obstacles';
 import { ashore, type Shore } from '../shore';
-import type { BystanderState, SimState } from '../state';
+import type { BystanderLeaving, BystanderState, SimState } from '../state';
 import { reviveMulOf } from './revive';
-import { edgePosition } from './spawning';
+import { dryEdgePosition } from './spawning';
 import type { StepContext } from './types';
 
 const WANDER_FRACTION_MIN = 0.3;
@@ -46,11 +46,11 @@ function spawnBystander(
   obstacles: Obstacles,
   shore: Shore | null,
 ): void {
-  const edge = edgePosition(state.rng, state.arena, definition.radius);
+  const edge = dryEdgePosition(state.rng, state.arena, definition.radius, shore);
   const { x, y } = clearOfObstacles(edge, definition.radius, obstacles);
   const { core } = state;
   const fraction = WANDER_FRACTION_MIN + nextFloat(state.rng) * WANDER_FRACTION_SPAN;
-  // Players stay on the shore of a lake: a Festivalier stops there, within their reach.
+  // Players stay on the shore of a lake: a Festivalier comes from the land and stops there.
   const target = ashore(
     shore,
     { x: x + (core.x - x) * fraction, y: y + (core.y - y) * fraction },
@@ -86,7 +86,7 @@ function updateBystanders(ctx: StepContext): void {
     advance(bystander, definition);
 
     if (touchedByEnemy(state, bystander)) {
-      leave(state, bystander, definition.vibesPenalty);
+      leave(state, bystander, definition.vibesPenalty, 'badVibe');
       continue;
     }
 
@@ -98,13 +98,14 @@ function updateBystanders(ctx: StepContext): void {
         continue;
       }
     } else {
-      bystander.helpTicks = 0;
-    }
-
-    bystander.ticksLeft -= 1;
-    if (bystander.ticksLeft <= 0) {
-      leave(state, bystander, 0);
-      continue;
+      // Left alone, the help leaks back as fast as one player builds it, like a speaker's charge,
+      // and its time runs: it only runs out while nobody helps it.
+      bystander.helpTicks = Math.max(0, bystander.helpTicks - 1);
+      bystander.ticksLeft -= 1;
+      if (bystander.ticksLeft <= 0) {
+        leave(state, bystander, 0, 'timeUp');
+        continue;
+      }
     }
 
     list[kept] = bystander;
@@ -198,7 +199,12 @@ function help(state: SimState, bystander: BystanderState, reward: number): void 
   });
 }
 
-function leave(state: SimState, bystander: BystanderState, penalty: number): void {
+function leave(
+  state: SimState,
+  bystander: BystanderState,
+  penalty: number,
+  reason: BystanderLeaving,
+): void {
   for (const player of state.players) {
     player.vibes = Math.max(0, player.vibes - penalty);
   }
@@ -208,5 +214,6 @@ function leave(state: SimState, bystander: BystanderState, penalty: number): voi
     kind: bystander.kind,
     x: bystander.x,
     y: bystander.y,
+    reason,
   });
 }

@@ -3,7 +3,8 @@ import { type Locale, isLocale } from './languages';
 
 export type GameMode = 'solo' | 'local' | 'online';
 export type GameDevice = 'keyboardMouse' | 'gamepad' | 'touch';
-export type GameEdition = 'demo' | 'full';
+export const GAME_EDITIONS = ['full', 'demo', 'steam', 'steam-demo'] as const;
+export type GameEdition = (typeof GAME_EDITIONS)[number];
 export type GameOutcome = 'won' | 'core' | 'downed' | 'quit' | 'interrupted';
 
 interface GameFields {

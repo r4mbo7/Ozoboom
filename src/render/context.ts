@@ -38,12 +38,14 @@ export interface RenderContent {
   readonly traps: readonly Pick<TrapDefinition, 'id' | 'radius' | 'effect' | 'shade'>[];
   readonly sets: readonly SetDefinition[];
   readonly paths?: readonly SetDefinition[];
-  readonly bystanders?: readonly Pick<BystanderDefinition, 'id' | 'helpTicks'>[];
+  readonly bystanders?: readonly (BystanderLook & Pick<BystanderDefinition, 'id'>)[];
   readonly weapons?: readonly (WeaponLook & Pick<WeaponDefinition, 'id'>)[];
   readonly dash?: DashDefinition;
 }
 
 export type TrapLook = Pick<TrapDefinition, 'radius' | 'effect' | 'shade'>;
+
+export type BystanderLook = Pick<BystanderDefinition, 'helpTicks' | 'vibesReward' | 'lifetimeBars'>;
 
 export type SpeakerLook = Pick<
   SpeakerDefinition,
@@ -59,7 +61,7 @@ export interface RenderContext {
   readonly enemyRadii?: ReadonlyMap<string, number>;
   readonly trapLooks: ReadonlyMap<string, TrapLook>;
   readonly specials: ReadonlyMap<string, SpecialEffect>;
-  readonly helpTicks: ReadonlyMap<string, number>;
+  readonly bystanderLooks: ReadonlyMap<string, BystanderLook>;
   readonly speakerLooks: ReadonlyMap<string, ReadonlyMap<string, SpeakerLook>>;
   readonly stages: ReadonlyMap<string, SetDefinition>;
   readonly weaponLooks: ReadonlyMap<string, WeaponLook>;
@@ -99,7 +101,7 @@ export function createRenderContext(
         def.special === undefined ? [] : [[def.id, def.special]],
       ),
     ),
-    helpTicks: new Map((content.bystanders ?? []).map((def) => [def.id, def.helpTicks])),
+    bystanderLooks: new Map((content.bystanders ?? []).map((def) => [def.id, def])),
     stages: new Map(playedSets(content).map((set) => [set.id, set])),
     speakerLooks: new Map(
       playedSets(content).map((set) => [

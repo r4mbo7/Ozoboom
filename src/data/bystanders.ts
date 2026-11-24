@@ -11,6 +11,6 @@ export const BYSTANDERS: readonly BystanderDefinition[] = [
     helpTicks: TICKS_PER_BAR,
     vibesReward: 8,
     vibesPenalty: 4,
-    lifetimeBars: 4,
+    lifetimeBars: 5,
   },
 ];

@@ -81,6 +81,21 @@ export function createPortraits(classes: readonly PortraitClass[], calm: () => b
     }
     wake();
   });
+  // Painted as soon as it has a size, before that frame shows: until then it has no buffer to paint.
+  const sizer = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const view = views.get(entry.target);
+      if (view === undefined || entry.contentRect.width === 0) {
+        continue;
+      }
+      const pixi = held.current;
+      if (pixi === null) {
+        paintClassDisc(view.canvas, view.state.players[0]?.classId ?? '');
+      } else {
+        draw(view, view.canvas, pixi, ticksAt(performance.now()));
+      }
+    }
+  });
   const palette = paletteAt(PORTRAIT_NIGHT);
   let textures: Textures | null = null;
   let startedAt = Number.NaN;
@@ -162,16 +177,20 @@ export function createPortraits(classes: readonly PortraitClass[], calm: () => b
     if (pixi === null) {
       return;
     }
-    if (Number.isNaN(startedAt)) {
-      startedAt = time;
-    }
-    const now = (time - startedAt) / TICK_MS;
+    const now = ticksAt(time);
     for (const view of views.values()) {
       if (view.visible) {
         draw(view, view.canvas, pixi, now);
       }
     }
     wake();
+  }
+
+  function ticksAt(time: number): number {
+    if (Number.isNaN(startedAt)) {
+      startedAt = time;
+    }
+    return (time - startedAt) / TICK_MS;
   }
 
   function sceneOf(definition: PortraitClass): Scene {
@@ -232,6 +251,7 @@ export function createPortraits(classes: readonly PortraitClass[], calm: () => b
       destroy() {
         if (views.delete(canvas)) {
           watcher.unobserve(canvas);
+          sizer.unobserve(canvas);
           for (const family of families) {
             family.destroy();
           }
@@ -243,6 +263,7 @@ export function createPortraits(classes: readonly PortraitClass[], calm: () => b
     const view: View = { ...scene, canvas, visible: false };
     views.set(canvas, view);
     watcher.observe(canvas);
+    sizer.observe(canvas);
     return portrait;
   }
 

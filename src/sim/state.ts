@@ -490,6 +490,9 @@ export interface DieState extends Positioned {
   id: EntityId;
 }
 
+// Its time ran out, or a bad vibe touched it.
+export type BystanderLeaving = 'timeUp' | 'badVibe';
+
 export interface BystanderState extends Positioned {
   id: EntityId;
   kind: string;
@@ -761,7 +764,14 @@ export type SimEvent =
   | { type: 'enemyBabbled'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderSpawned'; id: EntityId; kind: string; x: number; y: number }
   | { type: 'bystanderHelped'; id: EntityId; kind: string; x: number; y: number }
-  | { type: 'bystanderLost'; id: EntityId; kind: string; x: number; y: number }
+  | {
+      type: 'bystanderLost';
+      id: EntityId;
+      kind: string;
+      x: number;
+      y: number;
+      reason: BystanderLeaving;
+    }
   // `enemyId`: the chased bad vibe he was.
   | { type: 'dancerUnmasked'; id: EntityId; enemyId: EntityId; x: number; y: number }
   | { type: 'dancerHit'; id: EntityId; notches: number }

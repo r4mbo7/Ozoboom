@@ -4,6 +4,7 @@ import { BARS_PER_PHRASE, barOfTick, isBarTick, type Tempo } from '../../shared/
 import { lookup } from '../lookup';
 import { compound } from '../effects';
 import { clearOfObstacles } from '../obstacles';
+import { shoreAt, type Shore } from '../shore';
 import { teamMul } from '../team';
 import { volumeMul } from '../volume';
 import type { Arena, EdgeSide, EnemyScale, EnemyState, SimState, Vec2 } from '../state';
@@ -187,6 +188,34 @@ function drawSides(rng: SimState['rng'], chance: number): EdgeSide[] {
 export function edgePosition(rng: SimState['rng'], arena: Arena, radius: number): Vec2 {
   const [spanX, spanY] = spans(arena, radius);
   return pointAlong(arena, radius, nextFloat(rng) * 2 * (spanX + spanY));
+}
+
+// A point of the edge players can reach: by a lake, the top and bottom east of its shore and the
+// whole east side, never out of the water.
+export function dryEdgePosition(
+  rng: SimState['rng'],
+  arena: Arena,
+  radius: number,
+  shore: Shore | null,
+): Vec2 {
+  if (shore === null) {
+    return edgePosition(rng, arena, radius);
+  }
+  const { width, height } = arena;
+  const right = width - radius;
+  const top = right - Math.min(right, shoreAt(shore, radius) + radius);
+  const bottom = right - Math.min(right, shoreAt(shore, height - radius) + radius);
+  const side = height - 2 * radius;
+  let along = nextFloat(rng) * (top + side + bottom);
+  if (along < top) {
+    return { x: right - top + along, y: radius };
+  }
+  along -= top;
+  if (along < side) {
+    return { x: right, y: radius + along };
+  }
+  along -= side;
+  return { x: right - along, y: height - radius };
 }
 
 function sidePosition(rng: SimState['rng'], arena: Arena, radius: number, side: EdgeSide): Vec2 {

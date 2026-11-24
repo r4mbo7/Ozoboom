@@ -1,4 +1,5 @@
 import { RING_STEPS } from './help';
+import { CROSS, type RaverTextures, createRaverTextures } from './textures-raver';
 import {
   SHADE,
   SHADE_DEEP,
@@ -12,7 +13,7 @@ import {
   type Shape,
 } from './paint';
 
-export interface SpecialTextures {
+export interface SpecialTextures extends RaverTextures {
   readonly zone: Shape;
   readonly cone: Shape;
   readonly link: Shape;
@@ -160,20 +161,7 @@ export function createSpecialTextures(): SpecialTextures {
     }),
     cross: paint(40, 40, 14, (ctx) => {
       ctx.lineJoin = 'round';
-      polygon(ctx, [
-        [-4.5, -13],
-        [4.5, -13],
-        [4.5, -4.5],
-        [13, -4.5],
-        [13, 4.5],
-        [4.5, 4.5],
-        [4.5, 13],
-        [-4.5, 13],
-        [-4.5, 4.5],
-        [-13, 4.5],
-        [-13, -4.5],
-        [-4.5, -4.5],
-      ]);
+      polygon(ctx, CROSS);
       ctx.fillStyle = WHITE;
       ctx.fill();
       ctx.lineWidth = 2;
@@ -217,10 +205,11 @@ export function createSpecialTextures(): SpecialTextures {
       );
     }),
     helpRing: Array.from({ length: RING_STEPS + 1 }, (_, step) => ringStepTexture(step)),
+    ...createRaverTextures(),
   };
 }
 
 export function specialShapes(textures: SpecialTextures): Shape[] {
-  const { helpRing, ...single } = textures;
-  return [...Object.values(single), ...helpRing];
+  const { helpRing, crossClock, heartHalves, ...single } = textures;
+  return [...Object.values(single), ...helpRing, ...crossClock, ...heartHalves];
 }
