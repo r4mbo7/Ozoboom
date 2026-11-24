@@ -11,7 +11,10 @@ import {
   type RecordingPartName,
   type RecordingVoice,
 } from './menu-track';
+import { barSeconds, sixteenthSeconds } from './clock';
+import { reachesLine } from './held-bar';
 import { createMusic, type Music } from './music';
+import { musicHits } from './music-hits';
 import { loadSamples, type SampleBank } from './samples';
 import {
   createSfx,
@@ -21,6 +24,8 @@ import {
   type SpecialTake,
   type TrapEffectOf,
 } from './sfx';
+import { playEntrySounds } from './stage-entry-sounds';
+import { keyedTrack } from './track-key';
 import type { MenuHeard } from '../shared/menu-score';
 import type { AudioEngine, Mood } from './types';
 
@@ -42,8 +47,8 @@ export interface AudioEngineOptions {
   // The menu track (MENU_RECORDING), loaded in the background: the menus wait for it in silence, and
   // play the ambience only when it is absent or does not decode.
   readonly menuTrack?: (context: BaseAudioContext) => RecordingLoad;
-  // The artists' files of the effects, decoded from the opening with the engine's own context.
-  // Absent means those placed with `pnpm sounds`.
+  // The artists' files of the effects and of the music's hits, decoded from the opening with the
+  // engine's own context. Absent means those placed with `pnpm sounds`.
   readonly samples?: (context: BaseAudioContext) => SampleBank;
 }
 
@@ -64,6 +69,8 @@ const DEFAULT_BREAK_BARS = 4;
 const OUTPUT_CLOCK_WARMUP_SECONDS = 0.1;
 const OUTPUT_CLOCK_GRACE_SECONDS = 0.5;
 const AMBIENCE_PUMP_MS = 100;
+const ENTRY_CUT_SECONDS = 0.02;
+const ENTRY_TAIL_MS = 1000;
 
 function everyPump(callback: () => void): () => void {
   const timer = setInterval(callback, AMBIENCE_PUMP_MS);
@@ -100,7 +107,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   const breakBars = options.breakBars ?? (() => DEFAULT_BREAK_BARS);
   const trapEffectOf = options.trapEffectOf ?? ((kind: string) => kind);
   const repeat = options.repeat ?? everyPump;
-  let track = options.track ?? SOIREE_OUVERTURE;
+  // Every track that enters plays in the key its artist set, if any (ADR 0026).
+  const keyed = (value: MusicTrack): MusicTrack => keyedTrack(value, FULL_SOUNDS.keys);
+  const { trackFor } = options;
+  let track = keyed(options.track ?? SOIREE_OUVERTURE);
   let running: Running | null = null;
   let muted = false;
   let volume = 1;
@@ -110,6 +120,22 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   let heard: Mood = 'set';
   let menuAt: number | null = null;
   let stopPumping: (() => void) | null = null;
+  // When the game began waiting for the beat it resumes on, and that beat, by the page clock.
+  let waiting: { readonly since: number; readonly until: number } | null = null;
+  // The entry the music lands on, by the page clock, and the bus its sounds play on.
+  let entry: { readonly landsAt: number; readonly bus: GainNode } | null = null;
+
+  const retireEntry = () => {
+    if (entry === null) {
+      return;
+    }
+    const { bus } = entry;
+    bus.gain.setTargetAtTime(0, bus.context.currentTime, ENTRY_CUT_SECONDS);
+    setTimeout(() => {
+      bus.disconnect();
+    }, ENTRY_TAIL_MS);
+    entry = null;
+  };
 
   const pump = () => {
     if (running === null) {
@@ -154,6 +180,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       trackOf(running)?.leave();
       music.fadeIn();
     } else {
+      retireEntry();
       const voice = menuVoice(running);
       for (const other of [ambience, trackOf(running)]) {
         if (other !== null && other !== voice) {
@@ -231,8 +258,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
           setOf: options.setOf,
           onKickScheduled: options.onKickScheduled,
           loops: { files: FULL_SOUNDS.music ?? {} },
+          hits: musicHits(samples, FULL_SOUNDS.silent),
         },
-        options.trackFor,
+        trackFor === undefined ? undefined : (set) => keyed(trackFor(set)),
       ),
       sfx,
       samples,
@@ -276,6 +304,70 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       return context instanceof AudioContext && context.state !== 'running'
         ? context.resume()
         : Promise.resolve();
+    },
+    waitsForBeat(state) {
+      // A film renders on its step clock, which a wait would move off its recording.
+      if (
+        running === null ||
+        !(running.context instanceof AudioContext) ||
+        muted ||
+        volume === 0 ||
+        isRealtimeStalled(running.context) ||
+        !running.music.holdsBar()
+      ) {
+        waiting = null;
+        return null;
+      }
+      const { context, music, sfx } = running;
+      const flushed = latest !== null;
+      if (flushed) {
+        flush();
+      }
+      const now = heardNow(context);
+      const at = now === null ? null : music.resumeOnBeat(now, context.currentTime);
+      const page = performance.now();
+      // An output clock that stops while its context runs never reaches the line.
+      const stuck = waiting !== null && page - waiting.since > 2000 * barSeconds(music.tempo());
+      if (now === null || at === null || reachesLine(now, at) || stuck) {
+        waiting = null;
+        return null;
+      }
+      waiting ??= { since: page, until: page + (at - now) * 1000 };
+      if (!flushed) {
+        music.update(state, now, context.currentTime);
+      }
+      sfx.setClock(music.clock());
+      return waiting.until;
+    },
+    enter(state, landsAt) {
+      if (running === null || isRealtimeStalled(running.context) || heard !== 'set') {
+        return;
+      }
+      if (latest !== null) {
+        flush();
+      }
+      const { context, master, music, sfx, ambience } = running;
+      const now = heardNow(context);
+      if (now === null) {
+        return;
+      }
+      if (entry?.landsAt === landsAt) {
+        music.update(state, now, context.currentTime);
+      } else {
+        const at = now + (landsAt - performance.now()) / 1000;
+        retireEntry();
+        music.landAt(state.tick, at);
+        music.update(state, now, context.currentTime);
+        // The tempo of the set played, which the update follows.
+        const leave = sixteenthSeconds(music.tempo());
+        ambience.leave(leave);
+        trackOf(running)?.leave(leave);
+        const bus = context.createGain();
+        bus.connect(master.music);
+        playEntrySounds(bus, at, context.currentTime, music.tempo(), music.track());
+        entry = { landsAt, bus };
+      }
+      sfx.setClock(music.clock());
     },
     update(state) {
       if (running === null || isRealtimeStalled(running.context)) {
@@ -325,9 +417,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       running?.sfx.setHitSound(value);
     },
     setTrack(value) {
-      track = value;
-      running?.music.setTrack(value);
-      running?.sfx.setKey(value);
+      track = keyed(value);
+      running?.music.setTrack(track);
+      running?.sfx.setKey(track);
     },
     loaded() {
       return running === null
@@ -354,6 +446,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       return beats === null ? null : { music: heardMusic, beats };
     },
     destroy() {
+      retireEntry();
       stopPumping?.();
       stopPumping = null;
       menuAt = null;

@@ -7,6 +7,7 @@ import { TICKS_PER_BEAT } from '../shared/tempo';
 import {
   type Bounds,
   type Camera,
+  boundPlayers,
   easeCamera,
   frameBounds,
   frameCamera,
@@ -25,6 +26,7 @@ import { type Frame, advanceFrame, beatFrame, createFrame } from './frame';
 import { type Layers, applyLight, createLayers } from './layers';
 import { checkDrawings } from './drawings';
 import { FlashLimiter } from './motion';
+import * as dive from './stage-entry';
 import { createTextures, destroyTextures } from './textures';
 import type { CameraFocus, Inset, RenderOptions, Renderer } from './types';
 import { byId, lookup } from './util';
@@ -61,6 +63,8 @@ export class Scene implements Renderer, InsetScene {
   private focusKey = '';
   private settling = false;
   private cameraNow = Number.NaN;
+  private flight: dive.Flight | null = null;
+  private roll = 0;
 
   constructor(
     pixi: PixiRenderer,
@@ -190,11 +194,11 @@ export class Scene implements Renderer, InsetScene {
   }
 
   screenToWorld(point: Vec2): Vec2 {
-    return screenToWorld(this.camera, point);
+    return screenToWorld(this.camera, dive.rollAbout(this.camera, point, -this.roll));
   }
 
   worldToScreen(point: Vec2): Vec2 {
-    return worldToScreen(this.camera, point);
+    return dive.rollAbout(this.camera, worldToScreen(this.camera, point), this.roll);
   }
 
   destroy(): void {
@@ -213,8 +217,10 @@ export class Scene implements Renderer, InsetScene {
     const { now } = this.frame;
     const focus = this.borrowed ? SOLO_FOCUS : (this.options.focus ?? SOLO_FOCUS);
     const key = focus.kind === 'everyone' ? 'everyone' : `player ${String(focus.playerId)}`;
-    const target = this.targetCamera(state, alpha, focus);
-    const elapsed = now - this.cameraNow;
+    this.flight = this.borrowed ? null : dive.flightOf(this.options.entry, performance.now());
+    const followed = this.targetCamera(state, alpha, focus);
+    const target = dive.divingCamera(followed, state.arena, this.flight);
+    const elapsed = this.flight === null ? now - this.cameraNow : Number.NaN;
     this.cameraNow = now;
     if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > SNAP_TICKS) {
       this.settling = false;
@@ -237,17 +243,8 @@ export class Scene implements Renderer, InsetScene {
     const { focus: point, bounds } = this;
     const { screenWidth, screenHeight } = this.camera;
     if (focus.kind === 'everyone' && state.players.length > 0) {
-      bounds.minX = bounds.minY = Number.POSITIVE_INFINITY;
-      bounds.maxX = bounds.maxY = Number.NEGATIVE_INFINITY;
-      for (const player of state.players) {
-        const x = lerp(player.prevX, player.x, alpha);
-        const y = lerp(player.prevY, player.y, alpha);
-        bounds.minX = Math.min(bounds.minX, x);
-        bounds.maxX = Math.max(bounds.maxX, x);
-        bounds.minY = Math.min(bounds.minY, y);
-        bounds.maxY = Math.max(bounds.maxY, y);
-      }
-      return frameBounds(bounds, state.arena, screenWidth, screenHeight);
+      const team = boundPlayers(bounds, state.players, alpha);
+      return frameBounds(team, state.arena, screenWidth, screenHeight);
     }
     const followed = focus.kind === 'player' ? byId(state.players, focus.playerId) : undefined;
     point.x = followed === undefined ? state.core.x : lerp(followed.prevX, followed.x, alpha);
@@ -292,8 +289,9 @@ export class Scene implements Renderer, InsetScene {
       center,
       this.frame.view,
     );
-    const { world } = this.layers;
-    world.scale.set(scale);
-    world.position.set(screenWidth / 2 - center.x * scale, screenHeight / 2 - center.y * scale);
+    const { flight } = this;
+    this.roll =
+      this.options.calmMode || flight === null ? 0 : dive.entryRoll(flight.entry, flight.now);
+    dive.placeWorld(this.layers.world, center, scale, screenWidth, screenHeight, this.roll);
   }
 }

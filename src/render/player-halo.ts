@@ -13,7 +13,8 @@ export function placePlayerHalo(
   share: number,
   frame: Frame,
 ): void {
-  const { palette, light, pulse } = frame;
+  const { palette, light } = frame;
+  const pulse = Math.max(frame.pulse, frame.resumeGlow);
   const dazzled = (player.dazzledTicks ?? 0) > 0;
   halo.visible = share > 0 || (!player.downed && !((player.suppressedTicks ?? 0) > 0));
   setTint(halo, dazzled ? palette.texte : color);

@@ -21,6 +21,9 @@ export interface Frame {
   light: Light;
   calm: boolean;
   pulse: number;
+  // While the game waits for the beat it resumes on after its cards, a light on each sixteenth of that
+  // wait, for the ground lights and the ring under each player: the bodies keep still.
+  resumeGlow: number;
   // A heartbeat on the set's beat, for a character in danger; zero in calm mode.
   heart: number;
   flashTick: number;
@@ -50,6 +53,7 @@ export function createFrame(set: SetDefinition = MAIN_STAGE): Frame {
     light: lightAt(0),
     calm: false,
     pulse: 0,
+    resumeGlow: 0,
     heart: 0,
     flashTick: Number.NEGATIVE_INFINITY,
     shakeTick: Number.NEGATIVE_INFINITY,

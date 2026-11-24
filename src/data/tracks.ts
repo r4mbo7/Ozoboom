@@ -1,15 +1,14 @@
 import { FULL_TRACKS } from './full';
-import { AEOLIAN, DORIAN, HIJAZ, hits } from './track-kit';
+import { SCALES } from './scales';
+import { hits } from './track-kit';
 import type { MusicNotes, MusicPart, MusicTrack } from './types';
-
-const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
 
 export const SOIREE_OUVERTURE: MusicTrack = {
   id: 'soiree-ouverture',
   name: 'Opening Night',
   rootMidi: 30,
-  scale: PHRYGIAN,
-  themeScale: HIJAZ,
+  scale: SCALES.phrygian,
+  themeScale: SCALES.hijaz,
   chords: [0, 1, 0, -1],
   kick: { fromHz: 320, release: 0.055 },
   parts: [
@@ -170,7 +169,7 @@ export const BRUME_DU_LAC: MusicTrack = {
   id: 'brume-du-lac',
   name: 'Lake Mist',
   rootMidi: 26,
-  scale: AEOLIAN,
+  scale: SCALES.minor,
   chords: [0, 0, -2, -1],
   kick: { fromHz: 230, release: 0.11 },
   padOpens: 300,
@@ -256,7 +255,6 @@ export const BRUME_DU_LAC: MusicTrack = {
   ],
 };
 
-const HARMONIC_MINOR = [0, 2, 3, 5, 7, 8, 11];
 const TRANCE_GATE = [0, 2, 3, 5, 6, 8, 10, 11, 13, 15];
 
 const GOA_LEAD: MusicNotes = [
@@ -290,7 +288,7 @@ const GOA_DES_ETOILES: MusicTrack = {
   id: 'goa-des-etoiles',
   name: 'Starlight Goa',
   rootMidi: 28,
-  scale: HARMONIC_MINOR,
+  scale: SCALES['harmonic-minor'],
   chords: [0, -2, -3, 0],
   kick: { fromHz: 300, release: 0.06 },
   parts: [
@@ -376,7 +374,7 @@ const GRENOUILLE_ACIDE: MusicTrack = {
   id: 'grenouille-acide',
   name: 'The Acid Frog',
   rootMidi: 33,
-  scale: DORIAN,
+  scale: SCALES.dorian,
   chords: [0, 0, 0, -2],
   kick: { fromHz: 340, release: 0.05 },
   parts: [

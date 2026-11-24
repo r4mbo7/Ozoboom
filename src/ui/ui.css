@@ -1712,7 +1712,7 @@ svg.ui-title__moon-glint {
 }
 
 .ui-sheet__skillname {
-  color: var(--class-color);
+  color: color-mix(in srgb, var(--class-color) 70%, var(--texte));
   font-size: 18px;
   font-weight: 800;
   line-height: 1.15;
@@ -2674,10 +2674,10 @@ svg.ui-title__moon-glint {
   min-width: 0;
   min-height: 0;
   padding: 16px;
-  border: 2px solid var(--turquoise);
+  border: 2px solid var(--seat-color);
   border-radius: var(--ui-radius);
-  background: var(--turquoise);
-  color: var(--sol);
+  background: var(--seat-color);
+  color: var(--seat-ink);
   text-align: center;
   animation: ui-invite-pulse 1.4s ease-out infinite;
 }
@@ -2694,8 +2694,8 @@ svg.ui-title__moon-glint {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: var(--sol);
-  color: var(--turquoise);
+  background: var(--seat-ink);
+  color: var(--seat-color);
   font-size: 26px;
   line-height: 1;
 }
@@ -2705,7 +2705,7 @@ svg.ui-title__moon-glint {
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  background: conic-gradient(var(--sol) calc(var(--hold, 0) * 1turn), transparent 0);
+  background: conic-gradient(var(--seat-ink) calc(var(--hold, 0) * 1turn), transparent 0);
   content: '';
   mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
 }
@@ -2742,9 +2742,9 @@ svg.ui-title__moon-glint {
 }
 
 .ui-invite .ui-key {
-  border-color: var(--sol);
-  background: var(--sol);
-  color: var(--turquoise);
+  border-color: var(--seat-ink);
+  background: var(--seat-ink);
+  color: var(--seat-color);
 }
 
 .ui-invite__keys {
@@ -2753,7 +2753,7 @@ svg.ui-title__moon-glint {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  color: var(--sol);
+  color: var(--seat-ink);
   font-size: 15px;
 }
 
@@ -2799,7 +2799,8 @@ svg.ui-title__moon-glint {
 
 /* A seat's cursor: a dashed ring in its colour while it picks, solid once it is ready, when its
    card dims for the others. */
-[data-seat='1'] {
+[data-seat='1'],
+.ui-invite {
   --seat-color: var(--turquoise);
 }
 
@@ -2813,6 +2814,15 @@ svg.ui-title__moon-glint {
 
 [data-seat='4'] {
   --seat-color: var(--healer);
+}
+
+/* On a seat-coloured fill, the number, the state and the invite take near-black over a light
+   colour (night) and near-white over a dark one (day): it holds on every moment of the sun. As
+   text on a panel, the colour is pulled toward the text colour, as the other --ui tints are. */
+[data-seat],
+.ui-invite {
+  --seat-ink: oklch(from var(--seat-color) clamp(0.12, calc((0.55 - l) * 1000), 0.97) 0.02 h);
+  --seat-text: color-mix(in srgb, var(--seat-color) 60%, var(--texte));
 }
 
 .ui-classcard[data-seat] {
@@ -2917,7 +2927,7 @@ svg.ui-title__moon-glint {
   height: 2em;
   border-radius: 50%;
   background: var(--seat-color);
-  color: var(--sol);
+  color: var(--seat-ink);
   font-weight: 800;
 }
 
@@ -2936,7 +2946,7 @@ svg.ui-title__moon-glint {
   margin-inline-start: auto;
   padding: 0.25em 0.8em;
   border-radius: 999px;
-  color: var(--seat-color);
+  color: var(--seat-text);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2951,7 +2961,7 @@ svg.ui-title__moon-glint {
 
 .ui-seatsheet[data-ready] .ui-seatsheet__state {
   background: var(--seat-color);
-  color: var(--sol);
+  color: var(--seat-ink);
 }
 
 .ui-seatsheet[data-ready] .ui-seatsheet__check {
@@ -2977,7 +2987,7 @@ svg.ui-title__moon-glint {
 .ui-seatsheet__name {
   grid-area: name;
   margin: 0;
-  color: var(--class-color);
+  color: color-mix(in srgb, var(--class-color) 70%, var(--texte));
   font-family: var(--font-title);
   font-size: clamp(20px, 3.4cqi, 46px);
   font-weight: 900;
@@ -4142,7 +4152,7 @@ svg.ui-title__moon-glint {
 .ui-nights__length {
   padding: 2px 10px;
   border-radius: 20px;
-  background: color-mix(in srgb, var(--ui-ink) 16%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ui-ink) 45%, transparent);
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
@@ -6213,10 +6223,10 @@ svg.ui-title__moon-glint {
   overflow: hidden;
 }
 
-/* The menu closes over the game that resumes: only the chosen cards remain, flying to the HUD. */
+/* The menu closes over the game that resumes: only the chosen cards remain, flying to the HUD, while
+   the veil lifts until the beat the game resumes on (at once when it does not wait). */
 .ui-upgrade[data-leaving] {
-  background: none;
-  backdrop-filter: none;
+  animation: ui-veil-lift var(--lift, 0ms) linear forwards;
   pointer-events: none;
 }
 
@@ -9003,7 +9013,7 @@ svg.ui-title__moon-glint {
 }
 
 .ui-upgrade[data-leaving] .ui-card[data-flying] {
-  animation: ui-card-fly calc(var(--beat) * 0.8) cubic-bezier(0.5, 0, 0.85, 0.35)
+  animation: ui-card-fly var(--fly-time, calc(var(--beat) * 0.8)) cubic-bezier(0.5, 0, 0.85, 0.35)
     var(--fly-wait, 0ms) forwards;
 }
 
@@ -9616,6 +9626,13 @@ svg.ui-title__moon-glint {
 @keyframes ui-veil {
   from {
     opacity: 0;
+  }
+}
+
+@keyframes ui-veil-lift {
+  to {
+    background-color: transparent;
+    backdrop-filter: blur(0);
   }
 }
 

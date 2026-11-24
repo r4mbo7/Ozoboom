@@ -91,6 +91,20 @@ const LIT_BEATS = 1;
 const SHARDS = 24;
 const STARS = 14;
 
+// The wait between the flights of several cards and how long each flies, so that the last lands at
+// the end of `span`; with no span, their own beat.
+function flightTimes(
+  count: number,
+  span: number,
+  beatMs: number,
+): { readonly stagger: number; readonly flight: number } {
+  if (span <= 0 || count === 0) {
+    return { stagger: FLIGHT_STAGGER_BEATS * beatMs, flight: FLIGHT_BEATS * beatMs };
+  }
+  const stagger = Math.min(FLIGHT_STAGGER_BEATS * beatMs, span / (2 * count));
+  return { stagger, flight: span - (count - 1) * stagger };
+}
+
 // What the menu does later, at a time of its own clock: it has no timer, only its updates.
 interface Later {
   at: number;
@@ -1013,7 +1027,9 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
     });
   }
 
-  function close(now: number, beatMs: number): void {
+  // When the game waits for the beat it resumes on, the veil lifts until then and the last card lands
+  // on it; else the veil goes at once and the cards fly their own beat.
+  function close(now: number, beatMs: number, resumesAt: number | null): void {
     const flights = [...panels].flatMap(([playerId, panel]) => {
       const { taken } = panel;
       const spot = taken === null ? null : host.landing(playerId, taken.weaponId);
@@ -1021,12 +1037,16 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
         ? []
         : [{ button: taken.button, spot }];
     });
-    if (flights.length === 0) {
+    const calm = host.calm();
+    const span = resumesAt === null || calm ? 0 : Math.max(0, resumesAt - now);
+    if (flights.length === 0 && span === 0) {
       shut();
       return;
     }
-    heard.cue('cardFlight', 0);
-    if (host.calm()) {
+    if (flights.length > 0) {
+      heard.cue('cardFlight', 0);
+    }
+    if (calm) {
       for (const flight of flights) {
         land(flight.spot, now, beatMs);
       }
@@ -1035,22 +1055,26 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
     }
     element.dataset.leaving = '';
     element.inert = true;
+    setVar(element, '--lift', `${span.toFixed(0)}ms`);
+    const { stagger, flight } = flightTimes(flights.length, span, beatMs);
     flights.forEach(({ button, spot }, turn) => {
       const from = restingCenterOf(button);
       const to = centerOf(spot);
-      const delay = turn * FLIGHT_STAGGER_BEATS * beatMs;
+      const delay = turn * stagger;
       setVar(button, '--fly-x', `${(to.x - from.x).toFixed(1)}px`);
       setVar(button, '--fly-y', `${(to.y - from.y).toFixed(1)}px`);
       setVar(button, '--fly-wait', `${delay.toFixed(0)}ms`);
+      setVar(button, '--fly-time', `${flight.toFixed(0)}ms`);
       button.dataset.flying = '';
       later.push({
-        at: now + delay + FLIGHT_BEATS * beatMs,
+        at: now + delay + flight,
         run() {
-          land(spot, now + delay + FLIGHT_BEATS * beatMs, beatMs);
+          land(spot, now + delay + flight, beatMs);
         },
       });
     });
-    closesAt = now + ((flights.length - 1) * FLIGHT_STAGGER_BEATS + FLIGHT_BEATS) * beatMs;
+    // The last card lands on the beat when the game waits for one.
+    closesAt = now + (span > 0 ? span : (flights.length - 1) * stagger + flight);
   }
 
   // A chip that has not changed keeps its node: replacing it would replay its entrance.
@@ -1124,7 +1148,7 @@ export function createUpgradeOverlay(host: UpgradeHost): UpgradeOverlay {
       }
       if (offers.length === 0) {
         if (closesAt === null && !element.hidden) {
-          close(now, beatMs);
+          close(now, beatMs, frame.resumesAt ?? null);
         }
         return;
       }

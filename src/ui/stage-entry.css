@@ -1,0 +1,198 @@
+/* The entry a run opens on: every part plays at its beat of the two bars, counted from the poster's
+   first beat; `--entry-since` is how far into them the overlay was built. */
+.ui-entry {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ui-entry[hidden] {
+  display: none;
+}
+
+/* A little larger than the screen, so its edges never show as it shakes. */
+.ui-entry__sheet {
+  position: absolute;
+  inset: 0;
+  scale: 1.02;
+  animation: ui-entry-shudder calc(var(--entry-beat) / 8) linear
+    calc(3 * var(--entry-beat) - var(--entry-since)) 8;
+}
+
+/* The poster fills the screen from the click, edge to edge. */
+.ui-entry__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ui-entry__sheet > .ui-entry__poster {
+  animation: ui-entry-gone var(--entry-beat) calc(4 * var(--entry-beat) - var(--entry-since))
+    forwards;
+}
+
+/* On the tear each half flies off, a light paper edge along its cut. */
+.ui-entry__half {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  filter: drop-shadow(0 0 1px #f4e6cf);
+  animation: ui-entry-fly-start calc(1.1 * var(--entry-beat)) cubic-bezier(0.5, 0, 0.9, 0.6)
+    calc(4 * var(--entry-beat) - var(--entry-since)) forwards;
+}
+
+.ui-entry__half--end {
+  animation-name: ui-entry-fly-end;
+}
+
+/* The landing stands on the stage, wherever the camera shows it. */
+.ui-entry__mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.ui-entry__go,
+.ui-entry__burst {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% -50%;
+  opacity: 0;
+}
+
+.ui-entry__burst {
+  width: clamp(40px, 14dvh, 110px);
+  aspect-ratio: 1;
+  border: 3px solid var(--or);
+  border-radius: 50%;
+  animation: ui-entry-burst calc(0.6 * var(--entry-beat)) ease-out
+    calc(8 * var(--entry-beat) - var(--entry-since));
+}
+
+.ui-entry__go {
+  font-family: var(--font-title);
+  font-size: clamp(40px, 14dvh, 120px);
+  font-weight: 900;
+  white-space: nowrap;
+  color: var(--or);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--sol) 85%, transparent);
+  rotate: -3.5deg;
+  animation: ui-entry-go calc(1.2 * var(--entry-beat)) ease-out
+    calc(8 * var(--entry-beat) - var(--entry-since));
+}
+
+.ui-entry__flash {
+  position: absolute;
+  inset: 0;
+  background: #fff4d8;
+  opacity: 0;
+  animation: ui-entry-flash calc(0.4 * var(--entry-beat)) ease-out
+    calc(8 * var(--entry-beat) - var(--entry-since));
+}
+
+.calm > .ui :is(.ui-entry__flash, .ui-entry__burst) {
+  display: none;
+}
+
+.calm > .ui .ui-entry__sheet {
+  animation: none;
+}
+
+@keyframes ui-entry-shudder {
+  25% {
+    transform: translate(0.4vmin, -0.2vmin);
+  }
+
+  75% {
+    transform: translate(-0.4vmin, 0.2vmin);
+  }
+}
+
+@keyframes ui-entry-gone {
+  from,
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-entry-fly-start {
+  0% {
+    visibility: visible;
+    transform: translateX(-1.5%);
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  100% {
+    visibility: visible;
+    opacity: 0;
+    transform: translate(-70%, 35%) rotate(-32deg);
+  }
+}
+
+@keyframes ui-entry-fly-end {
+  0% {
+    visibility: visible;
+    transform: translateX(1.5%);
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  100% {
+    visibility: visible;
+    opacity: 0;
+    transform: translate(70%, 35%) rotate(32deg);
+  }
+}
+
+@keyframes ui-entry-burst {
+  from {
+    opacity: 0.9;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0;
+    scale: 3;
+  }
+}
+
+@keyframes ui-entry-go {
+  0% {
+    opacity: 1;
+    scale: 0.7;
+  }
+
+  12% {
+    scale: 1.2;
+  }
+
+  66% {
+    opacity: 1;
+    scale: 1.12;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.1;
+  }
+}
+
+@keyframes ui-entry-flash {
+  from {
+    opacity: 0.35;
+  }
+
+  to {
+    opacity: 0;
+  }
+}

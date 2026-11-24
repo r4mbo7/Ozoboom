@@ -20,6 +20,9 @@ export const SOL_CLAIR_SHARE = { lawn: 0.3, tufts: 0.5, floor: 0.6 } as const;
 export const LAKE_SKY_MIX = 0.5;
 // For a screen up to 32:9 at the usual scale.
 export const OVERFLOW = 640;
+// How far past the arena its plain ground and its lake go: the festival the entry dives from is seen
+// from about seven times higher (`ENTRY_START_ZOOM`), rolled, on a screen up to 32:9.
+export const SKY_REACH = 9600;
 const SHORE_MARGIN = 70;
 const FLOOR_SHARE = 0.34;
 const EDGE_MARGIN = 60;

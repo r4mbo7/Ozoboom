@@ -1,8 +1,16 @@
 import type { InputDevice } from '../input/intents';
 import type { Locale } from '../shared/languages';
-import type { GameEnd, GameEvent, GameMode, GameOutcome, GameStart } from '../shared/stats';
+import type {
+  GameDrop,
+  GameEnd,
+  GameEvent,
+  GameMode,
+  GameOutcome,
+  GameStart,
+} from '../shared/stats';
 import { TICK_RATE_HZ } from '../shared/tempo';
 import type { SimState } from '../sim/state';
+import { createDropTracker } from './drops';
 
 export interface GameContext {
   readonly mode: GameMode;
@@ -13,6 +21,8 @@ export interface GameContext {
 
 export interface GameStats {
   start(state: SimState, context: GameContext): void;
+  // After every sim step of the game, to follow its drops.
+  step(state: SimState): void;
   end(state: SimState, outcome: GameOutcome): void;
 }
 
@@ -20,6 +30,7 @@ export function gameEvent(
   state: SimState,
   { mode, device, version, locale }: GameContext,
   outcome?: GameOutcome,
+  drops: readonly GameDrop[] = [],
 ): GameStart | GameEnd {
   const fields = {
     stage: state.setId,
@@ -42,6 +53,7 @@ export function gameEvent(
     outcome,
     tier: state.set.tier,
     seconds: Math.floor(state.tick / TICK_RATE_HZ),
+    drops: [...drops],
   };
 }
 
@@ -54,16 +66,23 @@ export function outcomeOf(state: SimState): GameOutcome {
 
 export function createGameStats(send: (event: GameEvent) => void): GameStats {
   let started: GameContext | null = null;
+  let drops = createDropTracker();
   return {
     start(state, context) {
       started = context;
+      drops = createDropTracker();
       send(gameEvent(state, context));
+    },
+    step(state) {
+      if (started !== null) {
+        drops.step(state);
+      }
     },
     end(state, outcome) {
       if (started === null) {
         return;
       }
-      send(gameEvent(state, started, outcome));
+      send(gameEvent(state, started, outcome, drops.end(state, outcome)));
       started = null;
     },
   };

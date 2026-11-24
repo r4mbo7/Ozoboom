@@ -7,6 +7,23 @@ export const sfxSlotId = (soundName: string): string => `sfx/${soundName}`;
 
 export const shotSlotId = (attackKind: string): string => `shot/${attackKind}`;
 
+// The game's own music sounds (ADR 0027), each one slot shared by every track.
+export const HIT_NAMES = [
+  'downlifter',
+  'impact',
+  'heartbeat',
+  'arrival',
+  'sunrise',
+  'powerDown',
+] as const;
+
+export type HitName = (typeof HIT_NAMES)[number];
+
+export const hitSlotId = (name: HitName): string => `hit/${name}`;
+
+export const hitNameOf = (slotId: string): HitName | undefined =>
+  HIT_NAMES.find((name) => hitSlotId(name) === slotId);
+
 export const stemSlotId = (trackId: string, speakerId: string): string =>
   `stem/${trackId}/${speakerId}`;
 

@@ -4,7 +4,7 @@ import type { SetProgress, SetSegment, SimState } from '../sim/state';
 import { sixteenthSeconds, sixteenthTicks, tickToTime, type Anchor } from './clock';
 import { DRUM_VOICES } from './drums';
 import { setEcho, type Bus } from './music-bus';
-import { clap, crash, hat, impact, kick, pad, pulse, riser, snare } from './music-hits';
+import { clap, crash, hat, kick, pad, riser, snare, type MusicHits } from './music-hits';
 import {
   NO_CUE,
   breakCueAt,
@@ -32,6 +32,7 @@ export interface Groove {
   entries: ReadonlyMap<SpeakerLayerId, number>;
   plugging: ReadonlyMap<SpeakerLayerId, number>;
   onKick: ((tick: number, time: number) => void) | undefined;
+  hits: MusicHits;
   // A moment an artist's loop plays (ADR 0022): its musical layers are silent, the game's hits stay.
   recorded: (segment: SetSegment) => boolean;
   // A speaker whose stem plays on the step at `tick`, heard at `at`: its synth layer leaves it the
@@ -135,7 +136,7 @@ export function playStep(
   const at = Math.max(tickToTime(clock, timeStep), currentTime);
   const current = segmentAt(state.set.segment, dropTick, step);
   if (current !== state.set.segment && step === dropTick) {
-    impact(target.input, at);
+    groove.hits.play('impact', target.input, at, track);
     setEcho(target, at, true);
   }
   const cue = current === 'break' ? breakCueAt(dropTick, step, tempo) : NO_CUE;
@@ -148,7 +149,7 @@ export function playStep(
   const beat = beatOf(groove, target, at, step, current, state, clock);
   const thump = pulseGain(beat.sixteenth, groove.pulsing, groove.choking);
   if (thump > 0) {
-    pulse(beat.input, at, thump, track);
+    groove.hits.play('heartbeat', beat.input, at, track, thump);
   }
   if (!groove.recorded(current)) {
     playLayers(groove, cue, beat, state.set, clock);

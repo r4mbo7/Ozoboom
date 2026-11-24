@@ -1,4 +1,4 @@
-import type { MusicTrack } from '../data/types';
+import type { MusicTrack, SetDefinition } from '../data/types';
 import { nextFloat, seedRng } from '../shared/prng';
 
 // Any track but the last one played, so that two games in a row never sound the same.
@@ -22,6 +22,18 @@ export function stageTracks(
 // A track sent by another device that this one does not know plays as the first.
 export function trackOf(tracks: readonly MusicTrack[], id: string): MusicTrack {
   return tracks.find((track) => track.id === id) ?? pickOf(tracks, 0);
+}
+
+// The line-up poster a run of `trackId` opens on: one of those that list it, the same on every peer.
+export function posterOf(set: SetDefinition, trackId: string, seed: number): string {
+  const posters = set.posters ?? [];
+  const listed = posters.filter((poster) => poster.trackIds.includes(trackId));
+  const pool = listed.length > 0 ? listed : posters.slice(0, 1);
+  const poster = pool[Math.floor(seededRandom(seed, 'poster')() * pool.length)];
+  if (poster === undefined) {
+    throw new Error(`No poster for the stage ${set.id}`);
+  }
+  return poster.id;
 }
 
 function pickOf(tracks: readonly MusicTrack[], index: number): MusicTrack {

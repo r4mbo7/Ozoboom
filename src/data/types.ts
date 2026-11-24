@@ -506,6 +506,12 @@ export interface ObstacleDefinition {
 
 export type DancerLook = 'kid' | 'rain';
 
+// A line-up poster, drawn by the interface under its id, for the tracks of its stage it opens.
+export interface PosterDefinition {
+  id: string;
+  trackIds: readonly string[];
+}
+
 export interface SetDefinition {
   id: string;
   name: string;
@@ -524,6 +530,8 @@ export interface SetDefinition {
   danceHops?: 'downbeat';
   obstacles?: readonly ObstacleDefinition[];
   trackIds: readonly string[];
+  // The line-up posters a run opens on, the first for a track none lists.
+  posters?: readonly PosterDefinition[];
   // Absent, a dry stage; `lowCutHz` keeps the lows out of the room, `toneHz` darkens its tail.
   acoustics?: { reverbSeconds: number; wet: number; lowCutHz?: number; toneHz?: number };
   arena: { width: number; height: number };

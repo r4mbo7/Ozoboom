@@ -10,6 +10,10 @@ export const MAIN_STAGE: SetDefinition = {
   decor: 'lake',
   lake: true,
   trackIds: ['soiree-ouverture', 'brume-du-lac', 'grenouille-acide', 'goa-des-etoiles'],
+  posters: [
+    { id: 'main-stage-sun', trackIds: ['soiree-ouverture', 'brume-du-lac'] },
+    { id: 'main-stage-ripples', trackIds: ['grenouille-acide', 'goa-des-etoiles'] },
+  ],
   arena: { width: 1600, height: 1000 },
   core: { radius: 56, maxHp: 660 },
   startingTrap: 'caisson-de-basse',

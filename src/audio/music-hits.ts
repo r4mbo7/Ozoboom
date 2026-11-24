@@ -1,6 +1,8 @@
 import type { MusicTrack } from '../data/types';
 import { clamp01 } from '../shared/scalar';
-import { SUNRISE_SEMITONES, keyHz, midiToHz, type MusicKey } from './scale';
+import type { SampleBank } from './samples';
+import { keyHz, midiToHz, type MusicKey } from './scale';
+import { hitSlotId, type HitName } from './slot-ids';
 import { playNoise, playTone } from './synth';
 
 const SUNRISE_ATTACK = 4;
@@ -11,6 +13,9 @@ const RISER_LOW_HZ = 300;
 const RISER_HIGH_HZ = 7000;
 const SOFT_RISER_HIGH_HZ = 1800;
 const PULSE_GLIDE = 0.12;
+// A file's downlifter on a soft track, as much under its level as the synth's soft one.
+export const SOFT_DOWNLIFTER_GAIN = 0.35;
+const ARRIVAL_GAIN = 0.5;
 
 export function kick(out: AudioNode, at: number, track: MusicTrack) {
   playTone(out, at, {
@@ -32,9 +37,9 @@ export function kick(out: AudioNode, at: number, track: MusicTrack) {
   });
 }
 
-export function pulse(out: AudioNode, at: number, gain: number, track: MusicTrack) {
+function pulse(out: AudioNode, at: number, gain: number, track: MusicTrack): number {
   const envelope = { attack: 0.003, hold: 0.03, release: 0.14 };
-  playTone(out, at, {
+  const end = playTone(out, at, {
     wave: 'sine',
     hz: keyHz(track, 0, 2),
     toHz: keyHz(track, 0, 0),
@@ -49,6 +54,7 @@ export function pulse(out: AudioNode, at: number, gain: number, track: MusicTrac
     ...envelope,
     filter: { type: 'lowpass', hz: 700 },
   });
+  return end;
 }
 
 export function hat(out: AudioNode, at: number, open: boolean, pan: number) {
@@ -171,8 +177,8 @@ export function riser(
   });
 }
 
-export function downlifter(out: AudioNode, at: number, soft: boolean) {
-  playNoise(out, at, {
+function downlifter(out: AudioNode, at: number, soft: boolean): number {
+  const end = playNoise(out, at, {
     gain: soft ? 0.07 : 0.2,
     attack: 0.005,
     hold: 0.1,
@@ -180,27 +186,29 @@ export function downlifter(out: AudioNode, at: number, soft: boolean) {
     filter: { type: 'bandpass', hz: 6000, toHz: 300, glide: 2.4, q: 1.2 },
   });
   crash(out, at, soft ? 0.03 : 0.09);
+  return end;
 }
 
-export function impact(out: AudioNode, at: number) {
-  playTone(out, at, {
+function impact(out: AudioNode, at: number, gain: number): number {
+  const end = playTone(out, at, {
     wave: 'sine',
     hz: 160,
     toHz: 32,
     glide: 0.7,
-    gain: 0.95,
+    gain: 0.95 * gain,
     attack: 0.002,
     hold: 0.12,
     release: 1.3,
   });
   playNoise(out, at, {
-    gain: 0.22,
+    gain: 0.22 * gain,
     attack: 0.002,
     hold: 0.04,
     release: 0.5,
     filter: { type: 'bandpass', hz: 900, q: 0.8 },
   });
-  crash(out, at, 0.2);
+  crash(out, at, 0.2 * gain);
+  return end;
 }
 
 // A loss closes the music down to a hum, under the power down.
@@ -209,8 +217,13 @@ export function extinguish(filter: BiquadFilterNode, at: number) {
   filter.frequency.exponentialRampToValueAtTime(EXTINCT_HZ, at + EXTINCTION_SECONDS);
 }
 
-export function sunrise(out: AudioNode, at: number, key: MusicKey): number {
-  for (const semitones of SUNRISE_SEMITONES) {
+export function sunriseChord({ scale }: Pick<MusicKey, 'scale'>): readonly number[] {
+  const third = [4, 3].find((semitones) => scale.includes(semitones));
+  return [0, 7, 12, ...(third === undefined ? [] : [12 + third]), 19, 24];
+}
+
+function sunrise(out: AudioNode, at: number, key: MusicKey): number {
+  for (const semitones of sunriseChord(key)) {
     for (const detune of [-7, 7]) {
       playTone(out, at, {
         wave: 'triangle',
@@ -227,7 +240,7 @@ export function sunrise(out: AudioNode, at: number, key: MusicKey): number {
   return at + SUNRISE_ATTACK + SUNRISE_HOLD;
 }
 
-export function powerDown(out: AudioNode, at: number, key: MusicKey): number {
+function powerDown(out: AudioNode, at: number, key: MusicKey): number {
   for (const degree of [0, 4]) {
     const hz = keyHz(key, degree, 2);
     playTone(out, at, {
@@ -243,4 +256,48 @@ export function powerDown(out: AudioNode, at: number, key: MusicKey): number {
     });
   }
   return at + EXTINCTION_SECONDS;
+}
+
+// The sunrise ends where its chord starts to fade.
+const SYNTH_HITS: Readonly<
+  Record<HitName, (out: AudioNode, at: number, track: MusicTrack, gain: number) => number>
+> = {
+  downlifter: (out, at, track) => downlifter(out, at, track.build === 'soft'),
+  impact: (out, at, _track, gain) => impact(out, at, gain),
+  heartbeat: (out, at, track, gain) => pulse(out, at, gain, track),
+  arrival: (out, at, _track, gain) => impact(out, at, ARRIVAL_GAIN * gain),
+  sunrise: (out, at, track) => sunrise(out, at, track),
+  powerDown: (out, at, track) => powerDown(out, at, track),
+};
+
+function scaled(out: AudioNode, gain: number): GainNode {
+  const level = out.context.createGain();
+  level.gain.value = gain;
+  level.connect(out);
+  return level;
+}
+
+export interface MusicHits {
+  // Plays the hit at `at` in the key of `track` (ADR 0027): the artist's file once decoded, nothing
+  // when he silenced it, its synth voice otherwise. Returns when it ends.
+  play(name: HitName, out: AudioNode, at: number, track: MusicTrack, gain?: number): number;
+}
+
+export function musicHits(
+  files?: Pick<SampleBank, 'hit'>,
+  silent: readonly string[] = [],
+): MusicHits {
+  return {
+    play(name, out, at, track, gain = 1) {
+      if (silent.includes(hitSlotId(name))) {
+        return at;
+      }
+      const file = files?.hit(name, track);
+      if (file === undefined) {
+        return SYNTH_HITS[name](out, at, track, gain);
+      }
+      file.play(gain === 1 ? out : scaled(out, gain), at);
+      return at + file.seconds;
+    },
+  };
 }

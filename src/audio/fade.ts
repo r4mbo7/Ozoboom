@@ -13,8 +13,9 @@ export interface Fade {
 }
 
 export interface Fader {
-  // From wherever the layer is now; returns when the fade ends.
-  to(presence: number): number;
+  // From wherever the layer is now, a whole swing over `crossfade` seconds (the fader's own when
+  // absent); returns when the fade ends.
+  to(presence: number, crossfade?: number): number;
 }
 
 export function presenceGain(presence: number): number {
@@ -63,9 +64,9 @@ export function createFader(
   let fade = restingAt(presence);
   param.value = presenceGain(presence);
   return {
-    to(target) {
+    to(target, seconds = crossfade()) {
       const now = context.currentTime;
-      fade = fadeTo(fade, target, now, crossfade());
+      fade = fadeTo(fade, target, now, seconds);
       param.cancelScheduledValues(now);
       if (fade.seconds > 0) {
         param.setValueCurveAtTime(fadeCurve(fade), now, fade.seconds);

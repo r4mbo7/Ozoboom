@@ -19,6 +19,22 @@ export interface UiFrame {
   menuPosition?: MenuHeard | null;
   // Where a point of the arena shows, in pixels of the game's view.
   toScreen?: (point: Vec2) => Vec2;
+  // The page time (`performance.now`) of the beat the game resumes on, its cards answered, while it
+  // waits for it; absent or null when it resumes at once.
+  resumesAt?: number | null;
+  // The entry the run opens on, a bar past its landing; absent or null otherwise.
+  entry?: EntryPoster | null;
+}
+
+// The two bars a run opens on, in page milliseconds (`performance.now`), its line-up poster, and what
+// the poster names: the track and the stage, by their source names.
+export interface EntryPoster {
+  readonly startsAt: number;
+  readonly beatMs: number;
+  readonly landsAt: number;
+  readonly poster: string;
+  readonly track: string;
+  readonly stage: string;
 }
 
 export interface StageCard {

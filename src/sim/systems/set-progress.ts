@@ -1,5 +1,11 @@
 import type { SetDefinition, TierDefinition } from '../../data/types';
-import { BARS_PER_PHRASE, TICK_RATE_HZ, isBarTick, type Tempo } from '../../shared/tempo';
+import {
+  BARS_PER_PHRASE,
+  TICK_RATE_HZ,
+  barOfTick,
+  isBarTick,
+  type Tempo,
+} from '../../shared/tempo';
 import type { ResolvedContent } from '../content';
 import { drawBoss } from '../draw';
 import type { SetProgress, SetSegment, SimState } from '../state';
@@ -46,9 +52,24 @@ function isSegmentOver(state: SimState, tier: TierDefinition, tempo: Tempo): boo
       return bars >= tier.buildupPhrases * BARS_PER_PHRASE;
     case 'break':
       return bars >= tier.breakBars;
-    case 'drop':
-      return bars >= MIN_DROP_BARS && !bossLeft(state);
+    case 'drop': {
+      const end = dropEndTick(state.set, tempo);
+      return bars >= MIN_DROP_BARS && !bossLeft(state) && (end === null || state.tick >= end);
+    }
   }
+}
+
+// The bar line a drop ends on once its last boss fell: the first a beat after the fall at least, so
+// that the music filters out over it. Null before the fall, and where no buildup follows.
+export function dropEndTick(progress: SetProgress, tempo: Tempo): number | null {
+  if (progress.bossesDownTick === undefined) {
+    return null;
+  }
+  const earliest = Math.max(
+    progress.bossesDownTick + tempo.ticksPerBeat,
+    progress.segmentStartTick + MIN_DROP_BARS * tempo.ticksPerBar,
+  );
+  return tempo.originTick + (barOfTick(earliest - 1, tempo) + 1) * tempo.ticksPerBar;
 }
 
 export function bossLeft(state: SimState): boolean {
@@ -82,5 +103,6 @@ function advance(state: SimState, content: ResolvedContent, set: SetDefinition):
 function enterSegment(state: SimState, segment: SetSegment): void {
   state.set.segment = segment;
   state.set.segmentStartTick = state.tick;
+  delete state.set.bossesDownTick;
   state.events.push({ type: 'segment', segment, tier: state.set.tier });
 }

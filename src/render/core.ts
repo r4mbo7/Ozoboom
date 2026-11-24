@@ -143,7 +143,8 @@ export function createCore(ctx: RenderContext): CoreFamily {
         flash.visible = false;
         return;
       }
-      const { pulse, palette, light } = frame;
+      const { palette, light } = frame;
+      const pulse = Math.max(frame.pulse, frame.resumeGlow);
       segments = litSegments(core);
       const held = repair.heldFor(segments, frame.now);
       const ringRadius = core.radius * RING_REACH;

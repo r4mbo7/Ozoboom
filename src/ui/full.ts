@@ -3,8 +3,10 @@ import type { HudPart, HudParts, PlaceKeyUse } from './hud-parts';
 import type { PlayerState, SimState } from '../sim/state';
 import type { DecorId, SummonLook } from '../data/types';
 import type { ChangelogView, LeaderboardView } from './title';
+import type { PosterDrawing } from './posters/pen';
 
 export const FULL_PREVIEWS: Readonly<Record<DecorId, string>> = {};
+export const FULL_POSTERS: Readonly<Record<string, PosterDrawing>> = {};
 export const FULL_MARKS: Readonly<Record<string, string>> = {};
 export const FULL_SKILL_ICONS: Readonly<Record<string, string>> = {};
 export const FULL_NIGHTS: { readonly festival?: true } = {};

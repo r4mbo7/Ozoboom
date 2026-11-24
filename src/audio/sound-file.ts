@@ -1,3 +1,5 @@
+import type { ScaleName } from '../data/scales';
+
 // What `pnpm sounds` measured of a file placed on a slot; the game derives its gain from them.
 interface MeasuredFile {
   // Under the game's base URL, in the order a browser tries them: Opus in WebM, then AAC.
@@ -22,8 +24,19 @@ export interface LoopFile extends MeasuredFile {
   readonly bars: number;
 }
 
-// By slot id: a sample slot holds its files, one per note, a music slot one; both absent in the demo.
+// The key an artist plays a track in, set with `pnpm sounds key` (ADR 0026): a note without its
+// octave, `E` or `Bb`, and a scale of the list.
+export interface TrackKey {
+  readonly root: string;
+  readonly scale: ScaleName;
+}
+
+// By slot id: a sample slot holds its files, one per note, a music slot one; by track id, the keys the
+// artists set. All absent in the demo.
 export interface SoundFiles {
   readonly samples?: Readonly<Record<string, readonly SampleFile[]>>;
   readonly music?: Readonly<Record<string, LoopFile>>;
+  // The hit slots the artist silenced (ADR 0027): they play nothing.
+  readonly silent?: readonly string[];
+  readonly keys?: Readonly<Record<string, TrackKey>>;
 }

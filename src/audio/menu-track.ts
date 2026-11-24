@@ -263,13 +263,13 @@ export function createRecordingVoice(out: AudioNode, recording: Recording): Reco
         begin(Math.max(at, context.currentTime));
       }
     },
-    leave() {
+    leave(seconds) {
       wanted = false;
       rewinding = false;
       if (silent()) {
         return;
       }
-      stopAt = fader.to(0);
+      stopAt = fader.to(0, seconds);
     },
     rewind() {
       wanted = true;

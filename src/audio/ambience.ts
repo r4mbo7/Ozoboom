@@ -21,7 +21,8 @@ export interface AmbienceNote {
 export interface Ambience {
   // Its first note on `origin` when it was silent, on the beat of `tempo`.
   enter(origin: number, tempo?: Tempo): void;
-  leave(): void;
+  // Over a bar of its tempo, or `seconds`.
+  leave(seconds?: number): void;
   // false once silent with nothing left to play.
   pump(): boolean;
   // In eighths since its first note; null before that note and once silent.
@@ -200,9 +201,9 @@ export function createAmbience(out: AudioNode): Ambience {
       stopAt = null;
       fader.to(1);
     },
-    leave() {
+    leave(seconds) {
       const now = context.currentTime;
-      stopAt = fader.to(0);
+      stopAt = fader.to(0, seconds);
       rhythm.gain.setTargetAtTime(0, now, RHYTHM_DUCK_SECONDS);
     },
     pump() {

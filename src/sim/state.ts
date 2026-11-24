@@ -52,6 +52,8 @@ export interface SetProgress {
   bar: number;
   beat: number;
   segmentStartTick: number;
+  // The tick the drop's last boss fell, when a buildup follows: the drop plays on to `dropEndTick`.
+  bossesDownTick?: number;
   // The tick the last boss first fell and its tier started over; null until then.
   endlessFromTick?: number | null;
   // The origin of its beats, bars and phrases (ADR 0018); absent means 0.

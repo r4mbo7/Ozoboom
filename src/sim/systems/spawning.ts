@@ -32,7 +32,8 @@ export function spawning(ctx: StepContext): void {
   if (tier === undefined || !(opening || isBarTick(state.tick, tempo))) {
     return;
   }
-  const rules = { buildup: tier.spawns, break: [], drop: tier.dropSpawns ?? [] }[state.set.segment];
+  const escort = state.set.bossesDownTick === undefined ? (tier.dropSpawns ?? []) : [];
+  const rules = { buildup: tier.spawns, break: [], drop: escort }[state.set.segment];
   const bar = opening ? 0 : (state.tick - state.set.segmentStartTick) / tempo.ticksPerBar;
   const phrase = Math.floor(bar / BARS_PER_PHRASE);
   for (const rule of rules) {

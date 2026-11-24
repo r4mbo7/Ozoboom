@@ -1,7 +1,7 @@
 import type { MusicPart, MusicTrack, SetDefinition } from '../data/types';
 import { BARS_PER_PHRASE, MAIN_TEMPO, barOfTick, phraseOfTick, type Tempo } from '../shared/tempo';
 import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state';
-import { MIN_DROP_BARS, bossLeft, isLastTier } from '../sim/systems/set-progress';
+import { MIN_DROP_BARS, bossLeft, dropEndTick, isLastTier } from '../sim/systems/set-progress';
 import { SPEAKER_LAYER_IDS, type SpeakerLayerId } from './speaker-layers';
 
 export type MusicMode = 'playing' | 'won' | 'lost';
@@ -104,9 +104,23 @@ export function dropTickOf(
 // A segment of a tier, from the tick it starts on.
 export type SetMoment = Pick<SetProgress, 'tier' | 'segment' | 'segmentStartTick'>;
 
+// The bars of its tier before a moment starts, as the stage lasts them: its buildup before its
+// break, and its break too before its drop.
+export function barsIntoTier(
+  { tier, segment }: Pick<SetMoment, 'tier' | 'segment'>,
+  stage: SetDefinition,
+): number {
+  const definition = stage.tiers[tier];
+  if (definition === undefined || segment === 'buildup') {
+    return 0;
+  }
+  const buildup = definition.buildupPhrases * BARS_PER_PHRASE;
+  return segment === 'break' ? buildup : buildup + definition.breakBars;
+}
+
 // The moment the set enters next once its tick is known, as the set's progress decides it: a
 // buildup's break after its phrases, a break's drop, and once a drop's last boss has fallen the next
-// buildup on the next bar it may end on (the last tier's again in an endless run, none after it).
+// buildup on the bar line the drop ends on (the last tier's again in an endless run, none after it).
 export function momentAfter(
   state: SimState,
   stage: SetDefinition,
@@ -136,7 +150,9 @@ export function momentAfter(
       return {
         tier: Math.min(tier + 1, stage.tiers.length - 1),
         segment: 'buildup',
-        segmentStartTick: Math.max(nextBar, segmentStartTick + MIN_DROP_BARS * tempo.ticksPerBar),
+        segmentStartTick:
+          dropEndTick(set, tempo) ??
+          Math.max(nextBar, segmentStartTick + MIN_DROP_BARS * tempo.ticksPerBar),
       };
     }
   }

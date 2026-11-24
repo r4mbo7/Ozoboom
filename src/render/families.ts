@@ -21,11 +21,13 @@ import { createPickupBursts } from './pickup-bursts';
 import { createPickups } from './pickups';
 import { createDownedScreen } from './downed-screen';
 import { createMarkers } from './markers';
+import { createStageEntry } from './stage-entry-site';
 import { createStageMarker } from './stage-marker';
 import { createPlayers } from './players';
 import { createProjectiles } from './projectiles';
 import { createRechargeCords } from './recharge-cords';
 import { createRecruits } from './recruits';
+import { createResumeWait } from './resume-wait';
 import { createSpecials } from './specials';
 import { createSpeakerCards } from './speaker-card';
 import { createSpeakerGuide } from './speaker-guide';
@@ -56,7 +58,10 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Families {
   const enemies = createEnemies(ctx);
   const poseOf = (id: EntityId) => enemies.poseOf(id);
   const beforePlayers = [
+    // First: the families after it read the light of the wait.
+    createResumeWait(ctx),
     createGround(ctx),
+    createStageEntry(ctx),
     ...FULL_LOOKS.flatMap((look) => look.families(ctx)),
     createGroundWaves(ctx),
     createSpeakers(ctx),

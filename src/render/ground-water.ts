@@ -5,7 +5,7 @@ import type { SimState } from '../sim/state';
 import type { RenderContext } from './context';
 import type { Frame } from './frame';
 import { shoreAt } from '../sim/shore';
-import { LAKE_SKY_MIX, type Layout, OVERFLOW } from './ground-layout';
+import { LAKE_SKY_MIX, type Layout, SKY_REACH } from './ground-layout';
 import { type PixiPalette, mixColor } from './palette';
 import { add, lookup, setTint } from './util';
 
@@ -37,12 +37,12 @@ export function createWater(ctx: RenderContext, parent: Container) {
       layout = next;
       const { height } = next.arena;
       const contour: number[] = [];
-      for (let y = -OVERFLOW; y <= height + OVERFLOW; y += 20) {
+      for (let y = -SKY_REACH; y <= height + SKY_REACH; y += 20) {
         contour.push(shoreAt(next, y), y);
       }
       lake
         .clear()
-        .poly([-OVERFLOW, -OVERFLOW, ...contour, -OVERFLOW, height + OVERFLOW])
+        .poly([-SKY_REACH, -SKY_REACH, ...contour, -SKY_REACH, height + SKY_REACH])
         .fill(WHITE);
       shore.clear().poly(contour, false).stroke({ width: 14, color: WHITE, alpha: 0.18 });
       shore.poly(contour, false).stroke({ width: 3, color: WHITE, alpha: 0.7 });

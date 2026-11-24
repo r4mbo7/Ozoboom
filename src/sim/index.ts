@@ -73,7 +73,6 @@ const RUNNING: readonly System[] = [
   departures,
   tempo,
   setProgress,
-  upgradeChoice,
   emotes,
   dashes,
   gusts,

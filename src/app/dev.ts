@@ -2,6 +2,7 @@ import { TRACKS } from '../data/tracks';
 import type { GameContent, SetDefinition } from '../data/types';
 import { layoutGround } from '../render/ground-layout';
 import { clamp } from '../shared/scalar';
+import { BARS_PER_PHRASE, BEATS_PER_BAR, sixteenthTick } from '../shared/tempo';
 import { resolveContent } from '../sim/content';
 import { drawBoss } from '../sim/draw';
 import { hashState } from '../sim/replay';
@@ -20,12 +21,24 @@ export interface DevBoss {
   readonly tier: number;
 }
 
+// A position in a moment as Cubase writes it, from its start: `3.4` is bar 3, beat 4, and `3.4.3`
+// that beat's third sixteenth, all from 1.
+export interface MomentBeat {
+  readonly bar: number;
+  readonly beat: number;
+  readonly sixteenth: number;
+}
+
 export interface DevMoment {
   // Counted from 0, as the sim counts; the URL counts from 1.
   readonly tier: number;
   readonly segment: SetSegment;
   // Replaces the run's track draw; null keeps the draw.
   readonly track: string | null;
+  // Every boss of the moment falls on that beat, as if killed; null leaves them to the players.
+  readonly bossFallsAt: MomentBeat | null;
+  // A level's card choice opens on that beat; null waits for a level won in play.
+  readonly choiceAt: MomentBeat | null;
 }
 
 const SEGMENTS: readonly SetSegment[] = ['buildup', 'break', 'drop'];
@@ -161,8 +174,66 @@ function momentOptions(params: URLSearchParams, content: GameContent): Omit<DevO
     light: false,
     seed: readSeed(params),
     boss: null,
-    moment: { tier, segment, track: readTrack(params, set) },
+    moment: {
+      tier,
+      segment,
+      track: readTrack(params, set),
+      bossFallsAt: readMomentBeat(params, 'bossFallsAt', set, tier, segment),
+      choiceAt: readMomentBeat(params, 'choiceAt', set, tier, segment),
+    },
   };
+}
+
+// A moment lasts its segment: a buildup its phrases, a break its bars, a drop until its boss is down.
+function momentBars(set: SetDefinition, tier: number, segment: SetSegment): number {
+  const definition = set.tiers[tier];
+  if (definition === undefined) {
+    throw new Error(`no tier ${String(tier + 1)} on "${set.id}"`);
+  }
+  switch (segment) {
+    case 'buildup':
+      return definition.buildupPhrases * BARS_PER_PHRASE;
+    case 'break':
+      return definition.breakBars;
+    case 'drop':
+      return Infinity;
+  }
+}
+
+function readMomentBeat(
+  params: URLSearchParams,
+  name: string,
+  set: SetDefinition,
+  tier: number,
+  segment: SetSegment,
+): MomentBeat | null {
+  const asked = params.get(name);
+  if (asked === null) {
+    return null;
+  }
+  const read = /^(\d+)(?:\.(\d+)(?:\.(\d+))?)?$/.exec(asked);
+  const bar = Number(read?.[1]);
+  const beat = Number(read?.[2] ?? 1);
+  const sixteenth = Number(read?.[3] ?? 1);
+  if (
+    read === null ||
+    bar < 1 ||
+    [beat, sixteenth].some((count) => count < 1 || count > BEATS_PER_BAR)
+  ) {
+    throw new DevUrlError(
+      `Unknown beat "${asked}" for &${name} in ?dev=moment, write bar.beat or bar.beat.sixteenth from 1.1, beat and sixteenth 1 to ${String(BEATS_PER_BAR)}`,
+    );
+  }
+  if (name === 'bossFallsAt' && segment !== 'drop') {
+    throw new DevUrlError(`&bossFallsAt needs a drop, where the boss is: add &segment=drop`);
+  }
+  const bars = momentBars(set, tier, segment);
+  if (bar > bars) {
+    throw new DevUrlError(
+      `Bar ${String(bar)} of &${name} is past the ${segment} of tier ${String(tier + 1)} on ${set.id}, which lasts ${String(bars)} bars`,
+    );
+  }
+  return { bar, beat, sixteenth };
 }
 
 function readStageTier(
@@ -354,6 +425,69 @@ export function createLandings(waits: boolean, current: () => object): Landings 
       pending = null;
     },
   };
+}
+
+// Before each step of a moment: what its link asks for on the tick that step plays, counted from
+// the tick the moment landed on. Null when it asks for nothing.
+export function momentSteps(
+  state: SimState,
+  dev: Pick<DevOptions, 'moment' | 'content'>,
+): ((state: SimState) => void) | null {
+  const { moment } = dev;
+  const set = dev.content.sets.find((candidate) => candidate.id === state.setId);
+  if (moment === null || set === undefined) {
+    return null;
+  }
+  const tempo = setTempo(set);
+  const start = state.tick;
+  // The landing tick is no step's: a beat on it plays on the first.
+  const tickOf = (at: MomentBeat | null) =>
+    at === null
+      ? null
+      : Math.max(
+          start + 1,
+          start +
+            (at.bar - 1) * tempo.ticksPerBar +
+            (at.beat - 1) * tempo.ticksPerBeat +
+            sixteenthTick(at.sixteenth - 1, tempo),
+        );
+  const fall = tickOf(moment.bossFallsAt);
+  const choice = tickOf(moment.choiceAt);
+  if (fall === null && choice === null) {
+    return null;
+  }
+  return (current) => {
+    // A choice holds the tick: the steps it lasts play the same tick again.
+    if (current.status !== 'running') {
+      return;
+    }
+    const next = current.tick + 1;
+    if (next === fall) {
+      bossesFall(current);
+    }
+    if (next === choice) {
+      levelUp(current);
+    }
+  };
+}
+
+function bossesFall(state: SimState): void {
+  const killer = state.players[0]?.id;
+  for (const enemy of state.enemies) {
+    if (enemy.isBoss) {
+      enemy.hp = 0;
+      if (killer !== undefined) {
+        enemy.lastHitBy = killer;
+      }
+    }
+  }
+  delete state.bossesDue;
+}
+
+function levelUp(state: SimState): void {
+  for (const player of state.players) {
+    player.vibes = Math.max(player.vibes, player.vibesToNextLevel);
+  }
 }
 
 export function devScene(

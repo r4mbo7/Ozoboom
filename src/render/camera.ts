@@ -1,4 +1,4 @@
-import { clamp } from '../shared/scalar';
+import { clamp, lerp } from '../shared/scalar';
 import type { Arena, Vec2 } from '../sim/state';
 
 const VIEW_HEIGHT = 720;
@@ -56,6 +56,25 @@ export function frameCamera(
   const scale =
     viewHeight === undefined ? baseScale(screenHeight) : Math.max(screenHeight, 1) / viewHeight;
   return place(focus.x, focus.y, scale, arena, screenWidth, screenHeight);
+}
+
+// The box around the players, as drawn between two ticks.
+export function boundPlayers(
+  bounds: Bounds,
+  players: readonly { prevX: number; x: number; prevY: number; y: number }[],
+  alpha: number,
+): Bounds {
+  bounds.minX = bounds.minY = Number.POSITIVE_INFINITY;
+  bounds.maxX = bounds.maxY = Number.NEGATIVE_INFINITY;
+  for (const player of players) {
+    const x = lerp(player.prevX, player.x, alpha);
+    const y = lerp(player.prevY, player.y, alpha);
+    bounds.minX = Math.min(bounds.minX, x);
+    bounds.maxX = Math.max(bounds.maxX, x);
+    bounds.minY = Math.min(bounds.minY, y);
+    bounds.maxY = Math.max(bounds.maxY, y);
+  }
+  return bounds;
 }
 
 export function frameBounds(

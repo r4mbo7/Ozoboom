@@ -18,6 +18,7 @@ import type { Prompts } from './prompts';
 import { classActions, lobbyActions, stageActions, titleActions } from './screen-actions';
 import { type Screen, createShownScreen } from './shown-screen';
 import { type StagePickerScreen, createStagePicker } from './stage';
+import { createEntryOverlay } from './stage-entry';
 import { createSunFollower } from './sun';
 import { type TitleOptions, type TitleScreen, createTitle } from './title';
 import { createTitleOptions } from './title-options';
@@ -196,8 +197,10 @@ export function createUi(
   const screens = createScreens();
   const { title, programme, classPicker, stagePicker, lobby, notice, hud, end, upgrade } = screens;
   const menus = screenMenus(screens, grace, isCalm);
+  const entry = createEntryOverlay(() => performance.now(), isCalm);
   container.append(
     hud.element,
+    entry.element,
     upgrade.element,
     upgrade.effects,
     end.element,
@@ -450,6 +453,8 @@ export function createUi(
         menus[screen](edges, frame);
         return;
       }
+      // The HUD comes with the game, on the landing of its entry.
+      hud.element.hidden = entry.update(frame.entry ?? null, state.core, frame.toScreen);
       hud.update(state, frame, content);
       sun.follow(setFraction(setOf(content, state.setId), state));
       upgrade.update(state, frame, content, performance.now());

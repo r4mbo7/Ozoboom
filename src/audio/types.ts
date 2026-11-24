@@ -23,6 +23,16 @@ export type Cue =
 export interface AudioEngine {
   start(): Promise<void>;
   update(state: SimState): void;
+  // While the music holds the game, its cards answered, for the beat line of the loop it resumes
+  // on: the page time of that beat (`performance.now`), and the game takes no step meanwhile. Keeps
+  // the music playing with `state`, which it does not play the events of. Null once there, and
+  // without a running, heard context.
+  waitsForBeat(state: SimState): number | null;
+  // Each frame of the entry a run opens on, until `landsAt` (`performance.now`): the first call makes
+  // the menus leave within a sixteenth, plays the entry's sounds and lands the tick of `state` on
+  // `landsAt`, the music at full level. Keeps the music playing with `state`, which it does not play
+  // the events of. Nothing without a running context: the entry then plays in silence.
+  enter(state: SimState, landsAt: number): void;
   setMuted(muted: boolean): void;
   // 0 to 1: the engine makes each step sound as large as the last.
   setVolume(volume: number): void;

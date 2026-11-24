@@ -21,11 +21,21 @@ export interface GameStart extends GameFields {
   event: 'start';
 }
 
+// A drop the game beat or died in: its bars are those the sim played, card choices and pauses aside.
+export interface GameDrop {
+  stage: string;
+  tier: number;
+  bars: number;
+  bossFell: boolean;
+}
+
 export interface GameEnd extends GameFields {
   event: 'end';
   outcome: GameOutcome;
   tier: number;
   seconds: number;
+  // In play order, at most `MAX_DROPS`; absent from games of releases before the game sent it.
+  drops?: GameDrop[];
 }
 
 export type CrashPlace = 'loop' | 'event' | 'promise';
@@ -68,9 +78,11 @@ export const CRASH_NAMES: readonly CrashName[] = [
   'other',
 ];
 export const CRASH_MESSAGE_LENGTH = 120;
+export const MAX_DROPS = 64;
 
 const START_FIELDS = ['event', 'stage', 'mode', 'players', 'classes', 'device', 'version'];
 const END_FIELDS = [...START_FIELDS, 'outcome', 'tier', 'seconds'];
+const DROP_FIELDS = ['stage', 'tier', 'bars', 'bossFell'];
 const CRASH_FIELDS = ['event', 'version', 'where', 'name', 'message', 'frame'];
 const CRASH_PLACES: readonly CrashPlace[] = ['loop', 'event', 'promise'];
 const MODES: readonly GameMode[] = ['solo', 'local', 'online'];
@@ -78,6 +90,7 @@ const DEVICES: readonly GameDevice[] = ['keyboardMouse', 'gamepad', 'touch'];
 const OUTCOMES: readonly GameOutcome[] = ['won', 'core', 'downed', 'quit', 'interrupted'];
 const ID = /^[a-z0-9-]{1,24}$/;
 const VERSION = /^[a-z0-9.-]{1,40}$/;
+const DIGITS = /^\d{1,9}$/;
 const MAX_PLAYERS = 4;
 // A quote would carry text the game did not write: the game scrubs them, the Worker checks it did.
 const CRASH_MESSAGE = new RegExp(`^[^"\`«»“”\\p{Cc}]{0,${String(CRASH_MESSAGE_LENGTH)}}$`, 'u');
@@ -95,7 +108,8 @@ export function parseGameEvent(json: string): GameEvent | null {
   }
   if (!isRecord(value)) return null;
   if (value.event === 'error') return parseGameCrash(value);
-  if (!hasExactly(value, value.event === 'end' ? END_FIELDS : START_FIELDS, ['locale'])) {
+  const end = value.event === 'end';
+  if (!hasExactly(value, end ? END_FIELDS : START_FIELDS, end ? ['locale', 'drops'] : ['locale'])) {
     return null;
   }
   const { event, stage, mode, players, classes, device, version, locale } = value;
@@ -120,13 +134,56 @@ export function parseGameEvent(json: string): GameEvent | null {
     ...(isLocale(locale) ? { locale } : {}),
   };
   if (event === 'start') return { event, ...game };
-  const { outcome, tier, seconds } = value;
-  return event === 'end' &&
+  const { outcome, tier, seconds, drops } = value;
+  const ends =
+    event === 'end' &&
     isOneOf(outcome, OUTCOMES) &&
     isCount(tier, 0, Infinity) &&
-    isCount(seconds, 0, Infinity)
-    ? { event, ...game, outcome, tier, seconds }
-    : null;
+    isCount(seconds, 0, Infinity);
+  if (!ends) return null;
+  const ended: GameEnd = { event, ...game, outcome, tier, seconds };
+  if (!('drops' in value)) return ended;
+  return isDrops(drops) ? { ...ended, drops } : null;
+}
+
+function isDrops(value: unknown): value is GameDrop[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_DROPS &&
+    value.every((drop) => isRecord(drop) && hasExactly(drop, DROP_FIELDS, []) && isDrop(drop))
+  );
+}
+
+function isDrop(drop: Record<string, unknown>): drop is Record<string, unknown> & GameDrop {
+  return (
+    isId(drop.stage) &&
+    isCount(drop.tier, 0, Infinity) &&
+    isCount(drop.bars, 1, Infinity) &&
+    typeof drop.bossFell === 'boolean'
+  );
+}
+
+// One column of the stats dataset: `stage:tier:bars:fell` for each drop, apart by a space, which
+// an id never holds.
+export function dropsBlob(drops: readonly GameDrop[]): string {
+  return drops
+    .map(({ stage, tier, bars, bossFell }) =>
+      [stage, String(tier), String(bars), bossFell ? '1' : '0'].join(':'),
+    )
+    .join(' ');
+}
+
+// The drops of a blob the Worker wrote; an entry it could not have written is left out.
+export function parseDropsBlob(blob: string): GameDrop[] {
+  return blob.split(' ').flatMap((entry) => {
+    const [stage, tier, bars, fell, ...rest] = entry.split(':');
+    const drop = { stage, tier: whole(tier), bars: whole(bars), bossFell: fell === '1' };
+    return rest.length === 0 && (fell === '0' || fell === '1') && isDrop(drop) ? [drop] : [];
+  });
+}
+
+function whole(text: string | undefined): number {
+  return text !== undefined && DIGITS.test(text) ? Number(text) : NaN;
 }
 
 function parseGameCrash(value: Record<string, unknown>): GameCrash | null {

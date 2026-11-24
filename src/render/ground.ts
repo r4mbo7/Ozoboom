@@ -9,9 +9,13 @@ import { releaseDrawing } from './util';
 import { createFireflies } from './ground-fireflies';
 import { LAKE_DECOR, type Layout, layoutGround } from './ground-layout';
 import { createLake } from './ground-lake';
+import { nearShown } from './stage-entry';
 
 export interface Ground {
   readonly root: Container;
+  // What the ground draws only as far as the game's view reaches: seen from the sky, its edges would
+  // frame the arena, so the entry's dive brings it in only as the camera nears the arena.
+  readonly near?: readonly Container[];
   draw(layout: Layout, seed: number): void;
   style(frame: Frame): void;
   update?(state: SimState, frame: Frame): void;
@@ -89,6 +93,10 @@ export function createGround(ctx: RenderContext): Family {
       if (frame.fraction !== styledAt) {
         styledAt = frame.fraction;
         ground.style(frame);
+      }
+      const near = nearShown(ctx.options.entry, performance.now());
+      for (const layer of ground.near ?? []) {
+        layer.alpha = near;
       }
       ground.update?.(state, frame);
       fireflies.update(frame);

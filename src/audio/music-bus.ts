@@ -75,17 +75,20 @@ export function createBus(
   return { input, cutoff, output, lead, echo, echoFeedback, echoReturn, feedback, ret };
 }
 
-export function retireBus(old: Bus | null, fadeSeconds: number) {
+// Fades out from `at`, never before now.
+export function retireBus(old: Bus | null, fadeSeconds: number, at = 0) {
   if (old === null) {
     return;
   }
-  old.output.gain.setTargetAtTime(0, old.output.context.currentTime, fadeSeconds / 4);
+  const now = old.output.context.currentTime;
+  const from = Math.max(now, at);
+  old.output.gain.setTargetAtTime(0, from, fadeSeconds / 4);
   setTimeout(
     () => {
       old.output.disconnect();
       old.echoFeedback.disconnect();
     },
-    (fadeSeconds + LOOKAHEAD_SECONDS + BUS_TAIL_SECONDS) * 1000,
+    (from - now + fadeSeconds + LOOKAHEAD_SECONDS + BUS_TAIL_SECONDS) * 1000,
   );
 }
 

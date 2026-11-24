@@ -5,7 +5,7 @@ import type { SimEvent } from '../sim/state';
 import type { Cue } from './types';
 import { BEATS_PER_BAR, MAIN_TEMPO, type Tempo, barOfTick, ticksIntoBar } from '../shared/tempo';
 import { beatSeconds, timeToTick, type Anchor } from './clock';
-import { chordRootOfBar, keyHz, type MusicKey } from './scale';
+import { chordRootOfBar, effectKey, keyHz, type MusicKey } from './scale';
 import { playNoise, playTone } from './synth';
 import { createVibeArp } from './vibe-arp';
 import {
@@ -2313,7 +2313,7 @@ export function createSfx(
   initialKey: SfxKey = SOIREE_OUVERTURE,
   samples: SfxSamples = NO_SAMPLES,
 ): Sfx {
-  let key = initialKey;
+  let key = effectKey(initialKey);
   let limiter = createSfxLimiter(SFX_LIMITS);
   // The voice of a sound the limiter lets through: the artist's file once decoded, in the key of the
   // track, its synth voice otherwise. A shot of an attack kind tries its kind's file first.
@@ -2408,7 +2408,7 @@ export function createSfx(
       hitSound = enabled;
     },
     setKey(next) {
-      key = next;
+      key = effectKey(next);
     },
     setTempo(next) {
       if (next.ticksPerBeat !== tempo.ticksPerBeat) {

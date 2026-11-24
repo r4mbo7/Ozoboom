@@ -1,4 +1,5 @@
-// The notes an artist declares on a tonal sample (ADR 0022, K7), shared by the game and `pnpm sounds`.
+// The notes an artist declares, on a tonal sample (ADR 0022, K7) or as the root of a track's key
+// (ADR 0026), shared by the game and `pnpm sounds`.
 // It imports nothing, so the command loads it in plain Node.
 
 export interface Note {
@@ -20,16 +21,33 @@ const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#',
 
 const modulo = (value: number, by: number): number => ((value % by) + by) % by;
 
-export function parseNote(text: string): Note | null {
-  const match = /^([A-G])([#b]?)(-?\d+)$/.exec(text);
-  const pitchClass = PITCH_CLASSES[match?.[1] ?? ''];
-  if (match === null || pitchClass === undefined) {
+function semitonesFromC(letter: string, accidental: string): number | null {
+  const pitchClass = PITCH_CLASSES[letter];
+  if (pitchClass === undefined) {
     return null;
   }
-  const accidental = match[2] === '#' ? 1 : match[2] === 'b' ? -1 : 0;
-  const midi = 12 * (Number(match[3]) + 1) + pitchClass + accidental;
-  const name = `${SHARP_NAMES[modulo(midi, 12)] ?? ''}${String(Math.floor(midi / 12) - 1)}`;
-  return { name, midi };
+  return pitchClass + (accidental === '#' ? 1 : accidental === 'b' ? -1 : 0);
+}
+
+export function parseNote(text: string): Note | null {
+  const [, letter = '', accidental = '', octave = ''] = /^([A-G])([#b]?)(-?\d+)$/.exec(text) ?? [];
+  const pitch = semitonesFromC(letter, accidental);
+  if (pitch === null) {
+    return null;
+  }
+  const midi = 12 * (Number(octave) + 1) + pitch;
+  return { name: `${sharpName(midi)}${String(Math.floor(midi / 12) - 1)}`, midi };
+}
+
+// A note without its octave, `E` or `Bb`, as the root of a key (ADR 0026): 0 for C to 11 for B.
+export function parsePitchClass(text: string): number | null {
+  const [, letter = '', accidental = ''] = /^([A-G])([#b]?)$/.exec(text) ?? [];
+  const pitch = semitonesFromC(letter, accidental);
+  return pitch === null ? null : modulo(pitch, 12);
+}
+
+export function sharpName(midi: number): string {
+  return SHARP_NAMES[modulo(midi, 12)] ?? '';
 }
 
 // How far a note is moved to reach a root, folded to the nearest octave: -6 to +5 semitones, a

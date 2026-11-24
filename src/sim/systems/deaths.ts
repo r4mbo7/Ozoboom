@@ -110,11 +110,14 @@ export function deaths(ctx: StepContext): void {
   // The relics wait for the last boss of the drop, called ones included. The vibes of all its bosses go
   // to the team at once, so that the level up they bring is offered right after the relic, not once the
   // stage is back.
-  if (bossFell && !bossLeft(state) && !isLastTier(state.set, set) && offerRelics(ctx)) {
-    absorbPickups(
-      state,
-      state.pickups.filter((pickup) => pickup.fromBoss === true),
-    );
+  if (bossFell && !bossLeft(state) && !isLastTier(state.set, set)) {
+    state.set.bossesDownTick = state.tick;
+    if (offerRelics(ctx)) {
+      absorbPickups(
+        state,
+        state.pickups.filter((pickup) => pickup.fromBoss === true),
+      );
+    }
   }
 }
 

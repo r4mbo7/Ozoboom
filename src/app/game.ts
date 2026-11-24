@@ -44,7 +44,7 @@ import {
   prefersCalmMode,
   showRendererUnavailable,
 } from '../ui';
-import { type DevOptions, benchSlots, createDevProbe, devScene } from './dev';
+import { type DevOptions, benchSlots, createDevProbe, devScene, momentSteps } from './dev';
 import { createBackgroundPlay } from './background-play';
 import { createDefeatFade } from './defeat-fade';
 import { createDialogs } from './dialogs';
@@ -82,10 +82,10 @@ import { changelogNews, seeChangelog } from './changelog-seen';
 import { FULL_RELEASES } from '../data/full';
 import { createTeamPause, pauseItems, pausingPlayer } from './team-pause';
 import { createToast } from './toast';
-import { drawTrack, stageTracks, trackOf } from './track';
+import { drawTrack, posterOf, stageTracks, trackOf } from './track';
 import { countVisit } from './visits';
 import { stageCards } from '../ui/lobby-model';
-import type { UiCallbacks, UpgradeCue } from '../ui/types';
+import type { EntryPoster, UiCallbacks, UpgradeCue } from '../ui/types';
 import { showsStageChoice } from '../ui/teaser';
 import { createPrompts } from '../ui/prompts';
 import { statsSheetOf } from '../ui/stats-model';
@@ -96,6 +96,8 @@ import { createStillness } from './stillness';
 import { createWeaponScenes } from './weapon-scenes';
 import { downloadJson } from './download';
 import { type RecordedGame, type Recorder, type Recording, createRecorder } from './recording';
+import { createResumeBeat } from './resume-beat';
+import { createEntryClock, stageEntry } from './stage-entry';
 import { TUTORIAL } from '../data/tutorial';
 
 const SOLO_FOCUS: CameraFocus = { kind: 'player', playerId: 0 };
@@ -189,10 +191,14 @@ export async function startGame(
     () => match,
   );
 
+  const entryClock = createEntryClock(audio, renderer);
+  // The names the poster of the entry shows.
+  let poster: EntryPoster | null = null;
   const stageListen = createStageListen(content, audio, applySound);
 
   let stageId = prefs.stageId;
   let frozenAlpha = 0;
+  const resumeBeat = createResumeBeat(audio, renderer);
   // What the arena shows of the guide of the last step.
   let arena = NO_ARENA_GUIDE;
   let endingLeft = 0;
@@ -223,6 +229,7 @@ export async function startGame(
   let uiSnapshot: InputSnapshot | null = null;
   let uiPlayers: readonly LocalPlayer[] = [];
   let played = false;
+  let momentStep: ((state: SimState) => void) | null = null;
   const fps = createFpsMeter();
   const probe =
     dev.mode === null
@@ -483,6 +490,9 @@ export async function startGame(
   }
 
   function applySound(): void {
+    if (screen !== 'game' || pause.stopsTheSet) {
+      entryClock.cancel();
+    }
     const sound = soundOf({
       screen,
       paused: pause.stopsTheSet,
@@ -670,20 +680,37 @@ export async function startGame(
       match,
       () => audio.loaded(),
       () => {
-        landGame(mode);
+        landGame(mode, trackId);
       },
     );
   }
 
-  function landGame(mode: GameMode | null): void {
+  function landGame(mode: GameMode | null, trackId: string): void {
     played = true;
-    devScene(match.session.state, dev);
+    const { state } = match.session;
+    devScene(state, dev);
+    momentStep = momentSteps(state, dev);
     screen = 'game';
     gameMode = mode ?? 'online';
     // An online guest may still be fading out when the host plays again.
     fade.lift();
-    ui.showGame(match.session.state.setId === TUTORIAL.id);
+    const tutorial = state.setId === TUTORIAL.id;
+    ui.showGame(tutorial);
     applySound();
+    const opensOnEntry = replay === undefined && dev.mode === null && !tutorial;
+    if (opensOnEntry) {
+      const set = setOf(content, state.setId);
+      const now = performance.now();
+      const entry = stageEntry(setTempo(set), now);
+      poster = {
+        ...entry,
+        poster: posterOf(set, trackId, state.seed),
+        track: trackOf(TRACKS, trackId).name,
+        stage: set.name,
+      };
+      entryClock.begin(entry);
+      entryClock.holds(state, now);
+    }
     if (mode !== null) {
       stats.start(match.session.state, {
         mode,
@@ -865,6 +892,8 @@ export async function startGame(
   function uiFrame(snapshot: InputSnapshot): UiFrame {
     return {
       snapshot,
+      resumesAt: resumeBeat.at,
+      entry: entryClock.entry === null ? null : poster,
       players: uiPlayers,
       devices: [...view.devices].map(([device, own]) => ({ device, snapshot: own })),
       menuPosition: screen === 'title' ? (audio.menuPosition() ?? silentMenuPosition()) : null,
@@ -897,6 +926,9 @@ export async function startGame(
       ) {
         return;
       }
+      if (entryClock.holds(match.session.state, performance.now())) {
+        return false;
+      }
       const rush = rushing();
       for (let rushed = 0; rushed < rush && playing(); rushed++) {
         if (!stepOnce(false)) {
@@ -906,7 +938,12 @@ export async function startGame(
       if (rush > 0) {
         return;
       }
+      if (resumeBeat.sync(match.session.state) !== null) {
+        return false;
+      }
       stepOnce();
+      // The step that answered the cards sets that beat before they fly, for them to land on it.
+      resumeBeat.sync(match.session.state);
       if (probe?.afterStep() === true) {
         match.frame({ devices: hub.poll(), merged: hub.merged() });
       }
@@ -914,6 +951,10 @@ export async function startGame(
     }
     if (screen !== 'game') {
       return;
+    }
+    // Online, the host sends no frame during its entry: each peer starts the set from its own.
+    if (entryClock.holds(match.session.state, performance.now())) {
+      return false;
     }
     // Online, a test's player plays after every step too: each peer changes its state at the same tick.
     if (!stepOnce()) {
@@ -940,10 +981,12 @@ export async function startGame(
 
   function stepOnce(heard = true): boolean {
     const start = performance.now();
+    momentStep?.(match.session.state);
     if (!match.step((point) => renderer.screenToWorld(point))) {
       return false;
     }
     const { session } = match;
+    stats.step(session.state);
     if (heard) {
       audio.update(session.state);
     }

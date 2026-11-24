@@ -2,10 +2,11 @@ import { Container, Graphics, type Texture, TilingSprite } from 'pixi.js';
 import type { SimState } from '../sim/state';
 import type { RenderContext } from './context';
 import type { Frame } from './frame';
-import { type Layout, OVERFLOW, SOL_CLAIR_SHARE } from './ground-layout';
+import { type Layout, SKY_REACH, SOL_CLAIR_SHARE } from './ground-layout';
 import { grainTile, patchTile } from './ground-paint';
 import { createTrees } from './ground-trees';
 import { createWater } from './ground-water';
+import { edgesShown } from './stage-entry';
 
 const TAU = Math.PI * 2;
 const WHITE = 0xffffff;
@@ -39,7 +40,7 @@ export function createLake(ctx: RenderContext, parent: Container) {
       const { width, height } = layout.arena;
       surface
         .clear()
-        .rect(-OVERFLOW, -OVERFLOW, width + 2 * OVERFLOW, height + 2 * OVERFLOW)
+        .rect(-SKY_REACH, -SKY_REACH, width + 2 * SKY_REACH, height + 2 * SKY_REACH)
         .fill(WHITE);
       release();
       for (const [tiling, texture] of [
@@ -48,10 +49,10 @@ export function createLake(ctx: RenderContext, parent: Container) {
       ] as const) {
         tiles.push(texture);
         tiling.texture = texture;
-        tiling.position.set(-OVERFLOW);
-        tiling.tilePosition.set(OVERFLOW);
-        tiling.width = width + 2 * OVERFLOW;
-        tiling.height = height + 2 * OVERFLOW;
+        tiling.position.set(-SKY_REACH);
+        tiling.tilePosition.set(SKY_REACH);
+        tiling.width = width + 2 * SKY_REACH;
+        tiling.height = height + 2 * SKY_REACH;
       }
 
       const cx = width / 2;
@@ -96,6 +97,8 @@ export function createLake(ctx: RenderContext, parent: Container) {
       trees.style(frame);
     },
     update(state: SimState, frame: Frame): void {
+      // The arena's edge exists only in the game's view: none seen from the sky.
+      border.alpha = edgesShown(ctx.options.entry, performance.now());
       water.update(state, frame);
     },
     destroy(): void {

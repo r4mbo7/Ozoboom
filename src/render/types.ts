@@ -20,6 +20,14 @@ export interface KeyTrap {
 
 export type CameraFocus = { kind: 'player'; playerId: PlayerId } | { kind: 'everyone' };
 
+// The two bars a run opens on, in page milliseconds (`performance.now`): from `startsAt` the
+// festival seen from the sky, a dive over the second bar, and the game from `landsAt`.
+export interface StageEntry {
+  readonly startsAt: number;
+  readonly beatMs: number;
+  readonly landsAt: number;
+}
+
 export interface RenderOptions {
   calmMode: boolean;
   focus?: CameraFocus;
@@ -33,6 +41,11 @@ export interface RenderOptions {
   keyTraps?: readonly KeyTrap[];
   // World units from top to bottom of the screen; absent, the camera's own for the screen's height.
   viewHeight?: number;
+  // While the game waits for the beat it resumes on after its cards, that beat's page time
+  // (`performance.now`); null otherwise.
+  resumesAt?: number | null;
+  // The entry the run opens on, kept a bar past its landing for the landing's effects; null otherwise.
+  entry?: StageEntry | null;
 }
 
 // The scene of a weapon on its card, painted before each image; `viewHeight` is in world units.
