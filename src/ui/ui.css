@@ -560,7 +560,7 @@
   --title-rise: calc(0.6 * var(--title-em));
 }
 
-.ui-title__body:is([data-view='settings'], [data-view='changelog']) {
+.ui-title__body:is([data-view='settings'], [data-view='sound'], [data-view='changelog']) {
   --title-rise: calc(0.35 * var(--title-em));
 }
 
@@ -1016,7 +1016,7 @@ svg.ui-title__moon-glint {
   padding: calc(0.6 * var(--title-em)) var(--ui-gap) 72px;
 }
 
-.ui-title__body[data-view='settings'] .ui-title__deck {
+.ui-title__body:is([data-view='settings'], [data-view='sound']) .ui-title__deck {
   padding-block: 20px 60px;
 }
 
@@ -1558,8 +1558,12 @@ svg.ui-title__moon-glint {
   }
 }
 
-/* A laptop screen: the five entries draw closer, so that the title holds whole. */
+/* A laptop screen: the sky over the logo and the five entries draw in, so the title holds whole. */
 @media (max-height: 799px) and (min-height: 521px) {
+  .ui-title__header {
+    padding-top: 16px;
+  }
+
   .ui-title__body[data-view='main'] .ui-menu {
     gap: 8px;
   }
@@ -2426,7 +2430,8 @@ svg.ui-title__moon-glint {
   pointer-events: none;
 }
 
-[aria-checked='true']:hover > .ui-go {
+[aria-checked='true']:hover > .ui-go,
+[aria-checked='true']:hover > .ui-stage__art > .ui-go {
   display: flex;
 }
 
@@ -2448,9 +2453,6 @@ svg.ui-title__moon-glint {
 
 /* Over a scene, only its picture: the name and the chips stay readable. */
 .ui-stage .ui-go {
-  inset: 10px 10px auto;
-  aspect-ratio: 16 / 9;
-  border-radius: calc(var(--ui-radius) - 6px);
   background: color-mix(in srgb, var(--sol) 72%, transparent);
   font-size: 15px;
 }
@@ -2565,35 +2567,35 @@ svg.ui-title__moon-glint {
   grid-area: cards;
 }
 
-.ui-picks > [data-slot='s0'] {
+.ui-picks > [data-slot='s0'],
+.ui-picks__seats > [data-slot='s0'] {
   grid-area: s0;
 }
 
-.ui-picks > [data-slot='s1'] {
+.ui-picks > [data-slot='s1'],
+.ui-picks__seats > [data-slot='s1'] {
   grid-area: s1;
 }
 
-.ui-picks > [data-slot='s2'] {
+.ui-picks > [data-slot='s2'],
+.ui-picks__seats > [data-slot='s2'] {
   grid-area: s2;
 }
 
-.ui-picks > [data-slot='s3'] {
+.ui-picks > [data-slot='s3'],
+.ui-picks__seats > [data-slot='s3'] {
   grid-area: s3;
 }
 
-/* Alone at a keyboard or a pad, the place of a second player waits in the corner of the screen,
-   beside the hero where the screen is wide enough. */
-.ui-classpicker:not([data-together]) .ui-lobby__body {
-  position: relative;
-}
-
+/* Alone at a keyboard or a pad, the place of a second player stands at the top right of the cards,
+   in a cell of its own that no card runs under: one row, its keys after its words while they fit. */
 .ui-classpicker:not([data-together]) .ui-picks > .ui-invite {
-  position: absolute;
-  top: 20px;
-  inset-inline-end: var(--ui-gap);
+  grid-area: invite;
   flex-direction: row;
+  justify-self: end;
+  align-self: end;
+  margin-inline-end: var(--cards-edge, 0);
   gap: 10px;
-  max-width: 280px;
   padding: 10px 22px 10px 12px;
   border-radius: 34px;
   text-align: start;
@@ -2612,52 +2614,28 @@ svg.ui-title__moon-glint {
 }
 
 .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__body {
-  align-items: flex-start;
-  gap: 4px;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 4px 10px;
 }
 
-@media (min-width: 1600px) {
-  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite {
-    position: static;
-    flex-direction: column;
-    justify-self: start;
-    align-self: start;
-    gap: 8px;
-    width: min(100%, 260px);
-    max-width: none;
-    padding: 14px 16px;
-    border-radius: var(--ui-radius);
-    text-align: center;
-  }
+.ui-classpicker:not([data-together]) .ui-picks:has(> .ui-invite:not([hidden])) {
+  grid-template-areas:
+    'hero'
+    'invite'
+    'cards';
+}
 
-  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__plus {
-    width: 36px;
-    height: 36px;
-    font-size: 22px;
-  }
+/* Its right edge on the hero's and the cards'. */
+.ui-classpicker[data-many]:not([data-together]) .ui-picks:has(> .ui-invite:not([hidden])) {
+  grid-template-columns: minmax(0, 1080px);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  justify-content: center;
+}
 
-  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__body {
-    align-items: center;
-  }
-
-  .ui-classpicker:not([data-together]) .ui-picks > .ui-invite .ui-invite__text {
-    font-size: 20px;
-  }
-
-  .ui-classpicker:not([data-together]) .ui-picks:has(> .ui-invite:not([hidden])) {
-    grid-template-areas:
-      '. hero s1'
-      'cards cards cards';
-    grid-template-columns: minmax(0, 1fr) minmax(0, 980px) minmax(0, 1fr);
-  }
-
-  .ui-classpicker[data-many]:not([data-together]) .ui-picks:has(> .ui-invite:not([hidden])) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1080px) minmax(0, 1fr);
-  }
-
-  .ui-classpicker:not([data-together]):has(.ui-invite:not([hidden])) .ui-lobby__body {
-    width: min(100%, 1640px);
-  }
+/* Laid out by the picks, each sheet in the place of its number, unless a column stacks them. */
+.ui-picks__seats {
+  display: contents;
 }
 
 .ui-picks > .ui-invite {
@@ -3081,11 +3059,6 @@ svg.ui-title__moon-glint {
     font-size: 28px;
   }
 
-  .ui-classpicker[data-many] .ui-lobby__actions .ui-button {
-    min-height: 46px;
-    padding-block: 6px;
-  }
-
   .ui-classpicker[data-many] .ui-hint {
     font-size: 14px;
   }
@@ -3137,11 +3110,6 @@ svg.ui-title__moon-glint {
     font-size: 24px;
   }
 
-  .ui-classpicker[data-many] .ui-lobby__actions .ui-button {
-    min-height: 40px;
-    padding-block: 4px;
-  }
-
   .ui-classpicker:is([data-seats='3'], [data-seats='4']) .ui-picks {
     --side: clamp(250px, 28vw, 680px);
   }
@@ -3181,44 +3149,175 @@ svg.ui-title__moon-glint {
   }
 }
 
-/* Alone on a landscape screen short of height, the hero stands beside the cards: its portrait takes
-   what its sheet leaves of the column. */
-@media (max-height: 820px) and (min-aspect-ratio: 4 / 3) and (max-width: 1599px) {
-  .ui-classpicker[data-many]:not([data-together]) .ui-picks {
-    grid-template-areas: 'hero cards';
-    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
+/* On a landscape screen, alone or two, the sheets take a column beside the cards, under which the
+   buttons and the hint run across both, at the scene screen's size: the picks and the seats give
+   their parts to the body's grid. Three or four players keep their sheets on both sides of the cards. */
+@media (min-aspect-ratio: 4 / 3) {
+  .ui-classpicker[data-many]:is(:not([data-together]), [data-seats='2']) .ui-lobby__body {
+    display: grid;
+    grid-template-areas:
+      'header header'
+      'hero invite'
+      'hero cards'
+      'actions actions'
+      'hint hint';
+    grid-template-columns: clamp(300px, 34vw, 760px) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
     align-items: stretch;
+    width: min(100%, 2400px);
+    padding-inline: clamp(16px, 2.4vw, 48px);
+    column-gap: clamp(16px, 2.4vw, 48px);
   }
 
+  .ui-classpicker[data-many]:is(:not([data-together]), [data-seats='2']) .ui-picks {
+    display: contents;
+  }
+
+  .ui-classpicker[data-many]:is(:not([data-together]), [data-seats='2'])
+    :is(.ui-lobby__header, .ui-landscape) {
+    grid-column: 1 / -1;
+  }
+
+  .ui-classpicker[data-many]:is(:not([data-together]), [data-seats='2']) .ui-classcards {
+    width: 100%;
+  }
+
+  .ui-classpicker[data-many]:is(:not([data-together]), [data-seats='2']) .ui-lobby__actions {
+    grid-area: actions;
+  }
+
+  .ui-classpicker[data-many]:is(:not([data-together]), [data-seats='2']) .ui-hint {
+    grid-area: hint;
+    justify-self: center;
+  }
+
+  /* The portrait takes what the sheet leaves of the column. */
   .ui-classpicker[data-many]:not([data-together]) .ui-hero {
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    justify-content: center;
     gap: 12px;
+    width: auto;
     min-height: 0;
   }
 
+  /* The portrait keeps its frame and gives way first when the sheet is short of height. */
   .ui-classpicker[data-many]:not([data-together]) .ui-hero__stage {
-    flex: 1 1 0;
+    flex: 0 1 auto;
     min-height: 0;
-    aspect-ratio: auto;
+    aspect-ratio: 3 / 2;
+  }
+
+  /* The sheet reads at the size of the title screen's buttons, smaller on a laptop. */
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero__info {
+    --hero-text: clamp(14px, 1.45vh, 18px);
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero :is(.ui-sheet__label, .ui-sheet__value) {
+    font-size: var(--hero-text);
+  }
+
+  .ui-classpicker[data-many]:not([data-together])
+    .ui-hero
+    :is(.ui-sheet__role, .ui-sheet__skillname) {
+    font-size: calc(var(--hero-text) * 1.12);
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__skilltext {
+    font-size: var(--hero-text);
+  }
+
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__skillhead {
+    font-size: calc(var(--hero-text) * 0.9);
+  }
+
+  /* The time it takes to come back reads as the special's own text. */
+  .ui-classpicker[data-many]:not([data-together]) .ui-hero .ui-sheet__recharge {
+    font-size: var(--hero-text);
   }
 
   .ui-classpicker[data-many]:not([data-together]) .ui-hero__name {
-    font-size: clamp(24px, 4.6vh, 36px);
+    font-size: clamp(24px, 4.6vh, 44px);
+  }
+
+  .ui-classpicker[data-many][data-seats='2'] .ui-picks__seats {
+    display: grid;
+    grid-area: hero;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(10px, 1.6vh, 20px);
+    min-height: 0;
+  }
+
+  /* Each on the row of its slot, whatever order the sheets joined the page in. */
+  .ui-classpicker[data-many][data-seats='2'] .ui-picks__seats > [data-slot='s0'] {
+    grid-area: 1 / 1;
+  }
+
+  .ui-classpicker[data-many][data-seats='2'] .ui-picks__seats > [data-slot='s1'] {
+    grid-area: 2 / 1;
+  }
+
+  /* Each sheet has half the column: its portrait takes what its text leaves of the height. */
+  .ui-classpicker[data-many][data-seats='2'] .ui-seatsheet {
+    --sheet-text: clamp(13px, 2.5cqi, 22px);
+    --sheet-small: clamp(11px, 2cqi, 17px);
+
+    grid-template-areas:
+      'head head'
+      'stage name'
+      'stage role'
+      'stage stats'
+      'skill skill';
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  }
+
+  .ui-classpicker[data-many][data-seats='2'] .ui-seatsheet .ui-sheet__stats {
+    align-self: start;
+  }
+
+  .ui-classpicker[data-many][data-seats='2'] .ui-seatsheet__stage {
+    align-self: stretch;
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+
+  /* The invite of a third player: the one-line pill of the one alone, over the cards. */
+  .ui-classpicker[data-many][data-seats='2'] .ui-picks > .ui-invite {
+    grid-area: invite;
+    flex-direction: row;
+    justify-self: end;
+    align-self: end;
+    gap: 10px;
+    margin-inline-end: var(--cards-edge, 0);
+    padding: 4px 14px 4px 6px;
+    border-radius: 34px;
+    text-align: start;
+  }
+
+  .ui-classpicker[data-many][data-seats='2'] .ui-picks > .ui-invite .ui-invite__plus {
+    width: 26px;
+    height: 26px;
+    font-size: 17px;
+  }
+
+  .ui-classpicker[data-many][data-seats='2'] .ui-picks > .ui-invite .ui-invite__text {
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .ui-classpicker[data-many][data-seats='2'] .ui-picks > .ui-invite .ui-invite__body {
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 4px 10px;
   }
 }
 
-/* On a short screen the invite keeps to the corner, over none of the cards. */
-@media (max-height: 640px) {
-  .ui-classpicker[data-many] .ui-lobby__lead {
-    display: none;
-  }
-
+/* Where the cards are short of height, the invite shrinks to the height of a line. */
+@media (max-height: 900px) {
   .ui-classpicker:not([data-together]) .ui-picks > .ui-invite {
-    top: 8px;
-    max-width: none;
     padding: 4px 14px 4px 6px;
   }
 
@@ -4036,7 +4135,7 @@ svg.ui-title__moon-glint {
   cursor: default;
 }
 
-.ui-stagecards[data-readonly] .ui-stage:not([aria-checked='true']) .ui-stage__preview {
+.ui-stagecards[data-readonly] .ui-stage:not([aria-checked='true']) .ui-stage__art {
   opacity: 0.5;
 }
 
@@ -4044,12 +4143,19 @@ svg.ui-title__moon-glint {
   border-color: var(--ui-line);
 }
 
+.ui-stage__art {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: calc(var(--ui-radius) - 6px);
+}
+
 .ui .ui-stage__preview {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  border-radius: calc(var(--ui-radius) - 6px);
+  height: 100%;
 }
 
 .ui-stage__name {
@@ -4216,7 +4322,7 @@ svg.ui-title__moon-glint {
   display: none;
 }
 
-.ui-stagecards[data-festival] .ui-stage:not([aria-checked='true']) .ui-stage__preview {
+.ui-stagecards[data-festival] .ui-stage:not([aria-checked='true']) .ui-stage__art {
   opacity: 0.6;
 }
 
@@ -4225,10 +4331,11 @@ svg.ui-title__moon-glint {
   column-gap: calc(var(--ui-chevron) + 8px);
 }
 
+/* At the size of the title screen's tagline. */
 .ui-stagepicker__note {
   margin: 0;
   color: var(--ui-muted);
-  font-size: 16px;
+  font-size: clamp(16px, 2.4vw, 20px);
   line-height: 1.4;
   text-align: center;
   /* One line stays reserved: the cards do not move when a mode has no description. */
@@ -4287,14 +4394,12 @@ svg.ui-title__moon-glint {
     padding: 6px 10px 6px 6px;
   }
 
-  .ui-stagepicker .ui-stage__preview {
+  .ui-stagepicker .ui-stage__art {
     grid-row: 1 / 3;
     align-self: center;
   }
 
   .ui-stagepicker .ui-stage .ui-go {
-    inset: 6px auto 6px 6px;
-    width: 40%;
     font-size: 11px;
   }
 
@@ -4320,6 +4425,49 @@ svg.ui-title__moon-glint {
   }
 }
 
+/* Above a phone, the scene screen fills the height: the row of cards takes what the tabs, the buttons
+   and the keys leave, and each picture grows up to a square, cropping its sides. */
+@media (min-height: 521px) {
+  .ui-stagepicker .ui-lobby__body {
+    width: min(100%, 2400px);
+    height: 100%;
+  }
+
+  .ui-stagepicker .ui-stagecards {
+    display: grid;
+    flex: 0 1 auto;
+    grid-template-columns: repeat(var(--stage-count, 4), minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    min-height: 0;
+    /* The halo of a picked first or last card stays on the screen. */
+    padding-inline: calc(var(--ui-chevron) + 12px);
+  }
+
+  .ui-stagepicker .ui-stage {
+    max-width: none;
+  }
+
+  .ui-stagepicker .ui-stage__art {
+    flex: 0 1 auto;
+    aspect-ratio: 1;
+    min-height: 0;
+  }
+
+  /* The way to the characters reads on one line, in every language. */
+  .ui-stagepicker .ui-lobby__actions .ui-button--primary {
+    width: auto;
+    min-width: 320px;
+    white-space: nowrap;
+  }
+}
+
+/* A screen held upright lays the cards two by two rather than leaving the last one alone. */
+@media (min-height: 521px) and (max-aspect-ratio: 1 / 1) {
+  .ui-stagepicker .ui-stagecards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* On a short laptop screen the scene screen holds whole: its margins give way first. */
 @media (max-height: 700px) and (min-height: 521px) {
   .ui-stagepicker .ui-lobby__body {
@@ -4327,29 +4475,23 @@ svg.ui-title__moon-glint {
   }
 }
 
-/* On a wide screen the scene screen grows as one picture rather than sitting small in an empty middle:
-   it holds in 1280x720, so it holds in a screen as many times larger. The scenes are drawn in SVG and
-   stay sharp. */
-@media (min-width: 1900px) and (min-height: 1000px) {
-  .ui-stagepicker .ui-lobby__body {
-    zoom: 1.4;
-  }
-}
-
-@media (min-width: 2400px) and (min-height: 1250px) {
-  .ui-stagepicker .ui-lobby__body {
-    zoom: 1.7;
-  }
-}
-
-/* Grown, a scene card keeps its style and its tempo on one line: the cards get the room they need. */
-@media (min-width: 1900px) and (min-height: 1000px) {
-  .ui-stagepicker .ui-lobby__body {
-    width: min(100%, 1360px);
+/* Above a phone, the keys stay at the foot of the screen, where the title screen shows them, rather
+   than under whatever the screen holds: the body keeps their room free. */
+@media (min-height: 521px) {
+  :is(.ui-stagepicker, .ui-classpicker[data-many]) .ui-lobby__body {
+    position: relative;
+    padding-bottom: clamp(56px, 6vh, 72px);
   }
 
-  .ui-stagepicker .ui-stagecards {
-    --stage-width: 330px;
+  /* Out of the cell of the picker's grid too, which would hold it otherwise. */
+  :is(.ui-stagepicker, .ui-classpicker[data-many]) .ui-lobby__body > .ui-hint {
+    position: absolute;
+    grid-area: auto;
+    inset-inline: 0;
+    bottom: 20px;
+    width: fit-content;
+    max-width: calc(100% - 2 * 88px);
+    margin-inline: auto;
   }
 }
 
@@ -8615,6 +8757,116 @@ svg.ui-title__moon-glint {
   padding-bottom: calc(6 * var(--card-unit));
 }
 
+/* Two panels to a row share the screen's whole height, down to each panel's cards: the room they gain
+   goes to the card heads. One panel to a row, or a screen shorter than the panels' unit can shrink to,
+   the rows keep their height and the screen scrolls. */
+@media (min-width: 1101px) and (min-height: 720px) {
+  /* The screen's height, not the cards' tallest: the heads would grow to their cap and scroll. */
+  .ui-upgrade:has(.ui-offers__panels:is([data-count='3'], [data-count='4'])) {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .ui-offers:has(.ui-offers__panels:is([data-count='3'], [data-count='4'])) {
+    align-self: stretch;
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) {
+    flex: 1;
+    /* Its content would count its card heads at their cap: the panels share the height, not that. */
+    min-height: 0;
+    grid-auto-rows: minmax(0, 1fr);
+  }
+
+  /* The header line on top, the hints at the foot, the cards taking all the height between. */
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-offer {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-columns: 1fr auto auto 1fr;
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-offer > .ui-who {
+    grid-column: 2;
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-offer > .ui-kicker {
+    grid-column: 3;
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4'])
+    .ui-offer
+    > :is(.ui-offer__views, .ui-offer__foot) {
+    grid-column: 1 / -1;
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-offer__views {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-offer__views > .ui-cards {
+    /* The heads share one row, the bodies the other: the bodies take what the longest needs, the
+       heads grow with the room left, all of a panel the same height. At least a weapon's strip and
+       the smallest medal above it. */
+    grid-template-rows: minmax(calc(64 * var(--card-unit)), calc(140 * var(--card-unit))) auto;
+    align-self: stretch;
+    row-gap: calc(4 * var(--card-unit));
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* As tall as its row: the medal sizes itself from it, the strip and the bracelet keeping their room. */
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__head {
+    --medal-room: calc(54 * var(--card-unit));
+
+    container-type: size;
+    grid-area: 1 / 1;
+    height: auto;
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4'])
+    .ui-card[data-kind='weapon']
+    .ui-card__head {
+    /* The strip's room is in the padding, already out of the head's inner height. */
+    --medal-room: calc(16 * var(--card-unit));
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__medal {
+    width: clamp(
+      calc(24 * var(--card-unit)),
+      100cqh - var(--medal-room),
+      calc(60 * var(--card-unit))
+    );
+    height: clamp(
+      calc(24 * var(--card-unit)),
+      100cqh - var(--medal-room),
+      calc(60 * var(--card-unit))
+    );
+  }
+
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__body {
+    display: flex;
+    grid-area: 2 / 1;
+    flex-direction: column;
+    align-items: center;
+    align-self: stretch;
+    gap: var(--card-gap);
+  }
+
+  /* At the foot of the head as on a single card, above it: the weapon's head is positioned too. */
+  .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__steps {
+    position: relative;
+    z-index: 1;
+    grid-area: 1 / 1;
+    align-self: end;
+    inset: auto;
+    margin: 0 calc(var(--strip-inset) / 2) var(--strip-inset);
+  }
+}
+
 .ui-offers__panels:is([data-count='3'], [data-count='4']) .ui-card__family {
   font-size: calc(11 * var(--card-unit));
 }
@@ -11302,19 +11554,25 @@ svg.ui-title__moon-glint {
   }
 
   /* The reroll and the pill wait in the bar's row, clear of the status panel: at its far end, over
-     the dimmed actions. */
+     the dimmed actions. The panel's width comes from the score and the language, measured into
+     --bar-clear; when the row runs short, their labels take two lines. */
   .ui-offer[data-bar] .ui-offer__foot {
     position: absolute;
     inset-inline: 0;
     bottom: 0;
+    flex-wrap: nowrap;
     justify-content: flex-end;
     gap: 8px 12px;
     height: var(--bar-room);
-    padding-inline-end: 8px;
+    padding-inline: calc(var(--bar-clear, 0px) + 8px) 8px;
     pointer-events: none;
   }
 
   .ui-offer[data-bar] :is(.ui-reroll, .ui-offer__toggle) {
+    flex: 0 1 auto;
+    min-width: 0;
+    line-height: 1.1;
+    text-align: center;
     pointer-events: auto;
   }
 
@@ -11416,6 +11674,12 @@ svg.ui-title__moon-glint {
   height: 28px;
 }
 
+/* On one line, sized to its card: wrapped, it made a locked card taller than the others. */
+.ui-classcard .ui-teaser__note {
+  font-size: clamp(9px, 12.5cqi, 12px);
+  white-space: nowrap;
+}
+
 .ui-classcard .ui-teaser__lock {
   border-radius: 50%;
   background: color-mix(in srgb, var(--class-color) 16%, transparent);
@@ -11434,6 +11698,7 @@ svg.ui-title__moon-glint {
 .ui-teaser__text {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .ui-teaser__note {

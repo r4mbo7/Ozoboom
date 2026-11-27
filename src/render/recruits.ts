@@ -172,7 +172,6 @@ export function createRecruits(ctx: RenderContext, burst: Burst): Family {
     reset,
     destroy(): void {
       reset();
-      layers.recruits.destroy({ children: true });
     },
   };
 }

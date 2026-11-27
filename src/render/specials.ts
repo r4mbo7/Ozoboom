@@ -262,8 +262,6 @@ export function createSpecials(ctx: RenderContext): Family {
     reset,
     destroy(): void {
       reset();
-      layers.bubbles.destroy({ children: true });
-      layers.zones.destroy({ children: true });
     },
   };
 }

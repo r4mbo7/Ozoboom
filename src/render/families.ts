@@ -66,7 +66,6 @@ export function createFamilies(ctx: RenderContext, inset: boolean): Families {
     createGroundWaves(ctx),
     createSpeakers(ctx),
     createCore(ctx),
-    // Before the traps, whose destruction takes this layer's children with it.
     createRechargeCords(ctx),
     traps,
     createPickups(ctx),

@@ -75,6 +75,8 @@ export interface RenderContext {
 
 export interface Family {
   update(state: SimState, alpha: number, frame: Frame): void;
+  // Lets go of what it holds besides its display objects: the scene destroys the layers last,
+  // with all they show, so that no family destroys what another still writes to.
   destroy(): void;
   onEvent?(event: SimEvent, state: SimState, frame: Frame): void;
   reset?(): void;

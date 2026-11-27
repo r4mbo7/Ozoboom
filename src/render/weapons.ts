@@ -55,7 +55,6 @@ export function createWeapons(ctx: RenderContext): WeaponsFamily {
     },
     destroy() {
       clear();
-      ctx.layers.weapons.destroy({ children: true });
     },
   };
 }

@@ -7,7 +7,7 @@ export const CLASSES: readonly ClassDefinition[] = [
   {
     id: 'mage',
     name: 'The Luxiole',
-    role: 'Sweeps the crowd from afar with glowing poi. Fragile.',
+    role: 'Sweeps the crowd from afar with their poi. Fragile.',
     color: '#ff2bd6',
     maxHp: 90,
     speed: 7.5,
@@ -27,7 +27,7 @@ export const CLASSES: readonly ClassDefinition[] = [
     skill: {
       id: 'nova',
       name: 'Nova',
-      description: 'You release a wave of light that pushes back the bad vibes around you.',
+      description: 'A wave of light pushes back the bad vibes around you.',
       cooldownTicks: 2 * TICKS_PER_BAR,
       effect: { kind: 'nova', damage: 60, radius: 190, knockback: 60 },
     },
@@ -35,7 +35,7 @@ export const CLASSES: readonly ClassDefinition[] = [
   {
     id: 'tank',
     name: 'The Nounours',
-    role: 'Holds the line and draws the bad vibes in. Slow.',
+    role: 'Takes the hits in the front row. Sturdy but slow.',
     color: '#ff9a3d',
     maxHp: 210,
     speed: 6.8,
@@ -56,7 +56,7 @@ export const CLASSES: readonly ClassDefinition[] = [
     skill: {
       id: 'charge',
       name: 'Charge',
-      description: 'You charge ahead, untouchable, and the bad vibes around see only you.',
+      description: 'You charge, untouchable, and the bad vibes around aim only at you.',
       cooldownTicks: TICKS_PER_BAR,
       effect: { kind: 'dash', distance: 160, invulnerableTicks: 10, tauntRadius: 180 },
     },
@@ -64,7 +64,7 @@ export const CLASSES: readonly ClassDefinition[] = [
   {
     id: 'healer',
     name: 'The Hygie',
-    role: 'Heals, repairs the stage and gets friends back up.',
+    role: 'Gets fallen friends back up faster than anyone.',
     color: '#7cf2b0',
     maxHp: 130,
     speed: 7,
@@ -86,7 +86,7 @@ export const CLASSES: readonly ClassDefinition[] = [
     skill: {
       id: 'soin',
       name: 'Heal',
-      description: 'You heal those near you and repair the stage a little.',
+      description: 'You heal those around you and repair the stage a little.',
       cooldownTicks: 5 * TICKS_PER_BAR,
       effect: { kind: 'healPulse', amount: 8, radius: 120, coreRepair: 10 },
     },

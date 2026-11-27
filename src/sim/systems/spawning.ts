@@ -2,6 +2,7 @@ import type { EnemyDefinition, SetDefinition } from '../../data/types';
 import { nextFloat, nextInt, pick } from '../../shared/prng';
 import { BARS_PER_PHRASE, barOfTick, isBarTick, type Tempo } from '../../shared/tempo';
 import { lookup } from '../lookup';
+import { segmentMusicTicks } from '../lineup';
 import { compound } from '../effects';
 import { clearOfObstacles } from '../obstacles';
 import { shoreAt, type Shore } from '../shore';
@@ -13,6 +14,9 @@ import type { StepContext } from './types';
 
 export function spawning(ctx: StepContext): void {
   const { state, content, set, tempo } = ctx;
+  if (state.noEnemies === true) {
+    return;
+  }
   for (const event of state.events) {
     if (event.type === 'segment' && event.segment === 'drop') {
       const tier = set.tiers[event.tier];
@@ -35,7 +39,7 @@ export function spawning(ctx: StepContext): void {
   }
   const escort = state.set.bossesDownTick === undefined ? (tier.dropSpawns ?? []) : [];
   const rules = { buildup: tier.spawns, break: [], drop: escort }[state.set.segment];
-  const bar = opening ? 0 : (state.tick - state.set.segmentStartTick) / tempo.ticksPerBar;
+  const bar = opening ? 0 : segmentMusicTicks(state.set, state.tick) / tempo.ticksPerBar;
   const phrase = Math.floor(bar / BARS_PER_PHRASE);
   for (const rule of rules) {
     const active =

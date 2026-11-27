@@ -100,8 +100,6 @@ export function createProjectiles(ctx: RenderContext): Family {
       enemyShots.end();
       lightShots.end();
     },
-    destroy(): void {
-      layers.enemyShots.destroy({ children: true });
-    },
+    destroy: () => undefined,
   };
 }

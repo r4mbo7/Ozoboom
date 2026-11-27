@@ -11,6 +11,18 @@ export interface SoundLevel {
   readonly muted: boolean;
 }
 
+export type SoundBus = 'music' | 'effects';
+export const SOUND_BUSES: readonly SoundBus[] = ['music', 'effects'];
+export type SoundMix = Readonly<Record<SoundBus, SoundLevel>>;
+export const FULL_MIX: SoundMix = {
+  music: { volume: VOLUME_STEPS, muted: false },
+  effects: { volume: VOLUME_STEPS, muted: false },
+};
+
+export function toggleMuted({ volume, muted }: SoundLevel): SoundLevel {
+  return { volume, muted: !muted };
+}
+
 // Below the quietest step the sound cuts, and the first step up brings it back where it was.
 export function stepSound({ volume, muted }: SoundLevel, side: -1 | 1): SoundLevel {
   if (muted) {
@@ -36,16 +48,60 @@ function arrow(label: string, flipped: boolean, onClick: () => void): HTMLButton
   return button;
 }
 
-export function createSoundControl(onStep: (side: -1 | 1) => void): SoundControl {
+interface SoundTexts {
+  readonly label: string;
+  readonly hint: string;
+  readonly down: string;
+  readonly up: string;
+}
+
+const soundTexts = (): SoundTexts => ({
+  label: t('Sound'),
+  hint: t('Music and effects'),
+  down: t('Turn the sound down'),
+  up: t('Turn the sound up'),
+});
+
+export const busLabel = (bus: SoundBus): string => (bus === 'music' ? t('Music') : t('Effects'));
+
+const busTexts = (bus: SoundBus): SoundTexts =>
+  bus === 'music'
+    ? {
+        label: busLabel(bus),
+        hint: t('Tracks and the title'),
+        down: t('Turn the music down'),
+        up: t('Turn the music up'),
+      }
+    : {
+        label: busLabel(bus),
+        hint: t('Shots, hits and menus'),
+        down: t('Turn the effects down'),
+        up: t('Turn the effects up'),
+      };
+
+export function createBusControls(
+  onStep: (bus: SoundBus, side: -1 | 1) => void,
+): Record<SoundBus, SoundControl> {
+  const control = (bus: SoundBus) =>
+    createSoundControl((side) => {
+      onStep(bus, side);
+    }, busTexts(bus));
+  return { music: control('music'), effects: control('effects') };
+}
+
+export function createSoundControl(
+  onStep: (side: -1 | 1) => void,
+  texts: SoundTexts = soundTexts(),
+): SoundControl {
   const element = el('div', 'ui-button ui-toggle ui-volume');
   element.setAttribute('role', 'slider');
-  element.setAttribute('aria-label', t('Sound'));
+  element.setAttribute('aria-label', texts.label);
   element.setAttribute('aria-valuemin', '0');
   element.setAttribute('aria-valuemax', String(VOLUME_STEPS));
   const text = el('span', 'ui-toggle__text');
   text.append(
-    el('span', 'ui-toggle__label', t('Sound')),
-    el('span', 'ui-toggle__hint', t('Music and effects')),
+    el('span', 'ui-toggle__label', texts.label),
+    el('span', 'ui-toggle__hint', texts.hint),
   );
   const meter = el('span', 'ui-volume__meter');
   meter.setAttribute('aria-hidden', 'true');
@@ -58,11 +114,11 @@ export function createSoundControl(onStep: (side: -1 | 1) => void): SoundControl
   const state = el('span', 'ui-toggle__state');
   const control = el('span', 'ui-toggle__control ui-volume__control');
   control.append(
-    arrow(t('Turn the sound down'), false, () => {
+    arrow(texts.down, false, () => {
       onStep(-1);
     }),
     meter,
-    arrow(t('Turn the sound up'), true, () => {
+    arrow(texts.up, true, () => {
       onStep(1);
     }),
     state,

@@ -38,13 +38,13 @@ export function classTeaser(entry: TeaserDefinition): HTMLButtonElement {
 
 export function stageTeaser(entry: TeaserDefinition): HTMLButtonElement {
   const node = teaser('ui-stage', entry);
-  const preview = el('span', 'ui-stage__preview ui-teaser__preview');
-  preview.append(icon('ui-teaser__lock', LOCK));
+  const art = el('span', 'ui-stage__art ui-teaser__preview');
+  art.append(icon('ui-teaser__lock', LOCK));
   const meta = el('span', 'ui-stage__meta');
   if (entry.style !== undefined) {
     meta.append(el('span', 'ui-stage__chip', t(entry.style)));
   }
   meta.append(el('span', 'ui-stage__chip ui-teaser__note', t('Full game')));
-  node.append(preview, el('span', 'ui-stage__name', t(entry.name)), meta);
+  node.append(art, el('span', 'ui-stage__name', t(entry.name)), meta);
   return node;
 }

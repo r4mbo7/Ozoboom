@@ -34,6 +34,11 @@ body {
   margin-top: 12px;
 }
 
+/* A page of level rows: as wide as the title's, so that a row's hint holds on one line. */
+.pause__menu--page {
+  width: min(100%, 420px);
+}
+
 .pause__main {
   display: flex;
   flex-direction: column;
@@ -77,6 +82,15 @@ body {
 
 /* A phone held sideways: the sheet at its compact size, every row kept. */
 @media (max-height: 520px) {
+  .pause__menu--page {
+    gap: 8px;
+  }
+
+  .pause__menu--page .ui-button {
+    min-height: 48px;
+    padding-block: 6px;
+  }
+
   .pause .ui-stats {
     gap: 8px;
     max-width: 440px;

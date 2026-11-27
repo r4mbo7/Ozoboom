@@ -51,10 +51,13 @@ function card(
   );
   const tag = el('span', 'ui-stage__tag', t('Start'));
   tag.hidden = true;
-  node.append(tag, stagePreview(stage.decor), el('span', 'ui-stage__name', t(stage.name)), meta);
+  // The go mark covers the picture alone, whatever height the picture takes.
+  const art = el('span', 'ui-stage__art');
+  art.append(stagePreview(stage.decor));
   if (go !== null) {
-    node.append(go.element);
+    art.append(go.element);
   }
+  node.append(tag, art, el('span', 'ui-stage__name', t(stage.name)), meta);
   node.addEventListener('click', (event) => {
     event.stopPropagation();
     if (!readonly()) {
@@ -100,6 +103,7 @@ export function createStageCards(label: string, onChoose: (setId: string) => voi
           card(stage, onChoose, () => locked, goes[index] ?? null),
         );
         element.replaceChildren(...nodes, ...teasers);
+        element.style.setProperty('--stage-count', String(nodes.length + teasers.length));
       }
       element.toggleAttribute('data-festival', festival);
       stages.forEach((stage, index) => {
@@ -161,7 +165,7 @@ export function createStagePicker(
     }
   });
   const note = el('p', 'ui-stagepicker__note');
-  const toClasses = el('button', 'ui-button ui-button--primary', t('Pick the characters'));
+  const toClasses = el('button', 'ui-button ui-button--primary');
   toClasses.type = 'button';
   toClasses.tabIndex = -1;
   const back = el('button', 'ui-button', t('Back to the title'));
@@ -173,7 +177,6 @@ export function createStagePicker(
   back.addEventListener('click', () => {
     actions.leave();
   });
-  cards.setGo(t('Pick the characters'));
   const buttons = createButtonRow(cards.element, [toClasses, back]);
   const footer = el('div', 'ui-lobby__actions');
   footer.append(toClasses, back);
@@ -186,7 +189,10 @@ export function createStagePicker(
 
   // What a validation does on the button in focus: the cards lead to the characters.
   function confirmLabel(focused: HTMLButtonElement | null): string {
-    return focused === back ? t('confirm') : t('characters');
+    if (focused === back) {
+      return t('confirm');
+    }
+    return (model.players ?? 1) > 1 ? t('characters') : t('character');
   }
 
   function paintHint(): void {
@@ -217,8 +223,13 @@ export function createStagePicker(
       model = next;
       const night = nightOf(next);
       nights.set(night, nightLength(night, next.stages, next.stageId));
+      // The go marks take their label when the cards are made: it comes first.
+      const pick = (next.players ?? 1) > 1 ? t('Pick the characters') : t('Pick your character');
+      setText(toClasses, pick);
+      cards.setGo(pick);
       cards.set(next.stages, next.stageId, night === 'festival');
       setText(note, nightNote(night));
+      paintHint();
     },
     setDevice(next) {
       if (next !== device) {

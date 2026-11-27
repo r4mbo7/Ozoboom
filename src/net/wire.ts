@@ -1,7 +1,7 @@
 import { isOneOf, isRecord } from '../shared/guards';
 import { flag, integer, list, oneOf, record, text } from '../shared/readers';
 import { clamp } from '../shared/scalar';
-import { EMOTES, type PlayerAction, type PlayerCommand } from '../sim/commands';
+import { EMOTES, REPLAY_BEATS, type PlayerAction, type PlayerCommand } from '../sim/commands';
 import type { PlayerSlot } from '../sim/initial-state';
 import { PLAYER_IDS } from '../sim/state';
 import type { NetMessage, Seat } from './types';
@@ -156,6 +156,7 @@ function writeAction(writer: Writer, action: PlayerAction): void {
   } else {
     writer.u8(CHOOSE_UPGRADE);
     writer.id(action.upgradeId);
+    writer.u8(action.replayBeats ?? 0);
   }
 }
 
@@ -165,7 +166,9 @@ function readAction(reader: Reader): PlayerAction {
     return { type: 'moveTrap' };
   }
   if (type === CHOOSE_UPGRADE) {
-    return { type: 'chooseUpgrade', upgradeId: reader.id() };
+    const upgradeId = reader.id();
+    const beats = oneOf(reader.u8(), REPLAY_BEATS);
+    return { type: 'chooseUpgrade', upgradeId, ...(beats === 0 ? {} : { replayBeats: beats }) };
   }
   if (type === DASH) {
     return { type: 'dash' };

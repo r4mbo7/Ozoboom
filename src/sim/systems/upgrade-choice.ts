@@ -7,10 +7,13 @@ import { applyModifiers, refreshDerivedStats, upgradeForm } from '../stats';
 import { giveTrap } from '../trap-moves';
 import { trailDismount } from '../weapons/trail-ride';
 import { presentNextOffer } from './progression';
+import type { ReplayBeats } from '../commands';
+import { replayBeats } from '../replay-beats';
 import type { StepContext } from './types';
 
 export function upgradeChoice(ctx: StepContext): void {
   const { state, commands } = ctx;
+  let lastPickBeats: ReplayBeats | undefined;
   for (const player of state.players) {
     for (const action of commands.get(player.id)?.actions ?? []) {
       if (action.type === 'rerollOffer') {
@@ -32,7 +35,12 @@ export function upgradeChoice(ctx: StepContext): void {
       }
       state.pendingUpgrades.splice(index, 1);
       presentNextOffer(ctx, player);
+      lastPickBeats = action.replayBeats ?? 0;
     }
+  }
+  // The pick that ends the choice, the last taken in this step, says where the music is.
+  if (lastPickBeats !== undefined && state.pendingUpgrades.length === 0) {
+    replayBeats(ctx, lastPickBeats);
   }
 }
 
@@ -136,7 +144,8 @@ function redrawn(
   };
 }
 
-// Other cards in a new offer, so that the screen deals them; none left to draw, the reroll is kept.
+// Other cards in a new offer, so that the screen deals them; none left to draw, the reroll is kept
+// and the offer says so.
 function reroll(ctx: StepContext, player: PlayerState): void {
   const { state } = ctx;
   const index = state.pendingUpgrades.findIndex((offer) => offer.playerId === player.id);
@@ -146,6 +155,7 @@ function reroll(ctx: StepContext, player: PlayerState): void {
   }
   const next = redrawn(ctx, player, offer, offer.options);
   if (next.options.length === 0) {
+    offer.drawnOut = true;
     return;
   }
   player.rerolls = (player.rerolls ?? 0) - 1;

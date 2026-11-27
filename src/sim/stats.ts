@@ -11,6 +11,7 @@ import type {
   WeaponDefinition,
 } from '../data/types';
 import { compound, wholeTicks } from './effects';
+import { isPotionBoost } from './potion-shield';
 import type { PlayerState } from './state';
 
 const ADDITIVE: Readonly<Record<StatKey, boolean>> = {
@@ -59,12 +60,14 @@ export function statValue(
   key: StatKey,
   base: number,
 ): number {
-  if ((player.suppressedTicks ?? 0) > 0) {
-    return base;
-  }
-  let modifier = player.modifiers[key];
+  // An Intolérant's suppression puts out every bonus but the potion.
+  const suppressed = (player.suppressedTicks ?? 0) > 0;
+  let modifier = suppressed ? undefined : player.modifiers[key];
   if (player.boosts !== undefined) {
     for (const boost of player.boosts) {
+      if (suppressed && !isPotionBoost(boost)) {
+        continue;
+      }
       for (const { stat, add = 0, mul = 1 } of boost.modifiers) {
         if (stat === key) {
           modifier = ((modifier ?? (ADDITIVE[key] ? 0 : 1)) + add) * mul;

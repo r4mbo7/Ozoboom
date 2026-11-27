@@ -503,6 +503,40 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     }
   });
 
+  // On a phone the reroll and the pill share the HUD bar's row with its score panel: they start past
+  // it, whatever its score or the language makes its width.
+  let barPanel: Element | null = null;
+  const barWatch =
+    typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(() => {
+          clearBar();
+        });
+
+  function clearBar(): void {
+    if (barPanel === null) {
+      foot.style.removeProperty('--bar-clear');
+      return;
+    }
+    const panel = barPanel.getBoundingClientRect();
+    const row = foot.getBoundingClientRect();
+    const clear = direction() === 'rtl' ? row.right - panel.left : panel.right - row.left;
+    foot.style.setProperty('--bar-clear', `${String(Math.max(0, Math.ceil(clear)))}px`);
+  }
+
+  function watchBar(panel: Element | null): void {
+    if (panel === barPanel) {
+      return;
+    }
+    barWatch?.disconnect();
+    barPanel = panel;
+    if (panel !== null) {
+      barWatch?.observe(panel);
+      barWatch?.observe(foot);
+    }
+    clearBar();
+  }
+
   const menu: Menu = createMenu((index) => {
     if (index === buttons.length) {
       askReroll();
@@ -741,6 +775,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     const bar = host.offerPlaces(playerId, views);
     const own = views !== null && bar === null;
     setFlag(element, 'bar', bar !== null);
+    watchBar(bar?.closest('.ui-hud__status') ?? null);
     setFlag(element, 'places', own);
     places.element.hidden = !own;
     if (own) {
@@ -754,6 +789,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
       shownPlaces = null;
       host.offerPlaces(playerId, null);
       delete element.dataset.bar;
+      watchBar(null);
     }
   }
 
@@ -897,8 +933,14 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
         deal();
         mark();
       }
-      if ((player?.rerolls ?? 0) !== rerolls) {
-        rerolls = player?.rerolls ?? 0;
+      // An offer with no other card to draw has no reroll left to offer.
+      const usable = offer.drawnOut === true ? 0 : (player?.rerolls ?? 0);
+      if (offer.drawnOut === true && rerolling) {
+        rerolling = false;
+        mark();
+      }
+      if (usable !== rerolls) {
+        rerolls = usable;
         showRerolls();
         if (now >= opensAt) {
           menu.setItems(menuItems());

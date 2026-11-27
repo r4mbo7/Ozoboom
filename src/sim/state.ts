@@ -58,6 +58,12 @@ export interface SetProgress {
   endlessFromTick?: number | null;
   // The origin of its beats, bars and phrases (ADR 0018); absent means 0.
   startTick?: number;
+  // The ticks card choices made the stage play again: its grid counts from `startTick` plus them.
+  replayTicks?: number;
+  // Those of the current segment, which its bars of music leave out; and the tick its last replay
+  // ends on, until which the line-up's cursor holds. Absent means none.
+  segmentReplayTicks?: number;
+  replayEndTick?: number;
 }
 
 export interface RngState {
@@ -80,6 +86,8 @@ export interface CoreState {
   maxHp: number;
   // Present only under `SetDefinition.coreRepairPerBar`, once something was repaired.
   repairedThisBar?: number;
+  // A dev link's stage volume (`&stageVolume`): no repair lifts `hp` above it.
+  ceiling?: number;
 }
 
 export interface WeaponSlot {
@@ -583,6 +591,8 @@ export interface UpgradeOffer {
   kind?: 'levelUp' | 'relic';
   // The trap a card that shows its trap gives; absent without such a card.
   trapId?: string;
+  // A reroll found no other card to draw: the screen stops offering one.
+  drawnOut?: true;
 }
 
 // What one player did in the game, for the titles of the end screen.
@@ -906,6 +916,8 @@ export interface SimState {
   summon?: SummonState;
   // The drop goes on until none is left.
   bossesDue?: number;
+  // A dev link's empty stage (`&noEnemies`): no bad vibe spawns, no boss comes, a drop plays on.
+  noEnemies?: true;
   // What the bad vibes gain at spawn on top of their own scaling.
   enemyScale?: EnemyScale;
   festival?: FestivalState;

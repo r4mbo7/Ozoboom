@@ -178,6 +178,10 @@ export function createOnline(env: OnlineEnv): Online {
     activeSource: LockstepSource,
     localPlayer: PlayerId,
   ): void {
+    // A guest still playing the game before when the host starts again: its source stops listening.
+    if (source !== activeSource) {
+      source?.close();
+    }
     source = activeSource;
     phase = 'playing';
     interrupted = false;
@@ -334,6 +338,7 @@ export function createOnline(env: OnlineEnv): Online {
     if (room === null || transport === null || role !== 'host') {
       return;
     }
+    // Its bye goes out before the start, never to the sources the guests open for the new game.
     source?.close();
     const { seats } = room;
     const start = startMessage(seats, {

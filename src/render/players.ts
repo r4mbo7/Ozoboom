@@ -293,7 +293,6 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
     },
     destroy(): void {
       burster.bursts.clear();
-      layers.players.destroy({ children: true });
     },
   };
 }

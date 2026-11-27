@@ -2,7 +2,7 @@ import { STAGE_BONUS_GRACE_SECONDS } from '../../data/sets';
 import type { SetDefinition } from '../../data/types';
 import { nextFloat, nextInt, nextU32, seedRng, type RngState } from '../../shared/prng';
 import { TICK_RATE_HZ, type Tempo } from '../../shared/tempo';
-import { setTempo } from '../lineup';
+import { segmentMusicTicks, setTempo } from '../lineup';
 import type { EnemyState, SimState } from '../state';
 
 export interface DrawnPhrase {
@@ -64,7 +64,7 @@ export function inDrawnPhrase(
   return (
     drawn !== null &&
     drawn.tier === progress.tier &&
-    state.tick - progress.segmentStartTick >= drawn.phrase * tempo.ticksPerPhrase
+    segmentMusicTicks(progress, state.tick) >= drawn.phrase * tempo.ticksPerPhrase
   );
 }
 

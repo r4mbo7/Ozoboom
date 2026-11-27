@@ -1,8 +1,9 @@
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import { segmentMusicTicks } from '../sim/lineup';
 import type { SimState } from '../sim/state';
 
 export type DropClock = Pick<SimState, 'status'> & {
-  set: Pick<SimState['set'], 'tier' | 'segment' | 'segmentStartTick'>;
+  set: Pick<SimState['set'], 'tier' | 'segment' | 'segmentStartTick' | 'segmentReplayTicks'>;
 };
 
 const FIRST_DROP_PEAK = 0.75;
@@ -23,7 +24,7 @@ export function dropFilterIntensity(
   if (state.status === 'won' || state.set.segment !== 'drop') {
     return 0;
   }
-  const elapsed = now - state.set.segmentStartTick;
+  const elapsed = segmentMusicTicks(state.set, now);
   const peak = state.set.tier === 0 ? FIRST_DROP_PEAK : 1;
   if (elapsed <= 0) {
     return 0;

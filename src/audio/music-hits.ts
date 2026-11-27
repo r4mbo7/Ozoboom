@@ -279,8 +279,16 @@ function scaled(out: AudioNode, gain: number): GainNode {
 
 export interface MusicHits {
   // Plays the hit at `at` in the key of `track` (ADR 0027): the artist's file once decoded, nothing
-  // when he silenced it, its synth voice otherwise. Returns when it ends.
-  play(name: HitName, out: AudioNode, at: number, track: MusicTrack, gain?: number): number;
+  // when he silenced it, its synth voice otherwise. An `echo` is a hit of the synth's own figure that
+  // a file leaves out. Returns when it ends.
+  play(
+    name: HitName,
+    out: AudioNode,
+    at: number,
+    track: MusicTrack,
+    gain?: number,
+    echo?: boolean,
+  ): number;
 }
 
 export function musicHits(
@@ -288,13 +296,16 @@ export function musicHits(
   silent: readonly string[] = [],
 ): MusicHits {
   return {
-    play(name, out, at, track, gain = 1) {
+    play(name, out, at, track, gain = 1, echo = false) {
       if (silent.includes(hitSlotId(name))) {
         return at;
       }
       const file = files?.hit(name, track);
       if (file === undefined) {
         return SYNTH_HITS[name](out, at, track, gain);
+      }
+      if (echo) {
+        return at;
       }
       file.play(gain === 1 ? out : scaled(out, gain), at);
       return at + file.seconds;

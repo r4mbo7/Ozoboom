@@ -24,7 +24,7 @@ export interface OlaEffect {
 export const KIFFEUR: ClassDefinition = {
   id: 'kiffeur',
   name: 'The Reveler',
-  role: 'Doesn’t aim, just dances: their good mood hits all around them and makes everyone fire faster.',
+  role: 'Doesn’t aim: hits all around them as they dance.',
   color: '#f5e663',
   maxHp: 150,
   speed: 7.2,
@@ -40,8 +40,7 @@ export const KIFFEUR: ClassDefinition = {
   skill: {
     id: 'ola',
     name: 'Wave',
-    description:
-      'A wave leaves you, slows the bad vibes and makes the whole team run and fire faster.',
+    description: 'Your wave slows the bad vibes and speeds up the whole team.',
     cooldownTicks: 4 * TICKS_PER_BAR,
     effect: {
       kind: 'ola',

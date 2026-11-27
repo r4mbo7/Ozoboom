@@ -1,3 +1,4 @@
+import type { TeaserDefinition } from '../data/types';
 import type { DeviceId, InputDevice, MenuIntents } from '../input/intents';
 import { defaultName, t } from '../shared/i18n';
 import { PLAYER_IDS, type PlayerId } from '../sim/state';
@@ -9,7 +10,7 @@ import {
   swatchPortrait,
 } from './class-picker';
 import { CLASS_TEASERS, classTeaser } from './teaser';
-import { el, fillHint, goMark, setText } from './dom';
+import { el, fillHint, goMark, onFontsLoaded, setText } from './dom';
 import { spreadCards } from './class-cards';
 import { launchDetail, launchLabel, nightOf } from './night';
 import { PLAY } from './icons';
@@ -76,6 +77,7 @@ export function createClassPicker(
   portrait: CreatePortrait,
   actions: ClassPickerActions,
   now: () => number,
+  teasers: readonly TeaserDefinition[] = CLASS_TEASERS,
 ): ClassPickerScreen {
   let model: ClassPickerModel = {
     classId: classes[0]?.id ?? '',
@@ -92,11 +94,10 @@ export function createClassPicker(
   const element = el('section', 'ui-screen ui-classpicker');
   element.setAttribute('aria-label', t('Character choice'));
   const grid = classes.length > ROW_CARDS;
-  const many = classes.length + CLASS_TEASERS.length > ROW_CARDS;
+  const many = classes.length + teasers.length > ROW_CARDS;
   element.toggleAttribute('data-many', many);
-  const lead = el('p', 'ui-lobby__lead', t('Who hits the floor tonight?'));
   const header = el('header', 'ui-lobby__header');
-  header.append(el('h2', 'ui-lobby__title', t('Pick your character')), lead);
+  header.append(el('h2', 'ui-lobby__title', t('Pick your character')));
 
   const hero = createClassHero(classes, portrait);
   const sheets = PLAYER_IDS.map((playerId) => createSeatSheet(playerId, classes, portrait));
@@ -139,7 +140,7 @@ export function createClassPicker(
     });
     return card;
   });
-  row.append(...cards, ...CLASS_TEASERS.map(classTeaser));
+  row.append(...cards, ...teasers.map(classTeaser));
   // Its border box, which the padding leaves alone, measured on the next frame, once laid out.
   if (many && typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => {
@@ -180,8 +181,10 @@ export function createClassPicker(
   // In the row of the buttons: the picker already fills the height of a laptop screen.
   footer.append(endless.toggle.button, confirm, learn, back);
   const hint = el('p', 'ui-hint');
+  // The sheets of the players together: laid out by the picks, or stacked in a column of their own.
+  const seatsBox = el('div', 'ui-picks__seats');
   const picks = el('div', 'ui-picks');
-  picks.append(hero.element, invite.element, row);
+  picks.append(hero.element, seatsBox, invite.element, row);
   const body = el('div', 'ui-lobby__body');
   body.append(header, landscapeNotice(), picks, footer, hint);
   element.append(body);
@@ -194,6 +197,12 @@ export function createClassPicker(
       rooms.observe(part);
     }
   }
+  // Cards and sheets laid in a fallback face hold names its own face wraps otherwise once it loads.
+  onFontsLoaded(() => {
+    if (element.offsetWidth > 0) {
+      layOut();
+    }
+  });
 
   const inputs = createSeatInputs(now);
   // A click of the mouse takes the lone seat back from a pad, as a key does, before the click acts.
@@ -321,9 +330,14 @@ export function createClassPicker(
   }
 
   // A twin standing where its sheet stands, unstretched, shows each class in turn.
-  function tallest(twin: HTMLElement, kept: HTMLElement, show: (info: ClassInfo) => void): string {
+  function tallest(
+    twin: HTMLElement,
+    kept: HTMLElement,
+    place: HTMLElement,
+    show: (info: ClassInfo) => void,
+  ): string {
     twin.style.alignSelf = 'start';
-    picks.prepend(twin);
+    place.prepend(twin);
     const heights = classes.map((info) => {
       show(info);
       return kept.getBoundingClientRect().height;
@@ -335,12 +349,12 @@ export function createClassPicker(
   // Every sheet is as tall as its tallest class at its width: no cursor move resizes the cards.
   function keepSheetRooms(): void {
     if (!hero.element.hidden) {
-      hero.info.style.minHeight = tallest(heroTwin.element, heroTwin.info, (info) => {
+      hero.info.style.minHeight = tallest(heroTwin.element, heroTwin.info, picks, (info) => {
         heroTwin.show(info);
       });
     }
     if (together()) {
-      const room = tallest(sheetTwin.element, sheetTwin.element, (info) => {
+      const room = tallest(sheetTwin.element, sheetTwin.element, seatsBox, (info) => {
         sheetTwin.show(info, false);
       });
       for (const seatSheet of sheets) {
@@ -360,7 +374,7 @@ export function createClassPicker(
         continue;
       }
       if (!seatSheet.element.isConnected) {
-        invite.element.before(seatSheet.element);
+        seatsBox.append(seatSheet.element);
       }
       seatSheet.element.dataset.slot = slotOf(seats, seat.playerId);
       seatSheet.show(chosen, cursors.isReady(seat.playerId));
@@ -440,7 +454,6 @@ export function createClassPicker(
   function paint(): void {
     element.dataset.seats = String(model.seats.length);
     element.toggleAttribute('data-together', together());
-    lead.hidden = together();
     hero.element.hidden = together();
     paintHero(model.seats[0]?.classId ?? model.classId);
     paintSheets();

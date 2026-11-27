@@ -4,7 +4,7 @@ import { direction, t } from '../../shared/i18n';
 import { wrap } from '../../shared/scalar';
 import { fitNames } from '../class-cards';
 import { keepArticle } from '../class-screen';
-import { el, icon, keycap, onPointerClick, setText } from '../dom';
+import { el, icon, keycap, onFontsLoaded, onPointerClick, setText } from '../dom';
 import { LOCK } from '../icons';
 import { onMouseMove } from '../pointer';
 import type { Prompts } from '../prompts';
@@ -411,9 +411,7 @@ export function createProgramme(
     new ResizeObserver(lay).observe(room);
   }
   // Tiles laid in a fallback face hold names its own face widens once it loads: they are laid again.
-  if ('fonts' in document) {
-    document.fonts.addEventListener('loadingdone', lay);
-  }
+  onFontsLoaded(lay);
 
   return {
     element,

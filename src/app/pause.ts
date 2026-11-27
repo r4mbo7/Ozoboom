@@ -2,7 +2,7 @@ import { t } from '../shared/i18n';
 import type { InputDevice, MenuIntents } from '../input/intents';
 import type { Vec2 } from '../sim/state';
 import { el, fillHint, setText } from '../ui/dom';
-import { createMenu } from '../ui/menu';
+import { type Menu, createMenu } from '../ui/menu';
 import { createMenuInput } from '../ui/navigation';
 import type { Prompts } from '../ui/prompts';
 
@@ -31,16 +31,19 @@ export interface PauseItem {
   readonly confirm?: PauseConfirmation;
   // Asked each time the pause shows; absent, the entry always is.
   shown?(): boolean;
-  activate(): void;
+  // The rows of a page of its own, with Back under them, that the entry opens in place of `activate`.
+  readonly opens?: readonly PauseItem[];
+  activate?(): void;
   adjust?(side: -1 | 1): void;
 }
 
 export interface PauseScreen {
-  readonly confirming: boolean;
+  // On a question or on a page an entry opened, which `back` leaves for the menu.
+  readonly nested: boolean;
   // For a pause that does not stop the set.
   show(device: InputDevice, text?: PauseText): void;
   hide(): void;
-  cancelConfirmation(): void;
+  back(): void;
   // `back` is the caller's to handle.
   handle(menu: MenuIntents, move: Vec2): void;
 }
@@ -90,6 +93,43 @@ function button(className: string, label: string): HTMLButtonElement {
   return node;
 }
 
+const nodeOf = (item: PauseItem, primary: boolean): HTMLElement =>
+  item.element ?? button(primary ? 'ui-button ui-button--primary' : 'ui-button', item.label);
+
+interface PausePage {
+  readonly entry: PauseItem;
+  readonly view: View;
+  readonly menu: Menu;
+}
+
+function pageOf(entry: PauseItem, rows: readonly PauseItem[], leave: () => void): PausePage {
+  const shown = view('dialog', entry.label, '');
+  shown.section.setAttribute('aria-label', entry.label);
+  shown.nav.setAttribute('aria-label', entry.label);
+  shown.nav.classList.add('pause__menu--page');
+  shown.text.hidden = true;
+  const back = button('ui-button', t('Back'));
+  const nodes = [...rows.map((row) => nodeOf(row, false)), back];
+  shown.nav.append(...nodes);
+  const menu = createMenu(
+    (index) => {
+      const row = rows[index];
+      if (row === undefined) {
+        leave();
+      } else {
+        row.activate?.();
+      }
+    },
+    (index, side) => {
+      const row = rows[index];
+      row?.adjust?.(side);
+      return row?.adjust !== undefined;
+    },
+  );
+  menu.setItems(nodes);
+  return { entry, view: shown, menu };
+}
+
 // The pause screen is the app's, but wears the interface's styles so that it reads as one of its screens.
 // `sheetFor`, asked each time the pause opens: what goes beside the menu, null for nothing.
 export function createPauseScreen(
@@ -111,19 +151,27 @@ export function createPauseScreen(
   const menuInput = createMenuInput();
   let device: InputDevice = 'none';
   let pending: PauseItem | null = null;
+  let opened: PausePage | null = null;
   let visible: readonly PauseItem[] = items;
 
-  const nodes = items.map(
-    (item, index) =>
-      item.element ??
-      button(index === 0 ? 'ui-button ui-button--primary' : 'ui-button', item.label),
-  );
+  const nodes = items.map((item, index) => nodeOf(item, index === 0));
   main.nav.append(...nodes);
+  const pages = new Map<PauseItem, PausePage>();
+  for (const item of items) {
+    if (item.opens !== undefined) {
+      const page = pageOf(item, item.opens, leavePage);
+      pages.set(item, page);
+      layer.append(page.view.section);
+    }
+  }
   const menu = createMenu(
     (index) => {
       const item = visible[index];
-      if (item?.confirm === undefined) {
-        item?.activate();
+      const page = item === undefined ? undefined : pages.get(item);
+      if (page !== undefined) {
+        openPage(page);
+      } else if (item?.confirm === undefined) {
+        item?.activate?.();
       } else {
         ask(item, item.confirm);
       }
@@ -142,7 +190,7 @@ export function createPauseScreen(
     if (index === 0) {
       cancelConfirmation();
     } else {
-      pending?.activate();
+      pending?.activate?.();
     }
   });
   confirmMenu.setItems([stay, leave]);
@@ -182,9 +230,39 @@ export function createPauseScreen(
     main.section.hidden = false;
   }
 
+  function openPage(page: PausePage): void {
+    opened = page;
+    const shown = prompts.for(device);
+    fillHint(
+      page.view.hint,
+      [
+        { keys: shown.navigate, label: t('navigate') },
+        { keys: shown.navigateRow, label: t('level') },
+        { keys: [shown.confirm], label: t('confirm') },
+        { keys: [shown.back], label: t('back') },
+      ],
+      shown.style,
+    );
+    page.menu.select(0);
+    menuInput.open();
+    main.section.hidden = true;
+    page.view.section.hidden = false;
+  }
+
+  function leavePage(): void {
+    if (opened === null) {
+      return;
+    }
+    menu.select(visible.indexOf(opened.entry));
+    opened.view.section.hidden = true;
+    opened = null;
+    menuInput.open();
+    main.section.hidden = false;
+  }
+
   return {
-    get confirming() {
-      return pending !== null;
+    get nested() {
+      return pending !== null || opened !== null;
     },
     show(next, text = pauseText()) {
       device = next;
@@ -216,12 +294,23 @@ export function createPauseScreen(
     },
     hide() {
       pending = null;
+      opened = null;
       main.section.hidden = true;
       confirmation.section.hidden = true;
+      for (const page of pages.values()) {
+        page.view.section.hidden = true;
+      }
     },
-    cancelConfirmation,
+    back() {
+      if (pending === null) {
+        leavePage();
+      } else {
+        cancelConfirmation();
+      }
+    },
     handle(intents, move) {
-      (pending === null ? menu : confirmMenu).handle(menuInput.edges(intents, move));
+      const current = pending === null ? (opened?.menu ?? menu) : confirmMenu;
+      current.handle(menuInput.edges(intents, move));
     },
   };
 }

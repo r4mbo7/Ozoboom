@@ -19,7 +19,24 @@ export interface LineupCursor {
 export interface LineupInput {
   tick: number;
   status: GameStatus;
-  set: Pick<SetProgress, 'tier' | 'segment' | 'segmentStartTick' | 'endlessFromTick'>;
+  set: Pick<
+    SetProgress,
+    | 'tier'
+    | 'segment'
+    | 'segmentStartTick'
+    | 'endlessFromTick'
+    | 'segmentReplayTicks'
+    | 'replayEndTick'
+  >;
+}
+
+// The ticks of music the current segment has played by `tick`: those it played again after a card
+// choice count once, so its bars and phrases fall where the music has them.
+export function segmentMusicTicks(
+  progress: Pick<SetProgress, 'segmentStartTick' | 'segmentReplayTicks'>,
+  tick: number,
+): number {
+  return tick - progress.segmentStartTick - (progress.segmentReplayTicks ?? 0);
 }
 
 export function setOf(content: GameContent, setId: string): SetDefinition {
@@ -49,9 +66,9 @@ export function setTempo(set: SetDefinition, startTick = 0): Tempo {
 
 export function playedTempo(
   set: SetDefinition,
-  state: { set: Pick<SetProgress, 'startTick'> },
+  state: { set: Pick<SetProgress, 'startTick' | 'replayTicks'> },
 ): Tempo {
-  return setTempo(set, state.set.startTick ?? 0);
+  return setTempo(set, (state.set.startTick ?? 0) + (state.set.replayTicks ?? 0));
 }
 
 export function lineupSlots(set: SetDefinition): LineupSlot[] {
@@ -119,11 +136,16 @@ export function ticksToDrop(set: SetDefinition, state: LineupInput): number | nu
     state.set.segment === 'buildup'
       ? tier.buildupPhrases * ticksPerPhrase + breakTicks
       : breakTicks;
-  return Math.max(0, segmentTicks - elapsedInSegment(state));
+  return Math.max(0, segmentTicks - Math.max(0, segmentMusicTicks(state.set, state.tick)));
 }
 
+// The music the cursor has reached: it holds over the beats a card choice plays again, so that it
+// never goes back, then follows the music.
 function elapsedInSegment(state: LineupInput): number {
-  return Math.max(0, state.tick - state.set.segmentStartTick);
+  return Math.max(
+    0,
+    segmentMusicTicks(state.set, Math.max(state.tick, state.set.replayEndTick ?? 0)),
+  );
 }
 
 function slotCount(tiers: readonly TierDefinition[]): number {

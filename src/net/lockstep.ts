@@ -50,6 +50,8 @@ interface Guest {
   playerId: PlayerId;
   peer: PeerId | null;
   gone: boolean;
+  // From its first command of this game: what it said before belongs to the game a restart ended.
+  playing: boolean;
   lastInput: PlayerInput;
   ring: (Pending | undefined)[];
 }
@@ -66,6 +68,7 @@ export function createHostSource(
       playerId: seat.playerId,
       peer: seat.peer,
       gone: seat.peer === null,
+      playing: false,
       lastInput: IDLE_INPUT,
       ring: new Array<Pending | undefined>(HOST_COMMAND_WINDOW).fill(undefined),
     }));
@@ -98,6 +101,7 @@ export function createHostSource(
     if (guest === undefined || guest.gone || at >= tick + HOST_COMMAND_WINDOW) {
       return;
     }
+    guest.playing = true;
     const target = Math.max(at, tick);
     const index = target % HOST_COMMAND_WINDOW;
     const slot = guest.ring[index];
@@ -120,14 +124,15 @@ export function createHostSource(
     if (closed) {
       return;
     }
-    const fromGuests = guests.filter((g) => g.peer === from);
+    if (message.type === 'command') {
+      receiveCommand(from, message.tick, message.command);
+      return;
+    }
+    const fromGuests = guests.filter((g) => g.peer === from && g.playing);
     if (fromGuests.length === 0) {
       return;
     }
     switch (message.type) {
-      case 'command':
-        receiveCommand(from, message.tick, message.command);
-        break;
       case 'hash':
         receiveHash(message.tick, message.hash);
         break;

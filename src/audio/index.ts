@@ -3,7 +3,7 @@ import type { MusicTrack, SetDefinition } from '../data/types';
 import type { SimState } from '../sim/state';
 import { createAmbience, type Ambience } from './ambience';
 import { FULL_MUSIC, FULL_SOUNDS, FULL_SYNTH_LUFS } from './full';
-import { createMasterChain, type MasterChain } from './master';
+import { FULL_LEVELS, createMasterChain, type MasterChain } from './master';
 import {
   MENU_RECORDING,
   createRecordingVoice,
@@ -24,7 +24,7 @@ import {
   type SpecialTake,
   type TrapEffectOf,
 } from './sfx';
-import { playEntrySounds } from './stage-entry-sounds';
+import { loadEntrySounds, type EntrySounds } from './stage-entry-sounds';
 import { keyedTrack } from './track-key';
 import type { MenuHeard } from '../shared/menu-score';
 import type { AudioEngine, Mood } from './types';
@@ -50,6 +50,9 @@ export interface AudioEngineOptions {
   // The artists' files of the effects and of the music's hits, decoded from the opening with the
   // engine's own context. Absent means those placed with `pnpm sounds`.
   readonly samples?: (context: BaseAudioContext) => SampleBank;
+  // The artists' entries of the tracks, decoded from the opening. Absent means those placed with
+  // `pnpm sounds`.
+  readonly entries?: (context: BaseAudioContext) => EntrySounds;
 }
 
 interface Running {
@@ -58,6 +61,7 @@ interface Running {
   music: Music;
   sfx: Sfx;
   samples: SampleBank;
+  entries: EntrySounds;
   ambience: Ambience;
   // What the menus play: their track, silent until its first part decodes, or the ambience.
   menus: RecordingVoice | 'ambience';
@@ -99,6 +103,10 @@ function placedSamples(context: BaseAudioContext): SampleBank {
   return loadSamples(context, FULL_SOUNDS.samples ?? {}, FULL_SYNTH_LUFS);
 }
 
+function placedEntries(context: BaseAudioContext): EntrySounds {
+  return loadEntrySounds(context, FULL_SOUNDS.music ?? {}, FULL_SOUNDS.silent);
+}
+
 function isRealtimeStalled(context: BaseAudioContext): boolean {
   return context instanceof AudioContext && context.state !== 'running';
 }
@@ -114,6 +122,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   let running: Running | null = null;
   let muted = false;
   let volume = 1;
+  let levels = FULL_LEVELS;
   let hitSound = true;
   let latest: SimState | null = null;
   let mood: Mood = 'set';
@@ -125,6 +134,17 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
   // The entry the music lands on, by the page clock, and the bus its sounds play on.
   let entry: { readonly landsAt: number; readonly bus: GainNode } | null = null;
 
+  const musicHeard = () => !muted && volume > 0 && levels.music > 0;
+  // A choice holds a bar the player hears, live: a film renders on its step clock, which a wait
+  // would move off its recording.
+  const holdingHeardBar = () =>
+    running !== null &&
+    running.context instanceof AudioContext &&
+    musicHeard() &&
+    !isRealtimeStalled(running.context) &&
+    running.music.holdsBar()
+      ? running
+      : null;
   const retireEntry = () => {
     if (entry === null) {
       return;
@@ -243,7 +263,12 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
 
   const open = (): Running => {
     const context = (options.createContext ?? (() => new AudioContext()))();
-    const master = createMasterChain(context, muted, volume, options.stems === true);
+    const master = createMasterChain(context, {
+      muted,
+      volume,
+      levels,
+      stems: options.stems === true,
+    });
     const samples = (options.samples ?? placedSamples)(context);
     const sfx = createSfx(master.sfx, trapEffectOf, options.sfxLookups, track, samples);
     sfx.setHitSound(hitSound);
@@ -257,13 +282,19 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
           breakBars,
           setOf: options.setOf,
           onKickScheduled: options.onKickScheduled,
-          loops: { files: FULL_SOUNDS.music ?? {} },
+          loops: {
+            files: FULL_SOUNDS.music ?? {},
+            silent: FULL_SOUNDS.silent,
+            heartbeatLufs: FULL_SYNTH_LUFS.heartbeat,
+          },
           hits: musicHits(samples, FULL_SOUNDS.silent),
+          dangers: FULL_SOUNDS.dangers,
         },
         trackFor === undefined ? undefined : (set) => keyed(trackFor(set)),
       ),
       sfx,
       samples,
+      entries: (options.entries ?? placedEntries)(context),
       ambience: createAmbience(master.music),
       menus:
         options.menuTrack === undefined
@@ -305,20 +336,24 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         ? context.resume()
         : Promise.resolve();
     },
+    replayBeats() {
+      const holding = holdingHeardBar();
+      if (holding === null) {
+        return 0;
+      }
+      if (latest !== null) {
+        flush();
+      }
+      const now = heardNow(holding.context);
+      return now === null ? 0 : holding.music.replayBeatsAt(now, holding.context.currentTime);
+    },
     waitsForBeat(state) {
-      // A film renders on its step clock, which a wait would move off its recording.
-      if (
-        running === null ||
-        !(running.context instanceof AudioContext) ||
-        muted ||
-        volume === 0 ||
-        isRealtimeStalled(running.context) ||
-        !running.music.holdsBar()
-      ) {
+      const holding = holdingHeardBar();
+      if (holding === null) {
         waiting = null;
         return null;
       }
-      const { context, music, sfx } = running;
+      const { context, music, sfx } = holding;
       const flushed = latest !== null;
       if (flushed) {
         flush();
@@ -346,7 +381,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       if (latest !== null) {
         flush();
       }
-      const { context, master, music, sfx, ambience } = running;
+      const { context, master, music, sfx, ambience, entries } = running;
       const now = heardNow(context);
       if (now === null) {
         return;
@@ -364,7 +399,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         trackOf(running)?.leave(leave);
         const bus = context.createGain();
         bus.connect(master.music);
-        playEntrySounds(bus, at, context.currentTime, music.tempo(), music.track());
+        entries.play(bus, at, context.currentTime, music.tempo(), music.track());
         entry = { landsAt, bus };
       }
       sfx.setClock(music.clock());
@@ -379,7 +414,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
         state.players,
         state.core,
         state.enemies,
-        state.tick,
+        state,
       );
       if (latest === null) {
         queueMicrotask(flush);
@@ -412,6 +447,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       volume = value;
       running?.master.setVolume(value);
     },
+    setLevels(value) {
+      levels = value;
+      running?.master.setLevels(value);
+    },
     setHitSound(value) {
       hitSound = value;
       running?.sfx.setHitSound(value);
@@ -424,7 +463,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
     loaded() {
       return running === null
         ? Promise.resolve()
-        : Promise.all([running.music.loaded(), running.samples.loaded]).then(() => undefined);
+        : Promise.all([
+            running.music.loaded(),
+            running.samples.loaded,
+            running.entries.loaded,
+          ]).then(() => undefined);
     },
     setMood(value) {
       mood = value;
@@ -433,7 +476,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): AudioEngine
       }
     },
     menuPosition() {
-      if (running === null || muted || volume === 0 || isRealtimeStalled(running.context)) {
+      if (running === null || !musicHeard() || isRealtimeStalled(running.context)) {
         return null;
       }
       const now = heardNow(running.context);

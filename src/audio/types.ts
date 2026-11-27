@@ -1,5 +1,6 @@
 import type { MusicTrack } from '../data/types';
 import type { MenuHeard } from '../shared/menu-score';
+import type { ReplayBeats } from '../sim/commands';
 import type { SimState } from '../sim/state';
 import type { SpecialTake } from './sfx';
 
@@ -20,14 +21,24 @@ export type Cue =
   | 'cardFlight'
   | 'cardLanded';
 
+// Each 0 to 1, 0 for off: the player's level of a bus.
+export interface BusLevels {
+  readonly music: number;
+  readonly effects: number;
+}
+
 export interface AudioEngine {
   start(): Promise<void>;
   update(state: SimState): void;
-  // While the music holds the game, its cards answered, for the beat line of the loop it resumes
-  // on: the page time of that beat (`performance.now`), and the game takes no step meanwhile. Keeps
-  // the music playing with `state`, which it does not play the events of. Null once there, and
-  // without a running, heard context.
+  // While the music holds the game, its cards answered, for the beat line of the loop it resumes on,
+  // the one the beats the game plays again land on: the page time of that beat (`performance.now`),
+  // and the game takes no step meanwhile. Keeps the music playing with `state`, which it does not
+  // play the events of. Null once there, and without a running, heard context.
   waitsForBeat(state: SimState): number | null;
+  // While a choice holds a bar on a running, heard context: the beats of that bar the game plays
+  // again if its cards are answered now, from the loop's next beat line; else none. The pick that
+  // ends the choice carries them.
+  replayBeats(): ReplayBeats;
   // Each frame of the entry a run opens on, until `landsAt` (`performance.now`): the first call makes
   // the menus leave within a sixteenth, plays the entry's sounds and lands the tick of `state` on
   // `landsAt`, the music at full level. Keeps the music playing with `state`, which it does not play
@@ -36,6 +47,8 @@ export interface AudioEngine {
   setMuted(muted: boolean): void;
   // 0 to 1: the engine makes each step sound as large as the last.
   setVolume(volume: number): void;
+  // Under the volume, each bus on its own; full until told otherwise. Music at 0 is music unheard.
+  setLevels(levels: BusLevels): void;
   // On until told otherwise.
   setHitSound(enabled: boolean): void;
   setMood(mood: Mood): void;

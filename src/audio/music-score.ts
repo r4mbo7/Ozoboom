@@ -1,6 +1,15 @@
 import type { MusicPart, MusicTrack, SetDefinition } from '../data/types';
-import { BARS_PER_PHRASE, MAIN_TEMPO, barOfTick, phraseOfTick, type Tempo } from '../shared/tempo';
+import { wrap } from '../shared/scalar';
+import {
+  BARS_PER_PHRASE,
+  MAIN_TEMPO,
+  barOfTick,
+  isBarTick,
+  phraseOfTick,
+  type Tempo,
+} from '../shared/tempo';
 import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state';
+import type { DangerCurve, DangerFilter } from './sound-file';
 import { MIN_DROP_BARS, bossLeft, dropEndTick, isLastTier } from '../sim/systems/set-progress';
 import { SPEAKER_LAYER_IDS, type SpeakerLayerId } from './speaker-layers';
 
@@ -38,36 +47,86 @@ const ROLL_BARS = 3;
 export const PULSE: Threshold = { below: 0.25, offAt: 0.27 };
 export const CHOKE: Threshold = { below: 0.1, offAt: 0.12 };
 // Seconds, the time constant of a cutoff following the life of the core.
-export const CHOKE_SMOOTHING = 0.12;
+export const DANGER_SMOOTHING = 0.12;
 const PAD_HZ = 900;
 export const NO_CUE: BreakCue = { roll: null, cut: false };
 export const OPEN_HZ = 20_000;
-const CHOKED_HZ = 380;
-const CHOKE_TOP_HZ = 3000;
+const HIGH_PASS_OPEN_HZ = 20;
 const DIVE_HZ = 900;
 
 export function latched(on: boolean, life: number, threshold: Threshold): boolean {
   return life < (on ? threshold.offAt : threshold.below);
 }
 
+export const PULSE_SIXTEENTH = 2;
+// The gain of the heartbeat's loudest hit.
+export const PULSE_GAIN = 0.55;
+
 export function pulseGain(sixteenth: number, pulse: boolean, choke: boolean): number {
   if (!pulse || (sixteenth >= 8 && !choke)) {
     return 0;
   }
   switch (sixteenth % 8) {
-    case 2:
-      return 0.55;
-    case 3:
+    case PULSE_SIXTEENTH:
+      return PULSE_GAIN;
+    case PULSE_SIXTEENTH + 1:
       return 0.4;
     default:
       return 0;
   }
 }
 
-export function musicCutoff(choke: boolean, life: number): number {
-  return choke
-    ? CHOKED_HZ * (CHOKE_TOP_HZ / CHOKED_HZ) ** (Math.max(0, life) / CHOKE.below)
-    : OPEN_HZ;
+export function isPulseEcho(sixteenth: number): boolean {
+  return sixteenth % 8 === PULSE_SIXTEENTH + 1;
+}
+
+export const HEARTBEAT_BARS = 2;
+
+// The bar line a track's heartbeat loop entered on, as the step at `step` leaves it: each bar line
+// decides from the heartbeat whether the loop plays through its bar, from its start when it enters.
+export function heartbeatLoopFrom(
+  from: number | null,
+  step: number,
+  pulsing: boolean,
+  tempo: Tempo = MAIN_TEMPO,
+): number | null {
+  if (!isBarTick(step, tempo)) {
+    return from;
+  }
+  return pulsing ? (from ?? step) : null;
+}
+
+export function heartbeatLoopTicks(step: number, from: number, tempo: Tempo = MAIN_TEMPO): number {
+  return wrap(step - from, HEARTBEAT_BARS * tempo.ticksPerBar);
+}
+
+export const DEFAULT_DANGER: DangerCurve = {
+  highPass: { from: { percent: 25, hz: HIGH_PASS_OPEN_HZ }, to: { percent: 10, hz: 150 } },
+  lowPass: { from: { percent: 10, hz: OPEN_HZ }, to: { percent: 0, hz: 380 } },
+};
+
+export interface DangerCutoffs {
+  readonly highPass: number;
+  readonly lowPass: number;
+}
+
+export const OPEN_CUTOFFS: DangerCutoffs = { highPass: HIGH_PASS_OPEN_HZ, lowPass: OPEN_HZ };
+
+// Open above its first point, held at its second below it, by as many octaves each point between.
+function filterCutoff({ from, to }: DangerFilter, percent: number, open: number): number {
+  if (percent >= from.percent) {
+    return open;
+  }
+  const along = Math.min(1, (from.percent - percent) / (from.percent - to.percent));
+  return from.hz * (to.hz / from.hz) ** along;
+}
+
+export function dangerCutoffs(curve: DangerCurve, life: number): DangerCutoffs {
+  const percent = 100 * life;
+  return {
+    highPass: filterCutoff(curve.highPass, percent, HIGH_PASS_OPEN_HZ),
+    lowPass: filterCutoff(curve.lowPass, percent, OPEN_HZ),
+  };
 }
 
 // Shallower than the choke and resonant: a filter sweep, not a scene that dies.
@@ -91,13 +150,20 @@ export function phraseAt(
   return progress.phrase + phraseOfTick(tick, tempo) - phraseOfTick(fromTick, tempo);
 }
 
+// The tick a segment's music starts on: the beats a card choice made it play again come after it.
+export function segmentMusicStart(
+  progress: Pick<SetProgress, 'segmentStartTick' | 'segmentReplayTicks'>,
+): number {
+  return progress.segmentStartTick + (progress.segmentReplayTicks ?? 0);
+}
+
 export function dropTickOf(
   progress: SetProgress,
   breakBars: number,
   tempo: Tempo = MAIN_TEMPO,
 ): number | null {
   return progress.segment === 'break'
-    ? progress.segmentStartTick + breakBars * tempo.ticksPerBar
+    ? segmentMusicStart(progress) + breakBars * tempo.ticksPerBar
     : null;
 }
 
@@ -128,7 +194,8 @@ export function momentAfter(
   tempo: Tempo = MAIN_TEMPO,
 ): SetMoment | null {
   const { set, tick } = state;
-  const { tier, segment, segmentStartTick } = set;
+  const { tier, segment } = set;
+  const start = segmentMusicStart(set);
   switch (segment) {
     case 'buildup': {
       const phrases = stage.tiers[tier]?.buildupPhrases;
@@ -137,7 +204,7 @@ export function momentAfter(
         : {
             tier,
             segment: 'break',
-            segmentStartTick: segmentStartTick + phrases * BARS_PER_PHRASE * tempo.ticksPerBar,
+            segmentStartTick: start + phrases * BARS_PER_PHRASE * tempo.ticksPerBar,
           };
     }
     case 'break':
@@ -151,8 +218,7 @@ export function momentAfter(
         tier: Math.min(tier + 1, stage.tiers.length - 1),
         segment: 'buildup',
         segmentStartTick:
-          dropEndTick(set, tempo) ??
-          Math.max(nextBar, segmentStartTick + MIN_DROP_BARS * tempo.ticksPerBar),
+          dropEndTick(set, tempo) ?? Math.max(nextBar, start + MIN_DROP_BARS * tempo.ticksPerBar),
       };
     }
   }
@@ -291,6 +357,6 @@ export function padCutoff(
   tempo: Tempo = MAIN_TEMPO,
 ) {
   return segment === 'break'
-    ? PAD_HZ + (track.padOpens ?? 0) * (bar - barOfTick(progress.segmentStartTick, tempo))
+    ? PAD_HZ + (track.padOpens ?? 0) * (bar - barOfTick(segmentMusicStart(progress), tempo))
     : PAD_HZ;
 }

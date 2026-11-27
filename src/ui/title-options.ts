@@ -1,12 +1,21 @@
 import type { TitleActions, TitleOptions } from './title';
 import type { UiCallbacks } from './types';
-import { type SoundLevel, VOLUME_STEPS, stepSound } from './volume';
+import {
+  FULL_MIX,
+  type SoundBus,
+  type SoundLevel,
+  VOLUME_STEPS,
+  stepSound,
+  toggleMuted,
+} from './volume';
 
 export type TitleOptionActions = Pick<
   TitleActions,
   | 'toggleCalmMode'
   | 'toggleMute'
   | 'stepVolume'
+  | 'toggleMix'
+  | 'stepMix'
   | 'toggleHitSound'
   | 'toggleAutoFire'
   | 'toggleAutoAim'
@@ -18,6 +27,7 @@ type TitleOptionCallbacks = Pick<
   | 'onToggleCalmMode'
   | 'onToggleMute'
   | 'onSetVolume'
+  | 'onSetMix'
   | 'onToggleHitSound'
   | 'onToggleAutoFire'
   | 'onToggleAutoAim'
@@ -38,6 +48,7 @@ export function createTitleOptions(
     calmMode: false,
     muted: false,
     volume: VOLUME_STEPS,
+    mix: FULL_MIX,
     hitSound: false,
     autoFire: false,
     autoAim: false,
@@ -60,6 +71,11 @@ export function createTitleOptions(
     }
   }
 
+  function setMix(bus: SoundBus, level: SoundLevel): void {
+    change({ mix: { ...options.mix, [bus]: level } });
+    callbacks.onSetMix(bus, level);
+  }
+
   return {
     actions: {
       toggleCalmMode() {
@@ -67,10 +83,16 @@ export function createTitleOptions(
         callbacks.onToggleCalmMode(options.calmMode);
       },
       toggleMute() {
-        setSound({ volume: options.volume, muted: !options.muted });
+        setSound(toggleMuted(options));
       },
       stepVolume(side) {
         setSound(stepSound(options, side));
+      },
+      toggleMix(bus) {
+        setMix(bus, toggleMuted(options.mix[bus]));
+      },
+      stepMix(bus, side) {
+        setMix(bus, stepSound(options.mix[bus], side));
       },
       toggleHitSound() {
         change({ hitSound: !options.hitSound });

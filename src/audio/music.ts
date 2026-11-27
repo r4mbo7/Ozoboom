@@ -1,6 +1,7 @@
 import { MAIN_STAGE } from '../data/main-stage';
 import type { MusicTrack, SetDefinition } from '../data/types';
 import { MAIN_TEMPO, type Tempo } from '../shared/tempo';
+import type { ReplayBeats } from '../sim/commands';
 import { playedTempo } from '../sim/lineup';
 import type { GameStatus, SetProgress, SetSegment, SimState } from '../sim/state';
 import { createBlank, heardBlackout, silentStep, soundingStep } from './blackout';
@@ -25,8 +26,11 @@ import {
   heldBarOf,
   heldShift,
   inPass,
+  replayedBeats,
+  resumeLine,
   resumedOnBeat,
   shiftedClock,
+  type ResumeLine,
   type HeldBar,
 } from './held-bar';
 import { createBus, createRoom, retireBus, setEcho, type Bus } from './music-bus';
@@ -40,20 +44,24 @@ import {
 } from './music-hits';
 import {
   CHOKE,
-  CHOKE_SMOOTHING,
+  DANGER_SMOOTHING,
+  OPEN_CUTOFFS,
   OPEN_HZ,
   PULSE,
+  dangerCutoffs,
   diveCutoff,
   dropTickOf,
   entersSegment,
   latched,
   modeOf,
   momentAfter,
-  musicCutoff,
+  type DangerCutoffs,
   type MusicMode,
 } from './music-score';
 import { CUT_SECONDS, playStep, sustain, type Groove } from './music-step';
 import type { Acoustics } from './reverb';
+import type { SoundFiles } from './sound-file';
+import { trackDanger } from './track-danger';
 import { pluggingSpeakers, speakerEntries } from './speaker-layers';
 
 export interface MusicOptions {
@@ -66,6 +74,8 @@ export interface MusicOptions {
   loops?: LoopFiles | undefined;
   // The game's own sounds, files and silences of the artist (ADR 0027); absent, their synth voices.
   hits?: MusicHits | undefined;
+  // By track id, the danger curves the artists set; absent, every track plays the default.
+  dangers?: SoundFiles['dangers'] | undefined;
 }
 
 export interface Music {
@@ -91,9 +101,12 @@ export interface Music {
   // Settles once the loops of the playing track have decoded or failed.
   loaded(): Promise<void>;
   // Once the cards of a choice are answered, before the game moves on: the beat line of the loop the
-  // game resumes on, set on the first call, a sixteenth after `now` at least. Null when no choice
-  // waits.
+  // game resumes on, the one the beats it plays again land on, set on the first call, a sixteenth
+  // after `now` at least. Null when no choice waits.
   resumeOnBeat(now: number, currentTime: number): number | null;
+  // While a choice holds a bar with no resume set: the beats of that bar the game would play again
+  // if the cards were answered `now`, from the loop's next beat line; else none.
+  replayBeatsAt(now: number, currentTime: number): ReplayBeats;
   // A choice holds a bar: its cards are open, or answered and the game has not moved on.
   holdsBar(): boolean;
 }
@@ -153,21 +166,62 @@ function createDive(context: BaseAudioContext): Dive {
   };
 }
 
-function lifeOf({ core }: SimState): number {
-  return core.maxHp > 0 ? core.hp / core.maxHp : 1;
+interface Danger {
+  // Where the music goes in: through its high-pass, then its low-pass.
+  input: AudioNode;
+  // Follows the cutoffs, or takes them at once.
+  follow(cutoffs: DangerCutoffs, currentTime: number, atOnce: boolean): void;
+  // A loss: the music sweeps down from where the danger left it, its bass given back.
+  extinguish(at: number): void;
 }
 
-function extinguishBus(bus: Bus | null, at: number) {
-  if (bus !== null) {
-    extinguish(bus.input, at);
+function createDanger(out: AudioNode): Danger {
+  const context = out.context;
+  const highPass = context.createBiquadFilter();
+  highPass.type = 'highpass';
+  const lowPass = context.createBiquadFilter();
+  lowPass.type = 'lowpass';
+  highPass.connect(lowPass);
+  lowPass.connect(out);
+  const filters = [
+    [highPass, 'highPass'],
+    [lowPass, 'lowPass'],
+  ] as const;
+  for (const [filter, name] of filters) {
+    filter.frequency.value = OPEN_CUTOFFS[name];
   }
-  retireBus(bus, EXTINCTION_SECONDS);
+  let heard: DangerCutoffs = OPEN_CUTOFFS;
+  return {
+    input: highPass,
+    follow(cutoffs, currentTime, atOnce) {
+      for (const [filter, name] of filters) {
+        if (atOnce) {
+          filter.frequency.cancelScheduledValues(currentTime);
+          filter.frequency.setValueAtTime(cutoffs[name], currentTime);
+        } else if (cutoffs[name] !== heard[name]) {
+          filter.frequency.setTargetAtTime(cutoffs[name], currentTime, DANGER_SMOOTHING);
+        }
+      }
+      heard = cutoffs;
+    },
+    extinguish(at) {
+      highPass.frequency.cancelScheduledValues(at);
+      highPass.frequency.setTargetAtTime(OPEN_CUTOFFS.highPass, at, EXTINCTION_SECONDS / 4);
+      extinguish(lowPass, at);
+    },
+  };
+}
+
+function lifeOf({ core }: SimState): number {
+  return core.maxHp > 0 ? core.hp / core.maxHp : 1;
 }
 
 export function createMusic(out: AudioNode, options: MusicOptions): Music {
   const context = out.context;
   const level = context.createGain();
-  const deck = createLoopDeck(level, options.loops ?? { files: {} });
+  // The music thins through it as the stage nears silence; what plays on a bus's whole goes around.
+  const danger = createDanger(level);
+  const deck = createLoopDeck(danger.input, options.loops ?? { files: {} });
   const hits = options.hits ?? musicHits();
   const groove: Groove = {
     track: options.track,
@@ -176,6 +230,8 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     dropTick: null,
     pulsing: false,
     choking: false,
+    heartbeatFrom: null,
+    heartbeat: () => deck.heartbeat(),
     entries: new Map(),
     plugging: new Map(),
     onKick: options.onKickScheduled,
@@ -197,7 +253,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   const filterOut = createFilterOut(context);
   dive.filter.connect(filterOut.filter);
   filterOut.filter.connect(out);
-  const room = createRoom(level);
+  const room = createRoom(danger.input);
+  // The room of what goes around the danger filters.
+  const wholeRoom = createRoom(level);
   let bus: Bus | null = null;
   let last: SimState | null = null;
   let endsAt = 0;
@@ -209,7 +267,11 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
   let followedTick = -1;
   // The bar an upgrade choice loops, and the bus its first pass plays out on.
   let hold: HeldBar | null = null;
+  // The resume line a pick read its beats off, for the hold it was read in.
+  let offered: { readonly hold: HeldBar; readonly line: ResumeLine } | null = null;
   let firstPass: Bus | null = null;
+  // What the danger filters last followed.
+  const dangerFollowed = { life: Number.NaN, trackId: '' };
   // A track's files decode from its first update, unless a game set it before.
   let requested = false;
 
@@ -218,15 +280,21 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     deck.load(track);
   }
 
-  function openBus(cutoff = OPEN_HZ): Bus {
-    const opened = createBus(level, cutoff, groove.track.echo, 3 * sixteenthSeconds(groove.tempo));
+  function openBus(): Bus {
+    const opened = createBus(
+      { music: danger.input, level },
+      groove.track.echo,
+      3 * sixteenthSeconds(groove.tempo),
+    );
     room.send(opened.output, acoustics);
+    wholeRoom.send(opened.whole, acoustics);
     bus = opened;
     return opened;
   }
 
   function followSet(state: SimState) {
     if (state.setId === setId) {
+      followReplay(state);
       return;
     }
     const first = setId === null;
@@ -238,9 +306,24 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       anchor = null;
       followedTick = -1;
     }
+    groove.heartbeatFrom = null;
     groove.tempo = next;
     acoustics = set?.acoustics;
     stage = set ?? MAIN_STAGE;
+  }
+
+  // A card choice that made the game play beats again moved its grid: the music goes on on it, and the
+  // heartbeat loop where it was in the music.
+  function followReplay(state: SimState) {
+    const next = playedTempo(stage, state);
+    if (next.originTick === groove.tempo.originTick) {
+      return;
+    }
+    const moved = next.originTick - groove.tempo.originTick;
+    if (groove.heartbeatFrom !== null) {
+      groove.heartbeatFrom += moved;
+    }
+    groove.tempo = next;
   }
 
   function followMode(state: SimState, currentTime: number) {
@@ -251,14 +334,16 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     mode = next;
     anchor = null;
     segment = null;
+    groove.heartbeatFrom = null;
     if (next === 'won') {
       retireBus(bus, WON_FADE_SECONDS);
       deck.retire(currentTime, WON_FADE_SECONDS);
-      endsAt = hits.play('sunrise', openBus().input, currentTime, groove.track);
+      endsAt = hits.play('sunrise', openBus().whole, currentTime, groove.track);
     } else if (next === 'lost') {
-      extinguishBus(bus, currentTime);
+      danger.extinguish(currentTime);
+      retireBus(bus, EXTINCTION_SECONDS);
       deck.extinguish(currentTime);
-      endsAt = hits.play('powerDown', openBus().input, currentTime, groove.track);
+      endsAt = hits.play('powerDown', openBus().whole, currentTime, groove.track);
     }
   }
 
@@ -286,23 +371,28 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     return entered;
   }
 
-  function followLife(state: SimState): number {
+  function followLife(state: SimState, currentTime: number, atOnce: boolean) {
     const life = lifeOf(state);
     groove.pulsing = latched(groove.pulsing, life, PULSE);
     groove.choking = latched(groove.choking, life, CHOKE);
-    return musicCutoff(groove.choking, life);
+    if (!atOnce && life === dangerFollowed.life && groove.track.id === dangerFollowed.trackId) {
+      return;
+    }
+    dangerFollowed.life = life;
+    dangerFollowed.trackId = groove.track.id;
+    const { curve } = trackDanger(groove.track.id, options.dangers);
+    danger.follow(dangerCutoffs(curve, life), currentTime, atOnce);
   }
 
   function reopenBus(
     state: SimState,
     followed: Follow,
     currentTime: number,
-    cutoff: number,
     entering: SetSegment | null,
   ): Bus {
     const clock = followed.anchor;
     retireBus(bus, CUT_SECONDS);
-    const target = openBus(cutoff);
+    const target = openBus();
     // A segment's first step on its bar line plays late by the output latency rather than not at all.
     cursor = firstStepAtOrAfter(state.tick, sixteenthTicks(groove.tempo), groove.tempo.originTick);
     const at = Math.max(tickToTime(clock, state.tick), currentTime);
@@ -329,19 +419,14 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
 
   function releaseHold() {
     hold = null;
+    offered = null;
     retireBus(firstPass, CUT_SECONDS);
     firstPass = null;
   }
 
-  // The bar the tick stopped in plays out on its bus, then loops on a bus of its own: what the
+  // The bar the tick stopped in plays out on its bus, then loops whole on a bus of its own: what the
   // lookahead scheduled of the next bar fades out with the first.
-  function holdBar(
-    target: Bus,
-    state: SimState,
-    clock: Anchor,
-    currentTime: number,
-    cutoff: number,
-  ): Bus {
+  function holdBar(target: Bus, state: SimState, clock: Anchor, currentTime: number): Bus {
     const held = heldBarOf(state.tick, groove.tempo, groove.dropTick);
     hold = held;
     const end = tickToTime(clock, held.untilTick);
@@ -349,14 +434,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     cursor = held.untilTick;
     retireBus(target, CUT_SECONDS, end - CUT_SECONDS);
     firstPass = target;
-    return openBus(cutoff);
-  }
-
-  function followFilter(target: Bus, cutoff: number, currentTime: number) {
-    if (cutoff !== target.cutoff) {
-      target.input.frequency.setTargetAtTime(cutoff, currentTime, CHOKE_SMOOTHING);
-      target.cutoff = cutoff;
-    }
+    return openBus();
   }
 
   function followSpeakers(state: SimState) {
@@ -365,7 +443,6 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
     groove.entries = speakerEntries(groove.entries, speakers, state.tick, cursor, groove.tempo);
   }
 
-  // Past the bar an upgrade choice holds, a step replays the step of that bar it falls on.
   function playHeld(
     target: Bus,
     step: number,
@@ -380,7 +457,21 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       setEcho(target, tickToTime(clock, step), true);
     }
     const passClock = shiftedClock(clock, back);
-    playStep(groove, target, step - back, state, passClock, currentTime, sound - back);
+    if (hold === null || !inPass(hold, step)) {
+      playStep(groove, target, step - back, state, passClock, currentTime, sound - back);
+      return;
+    }
+    // A pass sounds on the grid and the drop the choice opened on, which a replay moved since; the
+    // heartbeat loop it places goes on where the music is.
+    const moved = groove.tempo.originTick - hold.tempo.originTick;
+    const pass: Groove = {
+      ...groove,
+      tempo: hold.tempo,
+      dropTick: hold.dropTick,
+      heartbeatFrom: groove.heartbeatFrom === null ? null : groove.heartbeatFrom - moved,
+    };
+    playStep(pass, target, step - back, state, passClock, currentTime, sound - back);
+    groove.heartbeatFrom = pass.heartbeatFrom === null ? null : pass.heartbeatFrom + moved;
   }
 
   function scheduleAhead(
@@ -444,6 +535,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
 
   return {
     setTrack(next) {
+      if (next.id !== groove.track.id) {
+        groove.heartbeatFrom = null;
+      }
       groove.track = next;
       load(next);
     },
@@ -472,21 +566,38 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       if (last?.status !== 'running' || last.tick !== hold.tick) {
         return null;
       }
-      // The clock moves by whole beats so that the end of the held bar falls on the line: its passes
-      // fill the beats before, and the track goes on from its end on a bus of its own, the loop's bus
-      // retired on the line with what the lookahead had scheduled past it.
-      hold = resumedOnBeat(hold, anchor, { now, currentTime }, groove.tempo);
-      const at = hold.resumesAt ?? currentTime;
-      anchor = shiftedClock(anchor, hold.clockShift);
-      cursor = Math.min(cursor - hold.clockShift, hold.untilTick);
-      const { cutoff } = bus;
+      // The clock moves back by the beats from the end of the held bar's first pass to the line the
+      // game's replay lands on, so that its next tick sounds there: the passes fill the time before,
+      // and the track goes on from the loop's beat on a bus of its own, the loop's bus retired on the
+      // line with what the lookahead had scheduled past it.
+      // The line the pick read its beats off, while it can still be cut on: a lead that passed since
+      // would put the game's beat a bar later.
+      const beats = replayedBeats(hold, groove.tempo);
+      const line =
+        offered?.hold === hold &&
+        offered.line.beats === beats &&
+        offered.line.at >= currentTime + 2 * CUT_SECONDS
+          ? offered.line
+          : undefined;
+      const resumed = resumedOnBeat(hold, anchor, { now, currentTime }, beats, line);
+      hold = resumed;
+      const at = resumed.resumesAt ?? currentTime;
+      anchor = shiftedClock(anchor, resumed.clockShift);
+      cursor = Math.min(cursor - resumed.clockShift, resumed.untilTick);
       retireBus(bus, CUT_SECONDS, at - CUT_SECONDS);
       // A resync before the line silences the loop at once, as it does a first pass.
       firstPass = bus;
-      openBus(cutoff);
-      const filterOpenAt = Math.max(at, currentTime + beatSeconds(groove.tempo));
-      dive.to('running', currentTime, groove.tempo, filterOpenAt);
+      openBus();
+      // Open on the line: the game goes on with the loop's next beat sounding clear.
+      dive.to('running', currentTime, groove.tempo, at);
       return at;
+    },
+    replayBeatsAt(now, currentTime) {
+      if (hold === null || anchor === null || hold.resumesAt !== null) {
+        return 0;
+      }
+      offered = { hold, line: resumeLine(hold, anchor, { now, currentTime }) };
+      return offered.line.beats;
     },
     update(state, now, currentTime) {
       last = state;
@@ -518,7 +629,9 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       const clock = followed.anchor;
       const previous = segment;
       const entered = followSegment(state.set);
-      const cutoff = followLife(state);
+      // A run that starts, or a clock that moved, takes the filters where its life is at once: the
+      // music lives on from a lost run.
+      followLife(state, currentTime, followed.resynced);
       let target = bus;
       if (followed.resynced) {
         // A pause or a hidden tab moved the clock: a choice holds its bar again from the tick.
@@ -526,7 +639,7 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
       }
       if (target === null || followed.resynced || entered) {
         const entering = entered && previous !== null ? state.set.segment : null;
-        target = reopenBus(state, followed, currentTime, cutoff, entering);
+        target = reopenBus(state, followed, currentTime, entering);
       }
       if (resumedFrom !== null && followed.resynced) {
         // A frame that comes a step after the game resumed still plays the step it stopped on.
@@ -535,9 +648,8 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
         cursor = Math.min(cursor, stopped);
       }
       if (hold === null && state.status === 'choosingUpgrade') {
-        target = holdBar(target, state, clock, currentTime, cutoff);
+        target = holdBar(target, state, clock, currentTime);
       }
-      followFilter(target, cutoff, currentTime);
       followSpeakers(state);
       deck.follow({
         set: { ...state.set, tier: heardTier(state.set.tier) },
@@ -548,7 +660,6 @@ export function createMusic(out: AudioNode, options: MusicOptions): Music {
             : null,
         tick: state.tick,
         followed,
-        cutoff,
         tempo: groove.tempo,
         stage,
         currentTime,

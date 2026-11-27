@@ -7,6 +7,8 @@ export interface LoopOptions {
 }
 
 export interface LoopCallbacks {
+  // Reads the frame's input, before its steps: an exception here stops the loop like one in a step.
+  begin(timeMs: number): void;
   // False: nothing to run yet (a guest waiting for the host). The loop stops stepping this frame and holds the interpolation.
   step(): false | undefined;
   render(alpha: number): void;
@@ -75,7 +77,10 @@ export function createFixedStepLoop(options: LoopOptions, callbacks: LoopCallbac
     handle = undefined;
     const frameSession = session;
     try {
-      advance(timeMs, frameSession);
+      callbacks.begin(timeMs);
+      if (session === frameSession) {
+        advance(timeMs, frameSession);
+      }
     } catch (error) {
       stop();
       callbacks.crashed(error);

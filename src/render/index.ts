@@ -31,5 +31,11 @@ export async function createRenderer(
     skipExtensionImports: true,
   });
   container.appendChild(pixi.canvas);
-  return new Scene(pixi, options, content, width, height);
+  try {
+    return new Scene(pixi, options, content, width, height);
+  } catch (error) {
+    // A scene that fails to build gives its canvas and WebGL context back.
+    pixi.destroy({ removeView: true, releaseGlobalResources: true });
+    throw error;
+  }
 }

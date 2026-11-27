@@ -37,6 +37,7 @@ import {
   type StagePickerModel,
   type LocalPlayer,
   type StageCard,
+  type SoundLevel,
   type UiFrame,
   VOLUME_STEPS,
   createUi,
@@ -51,6 +52,7 @@ import { createDialogs } from './dialogs';
 import { createFpsMeter } from './fps';
 import { createGameSound } from './game-audio';
 import { createFixedStepLoop } from './loop';
+import { watchPageLeave } from './page-leave';
 import { choiceCallbacks } from './choices';
 import type { Assist } from './controls';
 import { type Interruption, type Online, type OnlineMatch, createOnline } from './online';
@@ -481,6 +483,7 @@ export async function startGame(
       calmMode: prefs.calmMode,
       muted: prefs.muted,
       volume: prefs.volume,
+      mix: prefs.mix,
       hitSound: prefs.hitSound,
       autoFire: prefs.autoFire,
       autoAim: prefs.autoAim,
@@ -503,6 +506,7 @@ export async function startGame(
     });
     audio.setMuted(sound.muted);
     audio.setVolume(prefs.volume / VOLUME_STEPS);
+    audio.setLevels({ music: heardLevel(prefs.mix.music), effects: heardLevel(prefs.mix.effects) });
     audio.setHitSound(prefs.hitSound);
     if (sound.mood !== null) {
       audio.setMood(sound.mood);
@@ -531,6 +535,7 @@ export async function startGame(
       source: recorded(createLocalSource(), start),
       focus,
       assist: () => prefs,
+      replayBeats: () => audio.replayBeats(),
     });
   }
 
@@ -654,7 +659,13 @@ export async function startGame(
   }
 
   function stagePicker(): StagePickerModel {
-    return { stages, stageId, endless: prefs.endless, festival: prefs.festival };
+    return {
+      stages,
+      stageId,
+      endless: prefs.endless,
+      festival: prefs.festival,
+      players: seats.count,
+    };
   }
 
   function openClassPicker(): void {
@@ -697,7 +708,8 @@ export async function startGame(
     const tutorial = state.setId === TUTORIAL.id;
     ui.showGame(tutorial);
     applySound();
-    const opensOnEntry = replay === undefined && dev.mode === null && !tutorial;
+    const opensOnEntry =
+      replay === undefined && (dev.mode === null || dev.moment?.entry === true) && !tutorial;
     if (opensOnEntry) {
       const set = setOf(content, state.setId);
       const now = performance.now();
@@ -1067,18 +1079,17 @@ export async function startGame(
       tickMs: TICK_MS / dev.speed,
       maxTicksPerFrame: MAX_TICKS_PER_FRAME * dev.speed,
       now: () => performance.now(),
-      requestFrame: (callback) =>
-        requestAnimationFrame((time) => {
-          fps.frame(time);
-          beginFrame();
-          catchUp = CATCH_UP_TICKS_PER_FRAME;
-          callback(time);
-        }),
+      requestFrame: (callback) => requestAnimationFrame(callback),
       cancelFrame: (handle) => {
         cancelAnimationFrame(handle);
       },
     },
     {
+      begin(time) {
+        fps.frame(time);
+        beginFrame();
+        catchUp = CATCH_UP_TICKS_PER_FRAME;
+      },
       step,
       render,
       crashed: (error) => {
@@ -1113,11 +1124,15 @@ export async function startGame(
     stageSize = { width: stage.clientWidth, height: stage.clientHeight };
     renderer.resize(stageSize.width, stageSize.height);
   }).observe(stage);
-  // Closing the tab tells the others at once, instead of leaving them to wait for a timeout.
-  window.addEventListener('pagehide', (event) => {
-    if (!event.persisted) {
-      online.leave();
-    }
+  watchPageLeave(window, {
+    online,
+    restored() {
+      if (onlineMatch === null) {
+        toTitle();
+      } else {
+        quit();
+      }
+    },
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === 'game' && onlineMatch === null) {
@@ -1142,6 +1157,10 @@ export async function startGame(
   }
 }
 
+function heardLevel({ volume, muted }: SoundLevel): number {
+  return muted ? 0 : volume / VOLUME_STEPS;
+}
+
 function settingsCallbacks(
   settings: Settings,
   renderer: Pick<Renderer, 'setOptions'>,
@@ -1151,6 +1170,7 @@ function settingsCallbacks(
   | 'onToggleCalmMode'
   | 'onToggleMute'
   | 'onSetVolume'
+  | 'onSetMix'
   | 'onToggleHitSound'
   | 'onToggleAutoFire'
   | 'onToggleAutoAim'
@@ -1171,6 +1191,7 @@ function settingsCallbacks(
     onSetVolume(volume) {
       settings.setSound({ volume, muted: prefs.muted });
     },
+    onSetMix: settings.setMix,
     onToggleHitSound: settings.setHitSound,
     onToggleAutoFire: settings.setAutoFire,
     onToggleAutoAim: settings.setAutoAim,

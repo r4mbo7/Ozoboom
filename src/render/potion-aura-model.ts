@@ -1,7 +1,7 @@
 import type { Container } from 'pixi.js';
 import { frac, lerp } from '../shared/scalar';
-import { POTION_BOOST, potionShielded } from '../sim/potion-shield';
-import type { PlayerBoost, PlayerState, SimEvent } from '../sim/state';
+import { isPotionBoost } from '../sim/potion-shield';
+import type { PlayerState, SimEvent } from '../sim/state';
 import { KEEP_PER_TICK, MAX_STEP_TICKS } from './drop-filter';
 import type { Frame } from './frame';
 import { TAU } from './paint';
@@ -17,10 +17,6 @@ const TRAIL_GONE = 0.02;
 // Prints of the trail a radius apart at most, and none across a jump (a revive, a teleport).
 const TRAIL_FILL = { spacing: 0.5, max: 8, jump: 10 };
 const GLINT_MAX = 16;
-
-function isPotion(boost: PlayerBoost): boolean {
-  return boost.id === POTION_BOOST;
-}
 
 export function hueAt(angle: number, turn: number): number {
   const at = frac((angle - turn) / TAU) * HUES.length;
@@ -78,11 +74,8 @@ export class PoweredBody {
     bars: number | undefined,
     frame: Pick<Frame, 'tempo' | 'calm' | 'pulse'>,
   ): boolean {
-    const boost = player.boosts?.find(isPotion);
+    const boost = player.boosts?.find(isPotionBoost);
     if (bars === undefined || boost === undefined || player.downed || player.gone === true) {
-      return false;
-    }
-    if (!potionShielded(player)) {
       return false;
     }
     const { ticksPerBar } = frame.tempo;

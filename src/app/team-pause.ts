@@ -1,7 +1,14 @@
 import type { DeviceId, InputDevice } from '../input/intents';
 import { t } from '../shared/i18n';
 import type { PlayerId } from '../sim/state';
-import { createControlsButton, createFeedbackButton } from '../ui';
+import {
+  SOUND_BUSES,
+  busLabel,
+  createControlsButton,
+  createFeedbackButton,
+  createSoundMixButton,
+  toggleMuted,
+} from '../ui';
 import type { InputView, MatchSeat } from './match';
 import type { PauseItem, PauseScreen } from './pause';
 import type { Settings } from './settings';
@@ -84,8 +91,8 @@ export function createTeamPause(screen: PauseScreen, env: TeamPauseEnv): TeamPau
           const [id, snapshot] = [...devices].find(([, own]) => own.gameplay.pause) ?? [];
           pause(snapshot?.device ?? merged.device, id);
         }
-      } else if ((gameplay.pause || menu.back) && screen.confirming) {
-        screen.cancelConfirmation();
+      } else if ((gameplay.pause || menu.back) && screen.nested) {
+        screen.back();
       } else if (gameplay.pause || menu.back) {
         resume();
       } else {
@@ -112,12 +119,28 @@ export function pauseItems(settings: Settings, actions: PauseActions): PauseItem
   return [
     { label: t('Resume'), activate: actions.resume },
     {
-      label: t('Sound'),
-      element: settings.soundControl.element,
-      activate() {
-        settings.setSound({ volume: prefs.volume, muted: !prefs.muted });
-      },
-      adjust: settings.stepVolume,
+      label: t('Sound mix'),
+      element: createSoundMixButton(),
+      opens: [
+        {
+          label: t('Sound'),
+          element: settings.soundControl.element,
+          activate() {
+            settings.setSound(toggleMuted(prefs));
+          },
+          adjust: settings.stepVolume,
+        },
+        ...SOUND_BUSES.map((bus): PauseItem => ({
+          label: busLabel(bus),
+          element: settings.busControls[bus].element,
+          activate() {
+            settings.setMix(bus, toggleMuted(prefs.mix[bus]));
+          },
+          adjust(side) {
+            settings.stepMix(bus, side);
+          },
+        })),
+      ],
     },
     {
       label: t('Hit sound'),

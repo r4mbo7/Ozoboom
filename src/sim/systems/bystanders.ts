@@ -3,6 +3,7 @@ import { nextFloat } from '../../shared/prng';
 import { BARS_PER_PHRASE, isBarTick, type Tempo } from '../../shared/tempo';
 import { playerById } from '../damage';
 import { lookup, type ResolvedContent } from '../content';
+import { segmentMusicTicks } from '../lineup';
 import { touches } from '../effects';
 import { clearOfObstacles, type Obstacles } from '../obstacles';
 import { ashore, type Shore } from '../shore';
@@ -24,7 +25,7 @@ function spawnBystanders({ state, content, set, tempo, obstacles, shore }: StepC
   if (tier === undefined || state.set.segment !== 'buildup' || !isBarTick(state.tick, tempo)) {
     return;
   }
-  const bar = (state.tick - state.set.segmentStartTick) / tempo.ticksPerBar;
+  const bar = segmentMusicTicks(state.set, state.tick) / tempo.ticksPerBar;
   const phrase = Math.floor(bar / BARS_PER_PHRASE);
   for (const rule of tier.bystanderSpawns ?? []) {
     const active =

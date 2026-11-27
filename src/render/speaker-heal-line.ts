@@ -15,12 +15,13 @@ const PLUSES = 3;
 const PLUS_SPACING = 5;
 const BEATS = 2;
 
-// A speaker's bubble offers the repair while the set has one and the stage has life to take back.
+// A speaker's bubble offers the repair while the set has one and the stage has life to take back,
+// up to a dev link's ceiling.
 export function offersRepair(
   set: Pick<SetDefinition, 'speakerCoreRepair'>,
-  core: Pick<CoreState, 'hp' | 'maxHp'>,
+  core: Pick<CoreState, 'hp' | 'maxHp' | 'ceiling'>,
 ): boolean {
-  return (set.speakerCoreRepair ?? 0) > 0 && core.hp < core.maxHp;
+  return (set.speakerCoreRepair ?? 0) > 0 && core.hp < (core.ceiling ?? core.maxHp);
 }
 
 export interface HealLine {

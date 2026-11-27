@@ -3,9 +3,10 @@ import { LOOKAHEAD_SECONDS } from './clock';
 import { createReverb, type Acoustics, type Reverb } from './reverb';
 
 export interface Bus {
-  input: BiquadFilterNode;
-  cutoff: number;
+  input: GainNode;
   output: GainNode;
+  // Around the danger filters: the heartbeat, the sunrise and the power down.
+  whole: GainNode;
   lead: GainNode;
   echo: DelayNode;
   echoFeedback: GainNode;
@@ -24,20 +25,19 @@ const ECHO_TONE = 2600;
 const ECHO_SPREAD = 0.85;
 const BUS_TAIL_SECONDS = 2;
 
+// `music` takes the danger filters, `level` is past them.
 export function createBus(
-  level: AudioNode,
-  cutoff: number,
+  { music, level }: { readonly music: AudioNode; readonly level: AudioNode },
   trackEcho: MusicTrack['echo'],
   echoSeconds: number,
 ): Bus {
   const context = level.context;
-  const input = context.createBiquadFilter();
-  input.type = 'lowpass';
-  input.frequency.value = cutoff;
-  input.Q.value = 0.7;
+  const input = context.createGain();
   const output = context.createGain();
   input.connect(output);
-  output.connect(level);
+  output.connect(music);
+  const whole = context.createGain();
+  whole.connect(level);
   const lead = context.createGain();
   const echo = context.createDelay(1);
   echo.delayTime.value = echoSeconds;
@@ -72,7 +72,7 @@ export function createBus(
   }
   echoFeedback.connect(echo);
   echoReturn.connect(input);
-  return { input, cutoff, output, lead, echo, echoFeedback, echoReturn, feedback, ret };
+  return { input, output, whole, lead, echo, echoFeedback, echoReturn, feedback, ret };
 }
 
 // Fades out from `at`, never before now.
@@ -83,9 +83,11 @@ export function retireBus(old: Bus | null, fadeSeconds: number, at = 0) {
   const now = old.output.context.currentTime;
   const from = Math.max(now, at);
   old.output.gain.setTargetAtTime(0, from, fadeSeconds / 4);
+  old.whole.gain.setTargetAtTime(0, from, fadeSeconds / 4);
   setTimeout(
     () => {
       old.output.disconnect();
+      old.whole.disconnect();
       old.echoFeedback.disconnect();
     },
     (from - now + fadeSeconds + LOOKAHEAD_SECONDS + BUS_TAIL_SECONDS) * 1000,

@@ -35,4 +35,6 @@ export interface FullSteps {
   readonly afterSpawning?: readonly System[];
   // `traps` leaves alone the pose key one of them took.
   readonly tookPoseKey?: (ctx: StepContext, playerId: PlayerId) => boolean;
+  // A card choice made the game play `ticks` again: what runs to a grid line moves with it.
+  readonly replayed?: (state: SimState, ticks: number) => void;
 }

@@ -117,24 +117,36 @@ function pressedButtons(pads: readonly (GamepadLike | null)[]): Set<string> {
 }
 
 // The click after the press would choose a slot again: it comes with the release, and goes no further.
+// Until the button is up. A release the page never hears, the focus lost on the way, ends with the
+// blur of the page or the next press.
 function swallowClicks(target: CaptureTarget): void {
   const kinds = ['click', 'auxclick', 'contextmenu'] as const;
   const swallow = (event: Event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
   };
+  const stop = (): void => {
+    for (const kind of kinds) {
+      target.removeEventListener(kind, swallow, CAPTURE);
+    }
+    target.removeEventListener('mouseup', afterClick, CAPTURE);
+    target.removeEventListener('mousedown', stop, CAPTURE);
+    target.removeEventListener('blur', blurred, CAPTURE);
+  };
+  // The click of a release comes right after it.
+  const afterClick = (): void => {
+    setTimeout(stop, 0);
+  };
+  // An element's blur reaches the page's capture too: only the page's own counts.
+  const blurred = (event: Event): void => {
+    if (event.target === target) {
+      stop();
+    }
+  };
   for (const kind of kinds) {
     target.addEventListener(kind, swallow, CAPTURE);
   }
-  target.addEventListener(
-    'mouseup',
-    () => {
-      setTimeout(() => {
-        for (const kind of kinds) {
-          target.removeEventListener(kind, swallow, CAPTURE);
-        }
-      }, 0);
-    },
-    { capture: true, once: true },
-  );
+  target.addEventListener('mouseup', afterClick, CAPTURE);
+  target.addEventListener('mousedown', stop, CAPTURE);
+  target.addEventListener('blur', blurred, CAPTURE);
 }

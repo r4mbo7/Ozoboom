@@ -293,7 +293,6 @@ export function createEnemies(ctx: RenderContext): EnemiesFamily {
     destroy(): void {
       bosses.destroy();
       wake.texture.destroy(true);
-      layers.enemies.destroy({ children: true });
     },
   };
 }

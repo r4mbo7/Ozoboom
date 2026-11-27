@@ -1,7 +1,12 @@
 import type { InputDevice, MenuIntents } from '../input/intents';
 import { el, fillHint, icon, setText } from './dom';
 import { formatNumber } from './format';
-import { createActionButton, createControlsButton, createFeedbackButton } from './feedback-button';
+import {
+  createActionButton,
+  createControlsButton,
+  createFeedbackButton,
+  createSoundMixButton,
+} from './feedback-button';
 import { openDiscord } from './discord';
 import { DISCORD, GEAR, GLOBE, PROGRAMME } from './icons';
 import { type Menu, createMenu } from './menu';
@@ -14,7 +19,13 @@ import {
   createHitSoundToggle,
   createToggle,
 } from './toggle';
-import { createSoundControl } from './volume';
+import {
+  SOUND_BUSES,
+  type SoundBus,
+  type SoundMix,
+  createBusControls,
+  createSoundControl,
+} from './volume';
 import { createPseudoSetting, editPseudo } from './pseudo-field';
 import { createLanguageControl, createLanguageList } from './language';
 import { locale, t, tn, type Locale } from '../shared/i18n';
@@ -31,6 +42,8 @@ export interface TitleActions {
   toggleCalmMode(): void;
   toggleMute(): void;
   stepVolume(side: -1 | 1): void;
+  toggleMix(bus: SoundBus): void;
+  stepMix(bus: SoundBus, side: -1 | 1): void;
   toggleHitSound(): void;
   toggleAutoFire(): void;
   toggleAutoAim(): void;
@@ -47,13 +60,16 @@ export interface TitleOptions {
   readonly calmMode: boolean;
   readonly muted: boolean;
   readonly volume: number;
+  readonly mix: SoundMix;
   readonly hitSound: boolean;
   readonly autoFire: boolean;
   readonly autoAim: boolean;
   readonly pseudo: string;
 }
 
-export type TitleView = 'main' | 'settings' | 'credits' | 'changelog' | 'leaderboard';
+export type TitleView = 'main' | 'settings' | 'sound' | 'credits' | 'changelog' | 'leaderboard';
+
+const parentOf = (view: TitleView): TitleView => (view === 'sound' ? 'settings' : 'main');
 
 // The notebook of what changed, which only the full game has: its rows are menu items, one open at a time.
 export interface ChangelogView {
@@ -330,9 +346,23 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     t('On'),
     t('Off'),
   );
-  const sound = createSoundControl((side) => {
+  const stepVolume = (side: -1 | 1) => {
     actions.stepVolume(side);
-  });
+  };
+  const sound = createSoundControl(stepVolume);
+  const mixSound = createSoundControl(stepVolume);
+  const stepBus = (bus: SoundBus, side: -1 | 1) => {
+    actions.stepMix(bus, side);
+  };
+  const buses = createBusControls(stepBus);
+  const soundMix = createSoundMixButton();
+  soundMix.classList.add('ui-title__sound-mix');
+  const backRow = () => {
+    const back = el('button', 'ui-button ui-title__back', t('Back'));
+    back.type = 'button';
+    return back;
+  };
+  const soundBack = backRow();
   const hitSound = createHitSoundToggle();
   const autoFire = createAutoFireToggle();
   const autoAim = createAutoAimToggle();
@@ -343,8 +373,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   const language = createLanguageControl(locale());
   const feedback = actions.feedback === undefined ? null : createFeedbackButton();
 
-  const settingsBack = el('button', 'ui-button ui-title__back', t('Back'));
-  settingsBack.type = 'button';
+  const settingsBack = backRow();
 
   const credits = createCredits();
   const creditsButton = el('button', 'ui-title__credits', t('Credits'));
@@ -428,17 +457,24 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
         pseudo.row,
         language,
         ...(feedback === null ? [] : [feedback]),
+        soundMix,
         settingsBack,
       ],
       nav: el('nav', 'ui-menu ui-menu--settings'),
     },
+    sound: {
+      title: t('Sound mix'),
+      items: [mixSound.element, ...SOUND_BUSES.map((bus) => buses[bus].element), soundBack],
+      nav: el('nav', 'ui-menu'),
+    },
   };
   views.main.nav.setAttribute('aria-label', t('Main menu'));
   views.main.nav.append(play, online, programmeRow, sound.element, settings);
-  for (const name of ['settings', 'credits', 'changelog', 'leaderboard'] as const) {
+  for (const name of ['settings', 'sound', 'credits', 'changelog', 'leaderboard'] as const) {
     views[name].nav.setAttribute('aria-label', views[name].title);
   }
   views.settings.nav.append(...views.settings.items);
+  views.sound.nav.append(...views.sound.items);
   views.credits.nav.append(creditsBack);
   views.changelog.nav.append(changelogBack);
   views.leaderboard.nav.append(leaderboardBack);
@@ -448,6 +484,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   deck.append(
     views.main.nav,
     views.settings.nav,
+    views.sound.nav,
     views.credits.nav,
     views.changelog.nav,
     views.leaderboard.nav,
@@ -567,6 +604,20 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   activations.set(settingsBack, () => {
     open('main');
   });
+  activations.set(soundMix, () => {
+    open('sound');
+  });
+  activations.set(mixSound.element, () => {
+    actions.toggleMute();
+  });
+  for (const bus of SOUND_BUSES) {
+    activations.set(buses[bus].element, () => {
+      actions.toggleMix(bus);
+    });
+  }
+  activations.set(soundBack, () => {
+    open('settings');
+  });
   activations.set(version, () => {
     open('changelog');
   });
@@ -592,10 +643,21 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   // Back on the title, the selection is the entry the player left it by.
   const openers: Partial<Record<TitleView, HTMLElement>> = {
     settings,
+    sound: soundMix,
     credits: creditsButton,
     changelog: version,
     ...(leaderboardButton === null ? {} : { leaderboard: leaderboardButton }),
   };
+  const steppers = new Map<HTMLElement, (side: -1 | 1) => void>([
+    [sound.element, stepVolume],
+    [mixSound.element, stepVolume],
+    ...SOUND_BUSES.map((bus): [HTMLElement, (side: -1 | 1) => void] => [
+      buses[bus].element,
+      (side) => {
+        stepBus(bus, side);
+      },
+    ]),
+  ]);
   let view: TitleView = 'main';
   const menu = createMenu(
     (index) => {
@@ -605,11 +667,10 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       }
     },
     (index, side) => {
-      if (views[view].items[index] === sound.element) {
-        actions.stepVolume(side);
-        return true;
-      }
-      return false;
+      const item = views[view].items[index];
+      const step = item === undefined ? undefined : steppers.get(item);
+      step?.(side);
+      return step !== undefined;
     },
   );
 
@@ -638,8 +699,8 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     }
     menu.setItems(views[next].items);
     const opener = openers[from] ?? null;
-    if (next === 'main' && opener !== null) {
-      menu.select(views.main.items.indexOf(opener));
+    if (next === parentOf(from) && opener !== null) {
+      menu.select(views[next].items.indexOf(opener));
     }
     if (next === 'leaderboard') {
       walkLeaderboard(true);
@@ -691,6 +752,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
       [
         { keys: shown.navigate, label: t('navigate') },
         ...(view === 'main' ? [{ keys: shown.navigateRow, label: t('sound') }] : []),
+        ...(view === 'sound' ? [{ keys: shown.navigateRow, label: t('level') }] : []),
         ...(action.keys.length === 0 ? [] : [action]),
         ...(view === 'main' ? [] : [{ keys: [shown.back], label: t('back') }]),
       ],
@@ -710,7 +772,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
         return;
       }
       if (edges.back && view !== 'main') {
-        open('main');
+        open(parentOf(view));
         return;
       }
       if (view === 'leaderboard' && leaderboard?.handle(edges) === true) {
@@ -740,6 +802,10 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     setOptions(options) {
       calm.set(options.calmMode);
       sound.set(options);
+      mixSound.set(options);
+      for (const bus of SOUND_BUSES) {
+        buses[bus].set(options.mix[bus]);
+      }
       hitSound.set(options.hitSound);
       autoFire.set(options.autoFire);
       autoAim.set(options.autoAim);

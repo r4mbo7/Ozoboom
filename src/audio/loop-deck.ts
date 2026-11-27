@@ -11,13 +11,13 @@ import {
   type Anchor,
   type Follow,
 } from './clock';
-import { loopableBar, type FileSpot, type HeldBar } from './held-bar';
+import { loopSeconds, loopableBar, type FileSpot, type HeldBar } from './held-bar';
 import { LOUDEST_PEAK, MUSIC_BUS_GAIN } from './master';
 import { decodeSlot, type FetchFile } from './menu-track';
-import { EXTINCTION_SECONDS, extinguish } from './music-hits';
-import { CHOKE_SMOOTHING, barsIntoTier, type SetMoment } from './music-score';
-import { CUT_SECONDS } from './music-step';
-import { momentSlotIds, musicSlotOf, stemSlotId } from './slot-ids';
+import { EXTINCTION_SECONDS } from './music-hits';
+import { PULSE_GAIN, barsIntoTier, segmentMusicStart, type SetMoment } from './music-score';
+import { CUT_SECONDS, type HeartbeatLoop } from './music-step';
+import { heartbeatSlotId, momentSlotIds, musicSlotOf, stemSlotId } from './slot-ids';
 import type { LoopFile } from './sound-file';
 import {
   SPEAKER_LAYER_IDS,
@@ -37,6 +37,9 @@ export const STAGE_MUSIC_LUFS = -10.2;
 export interface LoopFiles {
   readonly files: Readonly<Record<string, LoopFile>>;
   readonly fetchFile?: FetchFile;
+  readonly silent?: readonly string[] | undefined;
+  // The loudness of the synth's heartbeat, which a track's heartbeat loop is brought to.
+  readonly heartbeatLufs?: number | undefined;
 }
 
 // What the deck follows of an update of the music while the game plays.
@@ -46,7 +49,6 @@ export interface DeckCue {
   readonly ahead: SetMoment | null;
   readonly tick: number;
   readonly followed: Follow;
-  readonly cutoff: number;
   readonly tempo: Tempo;
   readonly stage: SetDefinition;
   readonly currentTime: number;
@@ -57,7 +59,7 @@ export interface DeckCue {
   // The first tick the sequencer has not scheduled yet: a stem never starts over its steps.
   readonly cursor: number;
   // The bar an upgrade choice loops while it holds the tick; the game resumes on a resync, or on the
-  // beat line the hold resumes on.
+  // beat line of the loop the hold resumes on.
   readonly hold: HeldBar | null;
 }
 
@@ -71,12 +73,15 @@ export interface LoopDeck {
   // The moment has a loop, decoded or on its way: the sequencer's musical layers leave it the room.
   holds(tier: number, segment: SetSegment): boolean;
   follow(cue: DeckCue): void;
+  // The track's heartbeat loop once decoded, 'silent' once its artist silenced it, else null: the
+  // shared heartbeat beats.
+  heartbeat(): HeartbeatLoop | 'silent' | null;
   // The stem of the speaker plays on the sequencer's step at `tick`, heard at `at`, in place of its
   // synth layer.
   stemAt(speaker: SpeakerLayerId, tick: number, at: number): boolean;
   // Fades the loop out over `seconds`; the next follow starts it again where the tick is.
   retire(at: number, seconds: number): void;
-  // A loss: the loop closes down as the sequencer does, under the power down.
+  // A loss: the loop fades out under the power down, as the danger filters close it.
   extinguish(at: number): void;
   // The music faded out over it: the loop stops at `at`, where the fade ends.
   stop(at: number): void;
@@ -112,16 +117,15 @@ interface Stem extends Scheduled {
   entry: number | null;
 }
 
-// The files of one moment, through their own low-pass and fade.
+// The files of one moment, through their own fade.
 interface Voice {
   readonly moment: SetMoment;
   readonly layout: Layout;
-  readonly filter: BiquadFilterNode;
   readonly fade: GainNode;
   readonly sources: Scheduled[];
   readonly stems: Map<SpeakerLayerId, Stem>;
   readonly start: number;
-  cutoff: number;
+  readonly riseSeconds: number;
   // The source heard, where it plays at `time` in seconds since its moment started, unwrapped, and
   // at what rate since.
   source: AudioBufferSourceNode;
@@ -206,6 +210,30 @@ const stopAt = (source: Scheduled, at: number) => {
   source.node.stop(Math.min(at, source.end ?? Infinity));
 };
 
+function trackFiles(
+  files: Readonly<Record<string, LoopFile>>,
+  trackId: string,
+): [slotId: string, file: LoopFile][] {
+  return Object.entries(files).filter(([slotId]) => musicSlotOf(slotId)?.trackId === trackId);
+}
+
+// The files of a track that share its gain: all but its heartbeat loop, levelled as a hit is.
+export function levelledFiles(
+  files: Readonly<Record<string, LoopFile>>,
+  trackId: string,
+): LoopFile[] {
+  return trackFiles(files, trackId)
+    .filter(([slotId]) => musicSlotOf(slotId)?.part !== 'heartbeat')
+    .map(([, file]) => file);
+}
+
+export function heartbeatGain({ lufs, peak }: LoopFile, heartbeatLufs: number): number {
+  return Math.min(
+    PULSE_GAIN * 10 ** ((heartbeatLufs - lufs) / 20),
+    LOUDEST_PEAK / (peak * MUSIC_BUS_GAIN),
+  );
+}
+
 // One gain for every file of a track, which keeps the artist's balance between them: its loudest
 // loop at the level of the synthesized stage music, its loudest sample under the limiter.
 export function loopGain(files: readonly LoopFile[]): number {
@@ -217,10 +245,24 @@ export function loopGain(files: readonly LoopFile[]): number {
   );
 }
 
-export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles): LoopDeck {
+export function createLoopDeck(
+  out: AudioNode,
+  { files, fetchFile, silent = [], heartbeatLufs }: LoopFiles,
+): LoopDeck {
   const context = out.context;
   const level = context.createGain();
   level.connect(out);
+  const heartbeatGains = new Map(
+    Object.entries(files).flatMap(([slotId, file]) => {
+      if (musicSlotOf(slotId)?.part !== 'heartbeat') {
+        return [];
+      }
+      if (heartbeatLufs === undefined) {
+        throw new Error(`No reference level for the heartbeat loop ${slotId}`);
+      }
+      return [[slotId, heartbeatGain(file, heartbeatLufs)] as const];
+    }),
+  );
   let trackId: string | null = null;
   let decoded = new Map<string, AudioBuffer>();
   let failed = new Set<string>();
@@ -271,7 +313,7 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
 
   // An opening plays its bars once, never the padding its codec adds; a loop loops on its bars.
   function play(
-    voice: Pick<Voice, 'filter' | 'sources'>,
+    voice: Pick<Voice, 'fade' | 'sources'>,
     part: Part,
     at: number,
     offset: number,
@@ -279,7 +321,7 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
   ) {
     const node = context.createBufferSource();
     node.buffer = part.buffer;
-    node.connect(voice.filter);
+    node.connect(voice.fade);
     if (once) {
       node.start(at, offset, part.seconds - offset);
     } else {
@@ -297,17 +339,17 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
     layout: Layout,
     at: number,
     position: number,
-    cutoff: number,
+    riseSeconds = position > SAME_TIME ? RISE_SECONDS : 0,
   ): Voice {
-    const filter = context.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = cutoff;
     const fade = context.createGain();
-    fade.gain.setValueAtTime(0, at);
-    fade.gain.linearRampToValueAtTime(1, at + RISE_SECONDS);
-    filter.connect(fade);
+    if (riseSeconds > 0) {
+      fade.gain.setValueAtTime(0, at);
+      fade.gain.linearRampToValueAtTime(1, at + riseSeconds);
+    } else {
+      fade.gain.setValueAtTime(1, at);
+    }
     fade.connect(level);
-    const chain = { filter, sources: [] };
+    const chain = { fade, sources: [] };
     const { opening, loop } = layout;
     const source =
       opening !== null && position < opening.seconds
@@ -317,10 +359,9 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
       ...chain,
       moment: { ...of },
       layout,
-      fade,
       stems: new Map(),
       start: at,
-      cutoff,
+      riseSeconds,
       source,
       time: at,
       position,
@@ -440,7 +481,7 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
     filter.type = 'lowpass';
     filter.frequency.value = stemCutoff(presence.open);
     gain.connect(filter);
-    filter.connect(voice.filter);
+    filter.connect(voice.fade);
     const node = context.createBufferSource();
     node.buffer = part.buffer;
     node.loop = true;
@@ -536,11 +577,17 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
   }
 
   // A level given back at once, or by its rise on a start still ahead.
-  function rise(param: AudioParam, to: number, start: number, currentTime: number) {
+  function rise(
+    param: AudioParam,
+    to: number,
+    start: number,
+    currentTime: number,
+    seconds: number,
+  ) {
     param.cancelScheduledValues(currentTime);
-    if (start > currentTime) {
+    if (start > currentTime && seconds > 0) {
       param.setValueAtTime(0, start);
-      param.linearRampToValueAtTime(to, start + RISE_SECONDS);
+      param.linearRampToValueAtTime(to, start + seconds);
     } else {
       param.setValueAtTime(to, currentTime);
     }
@@ -555,13 +602,13 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
     if (playing === null) {
       return;
     }
-    rise(playing.fade.gain, 1, playing.start, currentTime);
+    rise(playing.fade.gain, 1, playing.start, currentTime, playing.riseSeconds);
     for (const source of playing.sources) {
       stopAt(source, currentTime + NEVER_SECONDS);
     }
     if (playing.hushAt !== null) {
       for (const stem of playing.stems.values()) {
-        rise(stem.gain.gain, stem.level, stem.at, currentTime);
+        rise(stem.gain.gain, stem.level, stem.at, currentTime, RISE_SECONDS);
         stem.entry = null;
       }
     }
@@ -579,13 +626,7 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
   }
 
   // The current loop stops on the tick the next moment starts, which starts there from its first bar.
-  function prepare(
-    ahead: SetMoment,
-    origin: number,
-    cutoff: number,
-    currentTime: number,
-    tempo: Tempo,
-  ) {
+  function prepare(ahead: SetMoment, origin: number, currentTime: number, tempo: Tempo) {
     if (origin < currentTime || origin - currentTime > LOOKAHEAD_SECONDS) {
       return;
     }
@@ -602,23 +643,24 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
     const bar = barSeconds(tempo);
     const layout = layoutOf(ahead, bar);
     if (layout !== null) {
-      next = voiceOf(ahead, layout, origin, 0, cutoff);
+      next = voiceOf(ahead, layout, origin, 0);
     }
   }
 
-  function heldFile({ opening, loop }: Layout, position: number, bar: number): AudioBuffer {
+  // The `seconds` of the moment's file from `position`, looped on their own.
+  function heldFile({ opening, loop }: Layout, position: number, seconds: number): AudioBuffer {
     if (opening !== null && position < opening.seconds) {
       const after =
-        position + bar < opening.seconds - SAME_TIME
-          ? spot(opening, position + bar)
+        position + seconds < opening.seconds - SAME_TIME
+          ? spot(opening, position + seconds)
           : spot(loop, 0);
-      return loopableBar(context, spot(opening, position), after, bar, null);
+      return loopableBar(context, spot(opening, position), after, seconds, null);
     }
     const from = wrap(position - (opening?.seconds ?? 0), loop.seconds);
-    return loopableBar(context, spot(loop, from), spot(loop, from + bar), bar, null);
+    return loopableBar(context, spot(loop, from), spot(loop, from + seconds), seconds, null);
   }
 
-  // A heard speaker's stem loops the same bar, `into` seconds into its tier, at its level at the
+  // A heard speaker's stem loops the same beats, `into` seconds into its tier, at its level at the
   // bar's end; on a break's last bar, it falls silent on its last beat, as `hush` silences it.
   function holdStem(
     voice: Voice,
@@ -633,20 +675,21 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
     if (part === null || !(entries.has(speaker) || plugging.has(speaker))) {
       return;
     }
+    const seconds = loopSeconds(hold);
     const from = stemLoop(into, part.seconds, drop).offset;
     const silentFrom = hold.cutTick === null ? null : (hold.cutTick - hold.fromTick) * TICK_SECONDS;
     const after =
-      silentFrom === null ? spot(part, stemLoop(into + bar, part.seconds, drop).offset) : null;
-    const buffer = loopableBar(context, spot(part, from), after, bar, silentFrom);
+      silentFrom === null ? spot(part, stemLoop(into + seconds, part.seconds, drop).offset) : null;
+    const buffer = loopableBar(context, spot(part, from), after, seconds, silentFrom);
     const presence = stemPresenceAt(
       hold.untilTick - 1,
       entries.get(speaker) ?? null,
       plugging.get(speaker) ?? 0,
       set.segment === 'break',
     );
-    addStem(voice, speaker, { buffer, seconds: bar }, presence, {
+    addStem(voice, speaker, { buffer, seconds }, presence, {
       at: voice.start,
-      offset: wrap(voice.position, bar),
+      offset: wrap(voice.position, seconds),
       loopStart: 0,
       fromTick: hold.fromTick,
       entry: null,
@@ -657,18 +700,19 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
   // file and of its heard stems loops until the game resumes. A loop decoded since the choice began
   // takes over on a pass far enough ahead to be scheduled in time.
   function holdBar(cue: DeckCue, hold: HeldBar, clock: Anchor, bar: number): Voice | null {
-    const { set, currentTime, cutoff } = cue;
+    const { set, currentTime } = cue;
     const layout = layoutOf(set, bar);
     if (layout === null) {
       return null;
     }
+    const seconds = loopSeconds(hold);
     const end = tickToTime(clock, hold.untilTick);
     const into = playing === null ? 0 : Math.max(0, currentTime - end);
     const passes =
       playing === null
-        ? Math.max(0, Math.ceil((currentTime + TAKE_OVER_LEAD_SECONDS - end) / bar))
+        ? Math.max(0, Math.ceil((currentTime + TAKE_OVER_LEAD_SECONDS - end) / seconds))
         : 0;
-    const at = end + passes * bar + into;
+    const at = end + passes * seconds + into;
     cut(next, currentTime, CUT_SECONDS);
     next = null;
     boundary = null;
@@ -676,9 +720,14 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
       hush(playing, Math.max(currentTime, tickToTime(clock, hold.cutTick)));
     }
     cut(playing, at, RISE_SECONDS);
-    const position = Math.max(0, (hold.fromTick - set.segmentStartTick) * TICK_SECONDS);
-    const file = { buffer: heldFile(layout, position, bar), seconds: bar };
-    const voice = voiceOf(set, { opening: null, loop: file }, at, into, cutoff);
+    // Where the held bar sits in its file, from the music start the hold opened on: a file decoded
+    // after the pick finds the beats it replays added to the segment already.
+    const replayedSince = cue.tempo.originTick - hold.tempo.originTick;
+    const start = segmentMusicStart(set) - replayedSince;
+    const position = Math.max(0, (hold.fromTick - start) * TICK_SECONDS);
+    const file = { buffer: heldFile(layout, position, seconds), seconds };
+    // Beats cut from inside their file: they rise, even from their first sample.
+    const voice = voiceOf(set, { opening: null, loop: file }, at, into, RISE_SECONDS);
     const { since, drop } = tierGrid(set, layout, cue.stage, bar);
     for (const speaker of SPEAKER_LAYER_IDS) {
       holdStem(voice, speaker, cue, hold, { into: since + position, drop }, bar);
@@ -686,10 +735,11 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
     return voice;
   }
 
-  // The game resumes on a beat line of the held loop, where the end of the held bar now falls: the
-  // loop stops there, and the moment goes on from that tick, or the moment that starts on it.
+  // The game resumes on a beat line of the held loop: the loop stops there, and the moment goes on
+  // from where its music is then, the held bar's beat the game plays again, or the moment that starts
+  // on it.
   function playResumedHold(cue: DeckCue, hold: HeldBar, clock: Anchor, bar: number) {
-    const { set, ahead, cutoff } = cue;
+    const { set, ahead } = cue;
     const at = tickToTime(clock, hold.untilTick);
     cut(held, at, RISE_SECONDS);
     playing = null;
@@ -697,22 +747,13 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
       return;
     }
     const layout = layoutOf(set, bar);
-    const origin = tickToTime(clock, set.segmentStartTick);
-    playing = layout === null ? null : voiceOf(set, layout, at, at - origin, cutoff);
-  }
-
-  function followCutoff(voice: Voice, cutoff: number, currentTime: number) {
-    if (cutoff !== voice.cutoff) {
-      voice.filter.frequency.setTargetAtTime(cutoff, currentTime, CHOKE_SMOOTHING);
-      voice.cutoff = cutoff;
-    }
+    const origin = tickToTime(clock, segmentMusicStart(set));
+    playing = layout === null ? null : voiceOf(set, layout, at, at - origin);
   }
 
   return {
     load(track) {
-      const mine = Object.entries(files).filter(
-        ([slotId]) => musicSlotOf(slotId)?.trackId === track.id,
-      );
+      const mine = trackFiles(files, track.id);
       const fresh = track.id !== trackId;
       if (fresh) {
         cutAll(context.currentTime, CUT_SECONDS);
@@ -720,13 +761,18 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
         decoded = new Map();
         failed = new Set();
         loading = NO_LOOPS;
-        if (mine.length > 0) {
-          level.gain.value = loopGain(mine.map(([, file]) => file));
+        const levelled = mine
+          .filter(([slotId]) => musicSlotOf(slotId)?.part !== 'heartbeat')
+          .map(([, file]) => file);
+        if (levelled.length > 0) {
+          level.gain.value = loopGain(levelled);
         }
       }
       const into = decoded;
       const lost = failed;
-      const due = fresh ? mine : mine.filter(([slotId]) => lost.has(slotId));
+      // The entry plays before the set, from the bank that decoded it at the opening.
+      const played = mine.filter(([slotId]) => musicSlotOf(slotId)?.part !== 'entry');
+      const due = fresh ? played : played.filter(([slotId]) => lost.has(slotId));
       for (const [slotId] of due) {
         lost.delete(slotId);
       }
@@ -747,7 +793,7 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
       return slotsOf({ tier, segment }) !== null;
     },
     follow(cue) {
-      const { set, ahead, tick, followed, cutoff, tempo, currentTime, hold } = cue;
+      const { set, ahead, tick, followed, tempo, currentTime, hold } = cue;
       const clock = followed.anchor;
       const bar = barSeconds(tempo);
       const entered = followed.resynced || !sameMoment(set, moment);
@@ -771,7 +817,7 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
       } else if (ahead === null && boundary !== null && currentTime < boundary) {
         withdraw(currentTime);
       }
-      const origin = tickToTime(clock, set.segmentStartTick);
+      const origin = tickToTime(clock, segmentMusicStart(set));
       if (playing === null && (hold === null || entered)) {
         const layout = layoutOf(set, bar);
         // On the tick a moment starts or the clock moved, else on the next bar of the moment.
@@ -779,14 +825,13 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
           ? Math.max(currentTime, tickToTime(clock, tick))
           : origin +
             Math.max(0, Math.ceil((currentTime + TAKE_OVER_LEAD_SECONDS - origin) / bar)) * bar;
-        playing = layout === null ? null : voiceOf(set, layout, at, at - origin, cutoff);
+        playing = layout === null ? null : voiceOf(set, layout, at, at - origin);
       } else if (playing !== null) {
         nudge(playing, origin, currentTime);
       }
       for (const voice of [playing, next]) {
         if (voice !== null) {
           handOff(voice, currentTime);
-          followCutoff(voice, cutoff, currentTime);
         }
       }
       if (hold !== null && held === null) {
@@ -798,13 +843,25 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
         held = null;
       }
       if (ahead !== null && next === null) {
-        prepare(ahead, tickToTime(clock, ahead.segmentStartTick), cutoff, currentTime, tempo);
+        prepare(ahead, tickToTime(clock, ahead.segmentStartTick), currentTime, tempo);
       }
       for (const voice of [playing, next]) {
         if (voice !== null) {
           followStems(voice, cue, clock, bar);
         }
       }
+    },
+    heartbeat() {
+      if (trackId === null) {
+        return null;
+      }
+      const slotId = heartbeatSlotId(trackId);
+      if (silent.includes(slotId)) {
+        return 'silent';
+      }
+      const buffer = decoded.get(slotId);
+      const gain = heartbeatGains.get(slotId);
+      return buffer === undefined || gain === undefined ? null : { buffer, gain };
     },
     stemAt(speaker, tick, at) {
       return [playing, next, held].some((voice) => {
@@ -822,11 +879,6 @@ export function createLoopDeck(out: AudioNode, { files, fetchFile }: LoopFiles):
       cutAll(at, seconds);
     },
     extinguish(at) {
-      for (const voice of [playing, next, held]) {
-        if (voice !== null) {
-          extinguish(voice.filter, at);
-        }
-      }
       cutAll(at, EXTINCTION_SECONDS);
     },
     // Its voices are kept, cut at `at`: a resync before then stops them at once.

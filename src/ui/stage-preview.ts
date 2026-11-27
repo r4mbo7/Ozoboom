@@ -5,7 +5,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const LAKE = `
   <rect width="160" height="90" fill="#060a1c"/>
-  <circle cx="132" cy="18" r="6" fill="#ffe9b0" opacity="0.85"/>
+  <circle cx="114" cy="18" r="6" fill="#ffe9b0" opacity="0.85"/>
   <g fill="#3fd0c9" opacity="0.55"><circle cx="20" cy="14" r="1"/><circle cx="52" cy="26" r="1"/><circle cx="104" cy="12" r="1"/><circle cx="146" cy="40" r="1"/></g>
   <rect y="64" width="160" height="26" fill="#0d2a48"/>
   <path d="M52 70 h56 M58 75 h44" stroke="#ffd27a" stroke-width="1.4" stroke-linecap="round" opacity="0.28"/>
@@ -15,7 +15,8 @@ const LAKE = `
 
 const PREVIEWS: Readonly<Record<DecorId, string>> = { lake: LAKE, ...FULL_PREVIEWS };
 
-// The stage seen from above, as svg drawn in a 160 by 90 box.
+// The stage seen from above, as svg drawn in a 160 by 90 box. The stage picker crops it to a square:
+// its subject stays between x 35 and 125.
 export function stagePicture(decor: DecorId): string {
   const preview = PREVIEWS[decor];
   if (preview === undefined) {
@@ -28,6 +29,8 @@ export function stagePreview(decor: DecorId): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 160 90');
   svg.setAttribute('class', 'ui-stage__preview');
+  // A frame taller than 16:9 crops the sides and keeps the middle of the stage.
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
   svg.innerHTML = stagePicture(decor);

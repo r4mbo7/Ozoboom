@@ -23,7 +23,7 @@ import { createSunFollower } from './sun';
 import { type TitleOptions, type TitleScreen, createTitle } from './title';
 import { createTitleOptions } from './title-options';
 import { t } from '../shared/i18n';
-import type { GameContent, TrapDefinition } from '../data/types';
+import type { GameContent, TeaserDefinition, TrapDefinition } from '../data/types';
 import { BROKEN_LINK, DOOR, TWO_VERSIONS } from './icons';
 import type {
   CreatePortrait,
@@ -55,10 +55,24 @@ export type {
   UiCallbacks,
   UiFrame,
 } from './types';
-export { createControlsButton, createFeedbackButton } from './feedback-button';
+export {
+  createControlsButton,
+  createFeedbackButton,
+  createSoundMixButton,
+} from './feedback-button';
 export { type RemapScreen, openRemap } from './remap';
 export { createAutoAimToggle, createAutoFireToggle, createHitSoundToggle } from './toggle';
-export { VOLUME_STEPS, createSoundControl, stepSound, type SoundLevel } from './volume';
+export {
+  SOUND_BUSES,
+  VOLUME_STEPS,
+  busLabel,
+  createBusControls,
+  createSoundControl,
+  stepSound,
+  toggleMuted,
+  type SoundBus,
+  type SoundLevel,
+} from './volume';
 export { defaultName } from './lobby-model';
 export { showRendererUnavailable } from './renderer-unavailable';
 
@@ -159,13 +173,14 @@ function screenMenus(
   };
 }
 
-// Only a harness offers other classes than the data ones; without a portrait maker, each class shows as a disc of its colour.
+// Only a harness offers other classes, or other locked ones, than the data ones; without a portrait maker, each class shows as a disc of its colour.
 export function createUi(
   root: HTMLElement,
   callbacks: UiCallbacks,
   prompts: Prompts,
   classes: readonly ClassInfo[] = CLASSES,
   portrait: CreatePortrait = () => swatchPortrait(classes),
+  classTeasers?: readonly TeaserDefinition[],
 ): Ui {
   const container = el('div', 'ui');
   container.append(el('style', '', veilStyle()));
@@ -256,6 +271,7 @@ export function createUi(
       portrait,
       classActions(callbacks, shown),
       () => performance.now(),
+      classTeasers,
     );
     const hud = createHud(prompts);
     const upgrade = createUpgradeOverlay({

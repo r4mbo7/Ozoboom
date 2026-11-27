@@ -284,8 +284,6 @@ export function createSpeakers(ctx: RenderContext): Family {
       flashes.clear();
       repairs.clear();
     },
-    destroy(): void {
-      layers.speakers.destroy({ children: true });
-    },
+    destroy: () => undefined,
   };
 }

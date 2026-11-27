@@ -3,7 +3,7 @@ import type { DeviceId, InputSnapshot } from '../input/intents';
 import type { CommandSource } from '../net/types';
 import type { CameraFocus } from '../render/types';
 import { length, normalize } from '../shared/vec';
-import { IDLE_INPUT } from '../sim/commands';
+import { IDLE_INPUT, type PlayerCommand, type ReplayBeats } from '../sim/commands';
 import type { PlayerSlot } from '../sim/initial-state';
 import type { PlayerId, PlayerState } from '../sim/state';
 import { attackReach } from '../sim/attacks';
@@ -30,6 +30,9 @@ export interface MatchOptions {
   readonly source: CommandSource;
   readonly focus: CameraFocus;
   readonly assist?: () => Assist;
+  // The beats of the bar a card choice holds that the game plays again if it is answered now, read
+  // off the music; absent, none (online, where each peer's music is at its own spot).
+  readonly replayBeats?: () => ReplayBeats;
 }
 
 export interface MatchSeat {
@@ -159,20 +162,23 @@ export function createMatch(options: MatchOptions): Match {
     },
     step(toWorld) {
       const commands = source.next(
-        [...controls].map(([playerId, own]) => {
-          const player = session.state.players.find((candidate) => candidate.id === playerId);
-          if (player === undefined) {
-            throw new Error(`The game has no player ${String(playerId)}`);
-          }
-          const attack = attackOf(content, player);
-          return own.command(
-            player,
-            toWorld,
-            session.state.enemies,
-            attackReach(attack, player),
-            options.assist?.(),
-          );
-        }),
+        withReplay(
+          [...controls].map(([playerId, own]) => {
+            const player = session.state.players.find((candidate) => candidate.id === playerId);
+            if (player === undefined) {
+              throw new Error(`The game has no player ${String(playerId)}`);
+            }
+            const attack = attackOf(content, player);
+            return own.command(
+              player,
+              toWorld,
+              session.state.enemies,
+              attackReach(attack, player),
+              options.assist?.(),
+            );
+          }),
+          options.replayBeats,
+        ),
       );
       if (commands === null) {
         return false;
@@ -203,4 +209,25 @@ function attackOf(content: GameContent, player: PlayerState): AttackDefinition {
     throw new Error(`The game has no class ${player.classId}`);
   }
   return definition.attack;
+}
+
+// A pick carries the beats of the held bar the music says the game plays again: the sim takes them
+// from the pick that ends the choice. Asked only when a card is picked.
+function withReplay(
+  commands: PlayerCommand[],
+  replayBeats: (() => ReplayBeats) | undefined,
+): PlayerCommand[] {
+  const picks = commands.some(({ actions }) =>
+    actions.some(({ type }) => type === 'chooseUpgrade'),
+  );
+  const beats = picks ? (replayBeats?.() ?? 0) : 0;
+  if (beats === 0) {
+    return commands;
+  }
+  return commands.map((command) => ({
+    ...command,
+    actions: command.actions.map((action) =>
+      action.type === 'chooseUpgrade' ? { ...action, replayBeats: beats } : action,
+    ),
+  }));
 }

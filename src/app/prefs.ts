@@ -1,7 +1,13 @@
 import type { GameContent } from '../data/types';
 import { DEFAULT_KEY_PROFILE, type KeyProfile, parseKeyProfile } from '../input/profile';
 import { seatName } from '../ui/lobby-model';
-import { VOLUME_STEPS } from '../ui/volume';
+import {
+  FULL_MIX,
+  type SoundBus,
+  type SoundLevel,
+  type SoundMix,
+  VOLUME_STEPS,
+} from '../ui/volume';
 import { readItem, writeItem } from './storage';
 
 export interface Prefs {
@@ -9,6 +15,7 @@ export interface Prefs {
   muted: boolean;
   // From 1 to `VOLUME_STEPS`.
   volume: number;
+  mix: SoundMix;
   hitSound: boolean;
   autoFire: boolean;
   autoAim: boolean;
@@ -25,7 +32,9 @@ export interface Prefs {
 
 const DEFAULT_CLASS_ID = 'mage';
 
-const KEYS: Readonly<Record<keyof Prefs, string>> = {
+export type StoredPref = Exclude<keyof Prefs, 'mix'>;
+
+const KEYS: Readonly<Record<StoredPref, string>> = {
   calmMode: 'ozoboom.calmMode',
   muted: 'ozoboom.muted',
   volume: 'ozoboom.volume',
@@ -47,6 +56,10 @@ export function loadPrefs(storage: () => Storage | null, defaults: Prefs): Prefs
     calmMode: readFlag(storage, KEYS.calmMode) ?? defaults.calmMode,
     muted: readFlag(storage, KEYS.muted) ?? defaults.muted,
     volume: readVolume(storage, KEYS.volume) ?? defaults.volume,
+    mix: {
+      music: readLevel(storage, 'music', defaults.mix.music),
+      effects: readLevel(storage, 'effects', defaults.mix.effects),
+    },
     hitSound: readFlag(storage, KEYS.hitSound) ?? defaults.hitSound,
     autoFire: readFlag(storage, KEYS.autoFire) ?? defaults.autoFire,
     autoAim: readFlag(storage, KEYS.autoAim) ?? defaults.autoAim,
@@ -71,6 +84,7 @@ export function loadPlayerPrefs(
     calmMode,
     muted: false,
     volume: VOLUME_STEPS,
+    mix: FULL_MIX,
     hitSound: false,
     autoFire: true,
     autoAim: true,
@@ -91,7 +105,7 @@ export function loadPlayerPrefs(
   return prefs;
 }
 
-export function savePref<K extends keyof Prefs>(
+export function savePref<K extends StoredPref>(
   storage: () => Storage | null,
   key: K,
   value: Prefs[K],
@@ -99,7 +113,25 @@ export function savePref<K extends keyof Prefs>(
   writeItem(storage, KEYS[key], stored(value));
 }
 
-function stored(value: Prefs[keyof Prefs]): string {
+export function saveLevel(storage: () => Storage | null, bus: SoundBus, level: SoundLevel): void {
+  const keys = levelKeys(bus);
+  writeItem(storage, keys.volume, stored(level.volume));
+  writeItem(storage, keys.muted, stored(level.muted));
+}
+
+function levelKeys(bus: SoundBus): { readonly volume: string; readonly muted: string } {
+  return { volume: `ozoboom.${bus}Volume`, muted: `ozoboom.${bus}Muted` };
+}
+
+function readLevel(storage: () => Storage | null, bus: SoundBus, fallback: SoundLevel): SoundLevel {
+  const keys = levelKeys(bus);
+  return {
+    volume: readVolume(storage, keys.volume) ?? fallback.volume,
+    muted: readFlag(storage, keys.muted) ?? fallback.muted,
+  };
+}
+
+function stored(value: Prefs[StoredPref]): string {
   if (typeof value === 'boolean') {
     return value ? '1' : '0';
   }

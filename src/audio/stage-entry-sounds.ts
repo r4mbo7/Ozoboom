@@ -1,6 +1,11 @@
+import type { MusicTrack } from '../data/types';
 import type { Tempo } from '../shared/tempo';
 import { beatSeconds } from './clock';
+import { levelledFiles, loopGain } from './loop-deck';
+import { decodeSlot, type FetchFile } from './menu-track';
 import { type MusicKey, midiToHz } from './scale';
+import { entrySlotId, musicSlotOf } from './slot-ids';
+import type { LoopFile } from './sound-file';
 import { playNoise, playTone } from './synth';
 
 const ENTRY_BEATS = 8;
@@ -107,4 +112,67 @@ export function playEntrySounds(
       cue(out, at, beat);
     }
   }
+}
+
+export interface EntrySounds {
+  // Settles once every entry file has decoded or failed.
+  readonly loaded: Promise<void>;
+  // The entry of `track` landing at `landsAt` (ADR 0027): its artist's file once decoded, from where
+  // it is at `now` when it starts late; nothing when he silenced it; the synth's sounds otherwise.
+  play(out: AudioNode, landsAt: number, now: number, tempo: Tempo, track: MusicTrack): void;
+}
+
+interface DecodedEntry {
+  readonly buffer: AudioBuffer;
+  readonly gain: number;
+}
+
+// Decodes every track's entry at once, so that the first run already opens on it, each at the gain
+// of its track's files: the artist's balance between the entry and the buildup it lands in.
+export function loadEntrySounds(
+  context: BaseAudioContext,
+  music: Readonly<Record<string, LoopFile>>,
+  silent: readonly string[] = [],
+  fetchFile?: FetchFile,
+): EntrySounds {
+  const decoded = new Map<string, DecodedEntry>();
+  const loads = Object.entries(music).flatMap(([slotId, file]) => {
+    const slot = musicSlotOf(slotId);
+    if (slot?.part !== 'entry') {
+      return [];
+    }
+    const gain = loopGain(levelledFiles(music, slot.trackId));
+    return [
+      decodeSlot(context, file.files, fetchFile).then((buffer) => {
+        if (buffer !== null) {
+          decoded.set(slot.trackId, { buffer, gain });
+        }
+      }),
+    ];
+  });
+  return {
+    loaded: Promise.all(loads).then(() => undefined),
+    play(out, landsAt, now, tempo, track) {
+      if (silent.includes(entrySlotId(track.id))) {
+        return;
+      }
+      const file = decoded.get(track.id);
+      if (file === undefined) {
+        playEntrySounds(out, landsAt, now, tempo, track);
+        return;
+      }
+      const startsAt = landsAt - ENTRY_BEATS * beatSeconds(tempo);
+      const late = Math.max(0, now - startsAt);
+      if (late >= file.buffer.duration) {
+        return;
+      }
+      const source = out.context.createBufferSource();
+      source.buffer = file.buffer;
+      const level = out.context.createGain();
+      level.gain.value = file.gain;
+      source.connect(level);
+      level.connect(out);
+      source.start(startsAt + late, late);
+    },
+  };
 }

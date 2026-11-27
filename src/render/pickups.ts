@@ -119,8 +119,6 @@ export function createPickups(ctx: RenderContext): Family {
       views.end();
       comets.end();
     },
-    destroy(): void {
-      layers.pickups.destroy({ children: true });
-    },
+    destroy: () => undefined,
   };
 }

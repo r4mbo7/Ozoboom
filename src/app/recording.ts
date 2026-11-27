@@ -1,7 +1,7 @@
 import type { CommandSource } from '../net/types';
 import { readSlot } from '../net/wire';
 import { finite, flag, integer, list, oneOf, record, text } from '../shared/readers';
-import { EMOTES, type PlayerAction, type PlayerCommand } from '../sim/commands';
+import { EMOTES, REPLAY_BEATS, type PlayerAction, type PlayerCommand } from '../sim/commands';
 import type { PlayerSlot } from '../sim/initial-state';
 import { hashState } from '../sim/replay';
 import { PLAYER_IDS, type SimState } from '../sim/state';
@@ -157,7 +157,13 @@ function readAction(value: unknown): PlayerAction {
   const action = record(value);
   switch (action.type) {
     case 'chooseUpgrade':
-      return { type: 'chooseUpgrade', upgradeId: text(action.upgradeId) };
+      return {
+        type: 'chooseUpgrade',
+        upgradeId: text(action.upgradeId),
+        ...(action.replayBeats === undefined
+          ? {}
+          : { replayBeats: oneOf(action.replayBeats, REPLAY_BEATS) }),
+      };
     case 'emote':
       return { type: 'emote', emote: oneOf(action.emote, EMOTES) };
     case 'moveTrap':

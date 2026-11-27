@@ -274,8 +274,6 @@ export function createTraps(ctx: RenderContext): TrapsFamily {
       drawFading(frame);
       views.end();
     },
-    destroy(): void {
-      layers.traps.destroy({ children: true });
-    },
+    destroy: () => undefined,
   };
 }

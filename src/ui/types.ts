@@ -4,6 +4,7 @@ import type { MenuHeard } from '../shared/menu-score';
 import type { DeviceId, InputDevice, InputSnapshot } from '../input/intents';
 import type { EntityId, PlayerId, SimState, Vec2 } from '../sim/state';
 import type { TutorialStep } from './tutorial';
+import type { SoundBus, SoundLevel, SoundMix } from './volume';
 
 export interface LocalPlayer {
   playerId: PlayerId;
@@ -57,6 +58,8 @@ export interface StagePickerModel {
   endless: boolean;
   // The whole festival, from the stage picked.
   festival?: boolean;
+  // Already seated, back from the characters: the button says "characters" from two on.
+  players?: number;
 }
 
 // A player of this screen, who picks with their own device.
@@ -189,6 +192,7 @@ export interface UiCallbacks {
   onToggleMute(muted: boolean): void;
   // From 1 to `VOLUME_STEPS`.
   onSetVolume(volume: number): void;
+  onSetMix(bus: SoundBus, level: SoundLevel): void;
   onToggleHitSound(enabled: boolean): void;
   onToggleAutoFire(enabled: boolean): void;
   onToggleAutoAim(enabled: boolean): void;
@@ -236,6 +240,7 @@ export interface Ui {
     calmMode: boolean;
     muted: boolean;
     volume: number;
+    mix: SoundMix;
     hitSound: boolean;
     autoFire: boolean;
     autoAim: boolean;

@@ -27,6 +27,10 @@ export const hitNameOf = (slotId: string): HitName | undefined =>
 export const stemSlotId = (trackId: string, speakerId: string): string =>
   `stem/${trackId}/${speakerId}`;
 
+export const entrySlotId = (trackId: string): string => `entry/${trackId}`;
+
+export const heartbeatSlotId = (trackId: string): string => `heartbeat/${trackId}`;
+
 // The tier's slot, counted from 1 (`tierIndex` is `SetProgress.tier`, from 0), then the track's.
 export function momentSlotIds(
   part: 'loop' | 'opening',
@@ -37,7 +41,7 @@ export function momentSlotIds(
   return [`${part}/${trackId}/${String(tierIndex + 1)}/${moment}`, `${part}/${trackId}/${moment}`];
 }
 
-const MUSIC_PARTS = ['loop', 'opening', 'stem'] as const;
+const MUSIC_PARTS = ['loop', 'opening', 'stem', 'entry', 'heartbeat'] as const;
 
 // The track a music slot belongs to, and which part of it; null for a sample slot.
 export function musicSlotOf(

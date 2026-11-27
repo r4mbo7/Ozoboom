@@ -129,6 +129,8 @@ function carry(state: SimState, player: PlayerState, spot: Vec2): void {
     shift(slot.trail, 2, dx, dy);
     shift(slot.dashTrail, 3, dx, dy);
   }
+  // The trail a brood walks: a jump shorter than its reset would have it follow the set left behind.
+  shift(player.steps, 2, dx, dy);
 }
 
 function shift(points: number[] | undefined, stride: number, dx: number, dy: number): void {

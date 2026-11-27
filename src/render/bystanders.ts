@@ -218,7 +218,6 @@ export function createBystanders(ctx: RenderContext): Family {
     reset,
     destroy(): void {
       reset();
-      layers.bystanders.destroy({ children: true });
     },
   };
 }

@@ -1,6 +1,6 @@
 import { t } from '../shared/i18n';
 import { el, icon } from './dom';
-import { KEYBOARD, SPEECH } from './icons';
+import { KEYBOARD, SPEAKER, SPEECH } from './icons';
 
 export function createActionButton(
   label: string,
@@ -20,6 +20,10 @@ export function createControlsButton(): HTMLButtonElement {
   const button = createActionButton(t('Controls'), t('Choose your keys and buttons'), KEYBOARD);
   button.classList.add('ui-action--keys');
   return button;
+}
+
+export function createSoundMixButton(): HTMLButtonElement {
+  return createActionButton(t('Sound mix'), t('Music and effects apart'), SPEAKER);
 }
 
 export function createFeedbackButton(): HTMLButtonElement {

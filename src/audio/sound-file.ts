@@ -31,12 +31,32 @@ export interface TrackKey {
   readonly scale: ScaleName;
 }
 
-// By slot id: a sample slot holds its files, one per note, a music slot one; by track id, the keys the
-// artists set. All absent in the demo.
+// A point of a danger curve: a filter's cutoff at a share of the stage's volume, in percent.
+export interface DangerPoint {
+  readonly percent: number;
+  readonly hz: number;
+}
+
+// A filter of the danger curve, closing from `from` to `to` as the stage's volume falls.
+export interface DangerFilter {
+  readonly from: DangerPoint;
+  readonly to: DangerPoint;
+}
+
+// How a track's music thins as its stage nears silence, set with `pnpm sounds danger` (ADR 0029):
+// a high-pass that takes its bass, then a low-pass that closes it; the heartbeat goes around both.
+export interface DangerCurve {
+  readonly highPass: DangerFilter;
+  readonly lowPass: DangerFilter;
+}
+
+// By slot id: a sample slot holds its files, one per note, a music slot one; by track id, the keys
+// and the danger curves the artists set. All absent in the demo.
 export interface SoundFiles {
   readonly samples?: Readonly<Record<string, readonly SampleFile[]>>;
   readonly music?: Readonly<Record<string, LoopFile>>;
   // The hit slots the artist silenced (ADR 0027): they play nothing.
   readonly silent?: readonly string[];
   readonly keys?: Readonly<Record<string, TrackKey>>;
+  readonly dangers?: Readonly<Record<string, DangerCurve>>;
 }

@@ -244,8 +244,6 @@ export function createCore(ctx: RenderContext): CoreFamily {
     },
     destroy(): void {
       lookView?.destroy();
-      layers.core.destroy({ children: true });
-      layers.coreLabel.destroy({ children: true });
     },
   };
 }

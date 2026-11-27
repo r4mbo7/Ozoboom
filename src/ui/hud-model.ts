@@ -11,7 +11,7 @@ import { t, tn } from '../shared/i18n';
 import { DANGER_RATIO, dangerDepth } from '../shared/low-life';
 import { type PaletteToken, isClassToken } from '../shared/palette';
 import { TICK_RATE_HZ, VIBE_STREAK_BEATS } from '../shared/tempo';
-import { POTION_BOOST, potionShielded } from '../sim/potion-shield';
+import { isPotionBoost } from '../sim/potion-shield';
 import { setTempo, ticksToDrop } from '../sim/lineup';
 import type { PlayerState, SimState, TrapState } from '../sim/state';
 import { gaugeValue } from '../sim/gauges';
@@ -211,18 +211,12 @@ export interface PotionReading {
 }
 
 export function potionReading(
-  player: Pick<PlayerState, 'boosts' | 'suppressedTicks' | 'downed'>,
+  player: Pick<PlayerState, 'boosts' | 'downed'>,
   set: SetDefinition,
   ticksPerBar: number,
 ): PotionReading | null {
-  const boost = player.boosts?.find((entry) => entry.id === POTION_BOOST);
-  if (
-    player.downed ||
-    boost === undefined ||
-    boost.ticksLeft <= 0 ||
-    set.potion === undefined ||
-    !potionShielded(player)
-  ) {
+  const boost = player.boosts?.find(isPotionBoost);
+  if (player.downed || boost === undefined || boost.ticksLeft <= 0 || set.potion === undefined) {
     return null;
   }
   return {

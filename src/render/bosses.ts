@@ -1,5 +1,5 @@
 import { Container, type Sprite, type Texture } from 'pixi.js';
-import { ticksToDrop } from '../sim/lineup';
+import { segmentMusicTicks, ticksToDrop } from '../sim/lineup';
 import type { EnemyState, EntityId, SimEvent, SimState } from '../sim/state';
 import {
   createBossDecor,
@@ -247,7 +247,7 @@ export function createBossStage(ctx: RenderContext): BossStage {
         prepareOne();
       }
       const intoDrop =
-        state.set.segment === 'drop' ? state.tick - state.set.segmentStartTick : null;
+        state.set.segment === 'drop' ? segmentMusicTicks(state.set, state.tick) : null;
       const shade = breakDim(ticksToDrop(frame.set, state), intoDrop, frame.tempo, frame.calm);
       dim(shade, state.arena);
       spotlight.update(state, frame);

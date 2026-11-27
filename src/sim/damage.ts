@@ -19,6 +19,10 @@ export function damageCore(state: SimState, amount: number): void {
   state.events.push({ type: 'coreHit', damage: amount });
 }
 
+export function coreRoom({ core }: SimState): number {
+  return Math.max(0, (core.ceiling ?? core.maxHp) - core.hp);
+}
+
 export function playerById(state: SimState, id: PlayerId): PlayerState | undefined {
   for (const player of state.players) {
     if (player.id === id) {

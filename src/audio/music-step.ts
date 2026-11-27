@@ -1,26 +1,36 @@
 import type { MusicLayer, MusicPart, MusicTrack } from '../data/types';
 import { barOfTick, isBarTick, ticksIntoBar, type Tempo } from '../shared/tempo';
 import type { SetProgress, SetSegment, SimState } from '../sim/state';
-import { sixteenthSeconds, sixteenthTicks, tickToTime, type Anchor } from './clock';
+import { TICK_SECONDS, sixteenthSeconds, sixteenthTicks, tickToTime, type Anchor } from './clock';
 import { DRUM_VOICES } from './drums';
 import { setEcho, type Bus } from './music-bus';
 import { clap, crash, hat, kick, pad, riser, snare, type MusicHits } from './music-hits';
 import {
   NO_CUE,
   breakCueAt,
+  heartbeatLoopFrom,
+  heartbeatLoopTicks,
   layersFor,
   padCutoff,
   partHeard,
   phraseAt,
+  isPulseEcho,
   pulseGain,
   rollProgress,
   segmentAt,
+  segmentMusicStart,
   type BreakCue,
   type Layers,
 } from './music-score';
 import { chordRootOfBar, keyHz, type MusicKey } from './scale';
 import { SPEAKER_VOICES, presenceAt, type SpeakerLayerId } from './speaker-layers';
 import { MUSIC_VOICES } from './voices';
+
+// A track's own heartbeat (ADR 0027): two bars on the bar grid, in place of the shared hit.
+export interface HeartbeatLoop {
+  readonly buffer: AudioBuffer;
+  readonly gain: number;
+}
 
 export interface Groove {
   track: MusicTrack;
@@ -29,6 +39,9 @@ export interface Groove {
   dropTick: number | null;
   pulsing: boolean;
   choking: boolean;
+  // The bar line the track's heartbeat loop entered on, null while it is silent.
+  heartbeatFrom: number | null;
+  heartbeat: () => HeartbeatLoop | 'silent' | null;
   entries: ReadonlyMap<SpeakerLayerId, number>;
   plugging: ReadonlyMap<SpeakerLayerId, number>;
   onKick: ((tick: number, time: number) => void) | undefined;
@@ -58,6 +71,9 @@ interface Beat {
 type Playing = Pick<SimState, 'set' | 'tick'>;
 
 export const CUT_SECONDS = 0.02;
+// Each slice of a heartbeat loop fades in and out over it, overlapping the next by as much: two
+// slices of the same file add up to it.
+const SLICE_FADE_SECONDS = 0.003;
 const PAD_RELEASE = 0.6;
 const PAD_CUT_RELEASE = 0.05;
 const CRASH_EVERY_BARS = 8;
@@ -115,7 +131,7 @@ export function sustain(groove: Groove, target: Bus, state: Playing, from: numbe
     );
   }
   if (dropTick !== null) {
-    const start = tickToTime(clock, set.segmentStartTick);
+    const start = tickToTime(clock, segmentMusicStart(set));
     const cut = cutTime(groove, clock);
     if (cut - from > sixteenthSeconds(tempo)) {
       riser(target.input, from, cut, (from - start) / (cut - start), track);
@@ -147,14 +163,74 @@ export function playStep(
     return;
   }
   const beat = beatOf(groove, target, at, step, current, state, clock);
-  const thump = pulseGain(beat.sixteenth, groove.pulsing, groove.choking);
-  if (thump > 0) {
-    groove.hits.play('heartbeat', beat.input, at, track, thump);
-  }
+  playHeartbeat(groove, target, { at, timeStep, step, sixteenth: beat.sixteenth }, clock);
   if (!groove.recorded(current)) {
     playLayers(groove, cue, beat, state.set, clock);
   }
   playSpeakers(groove, beat, timeStep);
+}
+
+function playHeartbeat(
+  groove: Groove,
+  target: Bus,
+  {
+    at,
+    timeStep,
+    step,
+    sixteenth,
+  }: { at: number; timeStep: number; step: number; sixteenth: number },
+  clock: Anchor,
+) {
+  if (!groove.pulsing && groove.heartbeatFrom === null) {
+    return;
+  }
+  const loop = groove.heartbeat();
+  if (loop === 'silent' || loop === null) {
+    groove.heartbeatFrom = null;
+  }
+  if (loop === 'silent') {
+    return;
+  }
+  if (loop === null) {
+    const thump = pulseGain(sixteenth, groove.pulsing, groove.choking);
+    if (thump > 0) {
+      groove.hits.play('heartbeat', target.whole, at, groove.track, thump, isPulseEcho(sixteenth));
+    }
+    return;
+  }
+  const { tempo } = groove;
+  groove.heartbeatFrom = heartbeatLoopFrom(groove.heartbeatFrom, timeStep, groove.pulsing, tempo);
+  if (groove.heartbeatFrom === null) {
+    return;
+  }
+  const late = at - tickToTime(clock, timeStep);
+  const seconds = sixteenthSeconds(tempo) - late;
+  if (seconds <= 0) {
+    return;
+  }
+  const offset = heartbeatLoopTicks(step, groove.heartbeatFrom, tempo) * TICK_SECONDS + late;
+  playSlice(target.whole, loop, at, offset, seconds);
+}
+
+function playSlice(
+  out: AudioNode,
+  { buffer, gain }: HeartbeatLoop,
+  at: number,
+  offset: number,
+  seconds: number,
+) {
+  const context = out.context;
+  const length = seconds + SLICE_FADE_SECONDS;
+  const level = context.createGain();
+  level.gain.setValueAtTime(0, at);
+  level.gain.linearRampToValueAtTime(gain, at + SLICE_FADE_SECONDS);
+  level.gain.setValueAtTime(gain, at + seconds);
+  level.gain.linearRampToValueAtTime(0, at + length);
+  level.connect(out);
+  const source = context.createBufferSource();
+  source.buffer = buffer;
+  source.connect(level);
+  source.start(at, offset, length);
 }
 
 function playLayers(groove: Groove, cue: BreakCue, beat: Beat, set: SetProgress, clock: Anchor) {

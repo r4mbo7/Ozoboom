@@ -39,6 +39,13 @@ export interface DevMoment {
   readonly bossFallsAt: MomentBeat | null;
   // A level's card choice opens on that beat; null waits for a level won in play.
   readonly choiceAt: MomentBeat | null;
+  // `&entry`: the set's start opens on its two bars under the poster, as a run does.
+  readonly entry: boolean;
+  // `&noEnemies`: no bad vibe nor boss comes, and a drop plays on.
+  readonly noEnemies: boolean;
+  // `&stageVolume`: the stage's volume in percent, which it starts at and no repair lifts it above;
+  // null leaves it full.
+  readonly stageVolume: number | null;
 }
 
 const SEGMENTS: readonly SetSegment[] = ['buildup', 'break', 'drop'];
@@ -180,8 +187,37 @@ function momentOptions(params: URLSearchParams, content: GameContent): Omit<DevO
       track: readTrack(params, set),
       bossFallsAt: readMomentBeat(params, 'bossFallsAt', set, tier, segment),
       choiceAt: readMomentBeat(params, 'choiceAt', set, tier, segment),
+      entry: readEntry(params, tier, segment),
+      noEnemies: params.has('noEnemies'),
+      stageVolume: readStageVolume(params),
     },
   };
+}
+
+function readEntry(params: URLSearchParams, tier: number, segment: SetSegment): boolean {
+  if (!params.has('entry')) {
+    return false;
+  }
+  if (tier !== 0 || segment !== 'buildup') {
+    throw new DevUrlError(
+      '&entry opens the set on its entry, which only the buildup of tier 1 has: add &tier=1&segment=buildup',
+    );
+  }
+  return true;
+}
+
+function readStageVolume(params: URLSearchParams): number | null {
+  const asked = params.get('stageVolume');
+  if (asked === null) {
+    return null;
+  }
+  const percent = Number(asked);
+  if (!/^\d+$/.test(asked) || percent < 1 || percent > 100) {
+    throw new DevUrlError(
+      `Unknown stage volume "${asked}" for &stageVolume in ?dev=moment, write a whole percent from 1 to 100`,
+    );
+  }
+  return percent;
 }
 
 // A moment lasts its segment: a buildup its phrases, a break its bars, a drop until its boss is down.
@@ -226,6 +262,9 @@ function readMomentBeat(
   }
   if (name === 'bossFallsAt' && segment !== 'drop') {
     throw new DevUrlError(`&bossFallsAt needs a drop, where the boss is: add &segment=drop`);
+  }
+  if (name === 'bossFallsAt' && params.has('noEnemies')) {
+    throw new DevUrlError(`&bossFallsAt has no boss to fell with &noEnemies: drop one of them`);
   }
   const bars = momentBars(set, tier, segment);
   if (bar > bars) {
@@ -333,6 +372,13 @@ export function momentScene(state: SimState, moment: DevMoment, content: GameCon
   }
   state.bosses = bosses;
   landOn(state, moment.tier, moment.segment);
+  if (moment.stageVolume !== null) {
+    state.core.hp = state.core.ceiling = (state.core.maxHp * moment.stageVolume) / 100;
+  }
+  if (moment.noEnemies) {
+    state.noEnemies = true;
+    return;
+  }
   const bossId = bosses.at(-1);
   if (moment.segment === 'drop' && bossId !== undefined) {
     const boss = { ...lookup(resolved.enemies, bossId, 'enemy'), ...tier.boss };

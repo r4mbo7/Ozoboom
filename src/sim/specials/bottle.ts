@@ -1,3 +1,4 @@
+import { potionShielded } from '../potion-shield';
 import type { PlayerState, ProjectileState, SimState } from '../state';
 import type { SpecialModule } from './types';
 
@@ -11,7 +12,7 @@ export const bottle: SpecialModule = (ctx, enemy, effect) => {
       continue;
     }
     const player = aboutToBeTouched(state, projectile);
-    if (player === undefined) {
+    if (player === undefined || potionShielded(player)) {
       continue;
     }
     const expiresAtTick = state.tick + effect.durationTicks;

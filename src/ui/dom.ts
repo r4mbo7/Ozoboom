@@ -112,6 +112,14 @@ export function setText(node: HTMLElement, text: string): void {
   }
 }
 
+// Text laid in a fallback face wraps otherwise once its own face loads, with no box resized to say so:
+// what measured it lays it again.
+export function onFontsLoaded(lay: () => void): void {
+  if ('fonts' in document) {
+    document.fonts.addEventListener('loadingdone', lay);
+  }
+}
+
 export function setVar(node: HTMLElement, name: string, value: string): void {
   if (node.style.getPropertyValue(name) !== value) {
     node.style.setProperty(name, value);

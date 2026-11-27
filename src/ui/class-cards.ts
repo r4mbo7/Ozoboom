@@ -62,13 +62,14 @@ export function fitCards(count: number, box: CardBox): CardFit {
 
 const FIT_STEP = 8;
 
+// The inset is shared with the row's parent too, where what stands over the cards ends with them.
 function placeCards(row: HTMLElement, width: number, gap: number, fit: CardFit): void {
   setVar(row, '--card-width', `${String(fit.card)}px`);
-  setVar(
-    row,
-    '--cards-inset',
-    `${String(Math.floor((width - fit.columns * fit.card - (fit.columns - 1) * gap) / 2))}px`,
-  );
+  const inset = `${String(Math.floor((width - fit.columns * fit.card - (fit.columns - 1) * gap) / 2))}px`;
+  setVar(row, '--cards-inset', inset);
+  if (row.parentElement !== null) {
+    setVar(row.parentElement, '--cards-edge', inset);
+  }
   fitNames(row, '.ui-classcard__name');
 }
 

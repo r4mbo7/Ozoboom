@@ -5,6 +5,7 @@ import { length, normalize } from '../../shared/vec';
 import { IDLE_INPUT } from '../commands';
 import { gustDrift } from '../gusts';
 import { resolveObstacles } from '../obstacles';
+import { walkSlow } from '../potion-shield';
 import { keepAshore } from '../shore';
 import type { Vec2 } from '../state';
 import { holdsItsPlayer } from '../walls';
@@ -35,7 +36,7 @@ export function playerMovement({ state, content, commands, obstacles, shore }: S
       delete player.dash;
       continue;
     }
-    const { dx, dy } = player.dash ?? walk(input.move, player.speed * (player.slowFactor ?? 1));
+    const { dx, dy } = player.dash ?? walk(input.move, player.speed * walkSlow(player));
     const fromX = player.x;
     const fromY = player.y;
     player.x = clamp(player.x + dx + drift.x * gustMul, player.radius, arena.width - player.radius);

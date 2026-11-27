@@ -1,8 +1,10 @@
 import { TRAP_WEAR } from '../data/traps';
+import { segmentMusicTicks } from '../sim/lineup';
 import { SOIREE_OUVERTURE } from '../data/tracks';
 import type { MusicTrack } from '../data/types';
-import type { SimEvent } from '../sim/state';
+import type { SimEvent, SimState } from '../sim/state';
 import type { Cue } from './types';
+import { keysOf, recordOf } from '../shared/records';
 import { BEATS_PER_BAR, MAIN_TEMPO, type Tempo, barOfTick, ticksIntoBar } from '../shared/tempo';
 import { beatSeconds, timeToTick, type Anchor } from './clock';
 import { chordRootOfBar, effectKey, keyHz, type MusicKey } from './scale';
@@ -11,6 +13,7 @@ import { createVibeArp } from './vibe-arp';
 import {
   FULL_ATTACK_CALLS,
   FULL_BAR_CALLS,
+  FULL_BEAT_LIMITS,
   FULL_EVENT_CALLS,
   FULL_EVENT_VARIANTS,
   FULL_SKILL_CALLS,
@@ -55,15 +58,7 @@ export type SfxName =
   | 'enemyBabble'
   | 'enemyGrowl'
   | 'bossWhistle'
-  | 'bossThunder'
-  | 'bossFeedback'
   | 'bossGust'
-  | 'fireThrown'
-  | 'sporesThrown'
-  | 'fireBurnt'
-  | 'fireSwing'
-  | 'pinceClack'
-  | 'giantWoken'
   | 'vibesStolen'
   | 'bystanderHelped'
   | 'bystanderRewarded'
@@ -85,7 +80,6 @@ export type SfxName =
   | 'volumeUp'
   | 'skillCharge'
   | 'skillHeal'
-  | 'skillGong'
   | 'skillOla'
   | 'taunted'
   | 'playerHealed'
@@ -105,6 +99,19 @@ export interface SfxLimit {
   perFrame: number;
   concurrent: number;
   seconds: number;
+}
+
+// A limit in beats of the set it plays in.
+export type SfxBeatLimit = Omit<SfxLimit, 'seconds'> & { beats: number };
+
+function inBeats<Name extends string>(
+  limits: Readonly<Record<Name, SfxBeatLimit>>,
+  beat: number,
+): Record<Name, SfxLimit> {
+  return recordOf(keysOf(limits), (name) => {
+    const { beats, ...limit } = limits[name];
+    return { ...limit, seconds: beats * beat };
+  });
 }
 
 export interface SfxLimiter {
@@ -285,15 +292,7 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     enemyBabble: { perFrame: 1, concurrent: 2, seconds: 0.15 },
     enemyGrowl: { perFrame: 1, concurrent: 2, seconds: 0.35 },
     bossWhistle: { perFrame: 1, concurrent: 1, seconds: 0.2 },
-    bossThunder: { perFrame: 1, concurrent: 1, seconds: 0.5 },
-    bossFeedback: { perFrame: 1, concurrent: 1, seconds: 0.8 },
     bossGust: { perFrame: 1, concurrent: 1, seconds: 1.2 },
-    fireThrown: { perFrame: 1, concurrent: 2, seconds: beat * BEATS_PER_BAR },
-    sporesThrown: { perFrame: 1, concurrent: 2, seconds: beat },
-    fireBurnt: { perFrame: 1, concurrent: 2, seconds: beat * BEATS_PER_BAR },
-    fireSwing: { perFrame: 1, concurrent: 3, seconds: 0.3 },
-    pinceClack: { perFrame: 1, concurrent: 3, seconds: 0.1 },
-    giantWoken: { perFrame: 1, concurrent: 2, seconds: 1 },
     vibesStolen: { perFrame: 1, concurrent: 2, seconds: 0.25 },
     bystanderHelped: { perFrame: 1, concurrent: 2, seconds: 0.6 },
     bystanderRewarded: {
@@ -328,9 +327,9 @@ export function sfxLimitsFor(tempo: Tempo): Readonly<Record<SfxName, SfxLimit>> 
     volumeUp: { perFrame: 1, concurrent: 1, seconds: 0.6 },
     skillCharge: { perFrame: 1, concurrent: 2, seconds: 0.45 },
     skillHeal: { perFrame: 1, concurrent: 2, seconds: 0.7 },
-    skillGong: { perFrame: 1, concurrent: 2, seconds: 0.6 },
     skillOla: { perFrame: 1, concurrent: 2, seconds: 0.4 },
     ...FULL_SKILL_LIMITS,
+    ...inBeats(FULL_BEAT_LIMITS, beat),
     taunted: { perFrame: 1, concurrent: 2, seconds: 0.5 },
     playerHealed: { perFrame: 1, concurrent: 2, seconds: 0.15 },
     playerDowned: { perFrame: 1, concurrent: 2, seconds: 0.6 },
@@ -655,73 +654,6 @@ function dieThump(out: AudioNode, at: number, key: MusicKey, level: number): voi
     release: 0.08,
   });
 }
-const THROWN_FLIGHT_BEATS = 0.5;
-
-// The short breath of an offering leaving the hands.
-function tossBreath(out: AudioNode, at: number): void {
-  playNoise(out, at, {
-    gain: 0.07,
-    attack: 0.04,
-    hold: 0.03,
-    release: 0.14,
-    filter: { type: 'bandpass', hz: 600, toHz: 1500, glide: 0.12, q: 0.9 },
-  });
-}
-
-const FLARE_RISER_BEATS = 0.5;
-// The flare's open chord, [degree, octave, pan], and the bells that run across with its rays.
-const FLARE_CHORD = [
-  [0, 2, 0],
-  [4, 2, -0.2],
-  [0, 3, 0.2],
-  [4, 3, -0.35],
-  [0, 4, 0.35],
-  [2, 4, 0],
-] as const;
-const FLARE_BELLS = [0, 2, 4, 7, 9, 11] as const;
-
-// Up to half a beat before the 1 that burns an offering: noise and a fifth climbing an octave,
-// swelling like a reversed sound, cut right on the 1.
-function flareRiser(out: AudioNode, from: number, one: number, key: MusicKey): void {
-  const rise = one - from;
-  if (rise < 0.05) {
-    return;
-  }
-  const swell = { attack: rise - 0.015, hold: 0, release: 0.025 };
-  playNoise(out, from, {
-    gain: 0.16,
-    ...swell,
-    filter: { type: 'bandpass', hz: 700, toHz: 5200, glide: rise, q: 1.4 },
-  });
-  for (const [degree, gain, pan] of [
-    [0, 0.09, -0.3],
-    [4, 0.06, 0.3],
-  ] as const) {
-    playTone(out, from, {
-      wave: 'triangle',
-      hz: keyHz(key, degree, 3),
-      toHz: keyHz(key, degree, 4),
-      glide: rise,
-      gain,
-      ...swell,
-      pan,
-    });
-  }
-}
-
-// One crack of a fire, scattered a little in time and across the stereo.
-function fireSpark(out: AudioNode, at: number, index: number, gain: number): void {
-  const scatter = Math.abs(Math.sin((at + index) * 78.233) * 43_758.545) % 1;
-  playNoise(out, at + scatter * 0.05, {
-    gain,
-    attack: 0.001,
-    hold: 0.004,
-    release: 0.03,
-    pan: scatter * 1.2 - 0.6,
-    filter: { type: 'highpass', hz: 3500, q: 0.7 },
-  });
-}
-
 const DEALT_DEGREES = [0, 2, 4, 5];
 const FANS_DEGREES = [0, 2, 4, 2, 5, 4];
 
@@ -1742,221 +1674,6 @@ export const VOICES: Readonly<Record<SfxName, Voice>> = {
       filter: { type: 'bandpass', hz, q: 4 },
     });
   },
-  bossFeedback: (out, at, _variant, key) => {
-    const hz = keyHz(key, 4, 3);
-    playTone(out, at, {
-      wave: 'sine',
-      hz,
-      toHz: hz * 1.03,
-      glide: 0.6,
-      gain: 0.03,
-      attack: 0.25,
-      hold: 0.25,
-      release: 0.35,
-      vibrato: { hz: 5, cents: 12, delay: 0.25 },
-    });
-    playNoise(out, at, {
-      gain: 0.012,
-      attack: 0.2,
-      hold: 0.25,
-      release: 0.3,
-      filter: { type: 'bandpass', hz: hz * 2, q: 8 },
-    });
-  },
-  // Wood thrown in the fire, `beatsToOne` before the 1 that burns it: a short breath as it leaves,
-  // a matt knock of wood on the embers half a beat later, then a crackle growing until the 1.
-  fireThrown: (out, at, beatsToOne, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
-    tossBreath(out, at);
-    const land = at + THROWN_FLIGHT_BEATS * beat;
-    playTone(out, land, {
-      wave: 'triangle',
-      hz: keyHz(key, 0, 2) * 1.5,
-      toHz: keyHz(key, 0, 2),
-      glide: 0.04,
-      gain: 0.16,
-      attack: 0.001,
-      hold: 0.01,
-      release: 0.09,
-      filter: { type: 'lowpass', hz: 900 },
-    });
-    playNoise(out, land, {
-      gain: 0.1,
-      attack: 0.001,
-      hold: 0.006,
-      release: 0.05,
-      filter: { type: 'bandpass', hz: 1100, q: 2.5 },
-    });
-    // A 1 that catches it in flight burns it as it lands: no crackle, and the rise is cut on that 1.
-    const one = at + beatsToOne * beat;
-    const sparks = Math.min(40, Math.floor((one - land) / 0.07));
-    for (let spark = 1; spark < sparks; spark++) {
-      fireSpark(out, land + spark * 0.07, spark, 0.012 + 0.05 * (spark / sparks));
-    }
-    if (beatsToOne > 0) {
-      flareRiser(out, Math.max(at, one - FLARE_RISER_BEATS * beat), one, key);
-    }
-  },
-  // A ball of spores thrown at a giant: the same breath, and a soft puff as it lands.
-  sporesThrown: (out, at, _variant, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
-    tossBreath(out, at);
-    const land = at + THROWN_FLIGHT_BEATS * beat;
-    playNoise(out, land, {
-      gain: 0.08,
-      attack: 0.01,
-      hold: 0.02,
-      release: 0.18,
-      filter: { type: 'lowpass', hz: 700, q: 0.7 },
-    });
-    playTone(out, land, {
-      wave: 'sine',
-      hz: keyHz(key, 4, 5),
-      gain: 0.03,
-      attack: 0.005,
-      hold: 0.02,
-      release: 0.4,
-    });
-  },
-  // The light switched on: a sub boom, a bright open chord in the key whose filter opens in a quarter
-  // beat as the cut flames stretch, golden bells running across with the rays, gone in two beats.
-  fireBurnt: (out, at, _variant, key, _vibes, _progress, beat = beatSeconds(MAIN_TEMPO)) => {
-    const quarter = beat / 4;
-    const fade = 2.6 * beat;
-    playTone(out, at, {
-      wave: 'sine',
-      hz: keyHz(key, 0, 2),
-      toHz: keyHz(key, 0, 0),
-      glide: 0.16,
-      gain: 0.38,
-      attack: 0.003,
-      hold: 0.08,
-      release: 0.85,
-    });
-    for (const [degree, octave, pan] of FLARE_CHORD) {
-      for (const detune of [-11, 11]) {
-        playTone(out, at, {
-          wave: 'sawtooth',
-          hz: keyHz(key, degree, octave),
-          detune,
-          gain: 0.042,
-          attack: 0.006,
-          hold: 0.18,
-          release: fade - 0.18,
-          pan: pan + detune / 60,
-          filter: { type: 'lowpass', hz: 420, toHz: 5200, glide: quarter, q: 1.3 },
-        });
-      }
-      playTone(out, at, {
-        wave: 'triangle',
-        hz: keyHz(key, degree, octave),
-        gain: 0.05,
-        attack: 0.006,
-        hold: 0.3,
-        release: fade + beat,
-        pan,
-      });
-    }
-    playNoise(out, at, {
-      gain: 0.06,
-      attack: 0.004,
-      hold: 0.05,
-      release: 0.9,
-      filter: { type: 'highpass', hz: 6500, q: 0.7 },
-    });
-    FLARE_BELLS.forEach((degree, index) => {
-      const when = at + quarter * 0.5 + index * quarter * 0.75;
-      const pan = -0.75 + (1.5 * index) / (FLARE_BELLS.length - 1);
-      playTone(out, when, {
-        wave: 'sine',
-        hz: keyHz(key, degree, 5),
-        gain: 0.1 * (1 - index / 9),
-        attack: 0.002,
-        hold: 0.02,
-        release: 0.9,
-        pan,
-      });
-      playTone(out, when, {
-        wave: 'sine',
-        hz: keyHz(key, degree + 7, 5),
-        gain: 0.03,
-        attack: 0.002,
-        hold: 0.01,
-        release: 0.3,
-        pan,
-      });
-    });
-  },
-  // A torch swung through the air: a warm whoosh that opens and closes, and the flame's crackle.
-  fireSwing: (out, at) => {
-    playNoise(out, at, {
-      gain: 0.26,
-      attack: 0.05,
-      hold: 0.04,
-      release: 0.18,
-      filter: { type: 'bandpass', hz: 220, toHz: 900, glide: 0.12, q: 0.8 },
-    });
-    playNoise(out, at + 0.03, {
-      gain: 0.05,
-      attack: 0.02,
-      hold: 0.05,
-      release: 0.12,
-      filter: { type: 'highpass', hz: 3200, q: 0.7 },
-    });
-  },
-  // A litter picker's plastic jaws snapping shut: a dry click on a short knock of the scale.
-  pinceClack: (out, at, _variant, key) => {
-    playNoise(out, at, {
-      gain: 0.16,
-      attack: 0.001,
-      hold: 0.004,
-      release: 0.03,
-      filter: { type: 'bandpass', hz: 2600, q: 3 },
-    });
-    playTone(out, at, {
-      wave: 'triangle',
-      hz: keyHz(key, 4, 5) * 1.4,
-      toHz: keyHz(key, 4, 5),
-      glide: 0.015,
-      gain: 0.08,
-      attack: 0.001,
-      hold: 0.005,
-      release: 0.06,
-    });
-  },
-  giantWoken: (out, at, _variant, key) => {
-    const hz = keyHz(key, 0, 3);
-    for (const [ratio, gain, release, pan] of [
-      [1, 0.09, 4, -0.2],
-      [1.004, 0.07, 4, 0.2],
-      [2.76, 0.04, 2.5, -0.35],
-      [5.4, 0.02, 1.4, 0.35],
-    ] as const) {
-      playTone(out, at, {
-        wave: 'sine',
-        hz: hz * ratio,
-        gain,
-        attack: 0.008,
-        hold: 0.05,
-        release,
-        pan,
-      });
-    }
-    for (const [degree, pan] of [
-      [0, -0.3],
-      [2, 0],
-      [4, 0.3],
-    ] as const) {
-      playTone(out, at + 0.05, {
-        wave: 'triangle',
-        hz: keyHz(key, degree, 4),
-        gain: 0.025,
-        attack: 0.5,
-        hold: 0.6,
-        release: 1.2,
-        pan,
-        filter: { type: 'lowpass', hz: 1800, q: 0.7 },
-      });
-    }
-  },
   bossGust: (out, at) => {
     playNoise(out, at, {
       gain: 0.06,
@@ -1971,27 +1688,6 @@ export const VOICES: Readonly<Record<SfxName, Voice>> = {
       hold: 0.2,
       release: 0.5,
       filter: { type: 'lowpass', hz: 300, toHz: 180, glide: 0.8, q: 0.8 },
-    });
-  },
-  bossThunder: (out, at, _variant, key) => {
-    const hz = keyHz(key, 0, 1);
-    playNoise(out, at, {
-      gain: 0.08,
-      attack: 0.12,
-      hold: 0.3,
-      release: 0.7,
-      filter: { type: 'lowpass', hz: 220, toHz: 90, glide: 0.9, q: 1.4 },
-    });
-    playTone(out, at + 0.05, {
-      wave: 'triangle',
-      hz,
-      toHz: hz * 0.75,
-      glide: 0.8,
-      gain: 0.05,
-      attack: 0.08,
-      hold: 0.25,
-      release: 0.6,
-      filter: { type: 'lowpass', hz: 200 },
     });
   },
   vibesStolen: (out, at, _variant, key) => {
@@ -2165,56 +1861,6 @@ export const VOICES: Readonly<Record<SfxName, Voice>> = {
       release: 0.18,
     });
   },
-  skillGong: (out, at, _variant, key) => {
-    const root = keyHz(key, 0, 2);
-    playNoise(out, at, {
-      gain: 0.39,
-      attack: 0.002,
-      hold: 0,
-      release: 0.06,
-      filter: { type: 'lowpass', hz: 900 },
-    });
-    for (const [ratio, gain, decay, pan, detune] of [
-      [0.5, 0.284, 0.5, 0, 0],
-      [1, 0.302, 0.6, -0.15, -5],
-      [1, 0.302, 0.6, 0.15, 5],
-      [1.5, 0.355, 0.46, -0.25, 0],
-      [2.13, 0.32, 0.38, 0.25, 0],
-      [2.79, 0.249, 0.32, -0.25, 0],
-      [3.61, 0.178, 0.26, 0.25, 0],
-      [4.53, 0.124, 0.2, -0.25, 0],
-      [5.92, 0.078, 0.15, 0.25, 0],
-    ] as const) {
-      playTone(out, at, {
-        wave: 'sine',
-        hz: root * ratio * (ratio > 1 ? 0.99 : 0.985),
-        toHz: root * ratio,
-        glide: 0.2,
-        gain,
-        attack: 0.004,
-        hold: 0,
-        release: decay,
-        pan,
-        detune,
-      });
-    }
-    for (const [ratio, pan] of [
-      [24, -0.4],
-      [24.1, 0.4],
-      [32, 0.3],
-      [32.13, -0.3],
-    ] as const) {
-      playTone(out, at + 0.08, {
-        wave: 'sine',
-        hz: root * ratio,
-        gain: 0.064,
-        attack: 0.2,
-        hold: 0,
-        release: 0.32,
-        pan,
-      });
-    }
-  },
   taunted: (out, at, _variant, key) => {
     playTone(out, at, {
       wave: 'sawtooth',
@@ -2338,6 +1984,18 @@ export const VOICES: Readonly<Record<SfxName, Voice>> = {
   },
 };
 
+export type SfxMoment = Pick<SimState, 'tick' | 'set'>;
+
+// No kick covers a break, nor the drop's 1, where the artist's kick lands: these sounds keep out.
+const HELD_FOR_THE_DROP: ReadonlySet<SfxName> = new Set(['trapSub']);
+
+function heldForTheDrop({ tick, set }: SfxMoment, tempo: Tempo): boolean {
+  return (
+    set.segment === 'break' ||
+    (set.segment === 'drop' && segmentMusicTicks(set, tick) < tempo.ticksPerBeat)
+  );
+}
+
 export interface Sfx {
   play(
     events: readonly SimEvent[],
@@ -2345,8 +2003,8 @@ export interface Sfx {
     players?: readonly SfxPlayer[],
     core?: SfxCore,
     enemies?: readonly SfxEnemy[],
-    // The sim's tick of these events: the sfx clock drifts from it.
-    tick?: number,
+    // The sim's tick and moment of these events: the sfx clock drifts from it.
+    sim?: SfxMoment,
   ): void;
   cue(cue: Cue, now: number, variant?: number): void;
   beginFrame(): void;
@@ -2437,11 +2095,19 @@ export function createSfx(
     return variantOf(event, core, enemies);
   };
   return {
-    play(events, now, players = [], core = FULL_CORE, enemies = [], tick) {
+    play(events, now, players = [], core = FULL_CORE, enemies = [], sim) {
       let vibes = 0;
       for (const event of events) {
         const name = sfxOf(event, trapEffectOf, lookups, players);
         if (name === 'enemyHit' && !hitSound) {
+          continue;
+        }
+        if (
+          name !== null &&
+          HELD_FOR_THE_DROP.has(name) &&
+          sim !== undefined &&
+          heldForTheDrop(sim, tempo)
+        ) {
           continue;
         }
         if (event.type === 'pickupCollected') {
@@ -2453,7 +2119,7 @@ export function createSfx(
           name === 'playerFired' ? firedAttackKind(event, lookups, players) : undefined;
         const voice = name === null ? null : acquire(name, now, attackKind);
         if (name !== null && voice !== null) {
-          const variant = variantAt(name, event, events, now, core, enemies, tick);
+          const variant = variantAt(name, event, events, now, core, enemies, sim?.tick);
           voice(out, now, variant, key, undefined, undefined, beatSeconds(tempo));
         } else if (event.type === 'bar') {
           for (const enemy of enemies) {

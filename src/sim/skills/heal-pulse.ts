@@ -1,3 +1,4 @@
+import { coreRoom } from '../damage';
 import { healPlayer, soothe, touches } from '../effects';
 import type { SkillModule, SkillOf } from './types';
 
@@ -12,7 +13,7 @@ export const healPulse: SkillModule<SkillOf<'healPulse'>> = {
     const { core } = state;
     const cap = set.coreRepairPerBar;
     const room = cap === undefined ? Infinity : cap - (core.repairedThisBar ?? 0);
-    const repaired = Math.min(core.maxHp - core.hp, effect.coreRepair * power, room);
+    const repaired = Math.min(coreRoom(state), effect.coreRepair * power, room);
     if (touches(core, player, effect.radius) && repaired > 0) {
       core.hp += repaired;
       if (cap !== undefined) {

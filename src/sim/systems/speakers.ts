@@ -1,4 +1,5 @@
 import type { TrapCadence, TrapEffect } from '../../data/types';
+import { coreRoom } from '../damage';
 import { touches } from '../effects';
 import type { SimState, SpeakerState } from '../state';
 import { dropSpeakerDie } from './dice';
@@ -66,7 +67,7 @@ function repairCore(state: SimState, share: number | undefined, speakerId: strin
     return;
   }
   const { core } = state;
-  const repaired = Math.min(core.maxHp - core.hp, share * core.maxHp);
+  const repaired = Math.min(coreRoom(state), share * core.maxHp);
   core.hp += repaired;
   state.events.push({ type: 'coreRepaired', amount: repaired, speakerId });
 }
