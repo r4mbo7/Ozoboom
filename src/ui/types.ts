@@ -233,6 +233,8 @@ export interface UiCallbacks {
   // The Classement screen opened: the app reads the boards, then `setLeaderboard`. Absent, the
   // title has no Classement entry: a build without `VITE_LEADERBOARD_URL` reads no board.
   onLeaderboardOpened?(): void;
+  // Closes the game. Absent, the title has no Quit entry: a browser closes its own tab.
+  onQuitApp?(): void;
 }
 
 export interface Ui {

@@ -51,7 +51,7 @@ export function createKit(ctx: RenderContext): WeaponKit {
   const { textures: t, layers } = ctx;
   const styles = new Map<string, WeaponStyle>();
   return {
-    transients: new Transients(layers.fx, 64, t.weapons.hoopRing),
+    transients: new Transients(layers.fx, 64, t.ring),
     ribbons: new Ribbons(layers.fx, 6, t.pip),
     style(weaponId) {
       let found = styles.get(weaponId);

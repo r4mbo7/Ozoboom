@@ -26,7 +26,6 @@ export interface WeaponTextures {
   readonly frisbeeStreak: Shape;
   readonly swing: Shape;
   readonly swingFull: Shape;
-  readonly hoopRing: Shape;
   readonly dash: Shape;
   // The ribbon's mark: every set holds every n-th dash of one ring, each set tinted its colour.
   readonly markDashes: readonly Shape[];
@@ -231,12 +230,6 @@ export function createWeaponTextures(): WeaponTextures {
     }),
     swing: swing(false),
     swingFull: swing(true),
-    hoopRing: paint(160, 160, 60, (ctx) => {
-      glow(ctx, WHITE, 8);
-      ctx.strokeStyle = WHITE;
-      circle(ctx, 60);
-      doubleStroke(ctx, 7, 2.8);
-    }),
     dash: paint(128, 128, 54, (ctx) => {
       ctx.strokeStyle = WHITE;
       ctx.lineCap = 'round';
@@ -290,6 +283,6 @@ export function destroyWeaponTextures(textures: WeaponTextures): void {
 }
 
 function singles(textures: WeaponTextures): Shape[] {
-  const { frisbeeStreak, swing: arc, swingFull, hoopRing, dash, zone, shadow } = textures;
-  return [frisbeeStreak, arc, swingFull, hoopRing, dash, zone, shadow];
+  const { frisbeeStreak, swing: arc, swingFull, dash, zone, shadow } = textures;
+  return [frisbeeStreak, arc, swingFull, dash, zone, shadow];
 }

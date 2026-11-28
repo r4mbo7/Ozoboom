@@ -164,6 +164,8 @@ export interface PlayerState extends Positioned {
   dashBeats?: number;
   // The move of each tick of a dash under way.
   dash?: { dx: number; dy: number; ticksLeft: number };
+  // The walking velocity, in units per tick, kept between ticks; absent at rest.
+  walk?: Vec2;
   // The source of the light offering held.
   offering?: number;
   // Absent until their first feat.

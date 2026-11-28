@@ -8,7 +8,7 @@ import {
   createSoundMixButton,
 } from './feedback-button';
 import { openDiscord } from './discord';
-import { DISCORD, GEAR, GLOBE, PROGRAMME } from './icons';
+import { DISCORD, DOOR, GEAR, GLOBE, PROGRAMME } from './icons';
 import { type Menu, createMenu } from './menu';
 import type { Prompts } from './prompts';
 import type { MenuHeard } from '../shared/menu-score';
@@ -54,6 +54,8 @@ export interface TitleActions {
   changelogOpened(): void;
   // Absent, the title has no Classement entry: the build reads no board.
   leaderboardOpened?(): void;
+  // Absent, the title has no Quit entry: a browser closes its own tab.
+  quitApp?(): void;
 }
 
 export interface TitleOptions {
@@ -339,6 +341,13 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   programme.classList.add('ui-title__programme');
   const settings = createActionButton(t('Settings'), t('Calm mode, controls, language'), GEAR);
   settings.classList.add('ui-title__settings');
+  // In the desktop app, Quit shares the Settings' row: the column keeps its height.
+  const quit = actions.quitApp === undefined ? null : createActionButton(t('Quit'), '', DOOR);
+  let settingsRow: HTMLElement = settings;
+  if (quit !== null) {
+    settingsRow = el('div', 'ui-title__pair');
+    settingsRow.append(settings, quit);
+  }
 
   const calm = createToggle(
     t('Calm mode'),
@@ -425,6 +434,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
         ...leaderboardEntry,
         sound.element,
         settings,
+        ...(quit === null ? [] : [quit]),
         discord,
         creditsButton,
         ...(changelog === null ? [] : [version]),
@@ -469,7 +479,7 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
     },
   };
   views.main.nav.setAttribute('aria-label', t('Main menu'));
-  views.main.nav.append(play, online, programmeRow, sound.element, settings);
+  views.main.nav.append(play, online, programmeRow, sound.element, settingsRow);
   for (const name of ['settings', 'sound', 'credits', 'changelog', 'leaderboard'] as const) {
     views[name].nav.setAttribute('aria-label', views[name].title);
   }
@@ -593,6 +603,11 @@ export function createTitle(prompts: Prompts, actions: TitleActions): TitleScree
   if (feedback !== null) {
     activations.set(feedback, () => {
       actions.feedback?.();
+    });
+  }
+  if (quit !== null) {
+    activations.set(quit, () => {
+      actions.quitApp?.();
     });
   }
   activations.set(creditsBack, () => {

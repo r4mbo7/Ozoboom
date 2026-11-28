@@ -111,6 +111,7 @@ function carry(state: SimState, player: PlayerState, spot: Vec2): void {
   const dy = spot.y - player.y;
   player.x = player.prevX = spot.x;
   player.y = player.prevY = spot.y;
+  delete player.walk;
   const moved = (entity: { x: number; y: number; prevX: number; prevY: number }) => {
     entity.x = entity.prevX = entity.x + dx;
     entity.y = entity.prevY = entity.y + dy;

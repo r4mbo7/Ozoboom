@@ -298,7 +298,15 @@ export type WeaponRhythm = { everyBars: number; steps: readonly number[] } | 'co
 export type WeaponEffect =
   | { kind: 'sweep'; damage: number; radius: number; arcDegrees: number }
   | { kind: 'spark'; damage: number; speed: number; pierce: number; rangeTicks: number }
-  | { kind: 'hoop'; damage: number; radius: number; wideRadius: number; knockback: number }
+  | {
+      kind: 'hoop';
+      damage: number;
+      radius: number;
+      wideRadius: number;
+      knockback: number;
+      // Both radii grow by this factor on each level past the first, compounded.
+      reachPerLevel: number;
+    }
   | {
       kind: 'lob';
       damage: number;

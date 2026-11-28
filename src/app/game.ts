@@ -69,6 +69,7 @@ import { endingMs, endingTicks } from './ending';
 import { openAudioOnGesture } from './gesture';
 import { enterLandscapeFullscreen, fullscreenOnFirstTouch } from './fullscreen';
 import { createPauseScreen } from './pause';
+import { platformOf } from './platform';
 import { loadPlayerPrefs } from './prefs';
 import { createSeats, openerOf, type LaunchedSeats } from './seats';
 import { type Settings, createSettings } from './settings';
@@ -259,6 +260,7 @@ export async function startGame(
   const latestRelease = FULL_RELEASES[0]?.version;
   let boardReads = 0;
   const readBoard = FULL_BOARD.read;
+  const platform = platformOf(window);
 
   const ui = createUi(
     root,
@@ -287,6 +289,7 @@ export async function startGame(
               });
             },
           }),
+      ...(platform.quit === undefined ? {} : { onQuitApp: platform.quit }),
       ...menuCallbacks(),
       ...choiceCallbacks({
         seats,

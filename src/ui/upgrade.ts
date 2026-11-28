@@ -503,8 +503,8 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     }
   });
 
-  // On a phone the reroll and the pill share the HUD bar's row with its score panel: they start past
-  // it, whatever its score or the language makes its width.
+  // On a phone the reroll and the pill share the top row with the HUD's score panel, at its end: they
+  // stop short of it, whatever its score or the language makes its width.
   let barPanel: Element | null = null;
   const barWatch =
     typeof ResizeObserver === 'undefined'
@@ -520,7 +520,7 @@ function createPanel(playerId: PlayerId, host: UpgradeHost, effects: HTMLElement
     }
     const panel = barPanel.getBoundingClientRect();
     const row = foot.getBoundingClientRect();
-    const clear = direction() === 'rtl' ? row.right - panel.left : panel.right - row.left;
+    const clear = direction() === 'rtl' ? panel.right - row.left : row.right - panel.left;
     foot.style.setProperty('--bar-clear', `${String(Math.max(0, Math.ceil(clear)))}px`);
   }
 

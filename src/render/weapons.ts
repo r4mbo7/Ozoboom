@@ -4,6 +4,7 @@ import { createCarried } from './weapon-carried';
 import { createDevilStick } from './weapon-devil-stick';
 import { createFlight } from './weapon-flight';
 import { createGround } from './weapon-ground';
+import { createHoop } from './weapon-hoop';
 import { createKit } from './weapon-kit';
 import { drawFiring } from './weapon-shots';
 
@@ -20,6 +21,7 @@ export function createWeapons(ctx: RenderContext): WeaponsFamily {
   const devilStick = createDevilStick(ctx, kit);
   const flight = createFlight(ctx, kit);
   const ground = createGround(ctx, kit);
+  const hoop = createHoop(ctx, kit);
 
   function clear(): void {
     kit.transients.clear();
@@ -40,6 +42,7 @@ export function createWeapons(ctx: RenderContext): WeaponsFamily {
     update(state, alpha, frame) {
       carried.update(state, alpha, frame);
       devilStick.update(state, alpha, frame);
+      hoop.update(state, alpha, frame);
       flight.update(state, alpha, frame);
       ground.update(state, alpha, frame);
       kit.transients.update(frame.now);
@@ -48,10 +51,12 @@ export function createWeapons(ctx: RenderContext): WeaponsFamily {
     onEvent(event, state, frame) {
       drawFiring(ctx, kit, event, state, frame);
       devilStick.onEvent(event, state, frame);
+      hoop.onEvent(event, state, frame);
     },
     reset() {
       clear();
       flight.reset?.();
+      hoop.reset();
     },
     destroy() {
       clear();

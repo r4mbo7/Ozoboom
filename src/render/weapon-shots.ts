@@ -17,7 +17,7 @@ export function drawFiring(
   if (event.type !== 'weaponFired') {
     return;
   }
-  const { weapons: w, ring } = ctx.textures;
+  const { weapons: w } = ctx.textures;
   const look = kit.style(event.weaponId);
   const { effect } = look.look;
   const peak = frame.calm ? 0.5 : 0.9;
@@ -49,25 +49,6 @@ export function drawFiring(
         toRadius: effect.radius,
       });
     }
-  } else if (effect.kind === 'hoop') {
-    for (let copy = 0; copy < look.copies; copy += 1) {
-      const shrink = 1 - 0.18 * copy;
-      transients.spawn({
-        ...at,
-        shape: w.hoopRing,
-        duration: TICKS_PER_BEAT * 1.8,
-        fromRadius: effect.radius * shrink,
-        toRadius: effect.wideRadius * shrink,
-      });
-    }
-    transients.spawn({
-      ...at,
-      shape: ring,
-      duration: TICKS_PER_BEAT,
-      fromRadius: effect.radius,
-      toRadius: effect.wideRadius * 1.3,
-      peak: peak * 0.55,
-    });
   } else if (effect.kind === 'ribbon') {
     kit.ribbons.spawn(state.tick, event.x, event.y, aim, effect.length);
   }

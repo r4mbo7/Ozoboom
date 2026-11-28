@@ -18,6 +18,7 @@ export function titleActions(
     | 'onChooseLocale'
     | 'onChangelogOpened'
     | 'onLeaderboardOpened'
+    | 'onQuitApp'
   >,
   shown: Once,
   options: TitleOptionActions,
@@ -50,6 +51,13 @@ export function titleActions(
       : {
           leaderboardOpened() {
             callbacks.onLeaderboardOpened?.();
+          },
+        }),
+    ...(callbacks.onQuitApp === undefined
+      ? {}
+      : {
+          quitApp() {
+            callbacks.onQuitApp?.();
           },
         }),
   };

@@ -1,7 +1,6 @@
 import { Container, type Sprite } from 'pixi.js';
 import { clamp, lerp } from '../shared/scalar';
 import type { SimEvent, SimState } from '../sim/state';
-import { MAIN_TEMPO, type Tempo, ticksIntoBeat } from '../shared/tempo';
 import { PlayerCarriedTraps } from './carried-traps';
 import { TrapGhost } from './trap-ghost';
 import { createBurster } from './class-bursts';
@@ -15,29 +14,23 @@ import { createDashBursts } from './dash-bursts';
 import { WALKING } from './danced-bodies';
 import { createDrawn } from './drawings';
 import type { Frame } from './frame';
-import { TAU } from './paint';
 import { PotionBodies, PoweredBody } from './potion-aura-model';
 import { Downed } from './player-downed';
 import { PlayerGlow } from './player-glow';
+import { placePlayerContour } from './player-contour';
 import { placePlayerHalo } from './player-halo';
 import { type Look, type LookInput, type Spawn, createLookInput, teintOf } from './player-look';
 import { placePlayerShadow } from './player-shadow';
 import { PlayerTag, ReviveLog } from './player-tags';
-import { CONTOUR_RING, REFERENCE_RADIUS } from './textures-players';
+import { REFERENCE_RADIUS } from './textures-players';
 import { DOWNED_REACH } from './textures-players-downed';
 import { add, hide, lookup, setTint } from './util';
 import { ViewPool } from './views';
+import { WalkSpring } from './walk-spring';
 
-const CONTOUR_MARGIN = 4;
 const MAX_STEP_TICKS = 3;
 const NEVER = Number.NEGATIVE_INFINITY;
 const PLAYER_BURSTS = 48;
-
-// Smoothly: never a flash.
-export function contourAlpha(now: number, tempo: Tempo = MAIN_TEMPO): number {
-  const phase = ticksIntoBeat(now, tempo) / tempo.ticksPerBeat;
-  return 0.3 + 0.35 * (1 + Math.sin(phase * TAU));
-}
 
 interface PlayerView {
   lastNow: number;
@@ -45,6 +38,7 @@ interface PlayerView {
   heading: number;
   readonly looks: Map<string, Look>;
   readonly powered: PoweredBody;
+  readonly walk: WalkSpring;
   readonly halo: Sprite;
   readonly glow: PlayerGlow;
   readonly tag: PlayerTag;
@@ -93,6 +87,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
       shadow: add(ground, t.looks.poi.shadow),
       lying: new Downed(ctx, bodies, marks),
       powered: new PoweredBody(bodies.addChild(new Container())),
+      walk: new WalkSpring(),
       aim: add(marks, t.aim),
       contour: add(marks, t.contour),
       dashArc: new DashArc(arcs, () => ctx.options.tutorialCall?.gesture === 'dash'),
@@ -104,6 +99,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
     (view) => {
       view.lastNow = NEVER;
       view.moving = 0;
+      view.walk.reset();
       view.tag.hide();
       view.glow.reset();
       view.dashArc.reset();
@@ -196,7 +192,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
         const angle = Math.atan2(player.aim.y, player.aim.x);
         let look = view.looks.get(player.classId);
         if (look === undefined) {
-          look = make(view.powered.body);
+          look = make(view.powered.look);
           view.looks.set(player.classId, look);
         }
         const { halo, tag, shadow, lying, aim, contour } = view;
@@ -234,9 +230,11 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
           look.hide();
           hide(aim, contour);
           view.emote.reset();
+          view.walk.reset();
         } else {
           const { cover } = lookTextures;
           const { x: bodyX, y: bodyY, facing } = body;
+          view.walk.lean(view.powered.look, state.tick, player, alpha, bodyX, bodyY);
           view.emote.place(bodyX, bodyY, facing, scale, top, color, teintOf(player), cover, frame);
           const moment = moments.of(player.id);
           input ??= createLookInput(state, player, frame);
@@ -279,14 +277,7 @@ export function createPlayers(ctx: RenderContext): Family & { readonly potion: P
         aim.rotation = angle;
         aim.scale.set(scale);
 
-        const invulnerable = (player.invulnerableTicks ?? 0) > 0;
-        contour.visible = invulnerable;
-        if (invulnerable) {
-          setTint(contour, color);
-          contour.position.set(x, y);
-          contour.scale.set(((lookTextures.extent + CONTOUR_MARGIN) / CONTOUR_RING) * scale);
-          contour.alpha = contourAlpha(now, frame.tempo);
-        }
+        placePlayerContour(contour, player, x, y, lookTextures.extent, scale, color, frame);
       }
       views.end();
       burster.bursts.update(state, alpha, frame);

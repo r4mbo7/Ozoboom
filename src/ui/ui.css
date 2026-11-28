@@ -1052,6 +1052,29 @@ svg.ui-title__moon-glint {
   justify-content: center;
 }
 
+/* Two entries share a row of the title's column, each a half button: the Classement beside the
+   Programme, Quit beside the Settings in the desktop app. */
+.ui-title__pair {
+  display: flex;
+  gap: 12px;
+}
+
+.ui-title__pair > .ui-button {
+  flex: 1 1 0;
+  gap: 10px;
+  min-width: 0;
+  padding-inline: 20px 16px;
+}
+
+/* The ring alone shows the half button on the right: its chevron would land on the other one. */
+.ui-title__pair > .ui-button + .ui-button[aria-current]::before {
+  display: none;
+}
+
+.ui-title__pair .ui-action__hint {
+  display: none;
+}
+
 .ui-title__corner {
   position: absolute;
   inset-inline-start: var(--ui-gap);
@@ -11477,8 +11500,10 @@ svg.ui-title__moon-glint {
     backdrop-filter: none;
   }
 
+  /* Its parts keep to the start: the end of the row is the score panel's, then the pause button's. */
   .ui-hud__ribbon {
     align-items: flex-start;
+    justify-content: flex-start;
   }
 
   /* The top bar splits into panels here: on a shared screen the team's vibes get their own. */
@@ -11491,8 +11516,9 @@ svg.ui-title__moon-glint {
     font-size: 18px;
   }
 
+  /* The bar is no box here: its status panel joins the top row, its actions stay at the bottom. */
   .ui-hud__bar {
-    align-items: flex-end;
+    display: contents;
   }
 
   .ui-hud__status,
@@ -11520,19 +11546,34 @@ svg.ui-title__moon-glint {
     margin-block: 0;
   }
 
+  /* At the top right, as tall as the moment's panel, left of the pause button on a touch screen. */
   .ui-hud__status {
-    padding-block: 5px;
-    padding-inline: 5px 16px;
+    grid-area: top;
+    align-self: start;
+    justify-self: end;
+    gap: 8px;
+    padding-block: 1px;
+    padding-inline: 1px 12px;
   }
 
+  [data-touch] .ui-hud__status {
+    margin-inline-end: calc(40px + var(--ui-gap));
+  }
+
+  .ui-hud__status .ui-vibes {
+    font-size: 20px;
+  }
+
+  /* In the bottom right corner, under the right thumb; the left one is the joystick's. */
   .ui-hud__actions {
-    margin-inline-start: auto;
+    grid-area: bar;
+    justify-self: end;
     padding: 6px;
   }
 
   .ui-hud__gear .ui-place {
-    --ring: 34px;
-    --pearl: 6px;
+    --ring: 26px;
+    --pearl: 5px;
   }
 
   /* The status panel alone stays over the veil: the bar is no panel here. */
@@ -11545,26 +11586,30 @@ svg.ui-title__moon-glint {
     z-index: 1;
   }
 
+  /* The offer keeps clear of the top row, where the score panel shows its places. */
   .ui-upgrade:has(.ui-offer[data-bar]) {
-    --bar-room: 72px;
+    --bar-room: 48px;
+
+    padding-top: var(--bar-room);
+    padding-bottom: var(--ui-gap);
   }
 
   .ui-offer[data-bar] .ui-hint {
     display: none;
   }
 
-  /* The reroll and the pill wait in the bar's row, clear of the status panel: at its far end, over
-     the dimmed actions. The panel's width comes from the score and the language, measured into
-     --bar-clear; when the row runs short, their labels take two lines. */
+  /* The reroll and the pill wait in the top row, just before the status panel, over the dimmed
+     moment. The panel's width comes from the score and the language, measured into --bar-clear;
+     when the row runs short, their labels take two lines. */
   .ui-offer[data-bar] .ui-offer__foot {
     position: absolute;
     inset-inline: 0;
-    bottom: 0;
+    top: 0;
     flex-wrap: nowrap;
     justify-content: flex-end;
     gap: 8px 12px;
     height: var(--bar-room);
-    padding-inline: calc(var(--bar-clear, 0px) + 8px) 8px;
+    padding-inline: 8px calc(var(--bar-clear, 0px) + 8px);
     pointer-events: none;
   }
 
@@ -11608,18 +11653,18 @@ svg.ui-title__moon-glint {
   }
 
   .ui-level {
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
   }
 
   .ui-level::after {
-    transform-origin: 4px 21.5px;
+    transform-origin: 4px 16.5px;
   }
 
   .ui-level__number {
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
   }
 
   .ui-trap {

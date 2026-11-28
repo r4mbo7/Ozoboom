@@ -1,4 +1,4 @@
-import type { Container } from 'pixi.js';
+import { Container } from 'pixi.js';
 import { frac, lerp } from '../shared/scalar';
 import { isPotionBoost } from '../sim/potion-shield';
 import type { PlayerState, SimEvent } from '../sim/state';
@@ -33,8 +33,13 @@ export function flameClock(frame: Pick<Frame, 'now' | 'tempo' | 'calm'>): number
   return frame.calm ? 0 : frame.now / frame.tempo.ticksPerBeat;
 }
 
+// The label of the container a look is drawn in, inside its powered body: the walk leans it there, where
+// the aura's capture of the body still sees it.
+export const LOOK_LABEL = 'look';
+
 export class PoweredBody {
   readonly body: Container;
+  readonly look: Container;
   playerId = 0;
   x = 0;
   y = 0;
@@ -48,6 +53,7 @@ export class PoweredBody {
 
   constructor(body: Container) {
     this.body = body;
+    this.look = body.addChild(new Container({ label: LOOK_LABEL }));
   }
 
   place(
